@@ -1,0 +1,3 @@
+[submodule "UnityProject/Assets/ThirdParty"]
+	path = UnityProject/Assets/ThirdParty
+	url = https://github.com/jj-game-studio/Project-Nomad-Assets.git
