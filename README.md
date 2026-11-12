@@ -5,6 +5,7 @@
 
 ## 문서
 
+- [단계별 구현 목표와 작업 분담](docs/implementation-plan.md): Windows 11 대상 1~4차 목표와 두 담당자의 1차 작업 순서
 - [게임 기획서 v0.3](docs/game-design.md): 플레이 루프, 교역, 시간 진행, 성장과 지역 해금 방향
 - [개발 협업 루프](docs/development-loop.md): Issue·PR 운영과 사람 검토 기준
 
