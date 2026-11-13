@@ -59,6 +59,9 @@ namespace Nomad.Monsters.Editor
                 if (Time.time - since < 0.5f)
                     return;
 
+                if (stage == 4 || stage == 5)
+                    Require(Time.time - since < 15f, "계단 이동 시간 초과");
+
                 switch (stage)
                 {
                     case 0:
@@ -80,18 +83,18 @@ namespace Nomad.Monsters.Editor
                         break;
                     case 3:
                         Require(tracker.IsTracking && tracker.HasLineOfSight, "근접 범위 후방 탐지");
-                        Place(new Vector3(0f, 0f, 3f), new Vector3(0f, 2.05f, 10f), Vector3.forward);
+                        Place(new Vector3(0f, 0f, 4f), new Vector3(0f, 2.05f, 11.5f), Vector3.forward);
                         Advance();
                         break;
                     case 4:
-                        if (tracker.transform.position.y < 1.9f)
+                        if (tracker.transform.position.y < 1.9f || tracker.transform.position.z < 9.5f)
                             return;
                         Require(tracker.IsTracking, "계단을 넘어 높은 평지 추적");
                         Place(tracker.transform.position, new Vector3(0f, 0.05f, 3f), Vector3.back);
                         Advance();
                         break;
                     case 5:
-                        if (tracker.transform.position.y > 0.15f || tracker.transform.position.z > 4.5f)
+                        if (tracker.transform.position.y > 0.15f || tracker.transform.position.z > 5f)
                             return;
                         Require(tracker.IsTracking, "계단을 내려와 낮은 평지 추적");
                         Place(new Vector3(4f, 0f, 0f), new Vector3(11.5f, 0.05f, 0f), Vector3.right);
@@ -136,7 +139,8 @@ namespace Nomad.Monsters.Editor
             {
                 Debug.LogError($"MONSTER_TRACKING_FAIL stage={stage} monster={tracker?.transform.position} " +
                     $"target={target?.position} tracking={tracker?.IsTracking} visible={tracker?.HasLineOfSight} " +
-                    $"blocked={tracker?.PathBlocked}: {exception}");
+                    $"blocked={tracker?.PathBlocked} remaining={agent?.remainingDistance} " +
+                    $"velocity={agent?.velocity} destination={agent?.destination}: {exception}");
                 Finish(1);
             }
         }

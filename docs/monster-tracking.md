@@ -17,7 +17,7 @@ WASD 이동, Space 점프, 왼쪽 Shift 구르기는 기존 PlayerMovement를 �
 
 전용 씬 초기화 → 테스트 지형만 NavMesh 생성 → Inspector의 플레이어 Transform 연결.
 
-매 프레임 → 목표 유효성 확인 → 시야각/거리와 장애물 검사 → 마지막 목격 위치 갱신 → 0.2초 간격으로 완전한 경로를 계산해 추적.
+매 프레임 → 목표 유효성 확인 → 시야각/거리와 장애물 검사 → 마지막 목격 위치 갱신 → 0.2초 간격으로 목적지 변경을 확인해 완전한 경로로 추적. 동일 목적지의 유효 경로는 재사용합니다.
 
 - 플레이어 참조는 Inspector 또는 `BindTarget(Transform)`으로 명시합니다. 전역 검색이나 플레이어 코드 변경은 필요하지 않습니다.
 - 목표가 가려지면 실시간 위치를 쫓지 않고 마지막으로 본 위치를 사용합니다. 마지막 목격 후 2초가 지나면 멈춥니다.
@@ -37,5 +37,9 @@ NavMesh 크기는 공통 규격의 반지름 0.35m, 높이 1.8m, 단차 0.3m, �
 별도 Unity 프로세스에 `-batchmode -nographics -projectPath <UnityProject 절대 경로> -executeMethod Nomad.Monsters.Editor.MonsterTrackingVerification.Run -logFile <로그 절대 경로>`를 전달합니다.
 검증기가 Play 모드에 진입하고 종료 코드를 반환하므로 `-quit`는 붙이지 않습니다.
 
-검증 대상은 정면 탐지/이동, 벽 너머 근접 감지 차단, 후방 시야 제외/근접 감지, 2m 계단 왕복, 단절 경로, 목표 비활성, 추적 한계 거리입니다.
+검증 대상은 정면 탐지/이동, 벽 너머 근접 감지 차단, 후방 시야 제외/근접 감지, 2m 계단 왕복, 단절 경로, 목표 비활성, 추적 한계 거리, 시야 상실 후 종료입니다.
 성공 로그는 `MONSTER_TRACKING_PLAYMODE_PASS`입니다. 실제 생성 필드, 공격/피해 연결, Windows 플레이어 빌드와 재미·난이도 검토는 이 검사에 포함하지 않습니다.
+
+2026-11-14 Unity 6000.6.9f1 / Windows에서 위 Play 검사가 종료 코드 0으로 통과했습니다.
+동일 경로를 반복 설정할 때 계단 하강 중 멈추던 현상을 발견하여 유효 경로를 재사용하도록 수정하고 재검증했습니다.
+에디터 시작 시 UnityEditor.Search.SearchDatabase 인덱싱의 ArgumentOutOfRangeException 1건이 별도로 발생했습니다. 몬스터 코드 스택은 없지만 예외가 전혀 없는 실행은 아닙니다.

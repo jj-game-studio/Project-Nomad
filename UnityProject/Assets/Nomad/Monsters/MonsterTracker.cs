@@ -83,6 +83,10 @@ namespace Nomad.Monsters
                 return;
 
             nextPathTime = Time.time + 0.2f;
+            // 같은 경로를 계속 덮어쓰면 계단 모서리에서 감속과 회전이 반복될 수 있습니다.
+            if (agent.hasPath && (agent.destination - lastSeenPosition).sqrMagnitude < 0.01f)
+                return;
+
             var path = new NavMeshPath();
             PathBlocked = !agent.CalculatePath(lastSeenPosition, path) ||
                 path.status != NavMeshPathStatus.PathComplete;
