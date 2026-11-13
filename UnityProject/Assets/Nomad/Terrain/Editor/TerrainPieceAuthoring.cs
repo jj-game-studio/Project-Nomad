@@ -47,8 +47,7 @@ namespace Nomad.Terrain.Editor
                     new Bounds(new Vector3(0f, -0.125f, -3.5f), new Vector3(4f, 0.25f, 3f)));
                 AddFloor(visual.transform, collision.transform, "UpperLanding",
                     new Bounds(new Vector3(0f, 1.875f, 3.5f), new Vector3(4f, 0.25f, 3f)));
-                AddStairs(visual.transform, collision.transform, 0f, -1f);
-                AddStairs(visual.transform, collision.transform, 1f, 1f);
+                AddStairs(visual.transform, collision.transform);
             }
             else
             {
@@ -83,19 +82,18 @@ namespace Nomad.Terrain.Editor
             AddBox(collision, name, bounds);
         }
 
-        private static void AddStairs(Transform visual, Transform collision, float baseHeight, float centerZ)
+        private static void AddStairs(Transform visual, Transform collision)
         {
-            Vector3 center = new Vector3(0f, baseHeight + 0.5f, centerZ);
-            var stairs = FitVisual("SM_Buildings_Stairs_1x2_01.prefab", visual, $"Stairs_{baseHeight}",
-                new Bounds(center, new Vector3(4f, 1f, 2f)));
+            var stairs = FitVisual("SM_Buildings_Stairs_1x3_01.prefab", visual, "Stairs",
+                new Bounds(new Vector3(0f, 1f, 0f), new Vector3(4f, 2f, 4f)));
 
             // 원본 계단의 단 높이와 진행 방향을 메시에서 읽어 같은 형상의 충돌체를 만듭니다.
             var filter = stairs.GetComponentInChildren<MeshFilter>();
             var mesh = filter.sharedMesh;
             Vector3[] vertices = mesh.vertices.Select(v => filter.transform.TransformPoint(v)).ToArray();
             float[] levels = vertices.Select(v => (float)Math.Round(v.y, 4)).Distinct().OrderBy(y => y).ToArray();
-            float[] tops = levels.Where(y => y > baseHeight + 0.001f).ToArray();
-            if (tops.Length == 0 || tops.Zip(new[] { baseHeight }.Concat(tops), (a, b) => a - b).Any(h => h > 0.251f))
+            float[] tops = levels.Where(y => y > 0.001f).ToArray();
+            if (tops.Length == 0 || tops.Zip(new[] { 0f }.Concat(tops), (a, b) => a - b).Any(h => h > 0.251f))
                 throw new InvalidOperationException($"원본 계단 단 높이가 0.25m 규격을 초과합니다: {string.Join(", ", levels)}");
 
             // 상단의 수평 면을 찾아 +Z 쪽이 높아지게 정렬합니다.
@@ -107,8 +105,8 @@ namespace Nomad.Terrain.Editor
                 Vector3 a = vertices[indices[i]];
                 Vector3 b = vertices[indices[i + 1]];
                 Vector3 c = vertices[indices[i + 2]];
-                if (Mathf.Abs(a.y - (baseHeight + 1f)) < 0.001f && Mathf.Abs(b.y - (baseHeight + 1f)) < 0.001f
-                    && Mathf.Abs(c.y - (baseHeight + 1f)) < 0.001f)
+                if (Mathf.Abs(a.y - 2f) < 0.001f && Mathf.Abs(b.y - 2f) < 0.001f
+                    && Mathf.Abs(c.y - 2f) < 0.001f)
                 {
                     highFaceZ += (a.z + b.z + c.z) / 3f;
                     highFaceCount++;
@@ -118,9 +116,9 @@ namespace Nomad.Terrain.Editor
             if (highFaceCount == 0)
                 throw new InvalidOperationException("계단 상단 면을 찾지 못했습니다.");
 
-            bool reverse = highFaceZ / highFaceCount < centerZ;
+            bool reverse = highFaceZ / highFaceCount < 0f;
             if (reverse)
-                stairs.transform.RotateAround(center, Vector3.up, 180f);
+                stairs.transform.RotateAround(Vector3.zero, Vector3.up, 180f);
 
             // 각 수평 단의 실제 Z 구간을 사용하므로 외형과 발판이 일치합니다.
             foreach (float height in tops)
@@ -128,7 +126,7 @@ namespace Nomad.Terrain.Editor
                 var faceZ = Enumerable.Range(0, indices.Length / 3)
                     .Select(i => new[] { vertices[indices[i * 3]], vertices[indices[i * 3 + 1]], vertices[indices[i * 3 + 2]] })
                     .Where(t => t.All(v => Mathf.Abs(v.y - height) < 0.001f))
-                    .SelectMany(t => t.Select(v => reverse ? 2f * centerZ - v.z : v.z)).ToArray();
+                    .SelectMany(t => t.Select(v => reverse ? -v.z : v.z)).ToArray();
 
                 if (faceZ.Length == 0)
                     throw new InvalidOperationException($"계단 {height}m 수평 면이 없습니다.");

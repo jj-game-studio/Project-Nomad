@@ -24,3 +24,8 @@
 # 운영체제 파일
 .DS_Store
 Thumbs.db
+
+# B 지형 검증 실행 산출물
+/UnityProject/Artifacts/
+/terrain-validation.log
+/terrain-playmode.log

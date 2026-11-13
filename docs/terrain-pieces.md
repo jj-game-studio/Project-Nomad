@@ -71,3 +71,23 @@ batch 재현 명령(프로젝트를 닫은 상태에서 실행):
 
 검증 성공 시 TERRAIN_VALIDATION_PASS 로그와 UnityProject/Artifacts/terrain-overview.png를 생성합니다.
 Artifacts는 실행 산출물이며 커밋하지 않습니다. 랜덤 생성, NavMesh와 적 배치는 이번 범위에 포함하지 않습니다.
+
+## 이번 제출의 검증 결과
+
+- Unity 6000.6.9f1 / Windows에서 CreateAndValidate 종료 코드 0.
+- Flat/Stairs/Raised 저장 및 연결·오류 거절·점유 영역·통로 검사 통과.
+- 최종 계단은 SM_Buildings_Stairs_1x3_01 한 구간을 사용합니다.
+  24단, 총 상승 2m, 최대 단 높이 약 0.0895m로 0.25m 이하입니다.
+- CharacterController의 편집 모드 물리 시뮬레이션 왕복 통과.
+- 저장된 씬을 실제 Play 모드에서 실행해 10.38초에 자동 왕복 완료를 확인했습니다.
+  TERRAIN_PLAYMODE_PASS 로그의 frame=160243으로 프레임 진행도 확인했습니다.
+- 렌더링 미리보기에서 바닥·계단·높은 바닥의 연결과 정상 머티리얼 표시를 확인했습니다.
+- Play 진입 중 UnityEditor.Search.SearchDatabase의 시작 인덱싱에서
+  ArgumentOutOfRangeException 1건이 발생했습니다. 지형 코드 스택이 없으며 왕복은 완료됐습니다.
+  해당 에디터 내부 문제를 수정하거나 예외가 없는 실행으로 검증했다고 보고하지 않습니다.
+- 원본 애셋의 구버전 importer 경고가 있으나 원본 파일은 변경하지 않았습니다.
+- A 플레이어/적 통합과 사람의 지형 수용 검토는 별도입니다.
+
+Play 모드 검증만 batch로 재현하려면 -quit을 빼고
+-executeMethod Nomad.Terrain.Editor.TerrainPieceValidation.VerifyPlayMode를 사용합니다.
+이 진입점은 완료 또는 60초 제한에서 스스로 종료합니다.

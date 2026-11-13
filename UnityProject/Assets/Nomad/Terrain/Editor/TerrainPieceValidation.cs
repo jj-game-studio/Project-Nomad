@@ -57,6 +57,51 @@ namespace Nomad.Terrain.Editor
             Debug.Log("TERRAIN_VALIDATION_PASS: 규격/연결/겹침/2m 통로/계단 단차/캐릭터 왕복");
         }
 
+        public static void VerifyPlayMode()
+        {
+            EditorSceneManager.OpenScene(TerrainPieceAuthoring.Output + "/B_TerrainPieces.unity");
+            SessionState.SetBool("Nomad.Terrain.VerifyPlayMode", true);
+            SessionState.SetFloat("Nomad.Terrain.PlayModeStart", (float)EditorApplication.timeSinceStartup);
+            EditorApplication.update += CheckPlayMode;
+            EditorApplication.EnterPlaymode();
+        }
+
+        [InitializeOnLoadMethod]
+        private static void ResumePlayModeVerification()
+        {
+            if (SessionState.GetBool("Nomad.Terrain.VerifyPlayMode", false))
+                EditorApplication.update += CheckPlayMode;
+        }
+
+        private static void CheckPlayMode()
+        {
+            if (!SessionState.GetBool("Nomad.Terrain.VerifyPlayMode", false))
+                return;
+
+            var probe = Application.isPlaying
+                ? UnityEngine.Object.FindAnyObjectByType<TerrainTraversalProbe>() : null;
+            bool timedOut = EditorApplication.timeSinceStartup
+                - SessionState.GetFloat("Nomad.Terrain.PlayModeStart", 0f) > 60f;
+
+            if (probe != null && probe.Complete)
+            {
+                Debug.Log($"TERRAIN_PLAYMODE_PASS: frame={Time.frameCount}, time={Time.time:F2}");
+                FinishPlayModeVerification(0);
+            }
+            else if (timedOut || (probe != null && probe.Failed))
+            {
+                Debug.LogError("TERRAIN_PLAYMODE_FAIL");
+                FinishPlayModeVerification(1);
+            }
+        }
+
+        private static void FinishPlayModeVerification(int exitCode)
+        {
+            SessionState.SetBool("Nomad.Terrain.VerifyPlayMode", false);
+            EditorApplication.update -= CheckPlayMode;
+            EditorApplication.Exit(exitCode);
+        }
+
         private static bool InteriorOverlap(Bounds a, Bounds b)
         {
             Vector3 overlap = Vector3.Min(a.max, b.max) - Vector3.Max(a.min, b.min);
