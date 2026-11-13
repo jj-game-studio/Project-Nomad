@@ -82,3 +82,17 @@ unity run '<checkout>/UnityProject' --timeout 600 --log-file '<checkout>/UnityPr
 성공 로그: `TERRAIN_GENERATION_PLAYMODE_PASS`와 실제 frame/time.
 Artifacts는 실행 산출물이며 커밋하지 않습니다. 사람의 경로·높낮이 배치 수용 여부와
 A 플레이어/적의 통합 검토는 자동 검증 결과와 구분합니다.
+
+## 제출 시 확인한 결과
+
+- Unity 6000.6.9f1 / Windows에서 편집 모드 검증 종료 코드 0 및
+  `TERRAIN_GENERATION_PASS`를 확인했습니다.
+- Play 모드 검증 종료 코드 0, `TERRAIN_GENERATION_PLAYMODE_PASS`의
+  frame=5, time=0.08과 지연 삭제 완료를 확인했습니다.
+- Play 진입 시 UnityEditor.Search.SearchDatabase의 시작 인덱싱에서
+  ArgumentOutOfRangeException 1건이 발생했습니다. 지형 코드 스택은 없고
+  생성/정리 검증은 완료됐습니다. 에디터 예외가 없는 실행이라고 보고하지 않습니다.
+- 최초 임포트의 기존 ModelImporter 버전 경고와 라이선스 핸드셰이크 재시도 로그가
+  있습니다. 구매 애셋 원본과 공용 설정은 수정하지 않았습니다.
+- A 실제 플레이어/적 통합, 시각적 경로 수용 검토와 Windows 플레이어 빌드는
+  이번 자동 검증에서 수행하지 않았습니다.

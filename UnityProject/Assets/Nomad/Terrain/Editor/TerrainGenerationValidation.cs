@@ -17,19 +17,16 @@ namespace Nomad.Terrain.Editor
         public static void Validate()
         {
             // 별도 임시 씬에서 실행해 열려 있는 사용자 씬을 변경하지 않습니다.
-            Scene previous = SceneManager.GetActiveScene();
-            Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
-            SceneManager.SetActiveScene(scene);
+            Scene scene = EditorSceneManager.NewPreviewScene();
 
             try
             {
-                ValidateGeneration(100);
+                ValidateGeneration(100, scene);
                 Debug.Log("TERRAIN_GENERATION_PASS: 100 seeds, deterministic replay, heights/rotations, overlap/seam, bounded failure, regeneration/events");
             }
             finally
             {
-                SceneManager.SetActiveScene(previous);
-                EditorSceneManager.CloseScene(scene, true);
+                EditorSceneManager.ClosePreviewScene(scene);
             }
         }
 
@@ -40,11 +37,12 @@ namespace Nomad.Terrain.Editor
                     ?.GetComponent<TerrainPiece>()).ToArray();
         }
 
-        private static void ValidateGeneration(int seeds)
+        private static void ValidateGeneration(int seeds, Scene scene)
         {
             TerrainPiece[] sources = LoadPieces();
             Require(sources.All(p => p != null), "#12 지형 프리팹 필요");
             var host = new GameObject("GenerationValidation");
+            SceneManager.MoveGameObjectToScene(host, scene);
             var generator = host.AddComponent<TerrainGenerator>();
             int starts = 0;
             int completions = 0;
@@ -101,7 +99,7 @@ namespace Nomad.Terrain.Editor
                 Require(starts == completions && starts == seeds * 2 + 3, "세대당 완료/실패 통지 한 번");
 
                 ValidateTurns(generator);
-                ValidateOverlap(sources);
+                ValidateOverlap(sources, host.transform);
             }
             finally
             {
@@ -132,8 +130,9 @@ namespace Nomad.Terrain.Editor
         private static void ValidateTurns(TerrainGenerator generator)
         {
             // 기존 프리팹은 남북 연결뿐이므로 직교 회전·분기는 합성 조각으로 검증합니다.
-            TerrainPiece corner = CreateSynthetic(new[] { Vector3.back, Vector3.right });
-            TerrainPiece junction = CreateSynthetic(new[] { Vector3.back, Vector3.right, Vector3.forward, Vector3.left });
+            TerrainPiece corner = CreateSynthetic(new[] { Vector3.back, Vector3.right }, generator.transform);
+            TerrainPiece junction = CreateSynthetic(new[] { Vector3.back, Vector3.right, Vector3.forward, Vector3.left },
+                generator.transform);
             try
             {
                 generator.Configure(new[] { corner, junction }, 20, 23, Area);
@@ -155,9 +154,10 @@ namespace Nomad.Terrain.Editor
             }
         }
 
-        private static TerrainPiece CreateSynthetic(Vector3[] directions)
+        private static TerrainPiece CreateSynthetic(Vector3[] directions, Transform parent)
         {
             var root = new GameObject("SyntheticPiece");
+            root.transform.SetParent(parent, false);
             var points = directions.Select(direction =>
             {
                 var point = new GameObject("Port");
@@ -173,10 +173,10 @@ namespace Nomad.Terrain.Editor
             return piece;
         }
 
-        private static void ValidateOverlap(TerrainPiece[] sources)
+        private static void ValidateOverlap(TerrainPiece[] sources, Transform parent)
         {
-            TerrainPiece a = Object.Instantiate(sources[0]);
-            TerrainPiece b = Object.Instantiate(sources[0]);
+            TerrainPiece a = Object.Instantiate(sources[0], parent);
+            TerrainPiece b = Object.Instantiate(sources[0], parent);
             try
             {
                 a.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
@@ -257,7 +257,7 @@ namespace Nomad.Terrain.Editor
 
                 if (SessionState.GetInt(PlayKey, 0) == 1)
                 {
-                    ValidateGeneration(3);
+                    ValidateGeneration(3, SceneManager.GetActiveScene());
                     SessionState.SetInt(PlayKey, Time.frameCount + 2);
                     return;
                 }

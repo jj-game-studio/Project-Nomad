@@ -73,6 +73,7 @@ namespace Nomad.Terrain
                         pieces.Clear();
                         links.Clear();
                         generatedRoot = new GameObject("GeneratedTerrain_" + id);
+                        generatedRoot.transform.SetParent(transform, false);
                         // 완성 전 후보는 렌더링·물리·Start에서 사용하지 않도록 비활성 상태로 구성합니다.
                         generatedRoot.SetActive(false);
 
