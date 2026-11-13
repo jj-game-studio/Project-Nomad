@@ -15,6 +15,7 @@ namespace Nomad.Terrain
         [SerializeField] private int seed = 14;
         [SerializeField] private Bounds generationBounds = new Bounds(Vector3.zero, new Vector3(400f, 100f, 400f));
         [SerializeField] private bool generateOnStart;
+        [SerializeField] private bool requirePlanarBranch = true;
 
         [SerializeField, HideInInspector] private GameObject generatedRoot;
         private bool busy;
@@ -85,7 +86,7 @@ namespace Nomad.Terrain
                     }
 
                     if (!success)
-                        error = "후보 또는 배치 공간 부족으로 최초 생성과 재생성 3회에서 지정 수량을 연결하지 못했습니다.";
+                        error = "최초 생성과 재생성 3회에서 수량·공간·2D 분기 조건을 만족하지 못했습니다.";
                 }
 
                 if (!success)
@@ -165,7 +166,8 @@ namespace Nomad.Terrain
                     return false;
             }
 
-            return true;
+            // 분기에 필요한 최소 4조각부터 실제 결과의 양축 확장과 분기 연결을 확인합니다.
+            return !requirePlanarBranch || pieceCount < 4 || TerrainPlacement.HasPlanarBranch(pieces, links);
         }
 
         private string ValidateSettings()

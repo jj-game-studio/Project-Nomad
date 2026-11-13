@@ -1,9 +1,36 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Nomad.Terrain
 {
     public static class TerrainPlacement
     {
+        public static bool HasPlanarBranch(IReadOnlyList<TerrainPiece> pieces, IReadOnlyList<TerrainLink> links)
+        {
+            if (pieces.Count < 4)
+                return false;
+
+            var extent = new Bounds(pieces[0].transform.position, Vector3.zero);
+            var degrees = new Dictionary<TerrainPiece, int>();
+            foreach (TerrainPiece piece in pieces)
+            {
+                extent.Encapsulate(piece.transform.position);
+                degrees.Add(piece, 0);
+            }
+
+            bool branch = false;
+            foreach (TerrainLink link in links)
+            {
+                TerrainPiece from = link.From.GetComponentInParent<TerrainPiece>(true);
+                TerrainPiece to = link.To.GetComponentInParent<TerrainPiece>(true);
+                degrees[from]++;
+                degrees[to]++;
+                branch |= degrees[from] >= 3 || degrees[to] >= 3;
+            }
+
+            return extent.size.x >= 9.99f && extent.size.z >= 9.99f && branch;
+        }
+
         public static void Align(TerrainPiece piece, TerrainConnection incoming, TerrainConnection target)
         {
             Quaternion facing = Quaternion.LookRotation(-target.Outward, target.transform.up);

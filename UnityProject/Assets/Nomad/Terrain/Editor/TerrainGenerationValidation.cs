@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -22,7 +23,7 @@ namespace Nomad.Terrain.Editor
             try
             {
                 ValidateGeneration(100, scene);
-                Debug.Log("TERRAIN_GENERATION_PASS: 100 seeds, deterministic replay, heights/rotations, overlap/seam, bounded failure, regeneration/events");
+                Debug.Log("TERRAIN_GENERATION_PASS: 100 seeds x 2; real prefabs X/Z expansion + connected branch; deterministic replay, heights/rotations, overlap/seam, bounded failure, regeneration/events");
             }
             finally
             {
@@ -32,7 +33,7 @@ namespace Nomad.Terrain.Editor
 
         private static TerrainPiece[] LoadPieces()
         {
-            return new[] { "Flat", "Stairs", "Raised" }.Select(name =>
+            return new[] { "Flat", "Stairs", "Raised", "Corner", "Tee", "Cross" }.Select(name =>
                 AssetDatabase.LoadAssetAtPath<GameObject>($"{TerrainPieceAuthoring.Output}/{name}.prefab")
                     ?.GetComponent<TerrainPiece>()).ToArray();
         }
@@ -113,6 +114,8 @@ namespace Nomad.Terrain.Editor
                 $"seed={result.Seed} 조각/연결 수: {result.FailureReason}");
             Require(result.Pieces.All(p => p.gameObject.activeInHierarchy), "성공 지형 활성화");
             Require(result.Links.All(link => link.From.Matches(link.To)), "연결 위치·방향·높이·규격");
+            if (count >= 4)
+                Require(TerrainPlacement.HasPlanarBranch(result.Pieces, result.Links), "실제 X/Z 양축 확장 및 3방향 연결 분기");
 
             for (int i = 0; i < result.Pieces.Count; i++)
             {
@@ -140,6 +143,11 @@ namespace Nomad.Terrain.Editor
                 ValidateResult(result, 20);
                 Require(result.Pieces.Select(p => Mathf.RoundToInt(p.transform.eulerAngles.y)).Distinct().Count() > 1,
                     "90도 회전 배치");
+
+                generator.Configure(new[] { corner }, 4, 1, Area);
+                result = generator.Generate();
+                Require(!result.Success && result.Attempts == 4,
+                    "양축으로 휘어져도 실제 분기가 없는 경로는 2D 분기 성공으로 공개하지 않음");
 
                 generator.Configure(new[] { corner }, 100, 1,
                     new Bounds(Vector3.zero, new Vector3(20.01f, 20f, 20.01f)));
@@ -219,14 +227,48 @@ namespace Nomad.Terrain.Editor
             var settings = new SerializedObject(generator);
             settings.FindProperty("generateOnStart").boolValue = true;
             settings.ApplyModifiedPropertiesWithoutUndo();
-            generator.Generate();
+            TerrainGenerationResult result = generator.Generate();
+            Require(result.Success, "미리보기 생성: " + result.FailureReason);
+
+            Bounds bounds = result.Pieces[0].WorldOccupancy;
+            foreach (TerrainPiece piece in result.Pieces)
+                bounds.Encapsulate(piece.WorldOccupancy);
 
             Camera camera = Camera.main;
-            camera.transform.position = new Vector3(70f, 100f, -80f);
-            camera.transform.LookAt(Vector3.zero);
+            camera.orthographic = true;
+            camera.orthographicSize = Mathf.Max(bounds.size.x, bounds.size.z) * 0.7f + 5f;
+            camera.transform.position = bounds.center + new Vector3(0f, 100f, -70f);
+            camera.transform.LookAt(bounds.center);
             Selection.activeGameObject = host;
-            SceneView.lastActiveSceneView?.Frame(new Bounds(Vector3.zero, new Vector3(130f, 20f, 130f)), false);
+            SceneView.lastActiveSceneView?.Frame(bounds, false);
             Debug.Log("지형 전용 미저장 미리보기입니다. Inspector의 seed/조각 수 변경 후 Play로 재생성합니다. 최종 Ready는 제공하지 않습니다.");
+        }
+
+        public static void CapturePreview()
+        {
+            OpenPreview();
+            Camera camera = Camera.main;
+            var target = new RenderTexture(1280, 900, 24);
+            var texture = new Texture2D(1280, 900, TextureFormat.RGB24, false);
+            RenderTexture previous = RenderTexture.active;
+
+            try
+            {
+                camera.targetTexture = target;
+                camera.Render();
+                RenderTexture.active = target;
+                texture.ReadPixels(new Rect(0, 0, 1280, 900), 0, 0);
+                texture.Apply();
+                Directory.CreateDirectory("Artifacts");
+                File.WriteAllBytes("Artifacts/terrain-planar-preview.png", texture.EncodeToPNG());
+            }
+            finally
+            {
+                camera.targetTexture = null;
+                RenderTexture.active = previous;
+                Object.DestroyImmediate(texture);
+                Object.DestroyImmediate(target);
+            }
         }
 
         public static void VerifyPlayMode()
