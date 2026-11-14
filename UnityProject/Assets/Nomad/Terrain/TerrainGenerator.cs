@@ -13,6 +13,7 @@ namespace Nomad.Terrain
         [SerializeField] private TerrainPiece[] prefabs;
         [SerializeField, Min(1)] private int pieceCount = 12;
         [SerializeField] private int seed = 14;
+        [SerializeField] private bool randomizeSeed = true;
         [SerializeField] private Bounds generationBounds = new Bounds(Vector3.zero, new Vector3(400f, 100f, 400f));
         [SerializeField] private bool generateOnStart;
         [SerializeField] private bool requirePlanarBranch = true;
@@ -25,7 +26,8 @@ namespace Nomad.Terrain
         public event Action<string> GenerationStarted;
         public event Action<TerrainGenerationResult> GenerationCompleted;
 
-        public void Configure(TerrainPiece[] sources, int count, int randomSeed, Bounds bounds)
+        public void Configure(TerrainPiece[] sources, int count, int randomSeed, Bounds bounds,
+            bool useRandomSeed = false)
         {
             if (busy)
                 throw new InvalidOperationException("생성 중에는 설정을 변경할 수 없습니다.");
@@ -33,6 +35,7 @@ namespace Nomad.Terrain
             prefabs = sources == null ? null : (TerrainPiece[])sources.Clone();
             pieceCount = count;
             seed = randomSeed;
+            randomizeSeed = useRandomSeed;
             generationBounds = bounds;
         }
 
@@ -48,6 +51,12 @@ namespace Nomad.Terrain
                 throw new InvalidOperationException("생성 콜백에서 재진입할 수 없습니다.");
 
             busy = true;
+            if (randomizeSeed)
+            {
+                int nextSeed = Guid.NewGuid().GetHashCode();
+                seed = nextSeed == seed ? unchecked(nextSeed + 1) : nextSeed;
+            }
+
             string id = Guid.NewGuid().ToString("N");
             var pieces = new List<TerrainPiece>();
             var links = new List<TerrainLink>();

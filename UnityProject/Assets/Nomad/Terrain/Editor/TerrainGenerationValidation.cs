@@ -13,6 +13,7 @@ namespace Nomad.Terrain.Editor
     {
         private static readonly Bounds Area = new Bounds(Vector3.zero, new Vector3(400f, 100f, 400f));
         private const string PlayKey = "Nomad.Terrain.GenerationPlayCheck";
+        private static TerrainGenerator automaticStartProbe;
 
         [MenuItem("Nomad/Terrain/Validate Random Generation")]
         public static void Validate()
@@ -33,7 +34,8 @@ namespace Nomad.Terrain.Editor
 
         private static TerrainPiece[] LoadPieces()
         {
-            return new[] { "Flat", "Stairs", "Raised", "Corner", "Tee", "Cross" }.Select(name =>
+            return new[] { "Flat", "Stairs", "Raised", "Corner", "Tee", "Cross",
+                "StairsCorner", "StairsTee", "StairsCross" }.Select(name =>
                 AssetDatabase.LoadAssetAtPath<GameObject>($"{TerrainPieceAuthoring.Output}/{name}.prefab")
                     ?.GetComponent<TerrainPiece>()).ToArray();
         }
@@ -101,6 +103,7 @@ namespace Nomad.Terrain.Editor
 
                 ValidateTurns(generator);
                 ValidateOverlap(sources, host.transform);
+                ValidateAutomaticSeed(generator, sources);
             }
             finally
             {
@@ -128,6 +131,21 @@ namespace Nomad.Terrain.Editor
         {
             return string.Join(";", result.Pieces.Select(p =>
                 $"{p.Kind}:{p.transform.position:F3}:{p.transform.eulerAngles:F3}"));
+        }
+
+        private static void ValidateAutomaticSeed(TerrainGenerator generator, TerrainPiece[] sources)
+        {
+            generator.Configure(sources, 12, 14, Area, true);
+            TerrainGenerationResult first = generator.Generate();
+            ValidateResult(first, 12);
+            TerrainGenerationResult second = generator.Generate();
+            ValidateResult(second, 12);
+            Require(first.Seed != second.Seed, "자동 seed 갱신");
+            string signature = Signature(second);
+
+            generator.Configure(sources, 12, second.Seed, Area);
+            Require(Signature(generator.Generate()) == signature, "자동 seed를 고정 모드로 재현");
+            Debug.Log($"TERRAIN_AUTOMATIC_SEED_PASS: first={first.Seed}, second={second.Seed}, replay matched");
         }
 
         private static void ValidateTurns(TerrainGenerator generator)
@@ -223,7 +241,7 @@ namespace Nomad.Terrain.Editor
             EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
             var host = new GameObject("B_RandomTerrain");
             var generator = host.AddComponent<TerrainGenerator>();
-            generator.Configure(LoadPieces(), 12, 14, Area);
+            generator.Configure(LoadPieces(), 12, 14, Area, true);
             var settings = new SerializedObject(generator);
             settings.FindProperty("generateOnStart").boolValue = true;
             settings.ApplyModifiedPropertiesWithoutUndo();
@@ -300,12 +318,28 @@ namespace Nomad.Terrain.Editor
                 if (SessionState.GetInt(PlayKey, 0) == 1)
                 {
                     ValidateGeneration(3, SceneManager.GetActiveScene());
+                    automaticStartProbe = new GameObject("AutomaticStartProbe").AddComponent<TerrainGenerator>();
+                    automaticStartProbe.Configure(LoadPieces(), 12, 14, Area, true);
+                    var settings = new SerializedObject(automaticStartProbe);
+                    settings.FindProperty("generateOnStart").boolValue = true;
+                    settings.ApplyModifiedPropertiesWithoutUndo();
                     SessionState.SetInt(PlayKey, Time.frameCount + 2);
                     return;
                 }
 
                 if (Time.frameCount < SessionState.GetInt(PlayKey, 0))
                     return;
+
+                if (automaticStartProbe != null)
+                {
+                    Require(automaticStartProbe.LastResult != null && automaticStartProbe.LastResult.Success,
+                        "Play의 Start에서 자동 seed로 생성");
+                    Debug.Log($"TERRAIN_AUTOMATIC_START_PASS: seed={automaticStartProbe.LastResult.Seed}");
+                    Object.Destroy(automaticStartProbe.gameObject);
+                    automaticStartProbe = null;
+                    SessionState.SetInt(PlayKey, Time.frameCount + 2);
+                    return;
+                }
 
                 Require(!Object.FindObjectsByType<TerrainPiece>(FindObjectsInactive.Include,
                     FindObjectsSortMode.None).Any(), "프레임 경과 후 지연 삭제 완료");
