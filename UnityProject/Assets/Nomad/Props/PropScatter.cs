@@ -16,7 +16,7 @@ namespace Nomad.Props
         [SerializeField] private GameObject propPrefab;
         [SerializeField, Range(0, 4)] private int propsPerPiece = 2;
 
-        private GameObject generatedRoot;
+        [SerializeField, HideInInspector] private GameObject generatedRoot;
         private readonly List<Vector3> positions = new();
         public IReadOnlyList<Vector3> Positions => positions.AsReadOnly();
         public string GenerationId { get; private set; }

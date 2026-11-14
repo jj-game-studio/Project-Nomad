@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using Nomad.Inventory;
+using Nomad.Player;
 using Nomad.Props;
 using Nomad.Terrain;
 using UnityEditor;
@@ -49,16 +50,89 @@ namespace Nomad.Loot.Editor
             Set(preview, "inventory", inventory);
             Set(preview, "chest", chest);
 
-            var camera = new GameObject("Overview").AddComponent<Camera>();
-            camera.transform.position = new Vector3(22, 35, -25);
-            camera.transform.LookAt(Vector3.zero);
+            var player = new GameObject("B Review Player");
+            player.SetActive(false);
+            var controller = player.AddComponent<CharacterController>();
+            controller.height = 1.8f;
+            controller.radius = 0.35f;
+            controller.center = Vector3.up * 0.9f;
+            controller.stepOffset = 0.3f;
+            controller.slopeLimit = 45f;
+            controller.skinWidth = 0.05f;
+            GameObject body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            body.name = "Player Visual";
+            body.transform.SetParent(player.transform, false);
+            body.transform.localPosition = Vector3.up * 0.9f;
+            body.transform.localScale = new Vector3(0.7f, 0.9f, 0.7f);
+            Object.DestroyImmediate(body.GetComponent<Collider>());
+
+            var cameraRoot = new GameObject("Player Camera");
+            cameraRoot.SetActive(false);
+            var camera = cameraRoot.AddComponent<Camera>();
+            camera.tag = "MainCamera";
             camera.farClipPlane = 500;
+            camera.backgroundColor = new Color(0.08f, 0.11f, 0.16f);
+            camera.clearFlags = CameraClearFlags.SolidColor;
+            Set(player.AddComponent<PlayerMovement>(), "viewCamera", camera);
+            Set(cameraRoot.AddComponent<TopDownCamera>(), "target", player.transform);
+            cameraRoot.SetActive(true);
+
+            var field = new GameObject("B Field Controls").AddComponent<FieldPreview>();
+            Set(field, "generator", generator);
+            Set(field, "scatter", scatter);
+            Set(field, "player", player);
+            Set(field, "status", CreateStatus());
+            var settings = new SerializedObject(field);
+            SerializedProperty pieces = settings.FindProperty("pieces");
+            TerrainPiece[] sources = LoadPieces();
+            pieces.arraySize = sources.Length;
+            for (int i = 0; i < sources.Length; i++)
+                pieces.GetArrayElementAtIndex(i).objectReferenceValue = sources[i];
+            settings.ApplyModifiedPropertiesWithoutUndo();
+            field.Regenerate(false);
+            camera.transform.position = player.transform.position + new Vector3(0, 12, -8);
+            camera.transform.LookAt(player.transform.position);
             var sun = new GameObject("Sun").AddComponent<Light>();
             sun.type = LightType.Directional;
             sun.transform.rotation = Quaternion.Euler(50, -30, 0);
             RenderSettings.ambientLight = Color.gray;
-            Selection.activeGameObject = chest.gameObject;
-            Debug.Log("B PREVIEW: unsaved review scene. Play > LootPreview context menu 1/2/3. E input is pending A implementation.");
+            Selection.activeGameObject = player;
+            Debug.Log("B PREVIEW: Play + Game view. R new seed, T replay, WASD move. Player camera enabled. E integration pending A.");
+        }
+
+        private static UnityEngine.UI.Text CreateStatus()
+        {
+            var root = new GameObject("B Preview HUD", typeof(Canvas), typeof(UnityEngine.UI.CanvasScaler));
+            root.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
+            var scaler = root.GetComponent<UnityEngine.UI.CanvasScaler>();
+            scaler.uiScaleMode = UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1280, 720);
+            scaler.matchWidthOrHeight = 0.5f;
+
+            var panel = new GameObject("Status Panel", typeof(RectTransform), typeof(UnityEngine.UI.Image));
+            panel.transform.SetParent(root.transform, false);
+            var rect = (RectTransform)panel.transform;
+            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0, 1);
+            rect.anchoredPosition = new Vector2(16, -16);
+            rect.sizeDelta = new Vector2(670, 155);
+            var background = panel.GetComponent<UnityEngine.UI.Image>();
+            background.color = new Color(0.025f, 0.04f, 0.07f, 0.92f);
+            background.raycastTarget = false;
+
+            var label = new GameObject("Status", typeof(RectTransform), typeof(UnityEngine.UI.Text));
+            label.transform.SetParent(panel.transform, false);
+            var textRect = (RectTransform)label.transform;
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = new Vector2(16, 10);
+            textRect.offsetMax = new Vector2(-16, -10);
+            var text = label.GetComponent<UnityEngine.UI.Text>();
+            // 기존 인벤토리와 동일한 uGUI Text/내장 폰트를 사용합니다.
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            text.fontSize = 21;
+            text.color = Color.white;
+            text.raycastTarget = false;
+            return text;
         }
 
         public static void Run()
