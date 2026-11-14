@@ -1803,6 +1803,7 @@ GameObject:
   - component: {fileID: 1717225991}
   - component: {fileID: 1717225990}
   - component: {fileID: 1717225992}
+  - component: {fileID: 2014884801}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -1881,6 +1882,24 @@ MonoBehaviour:
   - {fileID: 11400000, guid: c5909ea4a83cd9b4d8f3f6480f5a4271, type: 2}
   - {fileID: 11400000, guid: 5abb4f098a436704e9d2514c8e985475, type: 2}
   - {fileID: 11400000, guid: 448cc5b227491124d9fcf8b3af24c8c1, type: 2}
+--- !u!114 &2014884801
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1717225988}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7fd2ee342ab7437fb79fccb07eb376bd, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::Nomad.Interaction.PlayerInteraction
+  targetLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  obstacleLayers:
+    serializedVersion: 2
+    m_Bits: 4294967291
 --- !u!1 &1825237397
 GameObject:
   m_ObjectHideFlags: 0

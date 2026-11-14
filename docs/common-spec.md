@@ -50,6 +50,14 @@
 - 공간 부족·빈 상자에서는 남은 아이템을 보존하고 안내합니다. 처리 중 재진입을 막고 입력 1회에 1회만 처리합니다. 부분 루팅 후에도 상자는 유지합니다.
 - 공용 상호작용 계약은 CanInteract(context), Interact(context)로 하고 context에 플레이어·인벤토리를 전달합니다. A가 계약을 제공하고 B가 상자에 구현합니다.
 
+#### A 공용 계약 연결 (#48)
+
+- **플레이어**: 기존 `PlayerMovement`, `CharacterController`, `PlayerInventory`가 있는 루트에 `Nomad.Interaction.PlayerInteraction`을 붙입니다. 인벤토리 검증 장면에는 연결되어 있습니다.
+- **대상**: 루트의 MonoBehaviour에 `Nomad.Interaction.IInteractable`을 구현합니다. 장면 안에서 고유한 `string InteractionId`와 월드 좌표 `Vector3 InteractionPoint`를 제공합니다. 대상과 연결된 활성 Collider를 루트 또는 자식에 배치하고 상호작용점이 Collider 안에 있도록 설정합니다. Trigger도 탐지합니다. 상자 상태가 바뀌어도 이 Collider는 유지합니다.
+- **호출**: `bool CanInteract(InteractionContext context)`에서 대상 사용 가능 여부를 판단하고 `void Interact(InteractionContext context)`에서 처리합니다. Context의 `Player`는 플레이어 Transform, `Inventory`는 해당 플레이어의 `PlayerInventory`입니다. B는 `Interact`에서 기존 `TryLoot(context.Inventory)`를 호출합니다. ID 동률 비교는 대소문자를 구분하는 사전식 비교(`String.CompareOrdinal`)를 사용합니다.
+- **시야**: 몸통에서 상호작용점까지 장애물 레이어를 검사합니다. Trigger와 플레이어·대상 자신의 Collider는 시야를 막지 않습니다.
+- **실행**: Unity에서 `Nomad > Interaction > Open E Key Preview`를 선택하고 Play 합니다. 시작점에서 E를 한 번 누를 때마다 가까운 테스트 표적 하나가 사라집니다. Tab으로 Scrap 수량이 늘었는지 볼 수 있습니다. 미리보기 표적은 별도의 저장하지 않은 장면에 생성됩니다.
+
 ### 6. 생성 결과 전달
 - 생성 순서: 지형 연결 → 통로를 막지 않는 소품 배치 → 이동 경로 준비·도달성 및 생성 지점 검증 → Ready 결과 → A의 적 배치 / B의 상자 배치.
 - B가 GenerationResult를 제공합니다: generationId, seed, 성공 여부, 실패 사유, 플레이어 시작 위치·회전, 적/상자 생성 지점 목록(고유 ID·위치·회전·허용 반경).
