@@ -7,6 +7,7 @@
 - 저장소: https://github.com/jj-game-studio/Project-Nomad
 - 공유 보드: https://github.com/orgs/jj-game-studio/projects/1
 - 게임 규칙은 `docs/game-design.md`, 전체 흐름은 `docs/development-loop.md`를 확인합니다.
+- 단계별 목표와 담당 범위는 `docs/implementation-plan.md`를 따릅니다. 1차 목표에 몬스터 시스템(탐지·추적·공격·피해·사망·랜덤 배치·전투 통합)을 포함하며, #17·#19의 담당자는 Lemonade8080입니다.
 - 전체 개발 기간은 10일입니다. 불필요한 구조 확장보다 작고 검증 가능한 변경을 우선합니다.
 - 사용자와는 존댓말로 소통합니다.
 
