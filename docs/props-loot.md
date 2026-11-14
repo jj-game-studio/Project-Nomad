@@ -26,10 +26,10 @@
 
 ## 자동 검증
 
-프로젝트 이름 충돌을 피하려면 Unity CLI에 프로젝트의 **절대 경로**를 전달합니다.
+Unity CLI의 `run`은 자동으로 -quit를 붙여 비동기 Play Mode 검증 전에 종료합니다. 아래와 같이 프로젝트 지정 Editor를 -quit 없이 실행합니다. 프로젝트는 **절대 경로**로 전달합니다.
 
 ```powershell
-unity run '<checkout>/UnityProject' --timeout 900 --log-file '<checkout>/UnityProject/Artifacts/loot-props.log' --no-tail -- -executeMethod Nomad.Loot.Editor.LootVerification.Run
+& 'C:/Program Files/Unity/Hub/Editor/6000.6.9f1/Editor/Unity.exe' -batchmode -projectPath '<checkout>/UnityProject' -executeMethod Nomad.Loot.Editor.LootVerification.Run -logFile '<checkout>/UnityProject/Artifacts/loot-props-play.log'
 ```
 
 검증은 별도 빈 장면의 실제 Play Mode에서 실행합니다. 부분 추가 3/10 → 잔여 7, 반복 호출, 재진입, 빈 상자, 목록 순서, 알 수 없는 아이템, 외부 Changed 구독자 예외를 검사합니다. 실제 지형 9종을 30seed×2회 생성하고 소품 배치·통로 보호·수량 상한·재현성·중복 generationId·실패 정리와 프레임 경과 후 삭제를 확인합니다. 성공 표식은 `B_LOOT_PROPS_PLAYMODE_PASS`입니다.

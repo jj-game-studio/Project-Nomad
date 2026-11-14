@@ -134,8 +134,8 @@ namespace Nomad.Props
 
         private void ValidatePrefab()
         {
-            if (propPrefab.transform.lossyScale != Vector3.one)
-                throw new InvalidOperationException("소품 루트 배율은 1이어야 합니다.");
+            if (transform.lossyScale != Vector3.one || propPrefab.transform.lossyScale != Vector3.one)
+                throw new InvalidOperationException("소품과 배치기 루트 배율은 1이어야 합니다.");
 
             Collider[] colliders = propPrefab.GetComponentsInChildren<Collider>(true);
             if (colliders.Length == 0 || propPrefab.GetComponentsInChildren<Rigidbody>(true).Length != 0)
@@ -187,5 +187,3 @@ namespace Nomad.Props
         }
     }
 }
-
-

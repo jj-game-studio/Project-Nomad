@@ -164,8 +164,8 @@ namespace Nomad.Loot.Editor
                 Require(scatter.CandidateChecks <= 12 * PropScatter.CandidatesPerPiece, "유한 후보");
                 foreach (Vector3 point in signature)
                 {
-                    Require(first.Pieces.Any(p => p.Kind != TerrainPieceKind.Stairs && p.WorldOccupancy.Contains(point)
-                        && PropScatter.PreservesPassages(p, point)), "통로/계단/연결점 보호");
+                    Require(first.Pieces.Any(p => p.Kind != TerrainPieceKind.Stairs && new Bounds(p.WorldOccupancy.center, p.WorldOccupancy.size + Vector3.one * 0.02f).Contains(point)
+                        && PropScatter.PreservesPassages(p, point)), "통로/계단/연결점 보호 seed=" + seed + " point=" + point);
                 }
                 for (int i = 0; i < signature.Length; i++)
                 for (int j = i + 1; j < signature.Length; j++)
@@ -177,6 +177,21 @@ namespace Nomad.Loot.Editor
                 Require(signature.SequenceEqual(scatter.Positions), "동일 seed 재현");
             }
             Require(count > 100, "실제 소품 배치 결과");
+            GameObject obstruction = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            obstruction.transform.localScale = new Vector3(400, 40, 400);
+            Physics.SyncTransforms();
+            generator.Generate();
+            Require(scatter.Positions.Count == 0 && scatter.CandidateChecks <= 600, "공간 부족 시 유한 종료");
+            obstruction.SetActive(false);
+            Object.Destroy(obstruction);
+
+            template.transform.localScale = Vector3.one * 2;
+            bool rejected = false;
+            try { generator.Generate(); }
+            catch (InvalidOperationException) { rejected = true; }
+            Require(rejected && scatter.Positions.Count == 0, "예약 크기를 벗어난 프리팹 거부");
+            template.transform.localScale = Vector3.one;
+
             generator.Configure(LoadPieces(), 12, 1, new Bounds(Vector3.zero, Vector3.one));
             Require(!generator.Generate().Success && scatter.Positions.Count == 0 && scatter.GenerationId == null, "실패 결과 소품 정리");
             Object.Destroy(host);
@@ -241,5 +256,3 @@ namespace Nomad.Loot.Editor
         }
     }
 }
-
-
