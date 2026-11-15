@@ -79,10 +79,10 @@ namespace Nomad.Monsters.Editor
             agent.stoppingDistance = 1.2f;
             agent.angularSpeed = 360f;
             Health monsterHealth = monster.AddComponent<Health>();
+            monster.AddComponent<SegmentedHealthBar>();
             if (elite)
             {
                 SetValue(monsterHealth, "maxHealth", 250);
-                monster.AddComponent<SegmentedHealthBar>();
                 Transform body = monster.transform.Find("Body");
                 body.localScale = new Vector3(0.875f, 0.99f, 0.875f);
                 body.localPosition = Vector3.up * 0.99f;
