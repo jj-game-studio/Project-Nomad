@@ -8,6 +8,7 @@ namespace Nomad.Monsters
     {
         [SerializeField, Range(1, 30)] private int segments = 10;
         [SerializeField] private Vector3 worldOffset = new Vector3(0f, 2.4f, 0f);
+        public bool Compact { get; set; }
         private Health health;
         private GUIStyle title;
 
@@ -46,11 +47,12 @@ namespace Nomad.Monsters
                 };
             }
 
-            const float width = 150f;
+            float width = Compact ? 78f : 150f;
             float x = screen.x - width * 0.5f;
-            float y = Screen.height - screen.y - 32f;
-            GUI.Box(new Rect(x - 4f, y, width + 8f, 32f), GUIContent.none);
-            GUI.Label(new Rect(x, y, width, 19f), $"{health.CurrentHealth} / {health.MaxHealth}", title);
+            float y = Screen.height - screen.y - (Compact ? 16f : 32f);
+            GUI.Box(new Rect(x - 4f, y, width + 8f, Compact ? 16f : 32f), GUIContent.none);
+            if (!Compact)
+                GUI.Label(new Rect(x, y, width, 19f), $"{health.CurrentHealth} / {health.MaxHealth}", title);
 
             const float gap = 2f;
             float cellWidth = (width - gap * (segments - 1)) / segments;
@@ -59,7 +61,7 @@ namespace Nomad.Monsters
                 ratio > 0.25f ? new Color(1f, 0.7f, 0.2f) : new Color(1f, 0.25f, 0.2f);
             for (int i = 0; i < segments; i++)
             {
-                Rect cell = new Rect(x + i * (cellWidth + gap), y + 20f, cellWidth, 9f);
+                Rect cell = new Rect(x + i * (cellWidth + gap), y + (Compact ? 3f : 20f), cellWidth, 9f);
                 Paint(cell, new Color(0.12f, 0.12f, 0.15f));
                 float fill = GetSegmentFill(i);
                 if (fill > 0f)

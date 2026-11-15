@@ -7,6 +7,7 @@ namespace Nomad.Monsters
     public enum MeleePhase { Idle, Windup, Recovery, Dead }
 
     [DisallowMultipleComponent]
+    [DefaultExecutionOrder(100)]
     [RequireComponent(typeof(Health), typeof(MonsterTracker))]
     public sealed class MonsterMeleeAttack : MonoBehaviour
     {
@@ -41,6 +42,24 @@ namespace Nomad.Monsters
         public float CurrentAttackRange => IsHeavyAttack ? heavyRange : attackRange;
         public float CurrentAttackAngle => IsHeavyAttack ? heavyAngle : 360f;
         public float WindupProgress { get; private set; }
+        public void Configure(Health victim, bool heavy, int lightDamage, int strongDamage,
+            float range, float strongRange, float speed)
+        {
+            if (target != null)
+                target.Died -= OnTargetDied;
+
+            target = victim;
+            if (isActiveAndEnabled && target != null)
+                target.Died += OnTargetDied;
+
+            enableHeavyAttack = heavy;
+            damage = Mathf.Max(1, lightDamage);
+            heavyDamage = Mathf.Max(1, strongDamage);
+            attackRange = Mathf.Max(0.1f, range);
+            heavyRange = Mathf.Max(attackRange, strongRange);
+            AttackSpeed = speed;
+        }
+
         public float AttackSpeed
         {
             get => attackSpeed;

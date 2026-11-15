@@ -1,7 +1,5 @@
 using Nomad.Combat;
 using UnityEngine;
-using UnityEngine.InputSystem;
-using UnityEngine.SceneManagement;
 
 namespace Nomad.Monsters.Demo
 {
@@ -14,15 +12,23 @@ namespace Nomad.Monsters.Demo
         [SerializeField] private Renderer monsterBody;
         [SerializeField] private LineRenderer heavyWarning;
         [SerializeField] private MeshFilter warningFill;
-        [SerializeField] private string opponentLabel = "Basic monster";
 
         private MaterialPropertyBlock tint;
-        private GUIStyle label;
-        private bool restarting;
         private Color idleColor;
         private Mesh fillMesh;
         private Renderer fillRenderer;
         private float fillAngle = -1f;
+
+        public void ConfigureDisplay(Health victim, Health owner, MonsterMeleeAttack melee,
+            Renderer body, LineRenderer outline, MeshFilter fill)
+        {
+            player = victim;
+            monster = owner;
+            attack = melee;
+            monsterBody = body;
+            heavyWarning = outline;
+            warningFill = fill;
+        }
 
         private void Awake()
         {
@@ -45,30 +51,6 @@ namespace Nomad.Monsters.Demo
             monsterBody.SetPropertyBlock(tint);
             UpdateWarning();
 
-            if (Keyboard.current?.rKey.wasPressedThisFrame == true)
-                Restart();
-        }
-
-        private void OnGUI()
-        {
-            if (label == null)
-                label = new GUIStyle(GUI.skin.label) { fontSize = 18 };
-
-            GUI.Box(new Rect(12f, 12f, 505f, 185f), GUIContent.none);
-            GUILayout.BeginArea(new Rect(25f, 22f, 475f, 165f));
-            GUILayout.Label("MELEE COMBAT TEST - " + opponentLabel, label);
-            GUILayout.Label($"Player HP {player.CurrentHealth}/{player.MaxHealth}    " +
-                $"Monster HP {monster.CurrentHealth}/{monster.MaxHealth}   Speed {attack.AttackSpeed:0.#}x", label);
-            GUILayout.Label("WASD move | LMB shoot | Shift roll | R restart", label);
-            string state = monster.IsDead ? "MONSTER DEFEATED" : player.IsDead ?
-                "PLAYER DEFEATED" : attack.Phase.ToString().ToUpperInvariant();
-            if (attack.Phase == MeleePhase.Windup)
-                state += $" {Mathf.RoundToInt(attack.WindupProgress * 100f)}%";
-            string hint = attack.IsHeavyAttack ? "   HEAVY: dodge the red sector" : "   Orange = preparing strike";
-            GUILayout.Label("Attack: " + state + hint, label);
-            if (GUILayout.Button("Restart combat (R)", GUILayout.Height(30f)))
-                Restart();
-            GUILayout.EndArea();
         }
 
         private void UpdateWarning()
@@ -136,21 +118,11 @@ namespace Nomad.Monsters.Demo
         {
             if (fillMesh != null)
                 Destroy(fillMesh);
+            if (heavyWarning != null)
+                Destroy(heavyWarning.gameObject);
+            if (warningFill != null)
+                Destroy(warningFill.gameObject);
         }
 
-        private void Restart()
-        {
-            if (restarting)
-                return;
-
-            restarting = true;
-            // 전용 씬의 개체/발사체/체력을 함께 재생성하며 공통 Health 계약은 바꾸지 않습니다.
-#if UNITY_EDITOR
-            UnityEditor.SceneManagement.EditorSceneManager.LoadSceneAsyncInPlayMode(gameObject.scene.path,
-                new LoadSceneParameters(LoadSceneMode.Single));
-#else
-            SceneManager.LoadSceneAsync(gameObject.scene.buildIndex);
-#endif
-        }
     }
 }

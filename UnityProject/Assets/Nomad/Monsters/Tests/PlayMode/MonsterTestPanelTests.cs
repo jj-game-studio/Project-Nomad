@@ -1,0 +1,234 @@
+#if UNITY_EDITOR
+using System;
+using System.Collections;
+using System.Reflection;
+using Nomad.Combat;
+using NUnit.Framework;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.AI;
+using UnityEngine.SceneManagement;
+using UnityEngine.TestTools;
+
+namespace Nomad.Monsters.Tests
+{
+    public sealed class MonsterTestPanelTests
+    {
+        private Scene previous;
+        private Scene scene;
+        private MonoBehaviour panel;
+        private Health player;
+
+        [UnitySetUp]
+        public IEnumerator SetUp()
+        {
+            previous = SceneManager.GetActiveScene();
+            const string path = "Assets/Nomad/Monsters/MonsterElite.unity";
+            yield return EditorSceneManager.LoadSceneAsyncInPlayMode(path,
+                new LoadSceneParameters(LoadSceneMode.Additive));
+            scene = SceneManager.GetSceneByPath(path);
+            SceneManager.SetActiveScene(scene);
+            foreach (GameObject root in scene.GetRootGameObjects())
+            {
+                if (root.name == "Test Controls")
+                    panel = (MonoBehaviour)root.GetComponent(Type.GetType("Nomad.Monsters.Demo.MonsterTestPanel, Assembly-CSharp"));
+                if (root.name == "Player")
+                    player = root.GetComponent<Health>();
+            }
+            Assert.That(panel, Is.Not.Null);
+            yield return null;
+            Call("ClearMonsters");
+            yield return null;
+            foreach (MonoBehaviour component in player.GetComponents<MonoBehaviour>())
+            {
+                if (component.GetType().FullName == "Nomad.Player.PlayerMovement")
+                    component.enabled = false;
+            }
+        }
+
+        [UnityTearDown]
+        public IEnumerator TearDown()
+        {
+            Time.timeScale = 1f;
+            if (previous.IsValid() && previous.isLoaded)
+                SceneManager.SetActiveScene(previous);
+            if (scene.IsValid() && scene.isLoaded)
+                yield return SceneManager.UnloadSceneAsync(scene);
+        }
+
+        [UnityTest]
+        public IEnumerator SpawnUsesPerTypeHealthSpeedAndTrackingSettings()
+        {
+            Call("SetKind", 0);
+            object config = Settings(0);
+            Set(config, "health", 375);
+            Set(config, "moveSpeed", 2f);
+            Set(config, "attackSpeed", 2.5f);
+            Set(config, "sightRange", 6f);
+            Set(config, "homeRange", 7f);
+            Health normal = (Health)Call("SpawnAt", new Vector3(3f, 0f, -2f));
+            Assert.That(normal, Is.Not.Null);
+            Assert.That(normal.CurrentHealth, Is.EqualTo(375));
+            Assert.That(normal.GetComponent<NavMeshAgent>().speed, Is.EqualTo(2f));
+            Assert.That(normal.GetComponent<MonsterMeleeAttack>().AttackSpeed, Is.EqualTo(2.5f));
+            Assert.That(normal.GetComponent<MonsterTracker>().SightRange, Is.EqualTo(6f));
+            Assert.That(normal.GetComponent<MonsterTracker>().HomeRange, Is.EqualTo(7f));
+            Call("SetKind", 1);
+            Health elite = (Health)Call("SpawnAt", new Vector3(5f, 0f, -2f));
+            Assert.That(elite.CurrentHealth, Is.EqualTo(250));
+            Assert.That(elite.GetComponent<MonsterTracker>().HomePosition.x, Is.EqualTo(5f).Within(0.1f));
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator BossAndInvalidOrOccupiedSpawnAreRejected()
+        {
+            Call("SetKind", 2);
+            Assert.That(Call("SpawnAt", new Vector3(3f, 0f, -2f)), Is.Null);
+            Call("SetKind", 0);
+            Assert.That(Call("SpawnAt", new Vector3(100f, 0f, 100f)), Is.Null);
+            Assert.That(Call("SpawnAt", player.transform.position), Is.Null);
+            Assert.That(Call("SpawnAt", new Vector3(-3f, 0f, 0f)), Is.Null);
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator PanelAndPlacementBlockTheRealPlayerShootingApi()
+        {
+            Component combat = player.GetComponent(Type.GetType("Nomad.Player.PlayerCombat, Assembly-CSharp"));
+            MethodInfo shoot = combat.GetType().GetMethod("TryShoot");
+            Vector2 panelPoint = new Vector2(Screen.width - 50f, Screen.height - 50f);
+            Assert.That(shoot.Invoke(combat, new object[] { panelPoint }), Is.False);
+            Set(panel, "placing", true);
+            Vector2 worldPoint = Camera.main.WorldToScreenPoint(new Vector3(3f, 0f, -2f));
+            Assert.That(shoot.Invoke(combat, new object[] { worldPoint }), Is.False);
+            Set(panel, "placing", false);
+            Set(panel, "placementClickFrame", Time.frameCount);
+            Assert.That(shoot.Invoke(combat, new object[] { worldPoint }), Is.False,
+                "소환을 끝낸 바로 그 클릭도 사격으로 전달하지 않아야 합니다.");
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator HomeLimitReturnsToSpawnWithoutTrackingDuringReturn()
+        {
+            Call("SetKind", 0);
+            object config = Settings(0);
+            Set(config, "homeRange", 2f);
+            Set(config, "sightRange", 20f);
+            Set(config, "sightAngle", 360f);
+            Set(config, "abandonRange", 30f);
+            Set(config, "attackRange", 0.5f);
+            Set(config, "moveSpeed", 6f);
+            player.transform.position = new Vector3(3f, 0.05f, 5f);
+            Health health = (Health)Call("SpawnAt", new Vector3(3f, 0f, -2f));
+            MonsterTracker tracker = health.GetComponent<MonsterTracker>();
+            float deadline = Time.realtimeSinceStartup + 5f;
+            while (!tracker.IsReturning && Time.realtimeSinceStartup < deadline)
+                yield return null;
+            Assert.That(tracker.IsReturning, Is.True, "활동 반경을 넘으면 복귀");
+            Assert.That(tracker.IsTracking, Is.False);
+            while (tracker.IsReturning && Time.realtimeSinceStartup < deadline)
+            {
+                Assert.That(tracker.IsTracking, Is.False, "복귀 도중 재감지 금지");
+                yield return null;
+            }
+            Assert.That(Vector3.Distance(health.transform.position, tracker.HomePosition), Is.LessThan(0.7f));
+        }
+
+        [UnityTest]
+        public IEnumerator RestoreRevivesPlayerAndClearRemovesTrackedActors()
+        {
+            Call("SetKind", 0);
+            Call("SpawnAt", new Vector3(3f, 0f, -2f));
+            player.TryApplyDamage(1000);
+            Assert.That(player.IsDead, Is.True);
+            Call("RestorePlayer");
+            Assert.That(player.CurrentHealth, Is.EqualTo(player.MaxHealth));
+            Assert.That(player.GetComponent<SegmentedHealthBar>().Compact, Is.True);
+            Call("ClearMonsters");
+            yield return null;
+            Assert.That(panel.GetType().GetProperty("MonsterCount").GetValue(panel), Is.EqualTo(0));
+            Assert.That(UnityEngine.Object.FindObjectsByType<MonsterTracker>(FindObjectsSortMode.None), Is.Empty);
+        }
+
+        [UnityTest]
+        public IEnumerator InvincibilitySurvivesMovementAndBlocksActualMeleeHits()
+        {
+            foreach (MonoBehaviour component in player.GetComponents<MonoBehaviour>())
+                if (component.GetType().FullName == "Nomad.Player.PlayerMovement") component.enabled = true;
+            Call("SetInvincible", true);
+            Call("SetKind", 0);
+            object config = Settings(0);
+            Set(config, "attackSpeed", 4f);
+            Health monster = (Health)Call("SpawnAt", player.transform.position + Vector3.back * 1.4f);
+            Assert.That(monster, Is.Not.Null);
+            float end = Time.time + 1.5f;
+            bool attacked = false;
+            while (Time.time < end)
+            {
+                attacked |= monster.GetComponent<MonsterMeleeAttack>().Phase == MeleePhase.Recovery;
+                yield return null;
+            }
+            Assert.That(attacked, Is.True);
+            Assert.That(player.CurrentHealth, Is.EqualTo(player.MaxHealth));
+            Call("SetInvincible", false);
+            Assert.That(player.TryApplyDamage(1), Is.True);
+        }
+
+        [UnityTest]
+        public IEnumerator ApplyResetsOnlySelectedAndKeepsItIfHomeIsOccupied()
+        {
+            Call("SetKind", 0);
+            Health original = (Health)Call("SpawnAt", new Vector3(3f, 0f, -2f));
+            Set(Settings(0), "health", 500);
+            Call("ApplySelected");
+            yield return null;
+            Assert.That(original == null, Is.True);
+            MonsterTracker[] active = UnityEngine.Object.FindObjectsByType<MonsterTracker>(FindObjectsSortMode.None);
+            Assert.That(active.Length, Is.EqualTo(1));
+            Health replacement = active[0].GetComponent<Health>();
+            Assert.That(replacement.CurrentHealth, Is.EqualTo(500));
+            player.transform.position = active[0].HomePosition;
+            Call("ApplySelected");
+            yield return null;
+            Assert.That(replacement != null && replacement.gameObject.activeSelf, Is.True,
+                "복귀 위치가 막히면 기존 몬스터를 잃지 않아야 합니다.");
+        }
+
+        [UnityTest]
+        public IEnumerator RangeTogglesAndPauseControlActualSimulation()
+        {
+            Call("SetKind", 0);
+            Health health = (Health)Call("SpawnAt", new Vector3(3f, 0f, -2f));
+            Set(panel, "detection", false);
+            Set(panel, "travel", true);
+            yield return null;
+            yield return null;
+            Component ranges = health.GetComponent(Type.GetType("Nomad.Monsters.Demo.MonsterTestRanges, Assembly-CSharp"));
+            Assert.That(ranges.GetType().GetProperty("ShowDetection").GetValue(ranges), Is.False);
+            Assert.That(ranges.GetType().GetProperty("ShowTravel").GetValue(ranges), Is.True);
+            LineRenderer[] lines = health.GetComponentsInChildren<LineRenderer>();
+            Assert.That(Array.Find(lines, line => line.name == "Test range 0").enabled, Is.False);
+            Assert.That(Array.Find(lines, line => line.name == "Test range 3").enabled, Is.True);
+            Call("SetPaused", true);
+            Vector3 position = health.transform.position;
+            yield return new WaitForSecondsRealtime(0.2f);
+            Assert.That(Vector3.Distance(position, health.transform.position), Is.LessThan(0.01f));
+            Call("SetPaused", false);
+            Assert.That(Time.timeScale, Is.EqualTo(1f));
+        }
+
+        private object Call(string name, params object[] arguments) =>
+            panel.GetType().GetMethod(name).Invoke(panel, arguments);
+
+        private object Settings(int index) =>
+            ((Array)panel.GetType().GetField("settings", BindingFlags.Instance | BindingFlags.NonPublic)
+                .GetValue(panel)).GetValue(index);
+
+        private static void Set(object owner, string name, object value) =>
+            owner.GetType().GetField(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+                .SetValue(owner, value);
+    }
+}
+#endif

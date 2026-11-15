@@ -94,13 +94,13 @@ namespace Nomad.Monsters.Editor
                 SetValue(melee, "enableHeavyAttack", true);
 
             var demo = new GameObject("Combat Guide").AddComponent<MonsterCombatDemo>();
+            demo.transform.SetParent(monster.transform, false);
             Reference(demo, "player", playerHealth);
             Reference(demo, "monster", monsterHealth);
             Reference(demo, "attack", melee);
             Reference(demo, "monsterBody", monster.GetComponentInChildren<Renderer>());
-            if (elite)
+            // 잡몹도 소환 테스트와 동일한 공격 준비 표시를 사용합니다.
             {
-                SetValue(demo, "opponentLabel", "ELITE: 2 light -> 1 heavy");
                 var warning = new GameObject("Heavy Warning").AddComponent<LineRenderer>();
                 warning.useWorldSpace = true;
                 warning.positionCount = 19;
@@ -125,6 +125,14 @@ namespace Nomad.Monsters.Editor
                 fillRenderer.enabled = false;
                 Reference(demo, "warningFill", fill);
             }
+            var panel = new GameObject("Test Controls").AddComponent<MonsterTestPanel>();
+            Reference(panel, "player", playerHealth);
+            Reference(panel, "initialMonster", monsterHealth);
+            SetValue(panel, "initialElite", elite);
+            Reference(panel, "normalMaterial", Material("Monster", new Color(0.35f, 0.7f, 0.2f)));
+            Reference(panel, "eliteMaterial", Material("Elite", new Color(0.6f, 0.25f, 0.8f)));
+            Reference(panel, "warningMaterial", AssetDatabase.LoadAssetAtPath<Material>($"{Folder}/HeavyWarning.mat"));
+            Reference(panel, "fillMaterial", AssetDatabase.LoadAssetAtPath<Material>($"{Folder}/WarningFill.mat"));
             Light light = new GameObject("Sun").AddComponent<Light>();
             light.type = LightType.Directional;
             light.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
