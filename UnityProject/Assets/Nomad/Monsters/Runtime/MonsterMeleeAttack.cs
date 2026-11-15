@@ -15,6 +15,7 @@ namespace Nomad.Monsters
         [SerializeField, Min(0.1f)] private float attackRange = 1.8f;
         [SerializeField, Min(0.05f)] private float windupSeconds = 0.5f;
         [SerializeField, Min(0.05f)] private float recoverySeconds = 1f;
+        [SerializeField, Min(0.1f)] private float attackSpeed = 1f;
 
         [SerializeField] private bool enableHeavyAttack;
         [SerializeField, Min(1)] private int heavyDamage = 40;
@@ -26,7 +27,7 @@ namespace Nomad.Monsters
         private Health health;
         private MonsterTracker tracker;
         private NavMeshAgent agent;
-        private float phaseEnd;
+        private float phaseElapsed;
         private bool ownsPause;
         private bool trackerWasEnabled;
         private int attacksStarted;
@@ -37,6 +38,14 @@ namespace Nomad.Monsters
         public float HeavyAttackRange => heavyRange;
         public float HeavyAttackAngle => heavyAngle;
         public Vector3 AttackDirection => strikeForward;
+        public float CurrentAttackRange => IsHeavyAttack ? heavyRange : attackRange;
+        public float CurrentAttackAngle => IsHeavyAttack ? heavyAngle : 360f;
+        public float WindupProgress { get; private set; }
+        public float AttackSpeed
+        {
+            get => attackSpeed;
+            set => attackSpeed = Mathf.Max(0.1f, value);
+        }
 
         private void Awake()
         {
@@ -50,6 +59,7 @@ namespace Nomad.Monsters
             Phase = MeleePhase.Idle;
             IsHeavyAttack = false;
             attacksStarted = 0;
+            WindupProgress = 0f;
             health.Died += OnDied;
             if (target != null)
                 target.Died += OnTargetDied;
@@ -62,6 +72,8 @@ namespace Nomad.Monsters
                 target.Died -= OnTargetDied;
 
             Phase = health.IsDead ? MeleePhase.Dead : MeleePhase.Idle;
+            WindupProgress = 0f;
+            IsHeavyAttack = false;
             ResumeMovement();
         }
 
@@ -76,12 +88,25 @@ namespace Nomad.Monsters
             if (target == null || !target.isActiveAndEnabled || target.IsDead)
             {
                 Phase = MeleePhase.Idle;
+                WindupProgress = 0f;
                 PauseMovement();
                 return;
             }
 
-            if (Phase == MeleePhase.Windup && Time.time >= phaseEnd)
+            if (Time.deltaTime <= 0f)
+                return;
+
+            if (Phase == MeleePhase.Windup)
             {
+                // 판정과 표시가 같은 진행도를 사용합니다. 100% 프레임을 보여준 뒤 타격합니다.
+                if (WindupProgress < 1f)
+                {
+                    phaseElapsed += Time.deltaTime * Mathf.Max(0.1f, attackSpeed);
+                    float duration = IsHeavyAttack ? heavyWindupSeconds : windupSeconds;
+                    WindupProgress = Mathf.Clamp01(phaseElapsed / duration);
+                    return;
+                }
+
                 // 준비가 끝난 시점에 거리와 벽을 다시 확인하며 피해는 한 번만 전달합니다.
                 if (CanStrike(IsHeavyAttack))
                     target.TryApplyDamage(IsHeavyAttack ? heavyDamage : damage);
@@ -90,10 +115,15 @@ namespace Nomad.Monsters
                     return;
 
                 Phase = MeleePhase.Recovery;
-                phaseEnd = Time.time + (IsHeavyAttack ? heavyRecoverySeconds : recoverySeconds);
+                WindupProgress = 0f;
+                phaseElapsed = 0f;
             }
-            else if (Phase == MeleePhase.Recovery && Time.time >= phaseEnd)
+            else if (Phase == MeleePhase.Recovery)
             {
+                phaseElapsed += Time.deltaTime * Mathf.Max(0.1f, attackSpeed);
+                if (phaseElapsed < (IsHeavyAttack ? heavyRecoverySeconds : recoverySeconds))
+                    return;
+
                 Phase = MeleePhase.Idle;
                 IsHeavyAttack = false;
                 ResumeMovement();
@@ -109,7 +139,8 @@ namespace Nomad.Monsters
                     strikeForward = transform.forward;
                     PauseMovement();
                     Phase = MeleePhase.Windup;
-                    phaseEnd = Time.time + (IsHeavyAttack ? heavyWindupSeconds : windupSeconds);
+                    WindupProgress = 0f;
+                    phaseElapsed = 0f;
                 }
             }
         }
@@ -137,12 +168,16 @@ namespace Nomad.Monsters
         private void OnDied(Health value)
         {
             Phase = MeleePhase.Dead;
+            WindupProgress = 0f;
+            IsHeavyAttack = false;
             PauseMovement();
         }
 
         private void OnTargetDied(Health value)
         {
             Phase = MeleePhase.Idle;
+            WindupProgress = 0f;
+            IsHeavyAttack = false;
             PauseMovement();
         }
 

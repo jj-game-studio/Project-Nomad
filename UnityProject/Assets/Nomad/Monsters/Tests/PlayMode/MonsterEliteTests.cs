@@ -22,6 +22,9 @@ namespace Nomad.Monsters.Tests
         private MonsterTracker tracker;
         private NavMeshAgent agent;
         private LineRenderer warning;
+        private MeshFilter fill;
+        private Renderer fillRenderer;
+        private SegmentedHealthBar healthBar;
 
         [UnitySetUp]
         public IEnumerator SetUp()
@@ -39,6 +42,9 @@ namespace Nomad.Monsters.Tests
             tracker = elite.GetComponent<MonsterTracker>();
             agent = elite.GetComponent<NavMeshAgent>();
             warning = Array.Find(roots, root => root.name == "Heavy Warning").GetComponent<LineRenderer>();
+            fill = Array.Find(roots, root => root.name == "Attack Fill").GetComponent<MeshFilter>();
+            fillRenderer = fill.GetComponent<Renderer>();
+            healthBar = elite.GetComponent<SegmentedHealthBar>();
             foreach (MonoBehaviour component in player.GetComponents<MonoBehaviour>())
             {
                 if (component.GetType().FullName == "Nomad.Player.PlayerMovement")
@@ -144,6 +150,93 @@ namespace Nomad.Monsters.Tests
             Assert.That(attack.Phase, Is.EqualTo(MeleePhase.Dead));
             Assert.That(!tracker.enabled && agent.isStopped && !agent.hasPath, Is.True);
             Assert.That(warning.enabled, Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator HealthBarShowsWholeAndPartialSegments()
+        {
+            Assert.That(healthBar.SegmentCount, Is.EqualTo(10));
+            Assert.That(healthBar.GetSegmentFill(9), Is.EqualTo(1f));
+            elite.TryApplyDamage(13);
+            Assert.That(healthBar.GetSegmentFill(9), Is.EqualTo(0.48f).Within(0.01f));
+            elite.TryApplyDamage(12);
+            Assert.That(healthBar.GetSegmentFill(8), Is.EqualTo(1f));
+            Assert.That(healthBar.GetSegmentFill(9), Is.EqualTo(0f));
+            elite.TryApplyDamage(225);
+            yield return null;
+            for (int i = 0; i < 10; i++)
+                Assert.That(healthBar.GetSegmentFill(i), Is.EqualTo(0f));
+        }
+
+        [UnityTest]
+        public IEnumerator FillReachesFullBeforeDamageAndMatchesAttackProgress()
+        {
+            yield return Until(() => attack.Phase == MeleePhase.Windup, 4f, "기본 공격 준비");
+            player.IsCombatImmune = false;
+            bool fullSeen = false;
+            float previous = 0f;
+            float deadline = Time.realtimeSinceStartup + 2f;
+            while (attack.Phase == MeleePhase.Windup && Time.realtimeSinceStartup < deadline)
+            {
+                Assert.That(player.CurrentHealth, Is.EqualTo(100), "채움 완료 전 피해 없음");
+                Assert.That(attack.WindupProgress, Is.GreaterThanOrEqualTo(previous));
+                previous = attack.WindupProgress;
+                Assert.That(fillRenderer.enabled, Is.True);
+                Assert.That(fill.transform.localScale.x,
+                    Is.EqualTo(attack.CurrentAttackRange * attack.WindupProgress).Within(0.01f));
+                fullSeen |= attack.WindupProgress >= 1f;
+                yield return null;
+            }
+            Assert.That(fullSeen, Is.True, "100% 채움 프레임 표시");
+            Assert.That(player.CurrentHealth, Is.EqualTo(80), "채움 완료 후 한 번 타격");
+            Assert.That(fillRenderer.enabled, Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator DoubleAttackSpeedShortensWindup()
+        {
+            attack.AttackSpeed = 2f;
+            yield return Until(() => attack.Phase == MeleePhase.Windup, 4f, "2배 공속 준비");
+            yield return Until(() => attack.Phase == MeleePhase.Recovery, 0.45f, "2배 공속 타격");
+        }
+
+        [UnityTest]
+        public IEnumerator ChangingSpeedDuringWindupAcceleratesSameFill()
+        {
+            attack.AttackSpeed = 0.5f;
+            yield return Until(() => attack.Phase == MeleePhase.Windup, 4f, "느린 준비");
+            yield return new WaitForSecondsRealtime(0.25f);
+            Assert.That(attack.WindupProgress, Is.InRange(0.1f, 0.5f));
+            float before = attack.WindupProgress;
+            attack.AttackSpeed = 2f;
+            yield return Until(() => attack.WindupProgress >= 1f, 0.4f, "준비 중 공속 증가");
+            Assert.That(attack.WindupProgress, Is.GreaterThan(before));
+        }
+
+        [UnityTest]
+        public IEnumerator PartialFillClearsOnDeath()
+        {
+            yield return EnterHeavyWindup();
+            yield return Until(() => attack.WindupProgress > 0.15f, 1f, "강공격 부분 채움");
+            Assert.That(fillRenderer.enabled, Is.True);
+            elite.TryApplyDamage(250);
+            yield return null;
+            Assert.That(attack.WindupProgress, Is.EqualTo(0f));
+            Assert.That(fillRenderer.enabled || warning.enabled, Is.False);
+            Assert.That(fill.transform.localScale, Is.EqualTo(Vector3.zero));
+        }
+
+        [UnityTest]
+        public IEnumerator BasicUsesCircleAndHeavyUsesSectorFill()
+        {
+            yield return Until(() => attack.Phase == MeleePhase.Windup && attack.WindupProgress > 0.1f,
+                4f, "원형 기본 경고");
+            Assert.That(warning.positionCount, Is.EqualTo(17));
+            Assert.That(fill.sharedMesh.bounds.min.z, Is.LessThan(-0.9f));
+            yield return EnterHeavyWindup();
+            Assert.That(warning.positionCount, Is.EqualTo(19));
+            Assert.That(fill.sharedMesh.bounds.min.z, Is.GreaterThanOrEqualTo(0f));
+            Assert.That(fill.sharedMesh.vertexCount, Is.EqualTo(34));
         }
 
         private IEnumerator EnterHeavyWindup()

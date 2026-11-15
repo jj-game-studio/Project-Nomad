@@ -82,6 +82,7 @@ namespace Nomad.Monsters.Editor
             if (elite)
             {
                 SetValue(monsterHealth, "maxHealth", 250);
+                monster.AddComponent<SegmentedHealthBar>();
                 Transform body = monster.transform.Find("Body");
                 body.localScale = new Vector3(0.875f, 0.99f, 0.875f);
                 body.localPosition = Vector3.up * 0.99f;
@@ -108,6 +109,21 @@ namespace Nomad.Monsters.Editor
                     "Universal Render Pipeline/Unlit");
                 warning.enabled = false;
                 Reference(demo, "heavyWarning", warning);
+                var fill = new GameObject("Attack Fill").AddComponent<MeshFilter>();
+                var fillRenderer = fill.gameObject.AddComponent<MeshRenderer>();
+                Material fillMaterial = Material("WarningFill", new Color(1f, 0.15f, 0.05f, 0.35f),
+                    "Universal Render Pipeline/Unlit");
+                fillMaterial.SetFloat("_Surface", 1f);
+                fillMaterial.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                fillMaterial.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                fillMaterial.SetFloat("_ZWrite", 0f);
+                fillMaterial.SetOverrideTag("RenderType", "Transparent");
+                fillMaterial.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                fillMaterial.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+                fillRenderer.sharedMaterial = fillMaterial;
+                fillRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                fillRenderer.enabled = false;
+                Reference(demo, "warningFill", fill);
             }
             Light light = new GameObject("Sun").AddComponent<Light>();
             light.type = LightType.Directional;
