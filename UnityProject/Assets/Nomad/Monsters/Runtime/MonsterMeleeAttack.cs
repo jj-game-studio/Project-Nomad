@@ -16,14 +16,27 @@ namespace Nomad.Monsters
         [SerializeField, Min(0.05f)] private float windupSeconds = 0.5f;
         [SerializeField, Min(0.05f)] private float recoverySeconds = 1f;
 
+        [SerializeField] private bool enableHeavyAttack;
+        [SerializeField, Min(1)] private int heavyDamage = 40;
+        [SerializeField, Min(0.1f)] private float heavyRange = 2.6f;
+        [SerializeField, Range(1f, 360f)] private float heavyAngle = 90f;
+        [SerializeField, Min(0.05f)] private float heavyWindupSeconds = 1.2f;
+        [SerializeField, Min(0.05f)] private float heavyRecoverySeconds = 1.8f;
+
         private Health health;
         private MonsterTracker tracker;
         private NavMeshAgent agent;
         private float phaseEnd;
         private bool ownsPause;
         private bool trackerWasEnabled;
+        private int attacksStarted;
+        private Vector3 strikeForward;
 
         public MeleePhase Phase { get; private set; }
+        public bool IsHeavyAttack { get; private set; }
+        public float HeavyAttackRange => heavyRange;
+        public float HeavyAttackAngle => heavyAngle;
+        public Vector3 AttackDirection => strikeForward;
 
         private void Awake()
         {
@@ -35,6 +48,8 @@ namespace Nomad.Monsters
         private void OnEnable()
         {
             Phase = MeleePhase.Idle;
+            IsHeavyAttack = false;
+            attacksStarted = 0;
             health.Died += OnDied;
             if (target != null)
                 target.Died += OnTargetDied;
@@ -68,36 +83,48 @@ namespace Nomad.Monsters
             if (Phase == MeleePhase.Windup && Time.time >= phaseEnd)
             {
                 // 준비가 끝난 시점에 거리와 벽을 다시 확인하며 피해는 한 번만 전달합니다.
-                if (CanStrike())
-                    target.TryApplyDamage(damage);
+                if (CanStrike(IsHeavyAttack))
+                    target.TryApplyDamage(IsHeavyAttack ? heavyDamage : damage);
 
                 if (health.IsDead || target.IsDead)
                     return;
 
                 Phase = MeleePhase.Recovery;
-                phaseEnd = Time.time + recoverySeconds;
+                phaseEnd = Time.time + (IsHeavyAttack ? heavyRecoverySeconds : recoverySeconds);
             }
             else if (Phase == MeleePhase.Recovery && Time.time >= phaseEnd)
             {
                 Phase = MeleePhase.Idle;
+                IsHeavyAttack = false;
                 ResumeMovement();
             }
             else if (Phase == MeleePhase.Idle)
             {
                 ResumeMovement();
-                if (tracker.IsTracking && tracker.HasLineOfSight && CanStrike())
+                bool nextIsHeavy = enableHeavyAttack && attacksStarted % 3 == 2;
+                if (tracker.IsTracking && tracker.HasLineOfSight && CanStrike(nextIsHeavy))
                 {
+                    IsHeavyAttack = nextIsHeavy;
+                    attacksStarted++;
+                    strikeForward = transform.forward;
                     PauseMovement();
                     Phase = MeleePhase.Windup;
-                    phaseEnd = Time.time + windupSeconds;
+                    phaseEnd = Time.time + (IsHeavyAttack ? heavyWindupSeconds : windupSeconds);
                 }
             }
         }
 
-        private bool CanStrike()
+        private bool CanStrike(bool heavy)
         {
+            float range = heavy ? heavyRange : attackRange;
             if (target == null || !target.isActiveAndEnabled || target.IsDead ||
-                (target.transform.position - transform.position).sqrMagnitude > attackRange * attackRange)
+                (target.transform.position - transform.position).sqrMagnitude > range * range)
+                return false;
+
+            // 강공격은 준비 시작 방향을 고정하여 옆으로 피할 수 있게 합니다.
+            Vector3 facing = Phase == MeleePhase.Windup ? strikeForward : transform.forward;
+            Vector3 offset = Vector3.ProjectOnPlane(target.transform.position - transform.position, Vector3.up);
+            if (heavy && Vector3.Angle(facing, offset) > heavyAngle * 0.5f)
                 return false;
 
             Vector3 origin = transform.position + Vector3.up;
