@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Nomad.Terrain
 {
     [DisallowMultipleComponent]
-    public sealed class TerrainGenerator : MonoBehaviour
+    public sealed partial class TerrainGenerator : MonoBehaviour
     {
         private const int CandidatesPerPiece = 50;
         private const int MaxRegenerations = 3;
@@ -32,6 +32,7 @@ namespace Nomad.Terrain
             if (busy)
                 throw new InvalidOperationException("생성 중에는 설정을 변경할 수 없습니다.");
 
+            wfcCatalog = null;
             prefabs = sources == null ? null : (TerrainPiece[])sources.Clone();
             pieceCount = count;
             seed = randomSeed;
@@ -87,7 +88,8 @@ namespace Nomad.Terrain
                         // 완성 전 후보는 렌더링·물리·Start에서 사용하지 않도록 비활성 상태로 구성합니다.
                         generatedRoot.SetActive(false);
 
-                        if (TryGenerate(random, pieces, links, ref checks))
+                        if (wfcCatalog != null ? TryGenerateWfc(random, pieces, links, ref checks)
+                            : TryGenerate(random, pieces, links, ref checks))
                         {
                             success = true;
                             break;
@@ -95,7 +97,7 @@ namespace Nomad.Terrain
                     }
 
                     if (!success)
-                        error = "최초 생성과 재생성 3회에서 수량·공간·2D 분기 조건을 만족하지 못했습니다.";
+                        error = "최초 생성과 재생성 3회에서 후보·공간·연결·계단 제약을 만족하지 못했습니다.";
                 }
 
                 if (!success)
@@ -147,8 +149,9 @@ namespace Nomad.Terrain
                     bool valid = incoming.Matches(target) && InsideBounds(candidate.WorldOccupancy);
                     foreach (TerrainPiece existing in pieces)
                     {
-                        if (valid && TerrainPlacement.Overlaps(existing, candidate,
-                            target.transform.IsChildOf(existing.transform) ? target : null, incoming))
+                        if (valid && (FootprintsOverlap(existing.WorldOccupancy, candidate.WorldOccupancy)
+                            || TerrainPlacement.Overlaps(existing, candidate,
+                            target.transform.IsChildOf(existing.transform) ? target : null, incoming)))
                             valid = false;
                     }
 
@@ -181,6 +184,8 @@ namespace Nomad.Terrain
 
         private string ValidateSettings()
         {
+            if (wfcCatalog != null) return ValidateWfcSettings();
+
             if (prefabs == null || prefabs.Length == 0 || pieceCount < 1)
                 return "프리팹과 양의 조각 수가 필요합니다.";
 
