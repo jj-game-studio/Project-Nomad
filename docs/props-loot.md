@@ -1,4 +1,4 @@
-# B 소품 배치와 상자 루팅 (#16)
+﻿# B 소품 배치와 상자 루팅 (#16)
 
 ## 현재 범위
 
@@ -13,9 +13,19 @@
 
 `Status`는 Closed / Remaining / Empty, `Message`는 결과 안내, `Changed`는 처리 후 알림입니다. Inspector의 closed/open/empty Visual에 서로 다른 자식 오브젝트를 지정하면 상태에 따라 표시합니다. ChestId와 InteractionPoint를 제공합니다.
 
-## 명시적으로 남겨 둔 연결
+## E키 상자 연결
 
-2026-11-14 사용자 지시: **A 담당 구현을 기다리고 B 범위만 진행**합니다. 공용 CanInteract/Interact 계약, E키 입력, 가장 가까운 대상 선택·동거리 ID 정렬, 2m/시야/구르기 검사는 구현하지 않았습니다. A가 계약을 제공하면 B 상자에 어댑터를 연결해야 합니다. TryLoot는 그 검사를 대체하지 않습니다. 따라서 실제 플레이어 상호작용 완료와 #16 전체 완료를 뜻하지 않습니다. 상자 랜덤 배치는 #20입니다.
+`LootChest`는 A의 `Nomad.Interaction.IInteractable`을 구현합니다. `InteractionId`는 기존 ChestId이며 `CanInteract`는 활성 상태·유효 ID·플레이어/인벤토리·잔여 수량·재진입을 확인합니다. `Interact`는 기존 `TryLoot(context.Inventory)`를 호출합니다. 빈 상자는 대상에서 제외하고, 공간 부족 시 남은 상자는 다시 시도할 수 있습니다. 거리·시야·구르기와 E 1회 입력은 기존 A `PlayerInteraction`이 담당합니다.
+
+상자 루트 또는 항상 활성인 자식에 탐지 Collider를 두고 상호작용점을 그 안에 지정합니다. 상태별 Visual에는 Collider를 두지 않습니다. 상자마다 고유 ID를 지정하고, 플레이어 루트에는 PlayerMovement·CharacterController·PlayerInventory·PlayerInteraction을 연결합니다. 상자 랜덤 배치는 #20입니다.
+
+### 실제 E키 검토
+
+1. `Nomad > Loot > Open B Chest E Key Preview` → Play → Game 탭을 클릭합니다. A 인벤토리 장면을 열어 고정 상자를 추가하지만 원본 장면은 저장하지 않습니다. 검토 후 변경된 A 장면을 저장하지 마세요. 기존 이동·카메라·인벤토리 UI를 재사용합니다.
+2. 초기 인벤토리는 Scrap 96/99와 칼 19개로 가득 차 있습니다. 시작점 왼쪽 앞의 상자에서 **E** → Scrap 3개 획득, 상자 7개 잔여를 확인합니다. **Tab**으로 실제 인벤토리를 확인합니다.
+3. E를 계속 누르거나 다시 눌러도 공간이 없으면 상자 7개가 보존됩니다. **G**로 Scrap 공간을 비운 뒤 E → 남은 7개 획득, Empty입니다. 다시 E를 눌러도 복제되지 않습니다.
+4. **F**는 인벤토리를 다시 채우는 검토 도구이며 상자 수량을 초기화하지 않습니다. 처음부터 다시 검토하려면 Play를 종료하고 재시작합니다. 화면 아래에 입력과 상자 상태·잔여 수량을 표시합니다.
+5. 상자에서 멀어지거나 벽 뒤에 있거나 구르는 중에는 획득되지 않습니다. #16의 새 입력 흐름에 대한 사람 플레이 수용은 별도 검토합니다.
 
 ## 직접 검토
 
@@ -23,7 +33,7 @@
 2. 필드의 안전한 평지에 검토용 플레이어를 배치합니다. 기존 PlayerMovement·TopDownCamera를 그대로 재사용하며 Game 화면에서 WASD 이동, Space 점프, 왼쪽 Shift 구르기로 확인합니다. 별도 전체 보기/시점 전환은 없습니다.
 3. **R**은 새 랜덤 seed로 지형·소품을 재생성합니다. **T**는 화면에 표시된 seed로 같은 배치를 재현합니다. Play를 시작할 때도 새 seed를 사용합니다. 매번 플레이어를 안전한 시작 위치로 되돌리며 이동/구르기 상태도 초기화합니다. 추락하면 시작점으로 복귀합니다.
 4. Game 화면 왼쪽 위에서 현재 seed, Ready/실패 상태, 지형 수와 소품 수, 조작 안내를 확인합니다. 생성 실패나 안전한 시작점 부재 시 플레이어를 활성화하지 않습니다. R로 다시 시도할 수 있습니다.
-5. 상자 수량 검토는 별도 원점 부근 바닥의 `B Chest` 오브젝트에 있는 `LootPreview` 컴포넌트 컨텍스트 메뉴를 사용합니다. `1 Fill inventory` → `2 Direct loot`는 3개 획득/7개 잔여, 다시 2는 0개, `3 Remove scrap` 후 2는 남은 7개 회수/Empty입니다. 이는 B 직접 호출 도구이며 플레이어 E키 상호작용이 아닙니다.
+5. 상자 수량 검토는 별도 원점 부근 바닥의 `B Chest` 오브젝트에 있는 `LootPreview` 컴포넌트 컨텍스트 메뉴를 사용합니다. `1 Fill inventory` → `2 Direct loot`는 3개 획득/7개 잔여, 다시 2는 0개, `3 Remove scrap` 후 2는 남은 7개 회수/Empty입니다. 이는 기존 B 직접 호출 도구입니다. 실제 E 입력 검토는 위 전용 메뉴를 사용합니다.
 
 ## 자동 검증
 
@@ -38,3 +48,7 @@ Unity CLI의 `run`은 자동으로 -quit를 붙여 비동기 Play Mode 검증 �
 같은 실행 명령에서 메서드를 `Nomad.Loot.Editor.FieldPreviewVerification.Run`으로 바꾸면 실제 R/T 키 입력, seed 변경과 동일 배치 재현, HUD 갱신, 플레이어 바닥 지지·이동·기존 카메라 추적·추락 복귀, 재생성 정리를 검증합니다. 성공 표식은 `FIELD_PREVIEW_PLAYMODE_PASS`이며 `Artifacts/field-preview.png`에 실제 카메라와 HUD를 렌더합니다. B 검토 전용 플레이어 배치는 #18의 정식 플레이어 시작/Ready 계약을 대체하지 않습니다.
 
 실행 결과와 검토 커밋은 연결된 PR과 Issue #16에 기록합니다. 외형·밀도와 최종 플레이 수용은 사람 검토 대상입니다.
+
+### E키 통합 자동 검증
+
+위 Editor 명령의 메서드를 `Nomad.Loot.Editor.ChestInteractionVerification.Run`으로, 로그 경로를 `Artifacts/chest-interaction.log`로 바꿉니다. 실제 가상 키보드 입력을 A PlayerInteraction에 전달해 부분 획득 3/10, 길게 누르기, 가득 참 재시도, G 공간 확보 후 잔여 7개, 빈 상자 중복 방지, 상태 전환 후 Collider 유지, 2m 밖·벽 차폐·구르기 차단 및 구르기 후 새 E를 검사합니다. 성공 표식은 `B_CHEST_INTERACTION_PASS`이며 카메라/HUD 렌더는 `Artifacts/chest-e-preview.png`입니다. 원본 A 장면과 공용 입력 코드는 수정하지 않습니다.
