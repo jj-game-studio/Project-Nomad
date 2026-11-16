@@ -79,4 +79,3 @@ WFC의 셀 간 간격은10m이며 XZ셀당 원형 하나만 배치합니다. 모
 - 기존 생성기100seed×2와 #50의436회전 상태/228왕복 회귀 통과. 같은 통합 씬에서 신규4종 외형 렌더를 확인했습니다.
 - 실제 Play R/T/L/P/O/G·W 이동/추락 복귀/카메라 및 갤러리의 새4종을 확인했습니다. `TERRAIN_INTEGRATION_PLAY_PASS frame=46 time=0.74`, 종료0.
 - 근거: `Artifacts/terrain-feedback-final.log`, `terrain-feedback-play.log`, `terrain-WideUHigh.png`, `terrain-WideULow.png`, `terrain-WideLHigh.png`, `terrain-WideLLow.png`. Play의 기존 Unity Search 초기 인덱싱 예외는 여전히 알려진 제한입니다. 표면 검사는 현재 원형의20×20 샘플과 변당20개 지점이며 임의의 미래 메시 내부를 완전히 증명하지 않습니다.
-
