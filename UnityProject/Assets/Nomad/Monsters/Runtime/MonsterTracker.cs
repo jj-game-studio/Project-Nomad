@@ -47,6 +47,33 @@ namespace Nomad.Monsters
             target = value;
         }
 
+        public void ReactToDamage()
+        {
+            if (!CanEngageTarget())
+                return;
+
+            // 현재 전투의 단일 지정 목표를 공격자로 취급합니다.
+            lastSeenPosition = target.position;
+            unseenTime = 0f;
+            nextPathTime = 0f;
+            IsTracking = true;
+        }
+
+        public void ResumeCombatTracking()
+        {
+            if (CanEngageTarget())
+                IsTracking = true;
+            // 공격 후 복원할 때 벽 뒤 목표의 현재 위치를 다시 읽지 않습니다.
+        }
+
+        private bool CanEngageTarget()
+        {
+            return target != null && target.gameObject.activeInHierarchy && !IsReturning &&
+                (target.position - transform.position).sqrMagnitude <= abandonRange * abandonRange &&
+                (homeRange <= 0f || Vector3.ProjectOnPlane(transform.position - HomePosition,
+                    Vector3.up).sqrMagnitude < homeRange * homeRange);
+        }
+
         private void Awake()
         {
             agent = GetComponent<NavMeshAgent>();
@@ -136,7 +163,8 @@ namespace Nomad.Monsters
             float distance = offset.magnitude;
             bool nearby = distance <= proximityRange;
             Vector3 planar = Vector3.ProjectOnPlane(offset, Vector3.up);
-            if (!nearby && (distance > sightRange ||
+            // 시야각은 최초 발견에만 사용합니다. 전투 중에도 벽 차단은 검사합니다.
+            if (!IsTracking && !nearby && (distance > sightRange ||
                 Vector3.Angle(transform.forward, planar) > sightAngle * 0.5f))
                 return false;
 

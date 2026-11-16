@@ -31,6 +31,8 @@ namespace Nomad.Monsters
         private float phaseElapsed;
         private bool ownsPause;
         private bool trackerWasEnabled;
+        private bool resumeTracking;
+        private int previousHealth;
         private int attacksStarted;
         private Vector3 strikeForward;
 
@@ -79,6 +81,8 @@ namespace Nomad.Monsters
             IsHeavyAttack = false;
             attacksStarted = 0;
             WindupProgress = 0f;
+            previousHealth = health.CurrentHealth;
+            resumeTracking = false;
             health.Died += OnDied;
             if (target != null)
                 target.Died += OnTargetDied;
@@ -98,6 +102,8 @@ namespace Nomad.Monsters
 
         private void Update()
         {
+            bool wasHit = health.CurrentHealth < previousHealth;
+            previousHealth = health.CurrentHealth;
             if (health.IsDead)
             {
                 OnDied(health);
@@ -110,6 +116,14 @@ namespace Nomad.Monsters
                 WindupProgress = 0f;
                 PauseMovement();
                 return;
+            }
+
+            if (wasHit)
+            {
+                if (ownsPause)
+                    resumeTracking = true;
+                else
+                    tracker.ReactToDamage();
             }
 
             if (Time.deltaTime <= 0f)
@@ -151,7 +165,7 @@ namespace Nomad.Monsters
             {
                 ResumeMovement();
                 bool nextIsHeavy = enableHeavyAttack && attacksStarted % 3 == 2;
-                if (tracker.IsTracking && tracker.HasLineOfSight && CanStrike(nextIsHeavy))
+                if (tracker.IsTracking && tracker.HasLineOfSight && FaceTarget() && CanStrike(nextIsHeavy))
                 {
                     IsHeavyAttack = nextIsHeavy;
                     attacksStarted++;
@@ -184,6 +198,17 @@ namespace Nomad.Monsters
                 hit.collider.GetComponentInParent<Health>() == target;
         }
 
+        private bool FaceTarget()
+        {
+            Vector3 direction = Vector3.ProjectOnPlane(target.transform.position - transform.position, Vector3.up);
+            if (direction.sqrMagnitude < 0.0001f)
+                return true;
+
+            transform.rotation = Quaternion.RotateTowards(transform.rotation,
+                Quaternion.LookRotation(direction), agent.angularSpeed * Time.deltaTime);
+            return Vector3.Angle(transform.forward, direction) <= 5f;
+        }
+
         private void OnDied(Health value)
         {
             Phase = MeleePhase.Dead;
@@ -205,6 +230,7 @@ namespace Nomad.Monsters
             if (!ownsPause)
             {
                 trackerWasEnabled = tracker.enabled;
+                resumeTracking = tracker.IsTracking;
                 ownsPause = true;
             }
 
@@ -225,6 +251,9 @@ namespace Nomad.Monsters
             tracker.enabled = trackerWasEnabled;
             if (agent.enabled && agent.isOnNavMesh)
                 agent.isStopped = false;
+            if (trackerWasEnabled && resumeTracking)
+                tracker.ResumeCombatTracking();
+            resumeTracking = false;
         }
     }
 }
