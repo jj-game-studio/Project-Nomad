@@ -1201,6 +1201,7 @@ MonoBehaviour:
   eliteMaterial: {fileID: 2100000, guid: a809024f3ded8a14a9d2474e04b182ca, type: 2}
   warningMaterial: {fileID: 2100000, guid: b9604fba17d86e74eacf26b1dc4c04b5, type: 2}
   fillMaterial: {fileID: 2100000, guid: 9c58b52eadffe20469f6d3477a6e01f1, type: 2}
+  appearances: {fileID: 11400000, guid: b3188f7ebaa2f6046a3dde7c430845a0, type: 2}
 --- !u!1 &1951189840
 GameObject:
   m_ObjectHideFlags: 0

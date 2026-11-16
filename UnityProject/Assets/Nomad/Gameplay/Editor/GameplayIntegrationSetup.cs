@@ -55,6 +55,8 @@ namespace Nomad.Gameplay.Editor
             var factory = controls.GetComponent<MonsterActorFactory>();
             if (factory == null) factory = controls.gameObject.AddComponent<MonsterActorFactory>();
             factory.ConfigureMaterials(Material("Monster"), Material("Elite"), Material("HeavyWarning"), Material("WarningFill"));
+            factory.ConfigureAppearances(AssetDatabase.LoadAssetAtPath<MonsterAppearanceSet>(
+                "Assets/ThirdParty/Nomad/Monsters/Skeletons/SkeletonAppearances.asset"));
             EditorUtility.SetDirty(factory);
             var integration = controls.GetComponent<GameplayIntegration>();
             if (integration == null) integration = controls.gameObject.AddComponent<GameplayIntegration>();

@@ -20,6 +20,7 @@ namespace Nomad.Monsters.Demo
         [SerializeField] private Material eliteMaterial;
         [SerializeField] private Material warningMaterial;
         [SerializeField] private Material fillMaterial;
+        [SerializeField] private MonsterAppearanceSet appearances;
 
         private sealed class Entry
         {
@@ -69,6 +70,7 @@ namespace Nomad.Monsters.Demo
             previousPlayerHp = player.CurrentHealth;
             factory = gameObject.AddComponent<MonsterActorFactory>();
             factory.ConfigureMaterials(normalMaterial, eliteMaterial, warningMaterial, fillMaterial);
+            factory.ConfigureAppearances(appearances);
             var bar = player.GetComponent<SegmentedHealthBar>();
             if (bar == null)
                 bar = player.gameObject.AddComponent<SegmentedHealthBar>();

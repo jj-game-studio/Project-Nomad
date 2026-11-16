@@ -19,6 +19,7 @@ namespace Nomad.Monsters.Demo
         private Renderer fillRenderer;
         private float fillAngle = -1f;
         private MonsterHitFeedback hitFeedback;
+        private Renderer[] bodies;
 
         public void ConfigureDisplay(Health victim, Health owner, MonsterMeleeAttack melee,
             Renderer body, LineRenderer outline, MeshFilter fill)
@@ -38,6 +39,8 @@ namespace Nomad.Monsters.Demo
             if (hitFeedback == null)
                 hitFeedback = monster.gameObject.AddComponent<MonsterHitFeedback>();
             idleColor = monsterBody.sharedMaterial.GetColor("_BaseColor");
+            Transform visual = monster.transform.Find("Body");
+            bodies = visual != null ? visual.GetComponentsInChildren<Renderer>() : new[] { monsterBody };
             if (warningFill != null)
             {
                 fillMesh = new Mesh { name = "Attack warning fill" };
@@ -53,8 +56,15 @@ namespace Nomad.Monsters.Demo
                 (attack.IsHeavyAttack ? new Color(1f, 0.2f, 0.1f) : new Color(1f, 0.5f, 0.1f)) : idleColor;
             if (hitFeedback != null && hitFeedback.IsFlashing)
                 color = Color.white;
-            tint.SetColor("_BaseColor", color);
-            monsterBody.SetPropertyBlock(tint);
+            foreach (Renderer body in bodies)
+            {
+                tint.Clear();
+                tint.SetColor("_BaseColor", color);
+                Texture texture = body.sharedMaterial.GetTexture("_BaseMap");
+                tint.SetTexture("_BaseMap", hitFeedback.IsFlashing ? Texture2D.whiteTexture : texture != null ? texture : Texture2D.whiteTexture);
+                body.SetPropertyBlock(tint);
+            }
+            tint.Clear();
             UpdateWarning();
 
         }

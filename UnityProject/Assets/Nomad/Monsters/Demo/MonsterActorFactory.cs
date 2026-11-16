@@ -12,6 +12,9 @@ namespace Nomad.Monsters.Demo
         [SerializeField] private Material eliteMaterial;
         [SerializeField] private Material warningMaterial;
         [SerializeField] private Material fillMaterial;
+        [SerializeField] private MonsterAppearanceSet appearances;
+
+        public void ConfigureAppearances(MonsterAppearanceSet value) => appearances = value;
 
         public void ConfigureMaterials(Material normal, Material elite, Material warning, Material fill)
         {
@@ -29,14 +32,19 @@ namespace Nomad.Monsters.Demo
             root.SetActive(false);
             root.transform.SetParent(parent, true);
             root.transform.SetPositionAndRotation(position, rotation);
-            GameObject body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            GameObject prefab = elite ? appearances?.elite :
+                appearances != null && appearances.normal.Length > 0 ? appearances.normal[Variant(actorName) % appearances.normal.Length] : null;
+            GameObject body = prefab != null ? Instantiate(prefab) : GameObject.CreatePrimitive(PrimitiveType.Capsule);
             body.name = "Body";
             body.transform.SetParent(root.transform, false);
-            body.transform.localPosition = Vector3.up * (elite ? 0.99f : 0.9f);
-            body.transform.localScale = elite ? new Vector3(0.875f, 0.99f, 0.875f) : new Vector3(0.7f, 0.9f, 0.7f);
-            body.GetComponent<Collider>().enabled = false;
-            Destroy(body.GetComponent<Collider>());
-            body.GetComponent<Renderer>().sharedMaterial = elite ? eliteMaterial : normalMaterial;
+            if (prefab == null)
+            {
+                body.transform.localPosition = Vector3.up * (elite ? 0.99f : 0.9f);
+                body.transform.localScale = elite ? new Vector3(0.875f, 0.99f, 0.875f) : new Vector3(0.7f, 0.9f, 0.7f);
+                body.GetComponent<Collider>().enabled = false;
+                Destroy(body.GetComponent<Collider>());
+                body.GetComponent<Renderer>().sharedMaterial = elite ? eliteMaterial : normalMaterial;
+            }
             CapsuleCollider capsule = root.AddComponent<CapsuleCollider>();
             capsule.height = 1.8f;
             capsule.radius = 0.35f;
@@ -52,6 +60,7 @@ namespace Nomad.Monsters.Demo
             JsonUtility.FromJsonOverwrite("{\"maxHealth\":" + config.health + "}", health);
             root.AddComponent<SegmentedHealthBar>();
             root.AddComponent<MonsterHitFeedback>();
+            if (prefab != null) root.AddComponent<MonsterAnimationDriver>();
             MonsterTracker tracker = root.AddComponent<MonsterTracker>();
             tracker.BindTarget(target.transform);
             tracker.Configure(config.sightRange, config.abandonRange, config.homeRange);
@@ -68,9 +77,16 @@ namespace Nomad.Monsters.Demo
             fill.transform.SetParent(root.transform, false);
             fill.gameObject.AddComponent<MeshRenderer>().sharedMaterial = fillMaterial;
             root.AddComponent<MonsterCombatDemo>().ConfigureDisplay(target, health, attack,
-                body.GetComponent<Renderer>(), outline, fill);
+                body.GetComponentInChildren<Renderer>(), outline, fill);
             root.SetActive(true);
             return health;
+        }
+
+        private static int Variant(string name)
+        {
+            uint hash = 2166136261;
+            foreach (char value in name) hash = (hash ^ value) * 16777619;
+            return (int)(hash & 0x7fffffff);
         }
     }
 }
