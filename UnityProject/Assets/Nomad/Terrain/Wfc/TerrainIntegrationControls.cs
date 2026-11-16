@@ -33,6 +33,7 @@ namespace Nomad.Terrain
         public string NavigationFailure { get; private set; }
         public int Seed => seed;
         public bool Legacy => legacy;
+        public bool GameplayView => view == 0;
         public string Summary => status.text;
         public TerrainGenerator Generator => generator;
         public GameObject Player => player;

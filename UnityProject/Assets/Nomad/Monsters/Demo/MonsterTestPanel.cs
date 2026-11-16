@@ -38,6 +38,7 @@ namespace Nomad.Monsters.Demo
         private readonly MonsterTestSettings[] settings =
             { MonsterTestSettings.Defaults(false), MonsterTestSettings.Defaults(true) };
         private Entry selected;
+        private MonsterActorFactory factory;
         private int kind;
         private int serial;
         private int previousPlayerHp;
@@ -66,6 +67,8 @@ namespace Nomad.Monsters.Demo
         {
             previousTimeScale = Time.timeScale;
             previousPlayerHp = player.CurrentHealth;
+            factory = gameObject.AddComponent<MonsterActorFactory>();
+            factory.ConfigureMaterials(normalMaterial, eliteMaterial, warningMaterial, fillMaterial);
             var bar = player.GetComponent<SegmentedHealthBar>();
             if (bar == null)
                 bar = player.gameObject.AddComponent<SegmentedHealthBar>();
@@ -186,57 +189,12 @@ namespace Nomad.Monsters.Demo
 
             bool elite = kind == 1;
             MonsterTestSettings config = settings[kind];
-            // 비활성 상태에서 설정하여 Awake가 지정한 최대 체력으로 초기화하도록 합니다.
-            var root = new GameObject((elite ? "Elite #" : "Normal #") + ++serial);
-            SceneManager.MoveGameObjectToScene(root, gameObject.scene);
-            root.SetActive(false);
-            root.transform.position = hit.position;
             Vector3 facing = Vector3.ProjectOnPlane(player.transform.position - hit.position, Vector3.up);
-            if (facing.sqrMagnitude > 0.01f)
-                root.transform.rotation = Quaternion.LookRotation(facing);
-
-            GameObject body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            body.name = "Body";
-            body.transform.SetParent(root.transform, false);
-            body.transform.localPosition = Vector3.up * (elite ? 0.99f : 0.9f);
-            body.transform.localScale = elite ? new Vector3(0.875f, 0.99f, 0.875f) : new Vector3(0.7f, 0.9f, 0.7f);
-            body.GetComponent<Collider>().enabled = false;
-            Destroy(body.GetComponent<Collider>());
-            body.GetComponent<Renderer>().sharedMaterial = elite ? eliteMaterial : normalMaterial;
-            CapsuleCollider capsule = root.AddComponent<CapsuleCollider>();
-            capsule.height = 1.8f;
-            capsule.radius = 0.35f;
-            capsule.center = Vector3.up * 0.9f;
-            NavMeshAgent agent = root.AddComponent<NavMeshAgent>();
-            agent.radius = 0.35f;
-            agent.height = 1.8f;
-            agent.speed = config.moveSpeed;
-            agent.stoppingDistance = Mathf.Min(1.2f, config.attackRange * 0.7f);
-            agent.angularSpeed = 360f;
-            Health health = root.AddComponent<Health>();
-            JsonUtility.FromJsonOverwrite("{\"maxHealth\":" + config.health + "}", health);
-            root.AddComponent<SegmentedHealthBar>();
-            root.AddComponent<MonsterHitFeedback>().SetEffects(hitFlash, damageNumbers, hitShards);
-            MonsterTracker tracker = root.AddComponent<MonsterTracker>();
-            tracker.BindTarget(player.transform);
-            tracker.Configure(config.sightRange, config.abandonRange, config.homeRange);
-            MonsterMeleeAttack attack = root.AddComponent<MonsterMeleeAttack>();
-            attack.Configure(player, elite, config.damage, config.heavyDamage,
-                config.attackRange, config.heavyRange, config.attackSpeed);
-
-            LineRenderer outline = new GameObject("Attack Outline").AddComponent<LineRenderer>();
-            outline.transform.SetParent(root.transform, false);
-            outline.useWorldSpace = true;
-            outline.widthMultiplier = 0.06f;
-            outline.sharedMaterial = warningMaterial;
-            MeshFilter fill = new GameObject("Attack Fill").AddComponent<MeshFilter>();
-            fill.transform.SetParent(root.transform, false);
-            fill.gameObject.AddComponent<MeshRenderer>().sharedMaterial = fillMaterial;
-            root.AddComponent<MonsterCombatDemo>().ConfigureDisplay(player, health, attack,
-                body.GetComponent<Renderer>(), outline, fill);
-            root.SetActive(true);
+            Quaternion rotation = facing.sqrMagnitude > 0.01f ? Quaternion.LookRotation(facing) : Quaternion.identity;
+            Health health = factory.Create(player, config, elite, hit.position, rotation,
+                (elite ? "Elite #" : "Normal #") + ++serial);
             selected = Register(health, elite);
-            notice = "Spawned " + root.name;
+            notice = "Spawned " + health.name;
             Log(notice);
             return health;
         }

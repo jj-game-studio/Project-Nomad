@@ -8,11 +8,13 @@ namespace Nomad.Monsters.Demo
     public sealed class MonsterTestInputBlocker : BaseRaycaster
     {
         public MonsterTestPanel Panel { get; set; }
+        public System.Func<Vector2, bool> AdditionalBlocker { get; set; }
         public override Camera eventCamera => null;
 
         public override void Raycast(PointerEventData data, List<RaycastResult> results)
         {
-            if (Panel == null || !Panel.BlocksPointer(data.position))
+            if (!(Panel != null && Panel.BlocksPointer(data.position)) &&
+                AdditionalBlocker?.Invoke(data.position) != true)
                 return;
 
             results.Add(new RaycastResult { gameObject = gameObject, module = this,
