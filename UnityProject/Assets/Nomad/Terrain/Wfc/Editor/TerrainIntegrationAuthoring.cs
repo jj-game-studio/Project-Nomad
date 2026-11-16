@@ -27,6 +27,13 @@ namespace Nomad.Terrain.Editor
         public static void Rebuild()
         {
             if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath) == null) RebuildLegacyLayout();
+            MicroTerrainSceneSetup.Create();
+        }
+
+        public static void RebuildLegacyLayout()
+        {
+            if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
             WfcCatalogAuthoring.Create();
             EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
             var generator = new GameObject("Integrated Terrain Generator").AddComponent<TerrainGenerator>();

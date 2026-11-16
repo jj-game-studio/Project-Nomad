@@ -27,7 +27,10 @@ namespace Nomad.Terrain.Editor
 
         public static void Run()
         {
+            if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
             EditorSceneManager.OpenScene(TerrainIntegrationAuthoring.ScenePath);
+            if (Object.FindAnyObjectByType<TerrainIntegrationControls>().Generator.UsesMicro)
+            { MicroTerrainPlayVerification.Run(); return; }
             SessionState.SetBool(SessionKey, true);
             Resume();
             EditorApplication.EnterPlaymode();

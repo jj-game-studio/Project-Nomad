@@ -16,6 +16,9 @@ namespace Nomad.Props
         [SerializeField] private GameObject propPrefab;
         [SerializeField, Range(0, 4)] private int propsPerPiece = 2;
 
+        [SerializeField] private float placementRadius = PropRadius;
+        [SerializeField] private float placementHeight = PropHeight;
+
         [SerializeField, HideInInspector] private GameObject generatedRoot;
         private readonly List<Vector3> positions = new();
         public IReadOnlyList<Vector3> Positions => positions.AsReadOnly();
@@ -24,13 +27,22 @@ namespace Nomad.Props
 
         public void Configure(TerrainGenerator source, GameObject prefab, int count = 2)
         {
+            Configure(source, prefab, count, PropRadius, PropHeight);
+        }
+
+        public void Configure(TerrainGenerator source, GameObject prefab, int count, float radius, float height)
+        {
             if (isActiveAndEnabled && generator != null)
                 Unsubscribe();
 
             Clear();
             generator = source;
             propPrefab = prefab;
+            if (radius <= 0f || height <= 0f || !float.IsFinite(radius) || !float.IsFinite(height))
+                throw new ArgumentOutOfRangeException(nameof(radius));
             propsPerPiece = Mathf.Clamp(count, 0, 4);
+            placementRadius = radius;
+            placementHeight = height;
             if (isActiveAndEnabled)
                 Subscribe();
         }
@@ -82,8 +94,14 @@ namespace Nomad.Props
                         Mathf.Lerp(area.min.x + 1f, area.max.x - 1f, (float)random.NextDouble()),
                         area.max.y + 1f,
                         Mathf.Lerp(area.min.z + 1f, area.max.z - 1f, (float)random.NextDouble()));
+                    if (area.size.x <= 3.01f && area.size.z <= 3.01f && placementRadius < 0.25f)
+                    {
+                        // 작은 조각에서는2m 통로를 피해 네 모서리 후보만 확인합니다.
+                        local.x = (random.Next(2) == 0 ? -1f : 1f) * (area.extents.x - placementRadius - 0.03f);
+                        local.z = (random.Next(2) == 0 ? -1f : 1f) * (area.extents.z - placementRadius - 0.03f);
+                    }
                     Vector3 point = piece.transform.TransformPoint(local);
-                    if (!TryFloor(piece, point, out point) || !PreservesPassages(piece, point)
+                    if (!TryFloor(piece, point, out point) || !PreservesPassages(piece, point, placementRadius, area.size.x <= 3.01f ? 1f : 2f)
                         || !ClearSpace(point)) continue;
 
                     GameObject prop = Instantiate(propPrefab, generatedRoot.transform);
@@ -98,6 +116,11 @@ namespace Nomad.Props
 
         public static bool PreservesPassages(TerrainPiece piece, Vector3 point)
         {
+            return PreservesPassages(piece, point, PropRadius, 2f);
+        }
+
+        private static bool PreservesPassages(TerrainPiece piece, Vector3 point, float radius, float centerClearance)
+        {
             Vector3 center = piece.transform.TransformPoint(piece.LocalOccupancy.center);
             center.y = point.y;
             foreach (TerrainConnection connection in piece.Connections)
@@ -107,13 +130,13 @@ namespace Nomad.Props
                 Vector3 delta = end - center;
                 float t = delta.sqrMagnitude == 0f ? 0f : Mathf.Clamp01(Vector3.Dot(point - center, delta) / delta.sqrMagnitude);
                 // 연결점 통로 폭에 소품 반경과 여유를 더해 예약합니다.
-                if (Vector3.Distance(point, center + delta * t) < connection.Width * 0.5f + PropRadius + 0.1f)
+                if (Vector3.Distance(point, center + delta * t) < connection.Width * 0.5f + radius + 0.1f)
                     return false;
             }
-            return Vector3.Distance(point, center) >= 2f;
+            return Vector3.Distance(point, center) >= centerClearance;
         }
 
-        private static bool TryFloor(TerrainPiece piece, Vector3 origin, out Vector3 point)
+        private bool TryFloor(TerrainPiece piece, Vector3 origin, out Vector3 point)
         {
             point = default;
             if (!Physics.Raycast(origin, Vector3.down, out RaycastHit hit, 10f, ~0, QueryTriggerInteraction.Ignore)
@@ -124,7 +147,7 @@ namespace Nomad.Props
             for (int x = -1; x <= 1; x += 2)
             for (int z = -1; z <= 1; z += 2)
             {
-                Vector3 sample = point + new Vector3(x * PropRadius, 0.5f, z * PropRadius);
+                Vector3 sample = point + new Vector3(x * placementRadius, 0.5f, z * placementRadius);
                 if (!Physics.Raycast(sample, Vector3.down, out RaycastHit support, 0.55f, ~0, QueryTriggerInteraction.Ignore)
                     || !support.collider.transform.IsChildOf(piece.transform) || support.normal.y < 0.99f
                     || Mathf.Abs(support.point.y - point.y) > 0.02f) return false;
@@ -161,19 +184,36 @@ namespace Nomad.Props
             {
                 Vector3 corner = bounds.center + Vector3.Scale(bounds.extents, new Vector3(x, y, z));
                 Vector3 local = propPrefab.transform.InverseTransformPoint(source.TransformPoint(corner));
-                if (Mathf.Abs(local.x) > PropRadius || Mathf.Abs(local.z) > PropRadius
-                    || local.y < -0.001f || local.y > PropHeight + 0.001f)
-                    throw new InvalidOperationException("소품 외형/충돌체는 반경 0.6m·높이 1m의 예약 영역 안에 있어야 합니다.");
+                if (Mathf.Abs(local.x) > placementRadius || Mathf.Abs(local.z) > placementRadius
+                    || local.y < -0.001f || local.y > placementHeight + 0.001f)
+                    throw new InvalidOperationException("소품 외형/충돌체는 지정한 반경·높이의 예약 영역 안에 있어야 합니다.");
             }
         }
 
-        private static bool ClearSpace(Vector3 point)
+        private bool ClearSpace(Vector3 point)
         {
-            return !Physics.CheckBox(point + Vector3.up * (PropHeight * 0.5f + 0.05f),
-                new Vector3(PropRadius, PropHeight * 0.5f, PropRadius), Quaternion.identity,
+            return !Physics.CheckBox(point + Vector3.up * (placementHeight * 0.5f + 0.05f),
+                new Vector3(placementRadius, placementHeight * 0.5f, placementRadius), Quaternion.identity,
                 ~0, QueryTriggerInteraction.Ignore);
         }
 
+        public int RemoveNear(Vector3 point, float distance, int maximum = int.MaxValue)
+        {
+            if (generatedRoot == null) return 0;
+            int removed = 0;
+            for (int index = generatedRoot.transform.childCount - 1; index >= 0; index--)
+            {
+                GameObject prop = generatedRoot.transform.GetChild(index).gameObject;
+                if (!prop.activeSelf || Vector3.Distance(prop.transform.position, point) > distance) continue;
+                positions.Remove(prop.transform.position);
+                prop.SetActive(false);
+                if (Application.isPlaying) Destroy(prop);
+                else DestroyImmediate(prop);
+                removed++;
+                if (removed >= maximum) break;
+            }
+            return removed;
+        }
         private void Clear()
         {
             GenerationId = null;

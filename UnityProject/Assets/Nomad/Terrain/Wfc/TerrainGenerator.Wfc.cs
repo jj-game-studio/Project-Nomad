@@ -30,8 +30,9 @@ namespace Nomad.Terrain
 
         private string ValidateWfcSettings()
         {
-            if (gridWidth < 1 || gridHeight < 1 || gridWidth > 16 || gridHeight > 16)
-                return "WFC 격자 크기는 축마다 1~16이어야 합니다.";
+            if (gridWidth < 1 || gridHeight < 1 || gridWidth > (wfcCatalog.microTiles ? 32 : 16) || gridHeight > (wfcCatalog.microTiles ? 32 : 16))
+                return "WFC 격자 크기를 확인하십시오(3m 규격 최대32, 기존 규격 최대16).";
+            if (wfcCatalog.microTiles && (gridWidth < 12 || gridHeight < 12)) return "3단계 지형은 축마다 최소12개 조각이 필요합니다.";
             if (wfcCatalog.variants == null || wfcCatalog.variants.Length == 0 || wfcCatalog.variants.Length > 1024)
                 return "WFC 후보는 1~1024개여야 합니다.";
             if (transform.lossyScale != Vector3.one || !Cardinal(transform)
@@ -46,6 +47,9 @@ namespace Nomad.Terrain
                     || variant.edgeHeights == null || variant.edgeHeights.Length != 80 || variant.voidBoundaries == null
                     || !float.IsFinite(variant.weight) || variant.weight <= 0f)
                     return "WFC 후보의 원형·표면·출입구·가중치 데이터가 유효하지 않습니다.";
+                if (wfcCatalog.microTiles && (wfcCatalog.cellSize != 3f || !variant.micro || variant.cornerLevels == null
+                    || variant.cornerLevels.Length != 4 || variant.edgeSlope == null || variant.edgeSlope.Length != 80))
+                    return "3m 타일 카탈로그 데이터가 유효하지 않습니다.";
                 if (variant.prefab.transform.localScale != Vector3.one || variant.turn < 0 || variant.turn > 3)
                     return "WFC 원형 배율과 회전을 확인하십시오.";
             }
@@ -54,6 +58,7 @@ namespace Nomad.Terrain
 
         private bool TryGenerateWfc(System.Random random, List<TerrainPiece> pieces, List<TerrainLink> links, ref int checks)
         {
+            if (wfcCatalog.microTiles) return TryGenerateMicro(random, pieces, links, ref checks);
             var solver = new WfcTerrainSolver(wfcCatalog.variants);
             if (!solver.Solve(gridWidth, gridHeight, random, out int[] choices, ref checks)) return false;
             Quaternion rotation = Quaternion.Euler(0f, transform.eulerAngles.y, 0f);

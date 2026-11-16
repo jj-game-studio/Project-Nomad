@@ -22,7 +22,7 @@ namespace Nomad.Terrain
             }
         }
 
-        public bool Solve(int width, int height, System.Random random, out int[] result, ref int checks)
+        public bool Solve(int width, int height, System.Random random, out int[] result, ref int checks, Func<int, WfcTileVariant, bool> filter = null)
         {
             result = null;
             var domains = new List<int>[width * height];
@@ -33,9 +33,9 @@ namespace Nomad.Terrain
                 for (int option = 0; option < variants.Length; option++)
                 {
                     WfcTileVariant tile = variants[option];
-                    bool valid = cell != 0 || (!tile.stairs && tile.surfaces[1] == 0);
+                    bool valid = filter != null ? filter(cell, tile) : cell != 0 || (!tile.stairs && tile.surfaces[1] == 0);
                     // 중앙 셀은 계단으로 제한해 평지만 생성되는 검토 결과를 방지합니다.
-                    if (width >= 3 && height >= 3 && cell == height / 2 * width + width / 2)
+                    if (filter == null && width >= 3 && height >= 3 && cell == height / 2 * width + width / 2)
                         valid &= tile.stairs;
                     int boundary = 0;
                     for (int side = 0; side < 4; side++)

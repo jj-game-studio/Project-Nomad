@@ -147,8 +147,8 @@ Transform:
   m_GameObject: {fileID: 434907683}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.5, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalPosition: {x: 0, y: 0.175, z: 0}
+  m_LocalScale: {x: 0.35, y: 0.35, z: 0.35}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 897010173}
@@ -663,9 +663,9 @@ MonoBehaviour:
   generateOnStart: 0
   requirePlanarBranch: 1
   generatedRoot: {fileID: 0}
-  wfcCatalog: {fileID: 11400000, guid: eb67bcd9f48034a4dafa08ac01163d78, type: 2}
-  gridWidth: 6
-  gridHeight: 6
+  wfcCatalog: {fileID: 11400000, guid: 2588cb103094d8341a0c65cca0a8e62e, type: 2}
+  gridWidth: 18
+  gridHeight: 18
 --- !u!4 &1613374920
 Transform:
   m_ObjectHideFlags: 0
@@ -794,6 +794,8 @@ MonoBehaviour:
   generator: {fileID: 1613374919}
   propPrefab: {fileID: 897010172}
   propsPerPiece: 2
+  placementRadius: 0.6
+  placementHeight: 1
   generatedRoot: {fileID: 0}
 --- !u!4 &1751394750
 Transform:
@@ -840,7 +842,7 @@ MonoBehaviour:
   m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Terrain.TerrainIntegrationControls
   generator: {fileID: 1613374919}
-  catalog: {fileID: 11400000, guid: eb67bcd9f48034a4dafa08ac01163d78, type: 2}
+  catalog: {fileID: 11400000, guid: 2588cb103094d8341a0c65cca0a8e62e, type: 2}
   legacySources:
   - {fileID: 5569437308054840144, guid: c64c351449db51840ab8fbf74cf2fc5a, type: 3}
   - {fileID: 4206913966229004079, guid: aa4881098cef8774a85ea8d40298660a, type: 3}
@@ -865,8 +867,20 @@ MonoBehaviour:
   viewCamera: {fileID: 654134747}
   status: {fileID: 1656767682}
   seed: 51
-  width: 6
-  height: 6
+  width: 18
+  height: 18
+  microSources:
+  - {fileID: 2222155994254282205, guid: 347829489d082c345b791efc25001f29, type: 3}
+  - {fileID: 8307354202130595620, guid: 24f0ebf0c5742de47b4e6b3321227a4e, type: 3}
+  - {fileID: 6889094219641819723, guid: 0a2078328786ca84396c74e53e3ebb47, type: 3}
+  - {fileID: 8269878452368510605, guid: 0f466a72d6f42b34f8c58cf58d35bb3b, type: 3}
+  - {fileID: 2678248673420893635, guid: f2c3df9fa733f074e9f54321b23309b1, type: 3}
+  - {fileID: 1161107331539862830, guid: 500acef14147fed4db8b44fcf1dba18f, type: 3}
+  - {fileID: 8358670368101383219, guid: 3c27e73eda53a374a94b49bfc6ed6da2, type: 3}
+  - {fileID: 8207588066425676716, guid: c0b5a585f4f535f4395804acf1f5d4bc, type: 3}
+  - {fileID: 3369657343732674329, guid: dadb9380a00467a4a8f28d5acee1cec1, type: 3}
+  - {fileID: 1017472151461606012, guid: f8a7c27e388150249bb9cb9e895cf32a, type: 3}
+  - {fileID: 5884585487504258983, guid: d52034bd7a0ce1b4d91587451701d6ad, type: 3}
 --- !u!4 &1930808193
 Transform:
   m_ObjectHideFlags: 0

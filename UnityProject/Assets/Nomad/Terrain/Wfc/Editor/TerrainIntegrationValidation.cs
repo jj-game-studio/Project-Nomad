@@ -30,11 +30,13 @@ namespace Nomad.Terrain.Editor
         [MenuItem("Nomad/Terrain/Run Integration Validation")]
         public static void Run()
         {
+            if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
             try
             {
                 EditorSceneManager.OpenScene(TerrainIntegrationAuthoring.ScenePath);
                 var controls = Object.FindAnyObjectByType<TerrainIntegrationControls>();
                 TerrainGenerator generator = controls.Generator;
+                if (generator.UsesMicro) { MicroTerrainValidation.Run(); return; }
                 var catalog = AssetDatabase.LoadAssetAtPath<WfcTerrainCatalog>(WfcCatalogAuthoring.CatalogPath);
                 Require(catalog.variants.Length == 460, "108 combinations x4 + 5 wide shapes x4 + floors x8");
                 Require(TerrainIntegrationAuthoring.LoadLegacy().All(p => p != null), "9 legacy prefabs loaded");

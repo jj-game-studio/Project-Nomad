@@ -11,6 +11,11 @@ namespace Nomad.Terrain
         public int turn;
         public bool stairs;
         public bool wide;
+        public bool micro;
+        public bool cliff;
+        public int level;
+        public int[] cornerLevels = new int[4];
+        public int[] edgeSlope = new int[80];
         public float weight = 1f;
         // 방향 N/E/S/W × 변의 -3.5/0/3.5m. 높이는 0.25m 단위, -99는 바닥 없음입니다.
         public int[] surfaces = new int[12];
@@ -23,6 +28,8 @@ namespace Nomad.Terrain
     [CreateAssetMenu(menuName = "Nomad/Terrain/WFC Catalog")]
     public sealed class WfcTerrainCatalog : ScriptableObject
     {
+        public float cellSize = 10f;
+        public bool microTiles;
         public WfcTileVariant[] variants = Array.Empty<WfcTileVariant>();
     }
 
@@ -47,6 +54,7 @@ namespace Nomad.Terrain
 
         public static bool Compatible(WfcTileVariant a, WfcTileVariant b, int side)
         {
+            if (a.micro && b.micro) return MicroTerrainRules.Compatible(a, b, side);
             if (a.stairs && b.stairs && !a.wide && !b.wide) return false;
             int opposite = (side + 2) % 4;
             if (!a.stairs && !b.stairs && a.surfaces[side * 3 + 1] != b.surfaces[opposite * 3 + 1]) return false;
