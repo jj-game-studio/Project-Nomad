@@ -6,7 +6,8 @@ using UnityEngine.InputSystem;
 
 namespace Nomad.Terrain
 {
-    // 지형 통합 씬 전용입니다. 실제 필드 Ready/NavMesh 계약은 #18에서 제공합니다.
+    // 지형·소품 검사가 끝난 뒤 최종 경로와 Ready 결과를 연결합니다.
+    [RequireComponent(typeof(FieldNavigation))]
     public sealed class TerrainIntegrationControls : MonoBehaviour
     {
         [SerializeField] private TerrainGenerator generator;
@@ -35,6 +36,7 @@ namespace Nomad.Terrain
         public string Summary => status.text;
         public TerrainGenerator Generator => generator;
         public GameObject Player => player;
+        public FieldNavigation Navigation => GetComponent<FieldNavigation>();
 
         private void Start() => Regenerate(false);
 
@@ -63,6 +65,8 @@ namespace Nomad.Terrain
         public TerrainGenerationResult Regenerate(bool newSeed)
         {
             player.SetActive(false);
+            if (Navigation == null) gameObject.AddComponent<FieldNavigation>();
+            Navigation.Configure(generator);
             bool micro = !legacy && catalog.microTiles;
             float crateSize = micro ? MicroTerrainTile.Size * 0.4f : 1f;
             Transform crate = propTemplate.transform.GetChild(0);
@@ -96,26 +100,14 @@ namespace Nomad.Terrain
                 scatter.Configure(generator, propTemplate, 0, crateSize * 0.5f, crateSize);
                 navigation = CheckNavigation();
             }
-            NavigationFailure = navigationError;
-            bool safe = false;
-            if (result.Success && navigation)
-            {
-                foreach (TerrainPiece piece in result.Pieces)
-                {
-                    if (piece.Kind == TerrainPieceKind.Stairs) continue;
-                    Vector3 origin = piece.WorldOccupancy.center + Vector3.up * 5f;
-                    if (!Physics.Raycast(origin, Vector3.down, out RaycastHit hit, 10f)
-                        || !hit.collider.transform.IsChildOf(piece.transform)) continue;
-                    spawn = hit.point + Vector3.up * 0.05f;
-                    if (Physics.CheckCapsule(spawn + Vector3.up * 0.35f, spawn + Vector3.up * 1.45f, 0.35f)) continue;
-                    safe = true;
-                    break;
-                }
-            }
+            FieldGenerationResult field = Navigation.Prepare(result, scatter.gameObject);
+            NavigationFailure = field.FailureReason;
+            bool safe = field.Success;
+            spawn = field.PlayerPosition + Vector3.up * 0.05f;
             if (safe) PlacePlayer();
             SetView(safe ? view : 1);
             status.text = $"TERRAIN INTEGRATION | {(legacy ? "Legacy" : "WFC")} | Seed {seed}\n"
-                + $"{(safe ? "Playable" : result.Success ? "No safe start" : result.FailureReason)} | Tiles {result.Pieces.Count} | Props {scatter.Positions.Count}\n"
+                + $"{Navigation.State} | Tiles {result.Pieces.Count} | Props {scatter.Positions.Count} | Enemy slots {field.EnemyPoints.Count} | Chest slots {field.ChestPoints.Count}\n"
                 + $"Attempts {result.Attempts} | Candidate checks {result.CandidateChecks}\n"
                 + "R New seed | T Replay | L WFC/Legacy | P Props on/off\n"
                 + "O Field overview/player | G 3m tile gallery/player\n"
