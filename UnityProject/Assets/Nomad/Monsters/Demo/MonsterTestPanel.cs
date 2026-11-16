@@ -27,6 +27,7 @@ namespace Nomad.Monsters.Demo
             public MonsterTracker tracker;
             public MonsterMeleeAttack attack;
             public MonsterTestRanges ranges;
+            public MonsterHitFeedback feedback;
             public bool elite;
             public int previousHp;
             public string previousState;
@@ -43,6 +44,9 @@ namespace Nomad.Monsters.Demo
         private int placementClickFrame = -1;
         private bool detection = true;
         private bool travel;
+        private bool hitFlash = true;
+        private bool damageNumbers = true;
+        private bool hitShards = true;
         private bool placing;
         private bool paused;
         private bool invincible;
@@ -115,6 +119,7 @@ namespace Nomad.Monsters.Demo
             {
                 entry.ranges.ShowDetection = detection && !entry.health.IsDead;
                 entry.ranges.ShowTravel = travel && !entry.health.IsDead;
+                entry.feedback.SetEffects(hitFlash, damageNumbers, hitShards);
                 string state = State(entry);
                 if (state != entry.previousState)
                 {
@@ -145,6 +150,10 @@ namespace Nomad.Monsters.Demo
             var entry = new Entry { health = value, elite = elite, previousHp = value.CurrentHealth,
                 tracker = value.GetComponent<MonsterTracker>(), attack = value.GetComponent<MonsterMeleeAttack>() };
             entry.ranges = value.GetComponent<MonsterTestRanges>();
+            entry.feedback = value.GetComponent<MonsterHitFeedback>();
+            if (entry.feedback == null)
+                entry.feedback = value.gameObject.AddComponent<MonsterHitFeedback>();
+            entry.feedback.SetEffects(hitFlash, damageNumbers, hitShards);
             if (entry.ranges == null)
                 entry.ranges = value.gameObject.AddComponent<MonsterTestRanges>();
             monsters.Add(entry);
@@ -208,6 +217,7 @@ namespace Nomad.Monsters.Demo
             Health health = root.AddComponent<Health>();
             JsonUtility.FromJsonOverwrite("{\"maxHealth\":" + config.health + "}", health);
             root.AddComponent<SegmentedHealthBar>();
+            root.AddComponent<MonsterHitFeedback>().SetEffects(hitFlash, damageNumbers, hitShards);
             MonsterTracker tracker = root.AddComponent<MonsterTracker>();
             tracker.BindTarget(player.transform);
             tracker.Configure(config.sightRange, config.sightAngle, config.proximityRange,
@@ -319,6 +329,9 @@ namespace Nomad.Monsters.Demo
             GUILayout.Label(notice);
             detection = GUILayout.Toggle(detection, "Detection: cyan sight / green proximity");
             travel = GUILayout.Toggle(travel, "Travel: amber target gap / purple home");
+            hitFlash = GUILayout.Toggle(hitFlash, "Hit flash");
+            damageNumbers = GUILayout.Toggle(damageNumbers, "Damage numbers");
+            hitShards = GUILayout.Toggle(hitShards, "Hit shards");
             GUILayout.Label("SETTINGS: new spawn / apply + reset");
             if (kind != 2)
                 DrawSettings(settings[kind]);

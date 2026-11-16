@@ -18,6 +18,7 @@ namespace Nomad.Monsters.Demo
         private Mesh fillMesh;
         private Renderer fillRenderer;
         private float fillAngle = -1f;
+        private MonsterHitFeedback hitFeedback;
 
         public void ConfigureDisplay(Health victim, Health owner, MonsterMeleeAttack melee,
             Renderer body, LineRenderer outline, MeshFilter fill)
@@ -33,6 +34,9 @@ namespace Nomad.Monsters.Demo
         private void Awake()
         {
             tint = new MaterialPropertyBlock();
+            hitFeedback = monster.GetComponent<MonsterHitFeedback>();
+            if (hitFeedback == null)
+                hitFeedback = monster.gameObject.AddComponent<MonsterHitFeedback>();
             idleColor = monsterBody.sharedMaterial.GetColor("_BaseColor");
             if (warningFill != null)
             {
@@ -47,6 +51,8 @@ namespace Nomad.Monsters.Demo
         {
             Color color = monster.IsDead ? Color.gray : attack.Phase == MeleePhase.Windup ?
                 (attack.IsHeavyAttack ? new Color(1f, 0.2f, 0.1f) : new Color(1f, 0.5f, 0.1f)) : idleColor;
+            if (hitFeedback != null && hitFeedback.IsFlashing)
+                color = Color.white;
             tint.SetColor("_BaseColor", color);
             monsterBody.SetPropertyBlock(tint);
             UpdateWarning();
