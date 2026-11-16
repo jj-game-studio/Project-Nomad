@@ -89,7 +89,7 @@ namespace Nomad.Props
                 if (micro != null)
                 {
                     // 3m 평지/절벽에는 중앙 상자를 최대 하나만 확률적으로 배치합니다.
-                    if (propsPerPiece == 0 || random.NextDouble() >= 0.2) continue;
+                    if (propsPerPiece == 0 || random.NextDouble() >= 0.07) continue;
                     CandidateChecks++;
                     Vector3 center = piece.transform.TransformPoint(new Vector3(0f, micro.Level + 1f, 0f));
                     if (!TryFloor(piece, center, out center) || !ClearSpace(center)) continue;
