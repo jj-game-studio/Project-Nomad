@@ -52,3 +52,7 @@ Unity CLI의 `run`은 자동으로 -quit를 붙여 비동기 Play Mode 검증 �
 ### E키 통합 자동 검증
 
 위 Editor 명령의 메서드를 `Nomad.Loot.Editor.ChestInteractionVerification.Run`으로, 로그 경로를 `Artifacts/chest-interaction.log`로 바꿉니다. 실제 가상 키보드 입력을 A PlayerInteraction에 전달해 부분 획득 3/10, 길게 누르기, 가득 참 재시도, G 공간 확보 후 잔여 7개, 빈 상자 중복 방지, 상태 전환 후 Collider 유지, 2m 밖·벽 차폐·구르기 차단 및 구르기 후 새 E를 검사합니다. 성공 표식은 `B_CHEST_INTERACTION_PASS`이며 카메라/HUD 렌더는 `Artifacts/chest-e-preview.png`입니다. 원본 A 장면과 공용 입력 코드는 수정하지 않습니다.
+
+## 저장 지형 통합 씬 연결
+
+#56 병합 후 #16 추가 요청에 따라 `Nomad > Terrain > Open Integration Test Scene`에서도 기존 생성 큐브를 E키로 루팅합니다. 별도 검토 장면 없이 저장 씬의 PlayerInventory/PlayerInteraction과 최종 배치 큐브의 LootChest를 사용합니다. 기존7% 배치·크기·도달성을 유지하며 새 랜덤 정책은 추가하지 않았습니다. 통합 씬에서는 **G가 갤러리**이므로 공간 확보는 **V**, 인벤토리 채우기는 F입니다. R/T/L/P 재생성은 상자를 초기화하고 인벤토리는 유지합니다. 상세 절차와 검증은 `docs/terrain-integration.md`를 참조합니다.
