@@ -192,8 +192,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Nomad.Monsters::Nomad.Monsters.MonsterTracker
   target: {fileID: 2140972748}
   sightRange: 8
-  sightAngle: 120
-  proximityRange: 2
   abandonRange: 12
   searchDuration: 2
   sightMask:

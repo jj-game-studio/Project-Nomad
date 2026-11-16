@@ -7,8 +7,6 @@ namespace Nomad.Monsters.Demo
     {
         public float moveSpeed = 3.5f;
         public float sightRange = 8f;
-        public float sightAngle = 120f;
-        public float proximityRange = 2f;
         public float abandonRange = 12f;
         public float homeRange = 15f;
         public float attackSpeed = 1f;
@@ -24,8 +22,6 @@ namespace Nomad.Monsters.Demo
             {
                 health = elite ? 250 : 100,
                 sightRange = elite ? 10f : 8f,
-                sightAngle = elite ? 140f : 120f,
-                proximityRange = elite ? 3f : 2f,
                 abandonRange = elite ? 16f : 12f,
                 homeRange = elite ? 20f : 15f
             };

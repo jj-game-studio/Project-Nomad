@@ -52,10 +52,11 @@ namespace Nomad.Monsters.Tests
         }
 
         [UnityTest]
-        public IEnumerator RearIdleTargetNeedsRealDamageToStartCombat()
+        public IEnumerator OutsideDetectionTargetNeedsRealDamageToStartCombat()
         {
+            Place(new Vector3(2f, 0.05f, 8f), Vector3.back);
             yield return new WaitForSeconds(0.2f);
-            Assert.That(tracker.IsTracking, Is.False, "전투 전에는 기존 시야각 유지");
+            Assert.That(tracker.IsTracking, Is.False, "원형 탐지 반경 밖에서는 최초 감지하지 않음");
             monster.IsCombatImmune = true;
             Assert.That(monster.TryApplyDamage(10), Is.False);
             yield return null;

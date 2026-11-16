@@ -9,8 +9,6 @@ namespace Nomad.Monsters
     {
         [SerializeField] private Transform target;
         [SerializeField, Min(0f)] private float sightRange = 8f;
-        [SerializeField, Range(0f, 360f)] private float sightAngle = 120f;
-        [SerializeField, Min(0f)] private float proximityRange = 2f;
         [SerializeField, Min(0f)] private float abandonRange = 12f;
         [SerializeField, Min(0f)] private float searchDuration = 2f;
         [SerializeField] private LayerMask sightMask = ~0;
@@ -27,16 +25,12 @@ namespace Nomad.Monsters
         public bool IsReturning { get; private set; }
         public Vector3 HomePosition { get; private set; }
         public float SightRange => sightRange;
-        public float SightAngle => sightAngle;
-        public float ProximityRange => proximityRange;
         public float AbandonRange => abandonRange;
         public float HomeRange => homeRange;
 
-        public void Configure(float sight, float angle, float proximity, float abandon, float territory)
+        public void Configure(float sight, float abandon, float territory)
         {
             sightRange = Mathf.Max(0f, sight);
-            sightAngle = Mathf.Clamp(angle, 0f, 360f);
-            proximityRange = Mathf.Max(0f, proximity);
             abandonRange = Mathf.Max(sightRange, abandon);
             homeRange = Mathf.Max(0f, territory);
         }
@@ -161,11 +155,8 @@ namespace Nomad.Monsters
         private bool CanSee(Vector3 offset)
         {
             float distance = offset.magnitude;
-            bool nearby = distance <= proximityRange;
-            Vector3 planar = Vector3.ProjectOnPlane(offset, Vector3.up);
-            // 시야각은 최초 발견에만 사용합니다. 전투 중에도 벽 차단은 검사합니다.
-            if (!IsTracking && !nearby && (distance > sightRange ||
-                Vector3.Angle(transform.forward, planar) > sightAngle * 0.5f))
+            // 방향과 관계없이 거리로 탐지하되, 아래 지형 차폐 검사는 유지합니다.
+            if (!IsTracking && distance > sightRange)
                 return false;
 
             Vector3 eye = transform.position + Vector3.up;

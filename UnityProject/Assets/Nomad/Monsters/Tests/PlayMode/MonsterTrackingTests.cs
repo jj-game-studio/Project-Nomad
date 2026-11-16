@@ -61,7 +61,7 @@ namespace Nomad.Monsters.Tests
         }
 
         [UnityTest]
-        public IEnumerator WallBlocksEvenProximityDetection()
+        public IEnumerator WallBlocksCircularDetectionEvenAtCloseRange()
         {
             Place(new Vector3(-3.7f, 0f, 0f), new Vector3(-2.3f, 0.05f, 0f), Vector3.right);
             yield return new WaitForSecondsRealtime(0.3f);
@@ -69,15 +69,11 @@ namespace Nomad.Monsters.Tests
         }
 
         [UnityTest]
-        public IEnumerator RearTargetRequiresProximity()
+        public IEnumerator RearTargetWithinDetectionRadiusIsDetected()
         {
             Place(Vector3.zero, new Vector3(0f, 0.05f, -4f), Vector3.forward);
-            yield return new WaitForSecondsRealtime(0.3f);
-            Assert.That(tracker.IsTracking, Is.False, "시야 밖 후방: " + State());
-
-            MoveTarget(new Vector3(0f, 0.05f, -1f));
             yield return Until(() => tracker.IsTracking && tracker.HasLineOfSight,
-                1f, "후방 근접 감지");
+                1f, "근접 범위 밖의 후방도 원형 반경 안이면 감지");
         }
 
         [UnityTest]

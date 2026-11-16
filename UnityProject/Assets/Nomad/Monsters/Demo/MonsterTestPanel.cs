@@ -81,8 +81,7 @@ namespace Nomad.Monsters.Demo
             selected = Register(initialMonster, initialElite);
             kind = initialElite ? 1 : 0;
             MonsterTestSettings config = settings[kind];
-            selected.tracker.Configure(config.sightRange, config.sightAngle, config.proximityRange,
-                config.abandonRange, config.homeRange);
+            selected.tracker.Configure(config.sightRange, config.abandonRange, config.homeRange);
             Log("Ready: WASD / LMB shoot / Shift roll / R reset");
         }
 
@@ -220,8 +219,7 @@ namespace Nomad.Monsters.Demo
             root.AddComponent<MonsterHitFeedback>().SetEffects(hitFlash, damageNumbers, hitShards);
             MonsterTracker tracker = root.AddComponent<MonsterTracker>();
             tracker.BindTarget(player.transform);
-            tracker.Configure(config.sightRange, config.sightAngle, config.proximityRange,
-                config.abandonRange, config.homeRange);
+            tracker.Configure(config.sightRange, config.abandonRange, config.homeRange);
             MonsterMeleeAttack attack = root.AddComponent<MonsterMeleeAttack>();
             attack.Configure(player, elite, config.damage, config.heavyDamage,
                 config.attackRange, config.heavyRange, config.attackSpeed);
@@ -327,7 +325,7 @@ namespace Nomad.Monsters.Demo
                 SpawnAt(player.transform.position + player.transform.forward * 5f);
             GUI.enabled = true;
             GUILayout.Label(notice);
-            detection = GUILayout.Toggle(detection, "Detection: cyan sight / green proximity");
+            detection = GUILayout.Toggle(detection, "Detection: cyan radius (walls block sight)");
             travel = GUILayout.Toggle(travel, "Travel: amber target gap / purple home");
             hitFlash = GUILayout.Toggle(hitFlash, "Hit flash");
             damageNumbers = GUILayout.Toggle(damageNumbers, "Damage numbers");
@@ -372,9 +370,7 @@ namespace Nomad.Monsters.Demo
         private void DrawSettings(MonsterTestSettings c)
         {
             c.moveSpeed = Slider("Move speed (m/s)", c.moveSpeed, 0f, 8f);
-            c.sightRange = Slider("Sight range (m)", c.sightRange, 1f, 20f);
-            c.sightAngle = Slider("Sight angle (deg)", c.sightAngle, 30f, 360f);
-            c.proximityRange = Slider("Proximity (m)", c.proximityRange, 0f, 8f);
+            c.sightRange = Slider("Detection radius (m)", c.sightRange, 1f, 20f);
             c.abandonRange = Slider("Target gap limit (m)", c.abandonRange, c.sightRange, 30f);
             c.homeRange = Slider("Home radius (m)", c.homeRange, 2f, 25f);
             c.attackSpeed = Slider("Attack speed (x)", c.attackSpeed, 0.1f, 4f);

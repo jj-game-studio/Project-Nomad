@@ -116,7 +116,6 @@ namespace Nomad.Monsters.Tests
             object config = Settings(0);
             Set(config, "homeRange", 2f);
             Set(config, "sightRange", 20f);
-            Set(config, "sightAngle", 360f);
             Set(config, "abandonRange", 30f);
             Set(config, "attackRange", 0.5f);
             Set(config, "moveSpeed", 6f);
@@ -201,6 +200,16 @@ namespace Nomad.Monsters.Tests
         {
             Call("SetKind", 0);
             Health health = (Health)Call("SpawnAt", new Vector3(3f, 0f, -2f));
+            yield return null;
+            yield return null;
+            LineRenderer detection = Array.Find(health.GetComponentsInChildren<LineRenderer>(),
+                line => line.name == "Test range 0");
+            Assert.That(detection.positionCount, Is.EqualTo(65));
+            Assert.That(Vector3.Distance(detection.GetPosition(0), detection.GetPosition(64)), Is.LessThan(0.01f));
+            // 코루틴과 LateUpdate 사이에 개체가 이동할 수 있으므로 그려진 원의 중심으로 검사합니다.
+            Vector3 center = (detection.GetPosition(0) + detection.GetPosition(32)) * 0.5f;
+            Assert.That(Vector3.Distance(detection.GetPosition(16), center),
+                Is.EqualTo(health.GetComponent<MonsterTracker>().SightRange).Within(0.01f));
             Set(panel, "detection", false);
             Set(panel, "travel", true);
             yield return null;
@@ -210,7 +219,7 @@ namespace Nomad.Monsters.Tests
             Assert.That(ranges.GetType().GetProperty("ShowTravel").GetValue(ranges), Is.True);
             LineRenderer[] lines = health.GetComponentsInChildren<LineRenderer>();
             Assert.That(Array.Find(lines, line => line.name == "Test range 0").enabled, Is.False);
-            Assert.That(Array.Find(lines, line => line.name == "Test range 3").enabled, Is.True);
+            Assert.That(Array.Find(lines, line => line.name == "Test range 2").enabled, Is.True);
             Call("SetPaused", true);
             Vector3 position = health.transform.position;
             yield return new WaitForSecondsRealtime(0.2f);
