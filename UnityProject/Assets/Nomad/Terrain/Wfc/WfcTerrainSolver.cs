@@ -37,12 +37,15 @@ namespace Nomad.Terrain
                     // 중앙 셀은 계단으로 제한해 평지만 생성되는 검토 결과를 방지합니다.
                     if (width >= 3 && height >= 3 && cell == height / 2 * width + width / 2)
                         valid &= tile.stairs;
+                    int boundary = 0;
                     for (int side = 0; side < 4; side++)
                     {
                         if (Neighbour(cell, side, width, height) >= 0) continue;
+                        boundary |= 1 << side;
                         for (int lane = 0; lane < 3; lane++)
                             valid &= tile.required[side * 3 + lane] == -99;
                     }
+                    foreach (int region in tile.voidBoundaries) valid &= (region & boundary) != 0;
                     if (valid) domains[cell].Add(option);
                 }
                 if (domains[cell].Count == 0) return false;

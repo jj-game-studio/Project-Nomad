@@ -70,13 +70,26 @@ namespace Nomad.Terrain.Editor
             TerrainPiece[] legacy = LoadLegacy();
             SetArray(data.FindProperty("legacySources"), legacy);
             SetArray(data.FindProperty("modularSources"), new[] { "ModularCross", "ModularTee", "WideStairs" }
-                .Select(name => AssetDatabase.LoadAssetAtPath<GameObject>($"{ModularTileAuthoring.Output}/{name}.prefab").GetComponent<TerrainPiece>()).ToArray());
+                .Select(name => AssetDatabase.LoadAssetAtPath<GameObject>($"{ModularTileAuthoring.Output}/{name}.prefab").GetComponent<TerrainPiece>())
+                .Concat(FullWidthStairAuthoring.Names.Select(name => AssetDatabase.LoadAssetAtPath<GameObject>($"{WfcCatalogAuthoring.Folder}/{name}.prefab").GetComponent<TerrainPiece>())).ToArray());
             data.ApplyModifiedPropertiesWithoutUndo();
             RenderSettings.ambientLight = Color.gray;
             EditorSceneManager.SaveScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene(), ScenePath);
             AssetDatabase.SaveAssets();
         }
 
+        // 기존 검토 씬의 객체 ID와 수동 배치를 유지하면서 신규 갤러리 원형만 갱신합니다.
+        public static void RefreshTileReferences()
+        {
+            EditorSceneManager.OpenScene(ScenePath);
+            var controls = Object.FindAnyObjectByType<TerrainIntegrationControls>();
+            var data = new SerializedObject(controls);
+            SetArray(data.FindProperty("modularSources"), new[] { "ModularCross", "ModularTee", "WideStairs" }
+                .Select(name => AssetDatabase.LoadAssetAtPath<GameObject>($"{ModularTileAuthoring.Output}/{name}.prefab").GetComponent<TerrainPiece>())
+                .Concat(FullWidthStairAuthoring.Names.Select(name => AssetDatabase.LoadAssetAtPath<GameObject>($"{WfcCatalogAuthoring.Folder}/{name}.prefab").GetComponent<TerrainPiece>())).ToArray());
+            data.ApplyModifiedPropertiesWithoutUndo();
+            EditorSceneManager.SaveScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene(), ScenePath);
+        }
         public static TerrainPiece[] LoadLegacy() => LegacyNames.Select(name =>
             AssetDatabase.LoadAssetAtPath<GameObject>($"{TerrainPieceAuthoring.Output}/{name}.prefab")?.GetComponent<TerrainPiece>()).ToArray();
 
@@ -107,7 +120,7 @@ namespace Nomad.Terrain.Editor
             text.fontSize = 19;
             text.color = Color.white;
             text.raycastTarget = false;
-            text.text = "TERRAIN INTEGRATION\nPress Play to generate. R new seed / T replay / O overview / L legacy comparison / G gallery";
+            text.text = "TERRAIN INTEGRATION\nPress Play to generate. R new seed / T replay / O overview / L legacy comparison / G tile gallery";
             return text;
         }
 

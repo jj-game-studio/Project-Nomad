@@ -19,13 +19,14 @@ namespace Nomad.Terrain.Editor
         {
             CreateFloor("WfcLow", 0f);
             CreateFloor("WfcHigh", 2f);
+            FullWidthStairAuthoring.Create();
             var variants = new List<WfcTileVariant>();
             Scene scene = EditorSceneManager.NewPreviewScene();
             try
             {
-                foreach (string name in new[] { "WfcLow", "WfcHigh", "ModularCross", "ModularTee", "WideStairs" })
+                foreach (string name in new[] { "WfcLow", "WfcHigh", "ModularCross", "ModularTee", "WideStairs" }.Concat(FullWidthStairAuthoring.Names))
                 {
-                    string path = name.StartsWith("Wfc", StringComparison.Ordinal) ? $"{Folder}/{name}.prefab"
+                    string path = (name.StartsWith("Wfc", StringComparison.Ordinal) || FullWidthStairAuthoring.Names.Contains(name)) ? $"{Folder}/{name}.prefab"
                         : $"{ModularTileAuthoring.Output}/{name}.prefab";
                     TerrainPiece prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path)?.GetComponent<TerrainPiece>();
                     if (prefab == null) throw new InvalidOperationException("원형이 없습니다: " + path);
@@ -45,8 +46,8 @@ namespace Nomad.Terrain.Editor
                             var variant = new WfcTileVariant
                             {
                                 prefab = prefab, combination = combination, turn = turn,
-                                stairs = prefab.Kind == TerrainPieceKind.Stairs, wide = name == "WideStairs",
-                                weight = name.StartsWith("Wfc", StringComparison.Ordinal) ? 1f : name == "WideStairs" ? 0.35f : 0.5f / count
+                                stairs = prefab.Kind == TerrainPieceKind.Stairs, wide = name == "WideStairs" || sample.GetComponent<FullWidthStairTile>() != null,
+                                weight = name.StartsWith("Wfc", StringComparison.Ordinal) ? 1f : sample.GetComponent<ModularTerrainTile>() == null ? 0.35f : 0.5f / count
                             };
                             Bake(sample, scene.GetPhysicsScene(), variant);
                             variants.Add(variant);
@@ -91,16 +92,58 @@ namespace Nomad.Terrain.Editor
                     variant.surfaces[slot] = Mathf.RoundToInt(heights.Min() * 4f);
             }
 
+            BakeEdgesAndVoids(physics, variant);
+
             if (!variant.stairs) return;
             foreach (TerrainConnection port in piece.Connections)
             {
-                // 모듈 바닥의 선택 포트는 절벽을 허용합니다. 계단 팔/넓은 계단의 고정 포트만 필수입니다.
+                // 고정 출입구 지지 외에도 위에서 전체 변 높이와 빈 영역의 외곽 연결을 검사합니다.
                 if (port.transform.parent != piece.transform) continue;
                 int slot = WfcTileRules.Slot(port.Position, port.Outward);
                 variant.required[slot] = Mathf.RoundToInt(port.Position.y * 4f);
             }
         }
 
+        private static void BakeEdgesAndVoids(PhysicsScene physics, WfcTileVariant variant)
+        {
+            for (int side = 0; side < 4; side++)
+            for (int sample = 0; sample < 20; sample++)
+            {
+                float coordinate = -4.75f + sample * 0.5f;
+                Vector3 point = side % 2 == 0 ? new Vector3(coordinate, 4f, side == 0 ? 4.95f : -4.95f)
+                    : new Vector3(side == 1 ? 4.95f : -4.95f, 4f, coordinate);
+                variant.edgeHeights[side * 20 + sample] = physics.Raycast(point, Vector3.down, out RaycastHit hit, 5f)
+                    ? Mathf.RoundToInt(hit.point.y * 4f) : -99;
+            }
+
+            var empty = new bool[400];
+            for (int z = 0; z < 20; z++)
+            for (int x = 0; x < 20; x++)
+                empty[z * 20 + x] = !physics.Raycast(new Vector3(-4.75f + x * 0.5f, 4f, -4.75f + z * 0.5f), Vector3.down, out _, 5f);
+            var regions = new List<int>();
+            for (int cell = 0; cell < empty.Length; cell++)
+            {
+                if (!empty[cell]) continue;
+                var queue = new Queue<int>();
+                queue.Enqueue(cell);
+                empty[cell] = false;
+                int boundary = 0;
+                while (queue.Count > 0)
+                {
+                    int current = queue.Dequeue();
+                    for (int side = 0; side < 4; side++)
+                    {
+                        int neighbour = WfcTerrainSolver.Neighbour(current, side, 20, 20);
+                        if (neighbour < 0) { boundary |= 1 << side; continue; }
+                        if (!empty[neighbour]) continue;
+                        empty[neighbour] = false;
+                        queue.Enqueue(neighbour);
+                    }
+                }
+                regions.Add(boundary);
+            }
+            variant.voidBoundaries = regions.ToArray();
+        }
         private static void CreateFloor(string name, float height)
         {
             Directory.CreateDirectory(Folder);

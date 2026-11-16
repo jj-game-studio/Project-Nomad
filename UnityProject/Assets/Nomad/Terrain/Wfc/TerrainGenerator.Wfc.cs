@@ -43,6 +43,7 @@ namespace Nomad.Terrain
             {
                 if (variant == null || variant.prefab == null || variant.surfaces == null || variant.required == null
                     || variant.surfaces.Length != 12 || variant.required.Length != 12
+                    || variant.edgeHeights == null || variant.edgeHeights.Length != 80 || variant.voidBoundaries == null
                     || !float.IsFinite(variant.weight) || variant.weight <= 0f)
                     return "WFC 후보의 원형·표면·출입구·가중치 데이터가 유효하지 않습니다.";
                 if (variant.prefab.transform.localScale != Vector3.one || variant.turn < 0 || variant.turn > 3)

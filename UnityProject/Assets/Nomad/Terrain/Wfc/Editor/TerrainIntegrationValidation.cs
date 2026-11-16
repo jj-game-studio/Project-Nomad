@@ -36,9 +36,10 @@ namespace Nomad.Terrain.Editor
                 var controls = Object.FindAnyObjectByType<TerrainIntegrationControls>();
                 TerrainGenerator generator = controls.Generator;
                 var catalog = AssetDatabase.LoadAssetAtPath<WfcTerrainCatalog>(WfcCatalogAuthoring.CatalogPath);
-                Require(catalog.variants.Length == 444, "108 combinations x4 + wide x4 + floors x8");
+                Require(catalog.variants.Length == 460, "108 combinations x4 + 5 wide shapes x4 + floors x8");
                 Require(TerrainIntegrationAuthoring.LoadLegacy().All(p => p != null), "9 legacy prefabs loaded");
                 RuleCases(catalog);
+                TerrainSurfaceChecks.ValidateFixtures();
                 int starts = 0;
                 int completions = 0;
                 generator.GenerationStarted += _ => starts++;
@@ -62,6 +63,8 @@ namespace Nomad.Terrain.Editor
                     Require(props == string.Join(";", Object.FindAnyObjectByType<Nomad.Props.PropScatter>().Positions), "prop consumer replay");
                     maxChecks = Mathf.Max(maxChecks, first.CandidateChecks);
                 }
+                foreach (string name in FullWidthStairAuthoring.Names)
+                    Require(seen.Any(value => value.StartsWith(name + "_", StringComparison.Ordinal)), "new stair family actually generated: " + name);
                 Require(starts == 60 && completions == 60, "one result per generation");
                 generator.ConfigureWfc(catalog, 6, 6, 51, new Bounds(Vector3.zero, Vector3.one));
                 TerrainGenerationResult failure = generator.Generate();
@@ -77,6 +80,7 @@ namespace Nomad.Terrain.Editor
                 // 기존 연결 생성의 seed/이벤트/실패/분기 회귀도 같은 통합 진입점에서 실행합니다.
                 TerrainGenerationValidation.Validate();
                 ModularTileValidation.Validate();
+                FullWidthStairValidation.Validate();
                 var finalData = new SerializedObject(controls);
                 finalData.FindProperty("seed").intValue = 51;
                 finalData.ApplyModifiedPropertiesWithoutUndo();
@@ -84,8 +88,13 @@ namespace Nomad.Terrain.Editor
                 Capture(controls, 0, "terrain-integration-player");
                 Capture(controls, 1, "terrain-integration-overview");
                 Capture(controls, 2, "terrain-integration-gallery");
+                foreach (string name in FullWidthStairAuthoring.Names)
+                {
+                    var shape = Object.FindObjectsByType<FullWidthStairTile>().First(tile => tile.name == name);
+                    Capture(controls, 2, "terrain-" + name, shape.transform.position);
+                }
                 controls.SetView(0);
-                string report = $"TERRAIN_INTEGRATION_PASS: 30 seeds x2 WFC, 444 candidates, {seen.Count} distinct instantiated variants, max checks {maxChecks}, {watch.Elapsed.TotalSeconds:F2}s; same scene, prop replay, no XZ stacking, required exits, adjacency/wide exception, failure cleanup, legacy 100x2, modular 436/228";
+                string report = $"TERRAIN_INTEGRATION_PASS: 30 seeds x2 WFC, 460 candidates, {seen.Count} distinct instantiated variants, max checks {maxChecks}, {watch.Elapsed.TotalSeconds:F2}s; same scene, prop replay, no XZ stacking, required exits, adjacency/wide exception, failure cleanup, legacy 100x2, modular 436/228";
                 File.WriteAllText("Artifacts/terrain-integration-results.txt", report);
                 Debug.Log(report);
             }
@@ -107,7 +116,12 @@ namespace Nomad.Terrain.Editor
             Require(WfcTileRules.Compatible(regular, low, 0), "ordinary exit supported by low floor");
             var empty = new WfcTileVariant { surfaces = Enumerable.Repeat(-99, 12).ToArray(), required = Enumerable.Repeat(-99, 12).ToArray() };
             Require(!WfcTileRules.Compatible(regular, empty, 0), "unsupported exit rejected");
+            WfcTileVariant wrongCorner = catalog.variants.First(v => v.prefab.name == "ModularCross" && v.combination == 41 && v.turn == 0);
+            Require(!WfcTileRules.Compatible(wrongCorner, low, 2) && !WfcTileRules.Compatible(wrongCorner, low, 3), "image1 high corner next to low floor rejected");
+            WfcTileVariant hole = catalog.variants.First(v => v.prefab.name == "ModularTee" && v.combination == 12 && v.turn == 0);
+            Require(hole.voidBoundaries.Length > 0, "image2 tee missing region recorded");
             int checks = 0;
+            Require(!new WfcTerrainSolver(new[] { low, hole }).Solve(3, 3, new System.Random(1), out _, ref checks), "interior tee hole rejected");
             Require(!new WfcTerrainSolver(new[] { regular }).Solve(1, 1, new System.Random(1), out _, ref checks), "boundary exit rejected");
         }
 
@@ -116,6 +130,7 @@ namespace Nomad.Terrain.Editor
             Require(result.Success, "WFC generation: " + result.FailureReason + " seed=" + result.Seed);
             Require(result.Pieces.Count == 36 && result.Pieces.Any(p => p.Kind == TerrainPieceKind.Stairs), "36 cells with height variation");
             Physics.SyncTransforms();
+            TerrainSurfaceChecks.ValidateField(result.Pieces, 6, 6);
             for (int index = 0; index < result.Pieces.Count; index++)
             {
                 TerrainPiece piece = result.Pieces[index];
@@ -141,7 +156,7 @@ namespace Nomad.Terrain.Editor
                         Require(Physics.Raycast(origin, Vector3.down, out RaycastHit hit, 5f)
                             && hit.collider.GetComponentInParent<TerrainPiece>() != piece,
                             "required exit neighbouring floor");
-                        Require(hit.point.y >= port.Position.y - 0.01f && hit.point.y <= port.Position.y + 0.251f, "exit floor elevation");
+                        Require(Mathf.Abs(hit.point.y - port.Position.y) <= 0.251f, "exit floor elevation");
                     }
                 }
             }
@@ -150,16 +165,32 @@ namespace Nomad.Terrain.Editor
         public static string Signature(TerrainGenerationResult result) => string.Join(";",
             result.Pieces.Select(p => p.name + p.transform.position.ToString("F3") + p.transform.eulerAngles.ToString("F1")));
 
-        public static void Capture(TerrainIntegrationControls controls, int view, string name)
+        public static void Capture(TerrainIntegrationControls controls, int view, string name, Vector3? focus = null)
         {
             controls.SetView(view);
             Canvas canvas = Object.FindAnyObjectByType<Canvas>();
             Camera camera = Camera.main;
+            if (focus.HasValue)
+            {
+                camera.transform.position = focus.Value + new Vector3(15f, 19f, -18f);
+                camera.transform.LookAt(focus.Value);
+            }
             var target = new RenderTexture(1280, 720, 24);
             var pixels = new Texture2D(1280, 720, TextureFormat.RGB24, false);
             RenderTexture previous = RenderTexture.active;
+            bool previousOrthographic = camera.orthographic;
+            bool previousCanvasEnabled = canvas.enabled;
             try
             {
+                if (focus.HasValue)
+                {
+                    bool lShape = name.Contains("WideL");
+                    camera.orthographic = true;
+                    camera.orthographicSize = 7f;
+                    camera.transform.position = focus.Value + (lShape ? new Vector3(-15f, 19f, 18f) : new Vector3(15f, 19f, -18f));
+                    camera.transform.LookAt(focus.Value);
+                    canvas.enabled = false;
+                }
                 canvas.renderMode = RenderMode.ScreenSpaceCamera;
                 canvas.worldCamera = camera;
                 canvas.planeDistance = 1f;
@@ -176,6 +207,8 @@ namespace Nomad.Terrain.Editor
             finally
             {
                 camera.targetTexture = null;
+                camera.orthographic = previousOrthographic;
+                canvas.enabled = previousCanvasEnabled;
                 canvas.renderMode = RenderMode.ScreenSpaceOverlay;
                 RenderTexture.active = previous;
                 Object.DestroyImmediate(pixels);

@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Nomad.Player;
 using Nomad.Props;
 using UnityEditor;
@@ -87,6 +88,7 @@ namespace Nomad.Terrain.Editor
                         break;
                     case 4:
                         Require(Object.FindObjectsByType<ModularTerrainTile>().Length >= 108, "108 combination gallery active");
+                        Require(Object.FindObjectsByType<FullWidthStairTile>().Count(tile => tile.transform.parent.name == "IntegrationCombinationGallery") == 4, "four new stair variants in shared gallery");
                         Press(Key.G);
                         break;
                     case 5:

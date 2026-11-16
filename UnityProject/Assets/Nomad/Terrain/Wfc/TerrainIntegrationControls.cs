@@ -88,7 +88,7 @@ namespace Nomad.Terrain
                 + $"{(safe ? "Playable" : result.Success ? "No safe start" : result.FailureReason)} | Tiles {result.Pieces.Count} | Props {scatter.Positions.Count}\n"
                 + $"Attempts {result.Attempts} | Candidate checks {result.CandidateChecks}\n"
                 + "R New seed | T Replay | L WFC/Legacy | P Props on/off\n"
-                + "O Field overview/player | G 108-combination gallery/player\n"
+                + "O Field overview/player | G 108 combinations + 4 new stairs/player\n"
                 + "WASD Move | Space Jump | Left Shift Roll | Fall: respawn\n"
                 + "Single surface per XZ cell | Navigation/monster integration pending";
             return result;
@@ -137,6 +137,12 @@ namespace Nomad.Terrain
                     piece.GetComponent<ModularTerrainTile>().ApplyCombination(value);
                     piece.name = $"{modularSources[kind].name}_Combination_{value}";
                 }
+            }
+            for (int index = 3; index < modularSources.Length; index++, slot++)
+            {
+                TerrainPiece piece = Instantiate(modularSources[index], gallery.transform);
+                piece.transform.position = new Vector3(200f + slot % 12 * 14f, 0f, slot / 12 * 14f);
+                piece.name = modularSources[index].name;
             }
             gallery.SetActive(true);
         }

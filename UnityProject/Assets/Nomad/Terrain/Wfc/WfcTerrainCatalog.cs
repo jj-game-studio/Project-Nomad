@@ -15,6 +15,9 @@ namespace Nomad.Terrain
         // 방향 N/E/S/W × 변의 -3.5/0/3.5m. 높이는 0.25m 단위, -99는 바닥 없음입니다.
         public int[] surfaces = new int[12];
         public int[] required = new int[12];
+        public int[] edgeHeights = new int[80];
+        // 비어 있는 각 연결 영역이 닿는 원형 외곽 변의 비트입니다. 실제 맵 외곽에 닿아야 합니다.
+        public int[] voidBoundaries = Array.Empty<int>();
     }
 
     [CreateAssetMenu(menuName = "Nomad/Terrain/WFC Catalog")]
@@ -54,10 +57,16 @@ namespace Nomad.Terrain
                 if (!Supported(a.required[from], b.surfaces[to]) || !Supported(b.required[to], a.surfaces[from]))
                     return false;
             }
+            for (int sample = 0; sample < 20; sample++)
+            {
+                int from = a.edgeHeights[side * 20 + sample];
+                int to = b.edgeHeights[opposite * 20 + sample];
+                if (from != -99 && to != -99 && Mathf.Abs(from - to) > 1) return false;
+            }
             return true;
         }
 
         private static bool Supported(int required, int surface) => required == -99
-            || (surface >= required && surface <= required + 1);
+            || (surface != -99 && Mathf.Abs(surface - required) <= 1);
     }
 }
