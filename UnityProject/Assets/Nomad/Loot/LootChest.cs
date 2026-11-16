@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Nomad.Inventory;
+using Nomad.Interaction;
 using UnityEngine;
 
 namespace Nomad.Loot
@@ -21,7 +22,7 @@ namespace Nomad.Loot
     }
 
     [DisallowMultipleComponent]
-    public sealed class LootChest : MonoBehaviour
+    public sealed class LootChest : MonoBehaviour, IInteractable
     {
         [SerializeField] private string chestId;
         [SerializeField] private Transform interactionPoint;
@@ -32,6 +33,7 @@ namespace Nomad.Loot
 
         private bool busy;
         public string ChestId => chestId;
+        public string InteractionId => chestId;
         public Vector3 InteractionPoint => interactionPoint == null ? transform.position : interactionPoint.position;
         public LootStatus Status { get; private set; }
         public string Message { get; private set; } = "Closed";
@@ -60,6 +62,20 @@ namespace Nomad.Loot
 
             chestId = id;
             contents = (LootStack[])stacks.Clone();
+        }
+
+        public bool CanInteract(InteractionContext context)
+        {
+            return isActiveAndEnabled && !busy && !string.IsNullOrWhiteSpace(chestId) &&
+                   context.Player != null && context.Inventory != null &&
+                   context.Inventory.isActiveAndEnabled && Array.Exists(contents, stack => stack.Count > 0);
+        }
+
+        public void Interact(InteractionContext context)
+        {
+            // 거리·시야·구르기는 A의 PlayerInteraction에서 검사합니다.
+            if (CanInteract(context))
+                TryLoot(context.Inventory);
         }
 
         // A의 공용 계약/거리/시야/구르기 검증 후 호출할 B 소유 수량 전송입니다.

@@ -28,6 +28,7 @@ namespace Nomad.Terrain.Editor
             crate.localPosition = Vector3.up * (MicroTerrainTile.Size * 0.2f);
             controls.Generator.ConfigureWfc(AssetDatabase.LoadAssetAtPath<WfcTerrainCatalog>(MicroTerrainAuthoring.CatalogPath),
                 18, 18, 51, new Bounds(Vector3.zero, new Vector3(400f, 100f, 400f)));
+            Nomad.Loot.Editor.TerrainLootIntegrationSetup.ConfigureScene();
             EditorSceneManager.SaveScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene(), TerrainIntegrationAuthoring.ScenePath);
             AssetDatabase.SaveAssets();
         }

@@ -1,4 +1,5 @@
 using Nomad.Player;
+using Nomad.Loot;
 using Nomad.Props;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -120,6 +121,7 @@ namespace Nomad.Terrain
                 + "O Field overview/player | G 3m tile gallery/player\n"
                 + "WASD Move | Space Jump | Left Shift Roll | Fall: respawn\n"
                 + $"Levels 0/1/2m | Reachable samples {generator.ReachableSamples} | {NavigationFailure}{generator.WalkabilityFailure}";
+            GetComponent<TerrainLootIntegration>()?.Refresh(safe ? scatter : null);
             return result;
         }
 
