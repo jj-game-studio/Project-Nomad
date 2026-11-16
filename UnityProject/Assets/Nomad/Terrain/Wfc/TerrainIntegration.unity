@@ -147,8 +147,8 @@ Transform:
   m_GameObject: {fileID: 434907683}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.175, z: 0}
-  m_LocalScale: {x: 0.35, y: 0.35, z: 0.35}
+  m_LocalPosition: {x: 0, y: 0.6, z: 0}
+  m_LocalScale: {x: 1.2, y: 1.2, z: 1.2}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 897010173}
@@ -793,9 +793,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Props.PropScatter
   generator: {fileID: 1613374919}
   propPrefab: {fileID: 897010172}
-  propsPerPiece: 2
+  propsPerPiece: 1
   placementRadius: 0.6
-  placementHeight: 1
+  placementHeight: 1.2
   generatedRoot: {fileID: 0}
 --- !u!4 &1751394750
 Transform:

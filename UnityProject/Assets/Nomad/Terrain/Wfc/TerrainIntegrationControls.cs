@@ -63,7 +63,12 @@ namespace Nomad.Terrain
         {
             player.SetActive(false);
             bool micro = !legacy && catalog.microTiles;
-            scatter.Configure(generator, propTemplate, props ? 2 : 0, micro ? 0.18f : PropScatter.PropRadius, micro ? 0.36f : PropScatter.PropHeight);
+            float crateSize = micro ? MicroTerrainTile.Size * 0.4f : 1f;
+            Transform crate = propTemplate.transform.GetChild(0);
+            crate.localScale = Vector3.one * crateSize;
+            crate.localPosition = Vector3.up * (crateSize * 0.5f);
+            scatter.Configure(generator, propTemplate, props ? (micro ? 1 : 2) : 0,
+                micro ? crateSize * 0.5f : PropScatter.PropRadius, micro ? crateSize : PropScatter.PropHeight);
             Bounds bounds = new Bounds(Vector3.zero, new Vector3(400f, 100f, 400f));
             if (legacy) generator.Configure(legacySources, 12, seed, bounds, newSeed);
             else generator.ConfigureWfc(catalog, width, height, seed, bounds, newSeed);
@@ -87,7 +92,7 @@ namespace Nomad.Terrain
             if (!navigation)
             {
                 // 소품을 모두 제외해도 실패하면 플레이 가능으로 공개하지 않습니다.
-                scatter.Configure(generator, propTemplate, 0, 0.18f, 0.36f);
+                scatter.Configure(generator, propTemplate, 0, crateSize * 0.5f, crateSize);
                 navigation = CheckNavigation();
             }
             NavigationFailure = navigationError;

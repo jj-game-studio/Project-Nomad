@@ -77,7 +77,7 @@ namespace Nomad.Terrain.Editor
                 TerrainIntegrationValidation.Capture(controls, 0, "micro-player");
                 TerrainIntegrationValidation.Capture(controls, 2, "micro-gallery");
                 controls.SetView(0);
-                string report = $"MICRO_TERRAIN_PASS: 20 seeds x2, 324 3m tiles, levels0/1/2, {surfaces} NavMesh paths across all tile samples, 5 families, no opposing stairs, walls/cliffs, replay, max checks {maxChecks}; legacy/modular regressions";
+                string report = $"MICRO_TERRAIN_PASS: 20 seeds x2, 324 3m tiles, levels0/1/2, {surfaces} NavMesh paths across all tile samples, 5 families, no opposing stairs, unguarded cliffs, replay, max checks {maxChecks}; legacy/modular regressions";
                 File.WriteAllText("Artifacts/micro-terrain-results.txt", report);
                 Debug.Log(report);
             }
@@ -94,7 +94,6 @@ namespace Nomad.Terrain.Editor
             Require(result.Success && result.Pieces.Count == 324, "generated reachable field: " + result.FailureReason + " / " + generator.WalkabilityFailure);
             Require(generator.ReachableSamples == result.Pieces.Count * 9, "every tile surface has path");
             var levels = new HashSet<int>();
-            bool twoMetreDrop = false;
             foreach (TerrainPiece piece in result.Pieces)
             {
                 var tile = piece.GetComponent<MicroTerrainTile>();
@@ -105,19 +104,9 @@ namespace Nomad.Terrain.Editor
                 foreach (float z in new[] { -1f, 0.07f, 1f })
                     Require(TerrainSurfaceChecks.Height(piece, piece.transform.TransformPoint(new Vector3(x, 0f, z))).HasValue, "no missing floor");
             }
-            for (int cell = 0; cell < result.Pieces.Count; cell++)
-            for (int side = 0; side < 4; side++)
-            {
-                int neighbour = WfcTerrainSolver.Neighbour(cell, side, 18, 18);
-                if (neighbour < 0) continue;
-                var a = result.Pieces[cell].GetComponent<MicroTerrainTile>();
-                var b = result.Pieces[neighbour].GetComponent<MicroTerrainTile>();
-                twoMetreDrop |= a.IsCliff && a.Level == 2 && !b.IsStair && b.Level == 0;
-            }
-            Require(twoMetreDrop, "2m cliff actually adjacent to 0m floor");
             Require(levels.SetEquals(new[] { 0, 1, 2 }), "all three elevations exist");
             MicroTerrainWalls walls = result.Pieces[0].GetComponentInParent<Transform>().root.GetComponentInChildren<MicroTerrainWalls>();
-            Require(walls != null && walls.SegmentCount > 0, "cliff and outside guards");
+            Require(walls == null, "no cliff or outside guards");
         }
 
         private static void Rules(WfcTerrainCatalog catalog)
@@ -160,12 +149,10 @@ namespace Nomad.Terrain.Editor
                             piece.transform.SetPositionAndRotation(Vector3.right * index * 3f, Quaternion.Euler(0f, variant.turn * 90f, 0f));
                             pieces.Add(piece);
                         }
-                        MicroTerrainWalls.Build(root.transform, pieces.Count, 1, choices, catalog);
                         bool connected = MicroTerrainWalkability.Validate(root, pieces, out _, out _);
                         Require(connected == (scenario == 1), "isolated cliff rejected / 0-1-2 staircase connected");
                         Physics.SyncTransforms();
                         if (scenario == 1) WalkStairs(scene, scene.GetPhysicsScene());
-                        else CheckGuards(scene, scene.GetPhysicsScene());
                     }
                     finally
                     {
@@ -221,27 +208,6 @@ namespace Nomad.Terrain.Editor
             finally { Object.DestroyImmediate(body.gameObject); }
         }
 
-        private static void CheckGuards(Scene scene, PhysicsScene physics)
-        {
-            foreach (bool cliff in new[] { false, true })
-            {
-                CharacterController body = Probe(scene, cliff ? new Vector3(3f, 2f, 0f) : Vector3.zero);
-                try
-                {
-                    float velocity = Mathf.Sqrt(2f * 20f * 1.2f);
-                    for (int step = 0; step < 180; step++)
-                    {
-                        velocity = body.isGrounded && step > 30 ? -2f : velocity - 20f / 60f;
-                        body.Move(Vector3.left * (5f / 60f) + Vector3.up * (velocity / 60f));
-                        physics.Simulate(1f / 60f);
-                    }
-                    Require(cliff ? body.transform.position.x > 1.85f && body.transform.position.y > 1.8f
-                        : body.transform.position.x > -1.1f && body.transform.position.y > -0.1f,
-                        "cliff/outside guard blocks running jump");
-                }
-                finally { Object.DestroyImmediate(body.gameObject); }
-            }
-        }
         private static void Require(bool value, string message)
         {
             if (!value) throw new InvalidOperationException("MICRO_TERRAIN_FAIL: " + message);

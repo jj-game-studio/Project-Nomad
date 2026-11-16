@@ -41,17 +41,24 @@ namespace Nomad.Terrain
             NavMeshDataInstance instance = NavMesh.AddNavMeshData(data);
             try
             {
-                Vector3 start = pieces[0].transform.position;
+                var first = pieces[0].GetComponent<MicroTerrainTile>();
+                Vector3 start = pieces[0].transform.TransformPoint(new Vector3(-1.1f, first.HeightAt(-1.1f, -1.1f), -1.1f));
                 if (!NavMesh.SamplePosition(start, out NavMeshHit origin, 0.4f, NavMesh.AllAreas))
                 { reason = "시작점의 보행 영역 없음"; return false; }
                 var path = new NavMeshPath();
                 foreach (TerrainPiece piece in pieces)
                 {
                     var profile = piece.GetComponent<MicroTerrainTile>();
-                    foreach (float x in new[] { -0.75f, 0.03f, 0.75f })
-                    foreach (float z in new[] { -0.75f, 0.07f, 0.75f })
+                    // 중앙 상자가 있는 평지는 상자 주변 보행 면을 검사합니다.
+                    float offset = extraObstacles != null && !profile.IsStair ? 1.1f : 0.75f;
+                    foreach (float x in new[] { -offset, 0.03f, offset })
+                    foreach (float z in new[] { -offset, 0.07f, offset })
                     {
                         Vector3 point = piece.transform.TransformPoint(new Vector3(x, profile.HeightAt(x, z), z));
+                        // 상자 자체가 차지한 중앙은 보행 면이 아닙니다. 주변 8개 지점은 계속 검사합니다.
+                        if (extraObstacles != null && !profile.IsStair && Mathf.Abs(x) < 0.1f && Mathf.Abs(z) < 0.1f
+                            && boxes.Exists(box => !box.transform.IsChildOf(root.transform)
+                                && box.bounds.Contains(point + Vector3.up * 0.1f))) continue;
                         if (!NavMesh.SamplePosition(point, out NavMeshHit hit, 0.4f, NavMesh.AllAreas)
                             || Mathf.Abs(hit.position.y - point.y) > 0.3f
                             || !NavMesh.CalculatePath(origin.position, hit.position, NavMesh.AllAreas, path)

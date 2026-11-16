@@ -27,7 +27,6 @@ namespace Nomad.Terrain
                 if (!InsideBounds(piece.WorldOccupancy)) return false;
                 pieces.Add(piece);
             }
-            MicroTerrainWalls.Build(generatedRoot.transform, gridWidth, gridHeight, choices, wfcCatalog);
             for (int cell = 0; cell < pieces.Count; cell++)
             {
                 foreach (int side in new[] { 0, 1 })

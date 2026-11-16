@@ -24,8 +24,8 @@ namespace Nomad.Terrain.Editor
             data.ApplyModifiedPropertiesWithoutUndo();
             GameObject template = new SerializedObject(controls).FindProperty("propTemplate").objectReferenceValue as GameObject;
             Transform crate = template.transform.GetChild(0);
-            crate.localScale = Vector3.one * 0.35f;
-            crate.localPosition = Vector3.up * 0.175f;
+            crate.localScale = Vector3.one * (MicroTerrainTile.Size * 0.4f);
+            crate.localPosition = Vector3.up * (MicroTerrainTile.Size * 0.2f);
             controls.Generator.ConfigureWfc(AssetDatabase.LoadAssetAtPath<WfcTerrainCatalog>(MicroTerrainAuthoring.CatalogPath),
                 18, 18, 51, new Bounds(Vector3.zero, new Vector3(400f, 100f, 400f)));
             EditorSceneManager.SaveScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene(), TerrainIntegrationAuthoring.ScenePath);

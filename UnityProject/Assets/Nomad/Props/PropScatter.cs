@@ -83,8 +83,25 @@ namespace Nomad.Props
 
             foreach (TerrainPiece piece in result.Pieces)
             {
-                // 계단 전역은 예약합니다. 평지에서도 모든 연결점-중앙 통로를 보존합니다.
+                // 계단 전역은 예약하고, 기존 큰 타일은 연결점-중앙 통로도 보존합니다.
                 if (piece.Kind == TerrainPieceKind.Stairs) continue;
+                var micro = piece.GetComponent<MicroTerrainTile>();
+                if (micro != null)
+                {
+                    // 3m 평지/절벽에는 중앙 상자를 최대 하나만 확률적으로 배치합니다.
+                    if (propsPerPiece == 0 || random.NextDouble() >= 0.2) continue;
+                    CandidateChecks++;
+                    Vector3 center = piece.transform.TransformPoint(new Vector3(0f, micro.Level + 1f, 0f));
+                    if (!TryFloor(piece, center, out center) || !ClearSpace(center)) continue;
+
+                    GameObject crate = Instantiate(propPrefab, generatedRoot.transform);
+                    crate.transform.SetPositionAndRotation(center, piece.transform.rotation);
+                    crate.SetActive(true);
+                    positions.Add(center);
+                    Physics.SyncTransforms();
+                    continue;
+                }
+
                 int placed = 0;
                 Bounds area = piece.LocalOccupancy;
                 for (int attempt = 0; attempt < CandidatesPerPiece && placed < propsPerPiece; attempt++)
@@ -94,12 +111,6 @@ namespace Nomad.Props
                         Mathf.Lerp(area.min.x + 1f, area.max.x - 1f, (float)random.NextDouble()),
                         area.max.y + 1f,
                         Mathf.Lerp(area.min.z + 1f, area.max.z - 1f, (float)random.NextDouble()));
-                    if (area.size.x <= 3.01f && area.size.z <= 3.01f && placementRadius < 0.25f)
-                    {
-                        // 작은 조각에서는2m 통로를 피해 네 모서리 후보만 확인합니다.
-                        local.x = (random.Next(2) == 0 ? -1f : 1f) * (area.extents.x - placementRadius - 0.03f);
-                        local.z = (random.Next(2) == 0 ? -1f : 1f) * (area.extents.z - placementRadius - 0.03f);
-                    }
                     Vector3 point = piece.transform.TransformPoint(local);
                     if (!TryFloor(piece, point, out point) || !PreservesPassages(piece, point, placementRadius, area.size.x <= 3.01f ? 1f : 2f)
                         || !ClearSpace(point)) continue;
