@@ -11,8 +11,9 @@ namespace Nomad.Terrain
         private TerrainGenerator generator;
         private NavMeshData data;
         private NavMeshDataInstance instance;
-        private readonly NavMeshPath path = new();
+        private NavMeshPath path;
         private bool preparing;
+        private string completedId;
 
         public FieldGenerationState State { get; private set; }
         public FieldGenerationResult LastResult { get; private set; }
@@ -26,7 +27,7 @@ namespace Nomad.Terrain
             if (generator != null) generator.GenerationStarted -= Begin;
             Invalidate();
             generator = source;
-            if (generator != null) generator.GenerationStarted += Begin;
+            if (isActiveAndEnabled && generator != null) generator.GenerationStarted += Begin;
         }
 
         private void Begin(string id)
@@ -47,9 +48,12 @@ namespace Nomad.Terrain
         public FieldGenerationResult Prepare(TerrainGenerationResult terrain, GameObject obstacles)
         {
             if (preparing) throw new InvalidOperationException("경로 준비에 재진입할 수 없습니다.");
+            if (!isActiveAndEnabled) throw new InvalidOperationException("비활성 경로 제공자는 준비할 수 없습니다.");
             if (terrain == null || generator == null || generator.LastResult != terrain)
                 throw new ArgumentException("현재 생성기의 최신 지형 결과가 필요합니다.");
             if (LastResult?.GenerationId == terrain.GenerationId) return LastResult;
+            if (completedId == terrain.GenerationId)
+                throw new InvalidOperationException("무효화한 세대는 다시 준비할 수 없습니다. 지형을 새로 생성하십시오.");
 
             preparing = true;
             try
@@ -82,17 +86,18 @@ namespace Nomad.Terrain
             if (success)
             {
                 SelectPoints(terrain, start, chests, true);
-                if (chests.Count > 0)
+                while (chests.Count > 0)
                 {
                     // 상자를 모두 놓아도 필수 경로가 유지되는 예약 영역만 공개합니다.
                     Bake(terrain, obstacles, chests);
-                    if (!ValidateRoutes(terrain, start, obstacles, chests, out _)
-                        || !ReachAll(start, chests))
-                    {
-                        chests.Clear();
-                        Bake(terrain, obstacles, chests);
-                    }
+                    if (ValidateRoutes(terrain, start, obstacles, chests, out _) && ReachAll(start, chests)) break;
+                    int nearest = 0;
+                    for (int index = 1; index < chests.Count; index++)
+                        if (Vector3.Distance(chests[index].Position, MicroTerrainWalkability.BlockedPoint)
+                            < Vector3.Distance(chests[nearest].Position, MicroTerrainWalkability.BlockedPoint)) nearest = index;
+                    chests.RemoveAt(nearest);
                 }
+                if (chests.Count == 0) Bake(terrain, obstacles, chests);
                 success = HasNavigation && ValidateRoutes(terrain, start, obstacles, chests, out reason);
                 if (success) SelectPoints(terrain, start, enemies, false, chests);
             }
@@ -103,6 +108,7 @@ namespace Nomad.Terrain
                 chests.Clear();
             }
             LastResult = new FieldGenerationResult(terrain, success, reason, start, enemies, chests);
+            completedId = terrain.GenerationId;
             State = success ? FieldGenerationState.Ready : FieldGenerationState.Failed;
             GenerationCompleted?.Invoke(LastResult);
             return LastResult;
@@ -145,6 +151,8 @@ namespace Nomad.Terrain
                         || Vector3.Distance(floor, start) < (chest ? 2f : 5f)
                         || Overlaps(floor, radius, target) || Overlaps(floor, radius, other)) continue;
                     if (chest && !PreservesConnections(piece, floor, radius)) continue;
+                    if (chest && (!NavMesh.FindClosestEdge(floor, out NavMeshHit edge, NavMesh.AllAreas)
+                        || edge.distance < 2f)) continue;
 
                     Vector3 approach = floor;
                     bool valid = false;
@@ -157,7 +165,8 @@ namespace Nomad.Terrain
                                 && Reachable(start, approach)) { valid = true; break; }
                         }
                     }
-                    else valid = Sample(floor, out approach) && Reachable(start, approach);
+                    else valid = Sample(floor, out approach) && Reachable(start, approach)
+                        && TryFloor(piece, approach + Vector3.up * 2f, radius, out _);
                     if (!valid) continue;
 
                     target.Add(new FieldSpawnPoint((chest ? "chest-" : "enemy-") + index,
@@ -236,8 +245,12 @@ namespace Nomad.Terrain
                 foreach (TerrainConnection connection in new[] { link.From, link.To })
                 {
                     Vector3 inside = connection.Position - connection.transform.forward * 0.45f;
-                    if (!Sample(inside, out Vector3 hit) || !Reachable(start, hit))
-                    { reason = "도달할 수 없는 필수 연결부: " + connection.name; return false; }
+                    // 계단의 포트 바닥과 첫 단 높이는 다르므로 실제 표면에 투영합니다.
+                    if (!Physics.Raycast(inside + Vector3.up * 3f, Vector3.down, out RaycastHit floor,
+                        4f, ~0, QueryTriggerInteraction.Ignore)
+                        || floor.collider.GetComponentInParent<TerrainPiece>() != connection.GetComponentInParent<TerrainPiece>()
+                        || !Sample(floor.point, out Vector3 hit) || !Reachable(start, hit))
+                    { reason = $"도달할 수 없는 필수 연결부: {connection.transform.parent.name}/{connection.name} inside={inside} floor={floor.point}"; return false; }
                 }
             }
             return true;
@@ -245,14 +258,15 @@ namespace Nomad.Terrain
 
         private static bool Sample(Vector3 point, out Vector3 position)
         {
-            bool found = NavMesh.SamplePosition(point, out NavMeshHit hit, 0.25f, NavMesh.AllAreas)
-                && Mathf.Abs(hit.position.y - point.y) <= 0.15f;
+            bool found = NavMesh.SamplePosition(point, out NavMeshHit hit, 0.4f, NavMesh.AllAreas)
+                && Mathf.Abs(hit.position.y - point.y) <= 0.3f;
             position = hit.position;
             return found;
         }
 
         private bool Reachable(Vector3 start, Vector3 point)
         {
+            path ??= new NavMeshPath();
             return NavMesh.CalculatePath(start, point, NavMesh.AllAreas, path) && path.status == NavMeshPathStatus.PathComplete;
         }
 
@@ -273,7 +287,16 @@ namespace Nomad.Terrain
             data = null;
         }
 
-        private void OnDisable() => Invalidate();
+        private void OnEnable()
+        {
+            if (generator != null) generator.GenerationStarted += Begin;
+        }
+
+        private void OnDisable()
+        {
+            if (generator != null) generator.GenerationStarted -= Begin;
+            Invalidate();
+        }
         private void OnDestroy()
         {
             if (generator != null) generator.GenerationStarted -= Begin;

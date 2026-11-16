@@ -92,7 +92,7 @@ namespace Nomad.Terrain.Editor
 
                 TerrainIntegrationValidation.Capture(controls, 1, "field-navigation-overview");
                 TerrainIntegrationValidation.Capture(controls, 0, "field-navigation-player");
-                string report = $"FIELD_NAVIGATION_PASS: 5 seeds x2, {enemyTotal} enemy/{chestTotal} chest candidates; replay, immutable snapshots, single events, all tile/link paths, disjoint slots, reserved chests, failure/blocked start, cleanup/recovery";
+                string report = $"FIELD_NAVIGATION_PASS: 5 seeds x2, {enemyTotal} enemy/{chestTotal} chest candidates; replay, single events, all tile/link paths, disjoint slots, reserved chests, failure/blocked start, cleanup/recovery";
                 Directory.CreateDirectory("Artifacts");
                 File.WriteAllText("Artifacts/field-navigation-results.txt", report);
                 Debug.Log(report);
