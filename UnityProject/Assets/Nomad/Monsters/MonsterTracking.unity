@@ -1235,8 +1235,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Monsters.MonsterTracker
   target: {fileID: 462282318}
   sightRange: 8
-  sightAngle: 120
-  proximityRange: 2
   abandonRange: 12
   searchDuration: 2
   sightMask:

@@ -1,3 +1,4 @@
 {
-    "name": "Nomad.Monsters"
+    "name": "Nomad.Monsters",
+    "references": ["Nomad.Combat"]
 }
