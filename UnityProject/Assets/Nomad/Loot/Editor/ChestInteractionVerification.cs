@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using Nomad.Interaction;
 using Nomad.Inventory;
@@ -39,6 +39,11 @@ namespace Nomad.Loot.Editor
             var demo = Object.FindAnyObjectByType<InventoryDemo>();
             var status = new SerializedObject(demo).FindProperty("status").objectReferenceValue;
             demo.enabled = false;
+            foreach (var label in Object.FindObjectsByType<UnityEngine.UI.Text>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                if (label.text.Contains("Add scrap"))
+                    label.text = "E Loot    F Fill inventory    G Free scrap    Tab Inventory";
+            }
 
             chest = CreateChest("b-e-key-chest", player.transform.position + new Vector3(-0.9f, 0, 1.1f));
             var controls = chest.gameObject.AddComponent<LootPreview>();
@@ -147,10 +152,10 @@ namespace Nomad.Loot.Editor
                 case 1:
                     Require(Scrap() == 99 && chest.GetStack(0).Count == 7 && calls == 1, "E partial 3/10");
                     CheckCollider();
-                    Capture();
                     break;
                 case 2:
                     Require(calls == 1 && Scrap() == 99, "hold does not repeat");
+                    Capture();
                     Queue();
                     break;
                 case 3: Queue(Key.E); break;

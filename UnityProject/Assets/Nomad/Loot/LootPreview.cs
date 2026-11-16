@@ -1,4 +1,4 @@
-﻿using Nomad.Inventory;
+using Nomad.Inventory;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -26,7 +26,7 @@ namespace Nomad.Loot
             if (keyboard?.gKey.wasPressedThisFrame == true) Remove();
 
             if (status != null)
-                status.text = $"E Loot | F Fill | G Free scrap | Tab Inventory\nChest: {chest.GetStack(0).Count} / 10   {chest.Status}";
+                status.text = $"Chest: {chest.GetStack(0).Count} / 10   {chest.Status}";
         }
 
         [ContextMenu("B Review/1 Fill inventory (3 scrap spaces)")]

@@ -97,7 +97,7 @@ namespace Nomad.Loot.Editor
             sun.transform.rotation = Quaternion.Euler(50, -30, 0);
             RenderSettings.ambientLight = Color.gray;
             Selection.activeGameObject = player;
-            Debug.Log("B PREVIEW: Play + Game view. R new seed, T replay, WASD move. Player camera enabled. E integration pending A.");
+            Debug.Log("B PREVIEW: Play + Game view. R new seed, T replay, WASD move. Player camera enabled. For E input use Nomad > Loot > Open B Chest E Key Preview.");
         }
 
         private static UnityEngine.UI.Text CreateStatus()
