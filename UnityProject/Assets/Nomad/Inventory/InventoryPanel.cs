@@ -123,6 +123,12 @@ namespace Nomad.Inventory
                 return;
             }
 
+            if (inventory.BlocksTradeInput)
+            {
+                CloseForTrade();
+                return;
+            }
+
             if (HasOpenChest && (Keyboard.current?.tabKey.wasPressedThisFrame == true ||
                                  Keyboard.current?.escapeKey.wasPressedThisFrame == true))
             {
@@ -141,6 +147,13 @@ namespace Nomad.Inventory
 
             if (panel.activeSelf && lootDragSource < 0)
                 ProcessPointer();
+        }
+
+        internal void CloseForTrade()
+        {
+            CloseChest();
+            CancelDrag();
+            panel.SetActive(false);
         }
 
         internal void ShowChest(LootChest chest, PlayerInteraction interaction)
