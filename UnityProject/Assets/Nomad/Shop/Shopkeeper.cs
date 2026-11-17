@@ -18,7 +18,7 @@ namespace Nomad.Shop
         private int[] stock = Array.Empty<int>();
         private bool valid;
         public string InteractionId => interactionId;
-        public Vector3 InteractionPoint => transform.position;
+        public Vector3 InteractionPoint => transform.position + Vector3.up * 0.5f;
         public ShopCatalog Catalog => catalog;
         public event Action Changed;
 
@@ -91,7 +91,7 @@ namespace Nomad.Shop
             if ((InteractionPoint - feet).sqrMagnitude > 4f)
                 return false;
 
-            Vector3 delta = InteractionPoint + Vector3.up * 0.5f - body;
+            Vector3 delta = InteractionPoint - body;
             foreach (RaycastHit hit in Physics.RaycastAll(body, delta.normalized, delta.magnitude,
                          obstacleLayers, QueryTriggerInteraction.Ignore))
             {

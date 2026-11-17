@@ -41,7 +41,7 @@ namespace Nomad.Shop
 
         public static ShopPanel Open(Shopkeeper target, PlayerInventory player)
         {
-            if (!target.CanAccess(player) || player.HasOpenTrade || player.BlocksTradeInput)
+            if (target == null || player == null || !target.CanAccess(player) || player.HasOpenTrade || player.BlocksTradeInput)
                 return null;
 
             var root = new GameObject("Shop UI", typeof(RectTransform));
@@ -68,7 +68,7 @@ namespace Nomad.Shop
             CanvasScaler scaler = gameObject.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1440, 900);
-            scaler.matchWidthOrHeight = 0.5f;
+            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.Expand;
             gameObject.AddComponent<GraphicRaycaster>();
 
             if (EventSystem.current == null)
@@ -114,7 +114,7 @@ namespace Nomad.Shop
                 int captured = index;
                 Button button = ShopUi.Button(parent, $"Slot {index}", "", 0, 0, 98, 98,
                     () => Select(merchant, captured));
-                button.GetComponent<Image>().color = ShopUi.Slot;
+                button.GetComponent<Image>().color = ShopUi.Surface * new Color(0.8f, 0.8f, 0.8f, 1);
                 Destroy(button.transform.Find("Label").gameObject);
                 Image icon = ShopUi.Rect(button.transform, "Icon", 29, 5, 40, 40).gameObject.AddComponent<Image>();
                 icon.preserveAspect = true;
@@ -161,6 +161,8 @@ namespace Nomad.Shop
             long buyTotal = (long)selected.BuyPrice * quantity;
             buy.interactable = merchantSelected && shop.StockAt(merchantIndex) >= quantity && wallet.Gold >= buyTotal;
             sell.interactable = !merchantSelected && owned.Item != null && owned.Count >= quantity && sellPrice > 0;
+            buy.GetComponentInChildren<Text>().color = buy.interactable ? ShopUi.Ink : ShopUi.Muted * 0.6f;
+            sell.GetComponentInChildren<Text>().color = sell.interactable ? ShopUi.Ink : ShopUi.Muted * 0.6f;
             quantityText.text = $"Qty {quantity}";
             detail.text = merchantSelected
                 ? $"BUY  {selected.Item.DisplayName}  /  {selected.BuyPrice:N0} G each  /  Total {buyTotal:N0} G"
@@ -174,9 +176,10 @@ namespace Nomad.Shop
             view.Icon.sprite = item != null ? item.Icon : null;
             view.Icon.enabled = view.Icon.sprite != null;
             view.Name.text = item != null ? item.DisplayName : "Empty";
+            view.Name.color = item != null ? ShopUi.Ink : ShopUi.Muted;
             view.Count.text = item != null ? $"x{count}" : "";
             view.Price.text = item == null ? "" : price > 0 ? $"{(buying ? "Buy" : "Sell")} {price:N0} G" : "Not bought";
-            view.Border.effectColor = selected ? ShopUi.Gold : Color.clear;
+            view.Border.effectColor = selected ? ShopUi.Gold : new Color(0.2f, 0.29f, 0.3f, 0.7f);
         }
 
         private void Select(bool merchant, int index)
