@@ -216,15 +216,40 @@ namespace Nomad.Loot.Editor
                     Queue(Key.E);
                     break;
                 case 14:
-                    Require(Panel() == null && Scrap() == 7 && calls == 4, "empty chest cannot duplicate items");
+                    Require(Panel() != null && Scrap() == 7 && calls == 4 && chest.Status == LootStatus.Empty,
+                        "empty chest reopens for storage without changing quantities");
+                    ClickBackpackScrap();
+                    break;
+                case 15:
+                    Click("Viewport", true);
+                    break;
+                case 16:
+                    Require(Panel().Find("Viewport").GetComponent<UnityEngine.UI.Outline>().enabled &&
+                        Panel().parent.Find("DragPreview").gameObject.activeSelf, "drop area and dragged item are visible");
+                    Require(Scrap() == 7 && chest.GetStack(0).Count == 0, "drag does not transfer before release");
+                    Click("Viewport", false);
+                    break;
+                case 17:
+                    Require(Scrap() == 0 && chest.GetStack(0).Count == 7 && calls == 5 &&
+                        chest.Status == LootStatus.Remaining && Feedback() == "Stored 7", "drop stores the exact backpack stack");
+                    if (SystemInfo.graphicsDeviceType != UnityEngine.Rendering.GraphicsDeviceType.Null)
+                        Capture("chest-store-preview");
+                    Click("Take All", true);
+                    break;
+                case 18:
+                    Click("Take All", false);
+                    break;
+                case 19:
+                    Require(Scrap() == 7 && chest.GetStack(0).Count == 0 && calls == 6 &&
+                        chest.Status == LootStatus.Empty, "stored stack can be taken back without duplication");
                     chest.gameObject.SetActive(false);
                     chest = CreateChest("b-gate-check", player.transform.position + Vector3.forward * 3);
                     Queue();
                     break;
-                case 15:
+                case 20:
                     Queue(Key.E);
                     break;
-                case 16:
+                case 21:
                     Require(Panel() == null && chest.Status == LootStatus.Closed, "outside reach excluded");
                     chest.transform.position = player.transform.position + new Vector3(-0.9f, 0, 0);
                     wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -233,43 +258,46 @@ namespace Nomad.Loot.Editor
                     Physics.SyncTransforms();
                     Queue();
                     break;
-                case 17:
+                case 22:
                     Queue(Key.E);
                     break;
-                case 18:
+                case 23:
                     Require(Panel() == null && chest.Status == LootStatus.Closed, "wall blocks real chest");
                     wall.SetActive(false);
                     Physics.SyncTransforms();
                     Queue();
                     break;
-                case 19:
+                case 24:
                     rollStart = Time.time;
                     Queue(Key.LeftShift, Key.E);
                     break;
-                case 20:
+                case 25:
                     Require(player.IsRolling && chest.Status == LootStatus.Closed && Panel() == null, "roll start blocks E");
                     Queue();
                     break;
-                case 21:
+                case 26:
                     if (Time.time - rollStart < 0.4f) { stage--; return; }
                     Require(!player.IsRolling && chest.Status == LootStatus.Closed, "roll input is not reserved");
                     chest.transform.position = player.transform.position + new Vector3(-0.9f, 0, 0);
                     Physics.SyncTransforms();
                     Queue(Key.E);
                     break;
-                case 22:
+                case 27:
                     Require(chest.Status == LootStatus.Remaining && Panel() != null, "fresh E opens after roll");
-                    Click("Take All", true);
+                    ClickBackpackScrap();
                     break;
-                case 23:
+                case 28:
+                    Click("Viewport", true);
+                    break;
+                case 29:
                     chest.transform.position += Vector3.forward * 3;
                     Physics.SyncTransforms();
-                    Click("Take All", false);
+                    Click("Viewport", false);
                     break;
-                case 24:
+                case 30:
                     Require(Panel() == null && Scrap() == 7 && chest.GetStack(0).Count == 10,
                         "moving the chest out of reach closes the panel and preserves its contents");
-                    Debug.Log($"B_CHEST_INTERACTION_PASS frame={Time.frameCount}: E open, double-click, Take all, hold, partial, full, empty, collider, reach, wall, roll");
+                    Debug.Log($"B_CHEST_INTERACTION_PASS frame={Time.frameCount}: E open, double-click, Take all, hold, partial, full, empty, deposit, round trip, stale drop, collider, reach, wall, roll");
                     Finish(0);
                     break;
             }
@@ -286,13 +314,26 @@ namespace Nomad.Loot.Editor
             QueueMouse(point, pressed);
         }
 
+        private static void ClickBackpackScrap()
+        {
+            int slot = 0;
+            while (slot < PlayerInventory.Capacity && inventory.GetSlot(slot).Item?.ItemId != "scrap")
+                slot++;
+
+            Require(slot < PlayerInventory.Capacity, "backpack has scrap to drag");
+            Canvas.ForceUpdateCanvases();
+            var grid = Panel().parent.Find("InventoryPanel/Slots");
+            Vector2 point = RectTransformUtility.WorldToScreenPoint(null, grid.GetChild(slot).position);
+            QueueMouse(point, true);
+        }
+
         private static void QueueMouse(Vector2 position, bool pressed)
         {
             var state = new MouseState { position = position }.WithButton(MouseButton.Left, pressed);
             InputSystem.QueueStateEvent(mouse, state);
         }
 
-        private static void Capture()
+        private static void Capture(string name = "chest-loot-preview")
         {
             Directory.CreateDirectory("Artifacts");
             var camera = Camera.main;
@@ -311,7 +352,7 @@ namespace Nomad.Loot.Editor
                 RenderTexture.active = target;
                 pixels.ReadPixels(new Rect(0, 0, 1280, 720), 0, 0);
                 pixels.Apply();
-                File.WriteAllBytes("Artifacts/chest-loot-preview.png", pixels.EncodeToPNG());
+                File.WriteAllBytes($"Artifacts/{name}.png", pixels.EncodeToPNG());
             }
             finally
             {

@@ -47,6 +47,7 @@
 - A: E 입력·대상 탐지·인벤토리 제공. B: 상자의 보유 목록·상호작용 처리·열림/빈 상태 표시.
 - 발 위치 기준 거리 2m 이내이며 플레이어 몸통에서 상자 상호작용점까지 장애물에 가리지 않은 상자 중 가장 가까운 하나를 선택합니다. 같은 거리면 고유 ID 순으로 결정합니다.
 - E로 상자와 가방을 함께 엽니다. 상자 슬롯을 더블클릭하면 해당 스택, `Take all`을 누르면 목록 순서대로 전체 획득을 시도합니다. 각 항목에서 Add의 실제 반환량만 상자에서 차감합니다.
+- 열린 상자 목록에 가방 슬롯을 드래그하면 해당 스택을 보관합니다. 상자에 있는 같은 아이템을 최대 중첩까지 채우고 남으면 새 스택을 만듭니다. 빈 상자도 다시 열어 보관할 수 있습니다.
 - 열린 화면에서 E·Tab·Esc 또는 닫기 버튼으로 닫습니다. 거리·시야·구르기 조건이 깨지거나 상자가 제거되면 닫으며, 전송 직전에도 같은 조건을 검사합니다.
 - 공간 부족·빈 상자에서는 남은 아이템을 보존하고 안내합니다. 처리 중 재진입을 막고 입력 1회에 1회만 처리합니다. 부분 루팅 후에도 상자는 유지합니다.
 - 공용 상호작용 계약은 CanInteract(context), Interact(context)로 하고 context에 플레이어·인벤토리를 전달합니다. A가 계약을 제공하고 B가 상자에 구현합니다.
@@ -55,7 +56,7 @@
 
 - **플레이어**: 기존 `PlayerMovement`, `CharacterController`, `PlayerInventory`가 있는 루트에 `Nomad.Interaction.PlayerInteraction`을 붙입니다. 인벤토리 검증 장면에는 연결되어 있습니다.
 - **대상**: 루트의 MonoBehaviour에 `Nomad.Interaction.IInteractable`을 구현합니다. 장면 안에서 고유한 `string InteractionId`와 월드 좌표 `Vector3 InteractionPoint`를 제공합니다. 대상과 연결된 활성 Collider를 루트 또는 자식에 배치하고 상호작용점이 Collider 안에 있도록 설정합니다. Trigger도 탐지합니다. 상자 상태가 바뀌어도 이 Collider는 유지합니다.
-- **호출**: `bool CanInteract(InteractionContext context)`에서 대상 사용 가능 여부를 판단합니다. 일반 대상은 `Interact(context)`를 호출하고, 상자는 화면을 연 뒤 UI에서 `TryLootStack(inventory, index)` 또는 `TryLoot(inventory)`를 호출합니다. Context의 `Player`는 플레이어 Transform, `Inventory`는 해당 플레이어의 `PlayerInventory`입니다. ID 동률 비교는 대소문자를 구분하는 사전식 비교(`String.CompareOrdinal`)를 사용합니다.
+- **호출**: `bool CanInteract(InteractionContext context)`에서 대상 사용 가능 여부를 판단합니다. 일반 대상은 `Interact(context)`를 호출하고, 상자는 화면을 연 뒤 UI에서 `TryLootStack(inventory, index)`, `TryLoot(inventory)` 또는 `TryStoreStack(inventory, slotIndex)`를 호출합니다. Context의 `Player`는 플레이어 Transform, `Inventory`는 해당 플레이어의 `PlayerInventory`입니다. ID 동률 비교는 대소문자를 구분하는 사전식 비교(`String.CompareOrdinal`)를 사용합니다.
 - **시야**: 몸통에서 상호작용점까지 장애물 레이어를 검사합니다. Trigger와 플레이어·대상 자신의 Collider는 시야를 막지 않습니다.
 - **실행**: Unity에서 `Nomad > Interaction > Open E Key Preview`를 선택하고 Play 합니다. 시작점에서 E를 한 번 누를 때마다 가까운 테스트 표적 하나가 사라집니다. Tab으로 Scrap 수량이 늘었는지 볼 수 있습니다. 미리보기 표적은 별도의 저장하지 않은 장면에 생성됩니다.
 

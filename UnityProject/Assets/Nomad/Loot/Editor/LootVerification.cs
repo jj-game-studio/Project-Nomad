@@ -170,7 +170,7 @@ namespace Nomad.Loot.Editor
                 if (Time.frameCount <= frame + 2) return;
                 Require(!Object.FindObjectsByType<PropScatter>(FindObjectsInactive.Include, FindObjectsSortMode.None).Any(), "소품 지연 삭제");
                 Require(!Object.FindObjectsByType<TerrainPiece>(FindObjectsInactive.Include, FindObjectsSortMode.None).Any(), "지형 지연 삭제");
-                Debug.Log($"B_LOOT_PROPS_PLAYMODE_PASS: frame={Time.frameCount}, time={Time.time:F2}; partial/repeated/reentrant/exception/empty/unknown loot; 30 seeds x2 real terrain; cleanup");
+                Debug.Log($"B_LOOT_PROPS_PLAYMODE_PASS: frame={Time.frameCount}, time={Time.time:F2}; partial/repeated/empty/unknown loot, storage, reentry, subscriber exceptions, 30 seeds x2 real terrain, cleanup");
                 Finish(0);
             }
             catch (Exception exception)
@@ -215,6 +215,31 @@ namespace Nomad.Loot.Editor
             catch (InvalidOperationException) { }
             inventory.Changed -= fail;
             Require(chest.GetStack(0).Count == 0 && chest.TryLoot(inventory) == 0, "외부 알림 예외 후 복제 방지 및 잠금 해제");
+            Object.Destroy(chest.gameObject);
+
+            inventory.Add("scrap", 89);
+            chest = new GameObject("Storage test").AddComponent<LootChest>();
+            chest.Initialize("store", new[] { new LootStack("scrap", 96), new LootStack("field-knife", 1) });
+            bool observedComplete = false;
+            Action observe = () =>
+            {
+                observedComplete = inventory.GetSlot(0).Item == null && chest.GetStack(0).Count == 99 &&
+                    chest.GetStack(2).Count == 96 && chest.TryLoot(inventory) == 0;
+            };
+            inventory.Changed += observe;
+            Require(chest.TryStoreStack(inventory, 0) == 99 && observedComplete && inventory.UsedSlots == 19,
+                "상자 중첩 한도·남은 새 스택·전송 완료 상태·재진입 차단");
+            inventory.Changed -= observe;
+            Require(chest.TryStoreStack(inventory, 0) == 0 && chest.TryStoreStack(inventory, -1) == 0,
+                "빈 슬롯과 잘못된 슬롯 입력 차단");
+
+            inventory.Changed += fail;
+            bool threw = false;
+            try { chest.TryStoreStack(inventory, 1); }
+            catch (InvalidOperationException exception) when (exception.Message == "Expected subscriber failure") { threw = true; }
+            inventory.Changed -= fail;
+            Require(threw && inventory.GetSlot(1).Item == null && chest.GetStack(3).Count == 1 &&
+                chest.TryStoreStack(inventory, 2) == 1, "보관 알림 예외 뒤에도 중복 방지와 잠금 해제");
             Object.Destroy(chest.gameObject);
             Object.Destroy(inventory.gameObject);
         }

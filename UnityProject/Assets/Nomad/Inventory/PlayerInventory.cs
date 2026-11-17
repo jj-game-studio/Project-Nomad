@@ -45,6 +45,18 @@ namespace Nomad.Inventory
             return slots[index];
         }
 
+        // 양쪽에 먼저 반영한 뒤 알림을 보내는 상자 전송에서만 사용합니다.
+        internal void RemoveSlotForTransfer(int index)
+        {
+            slots[index] = default;
+            stackOrder.Remove(index);
+        }
+
+        internal void NotifyChanged()
+        {
+            Changed?.Invoke();
+        }
+
         internal bool TryGetItem(string itemId, out ItemDefinition item)
         {
             item = null;
@@ -83,7 +95,7 @@ namespace Nomad.Inventory
                     stackOrder[destinationOrder] = from;
             }
 
-            Changed?.Invoke();
+            NotifyChanged();
             return true;
         }
 
@@ -150,7 +162,7 @@ namespace Nomad.Inventory
         private int NotifyChange(int changedCount)
         {
             if (changedCount > 0)
-                Changed?.Invoke();
+                NotifyChanged();
 
             return changedCount;
         }

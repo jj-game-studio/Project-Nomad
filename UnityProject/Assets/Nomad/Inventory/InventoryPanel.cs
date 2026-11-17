@@ -235,6 +235,11 @@ namespace Nomad.Inventory
                 dragPreview.Bind(inventory.GetSlot(dragSource), false);
                 dragPreview.Rect.sizeDelta = slots[dragSource].Rect.rect.size;
                 slots[dragSource].Group.alpha = 0.45f;
+                if (HasOpenChest)
+                {
+                    preview.transform.SetParent(panel.transform.parent, false);
+                    preview.transform.SetAsLastSibling();
+                }
                 preview.SetActive(true);
             }
 
@@ -244,13 +249,20 @@ namespace Nomad.Inventory
                 dragPreview.Rect.position = worldPoint;
             }
 
+            bool overChest = preview.activeSelf && HasOpenChest && chestPanel.ContainsDropPoint(position, EventCamera);
+            chestPanel?.HighlightDrop(overChest);
             if (mouse.leftButton.isPressed)
                 return;
 
             int source = dragSource;
-            bool drop = preview.activeSelf && mouse.leftButton.wasReleasedThisFrame && pointerSlot >= 0;
+            bool drop = preview.activeSelf && mouse.leftButton.wasReleasedThisFrame;
             CancelDrag();
-            if (drop)
+            if (!drop)
+                return;
+
+            if (overChest)
+                chestPanel.Deposit(source);
+            else if (pointerSlot >= 0)
                 inventory.MoveStack(source, pointerSlot);
         }
 
@@ -261,6 +273,9 @@ namespace Nomad.Inventory
 
             slots[dragSource].Group.alpha = 1f;
             dragPreview.Rect.gameObject.SetActive(false);
+            if (dragPreview.Rect.parent != panel.transform)
+                dragPreview.Rect.SetParent(panel.transform, false);
+            chestPanel?.HighlightDrop(false);
             dragSource = -1;
             dragMouse = null;
         }

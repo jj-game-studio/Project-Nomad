@@ -15,11 +15,15 @@ namespace Nomad.Loot
         private static readonly Color Ink = new Color32(233, 234, 228, 255);
         private static readonly Color Muted = new Color32(170, 177, 174, 255);
         private static readonly Color Accent = new Color32(224, 182, 104, 255);
+        private static readonly Color ViewportFill = new Color32(24, 26, 27, 255);
+        private static readonly Color DropFill = new Color32(69, 57, 39, 255);
 
         private readonly PlayerInventory inventory;
         private readonly Font font;
         private readonly RectTransform backdrop;
         private readonly RectTransform root;
+        private readonly Image dropArea;
+        private readonly Outline dropOutline;
         private readonly RectTransform content;
         private readonly ScrollRect scroll;
         private readonly Text summary;
@@ -60,7 +64,11 @@ namespace Nomad.Loot
             RectTransform viewport = CreateRect("Viewport", root);
             Dock(viewport, 20, 20, 89, -86);
             viewport.gameObject.AddComponent<RectMask2D>();
-            viewport.gameObject.AddComponent<Image>().color = new Color32(24, 26, 27, 255);
+            dropArea = viewport.gameObject.AddComponent<Image>();
+            dropArea.color = ViewportFill;
+            dropOutline = viewport.gameObject.AddComponent<Outline>();
+            dropOutline.effectColor = Accent;
+            dropOutline.enabled = false;
 
             content = CreateRect("Loot Stacks", viewport);
             SetRect(content, Vector2.up, Vector2.one, Vector2.zero, Vector2.zero);
@@ -93,7 +101,7 @@ namespace Nomad.Loot
             Chest = chest;
             interaction = owner;
             Chest.Changed += Refresh;
-            feedback.text = "";
+            feedback.text = "Drag from backpack to store";
             backdrop.gameObject.SetActive(true);
             root.gameObject.SetActive(true);
             Refresh();
@@ -105,6 +113,7 @@ namespace Nomad.Loot
         {
             if (Chest != null)
                 Chest.Changed -= Refresh;
+            HighlightDrop(false);
             Chest = null;
             interaction = null;
             root.gameObject.SetActive(false);
@@ -138,8 +147,33 @@ namespace Nomad.Loot
                 row.Count.text = $"×{stack.Count}";
             }
 
-            summary.text = remainingStacks == 0 ? "Empty chest" : $"{remainingStacks} remaining  ·  Double-click to take";
+            summary.text = remainingStacks == 0 ? "Empty chest  ·  Drag here to store" : $"{remainingStacks} remaining  ·  Double-click to take";
             takeAll.interactable = remainingStacks > 0;
+        }
+
+        public bool ContainsDropPoint(Vector2 screenPosition, Camera eventCamera)
+        {
+            return IsOpen && RectTransformUtility.RectangleContainsScreenPoint(dropArea.rectTransform, screenPosition, eventCamera);
+        }
+
+        public void HighlightDrop(bool highlighted)
+        {
+            if (dropOutline.enabled == highlighted)
+                return;
+
+            dropArea.color = highlighted ? DropFill : ViewportFill;
+            dropOutline.enabled = highlighted;
+        }
+
+        public void Deposit(int fromSlot)
+        {
+            LootChest chest = Chest;
+            if (interaction == null || !interaction.CanAccessChest(chest))
+                return;
+
+            int stored = chest.TryStoreStack(inventory, fromSlot);
+            if (stored > 0 && Chest == chest)
+                feedback.text = $"Stored {stored}";
         }
 
         private void Transfer(int index)

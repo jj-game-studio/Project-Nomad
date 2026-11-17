@@ -105,7 +105,7 @@ namespace Nomad.Loot.Editor
                     Require(Scrap() == 7 && chest.Status == LootStatus.Empty && LootPanel() == null,
                         "remaining seven collected and E closes the UI");
                     Require(chest.GetComponent<BoxCollider>().enabled, "empty cube preserves collider");
-                    Require(controls.GetComponent<TerrainLootIntegration>().Summary.Contains("0/10 Empty"), "saved scene HUD shows loot state");
+                    Require(controls.GetComponent<TerrainLootIntegration>().Summary.Contains("0 items  ·  Empty"), "saved scene HUD shows loot state");
                     TerrainIntegrationValidation.Capture(controls, 0, "terrain-loot-player");
                     previous = chest;
                     Press(Key.T);
