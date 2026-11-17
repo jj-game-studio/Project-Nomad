@@ -308,73 +308,138 @@ namespace Nomad.Terrain
 
             float depth = bounds.size.x >= bounds.size.z ? bounds.size.z : bounds.size.x;
             Vector3 position = center + outward * (MicroTerrainTile.Size * 0.5f + depth * outside);
-            PlaceSegment(prefab, position, outward, removable);
+            PlaceSegment(prefab, position, outward, removable, MicroTerrainTile.Size);
         }
 
         // 언덕 단 경계의 위쪽 등고선(0.85m, 1.85m)을 따라 돌담·울타리 줄을 세웁니다.
-        // 이웃한 칸 중심 사이에서 등고선이 지나는 지점마다 한 칸씩 놓아 능선을 따라 이어지게 하고,
-        // 노이즈로 군데군데 틈(통로)과 종류(돌담/울타리) 구간을 나눕니다. 경로를 막으면 복구 단계에서 제거됩니다.
+        // 등고선을 실제로 따라가며 프리팹 원래 길이만큼 끝과 끝을 이어 붙이므로 조각 사이가 벌어지거나 겹치지 않습니다.
+        // 한 줄은 한 종류로 통일하고, 몇 조각마다 한 조각 길이를 통로로 비웁니다. 경로를 막으면 복구 단계에서 제거됩니다.
         private void PlaceRidges(FieldDressingSet source, IReadOnlyList<TerrainPiece> pieces)
         {
             var cells = new HashSet<Vector2Int>();
             foreach (TerrainPiece piece in pieces) cells.Add(Cell(piece.transform.position));
 
+            Bounds area = ground.terrainData.bounds;
+            area.center += ground.transform.position;
+            area.Expand(new Vector3(-2f, 100f, -2f));
+
+            var traced = new List<Vector3>();
             float size = MicroTerrainTile.Size;
-            foreach (Vector2Int cell in cells)
+            foreach (float contour in new[] { 0.85f, 1.85f })
+            foreach (TerrainPiece piece in pieces)
             foreach (Vector2Int step in new[] { new Vector2Int(1, 0), new Vector2Int(0, 1) })
             {
+                Vector2Int cell = Cell(piece.transform.position);
                 if (!cells.Contains(cell + step)) continue;
 
+                // 이웃 칸 중심 사이에서 등고선이 지나는 점을 줄의 시작점 후보로 씁니다.
                 var from = new Vector3(cell.x * size, 0f, cell.y * size);
                 Vector3 to = from + new Vector3(step.x, 0f, step.y) * size;
-                float a = GroundY(from, 0f) - ground.transform.position.y;
-                float b = GroundY(to, 0f) - ground.transform.position.y;
+                float a = Relief(from);
+                float b = Relief(to);
+                if ((a - contour) * (b - contour) >= 0f) continue;
 
-                foreach (float contour in new[] { 0.85f, 1.85f })
+                RidgeCandidates++;
+                Vector3 seed = Vector3.Lerp(from, to, (contour - a) / (b - a));
+                if (Near(traced, seed, 3f, traced.Count)) continue;
+
+                TraceRidge(source, cells, area, seed, contour, traced);
+            }
+        }
+
+        private void TraceRidge(FieldDressingSet source, HashSet<Vector2Int> cells, Bounds area, Vector3 seed, float contour,
+            List<Vector3> traced)
+        {
+            // 줄 전체에 같은 종류·같은 프리팹을 씁니다. 돌담 쪽 비중을 조금 더 둡니다.
+            bool stone = Mathf.PerlinNoise(noiseOffset.y + seed.x * 0.05f, noiseOffset.x + seed.z * 0.05f) > 0.42f;
+            GameObject[] options = stone ? source.borderWalls : source.fences;
+            if (options == null || options.Length == 0) return;
+
+            int hash = Mathf.Abs(Mathf.RoundToInt(seed.x * 7f) * 31 + Mathf.RoundToInt(seed.z * 7f) * 17);
+            GameObject prefab = options[hash % options.Length];
+            if (!TryLocalBounds(prefab, out Bounds shape)) return;
+
+            // 조각 길이는 프리팹의 원래 긴 변 길이입니다(늘리지 않음). 너무 짧은 조각은 2m 이상이 되도록 묶어 늘립니다.
+            float length = Mathf.Max(shape.size.x, shape.size.z);
+            float depth = Mathf.Min(shape.size.x, shape.size.z);
+            if (length < 2f) length = 2f;
+            int openingEvery = 3 + hash % 3;
+            int start = traced.Count;
+
+            // 시작점에서 양쪽으로 등고선을 따라갑니다.
+            foreach (float direction in new[] { 1f, -1f })
+            {
+                Vector3 current = seed;
+                for (int index = 1; index <= 40; index++)
                 {
-                    if ((a - contour) * (b - contour) >= 0f) continue;
-                    RidgeCandidates++;
+                    Vector3 tangent = Tangent(current) * direction;
+                    if (tangent == Vector3.zero) break;
 
-                    Vector3 point = Vector3.Lerp(from, to, (contour - a) / (b - a));
-                    float gap = Mathf.PerlinNoise(noiseOffset.x + point.x * 0.12f, noiseOffset.y + point.z * 0.12f);
-                    // 노이즈로 긴 빈 구간을, 칸 좌표로 세 칸 중 한 칸꼴의 짧은 통로를 만들어 단 사이를 오갈 수 있게 합니다.
-                    if (gap < 0.38f || Mathf.Abs(cell.x + cell.y * 2) % 3 == 0) continue;
+                    Vector3 next = ProjectToContour(current + tangent * length, contour);
+                    var chord = new Vector3(next.x - current.x, 0f, next.z - current.z);
+                    if (!area.Contains(next) || chord.magnitude < length * 0.6f) break;
 
-                    // 바깥(경사 아래) 방향은 지면 법선의 수평 성분입니다. 담은 그에 수직으로 등고선을 따라 놓입니다.
-                    Vector3 normal = ground.terrainData.GetInterpolatedNormal(
-                        (point.x - ground.transform.position.x) / ground.terrainData.size.x,
-                        (point.z - ground.transform.position.z) / ground.terrainData.size.z);
-                    Vector3 outward = new Vector3(normal.x, 0f, normal.z);
-                    if (outward.sqrMagnitude < 0.0001f) continue;
+                    // 다른 줄과 만나면 겹치지 않게 멈춥니다.
+                    Vector3 middle = (current + next) * 0.5f;
+                    if (Near(traced, middle, length * 0.6f, start)) break;
+                    traced.Add(middle);
 
-                    bool stone = Mathf.PerlinNoise(noiseOffset.y + point.x * 0.05f, noiseOffset.x + point.z * 0.05f) > 0.5f;
-                    GameObject[] options = stone ? source.borderWalls : source.fences;
-                    if (options == null || options.Length == 0) continue;
-
-                    GameObject prefab = options[Mathf.Abs(cell.x * 31 + cell.y * 17) % options.Length];
-
-                    // 경로 표본 지점을 막는 칸은 틈으로 남깁니다.
-                    if (!TryLocalBounds(prefab, out Bounds shape)) continue;
-                    float depth = Mathf.Min(shape.size.x, shape.size.z);
-                    // 표본·연결점을 막으면 경사 방향으로 조금씩(최대 0.75m) 옮겨 빈자리를 찾고, 없으면 틈으로 남깁니다.
-                    Vector3 placed = point;
-                    bool found = false;
-                    foreach (float shift in new[] { 0f, 0.25f, -0.25f, 0.5f, -0.5f, 0.75f, -0.75f })
+                    // 몇 조각마다 한 조각 길이를 통로로 비웁니다.
+                    bool opening = index % (openingEvery + 1) == 0;
+                    Vector3 outward = Vector3.Cross(chord.normalized, Vector3.up);
+                    if (!opening && !CrossesSample(cells, middle, outward, depth, chord.magnitude * 0.5f))
                     {
-                        placed = point + outward.normalized * shift;
-                        if (!CrossesSample(cells, placed, outward.normalized, depth)) { found = true; break; }
+                        PlaceSegment(prefab, middle, outward, removable: true, chord.magnitude);
+                        RidgeSegments++;
                     }
-                    if (!found) continue;
-                    PlaceSegment(prefab, placed, outward.normalized, removable: true);
-                    RidgeSegments++;
+                    current = next;
                 }
             }
+        }
+
+        // 지면 기준 상대 높이와 그 기울기입니다.
+        private float Relief(Vector3 point) => GroundY(point, 0f) - ground.transform.position.y;
+
+        private Vector3 Gradient(Vector3 point)
+        {
+            const float delta = 0.25f;
+            return new Vector3(
+                Relief(point + Vector3.right * delta) - Relief(point - Vector3.right * delta), 0f,
+                Relief(point + Vector3.forward * delta) - Relief(point - Vector3.forward * delta)) / (2f * delta);
+        }
+
+        // 등고선 방향(기울기에 수직)입니다. 같은 방향 규칙을 써서 한쪽으로 계속 따라갈 수 있습니다.
+        private Vector3 Tangent(Vector3 point)
+        {
+            Vector3 gradient = Gradient(point);
+            return gradient.sqrMagnitude < 0.0001f ? Vector3.zero : Vector3.Cross(Vector3.up, gradient).normalized;
+        }
+
+        // 기울기 방향으로 몇 번 보정해 점을 등고선 위로 되돌립니다(뉴턴 방식, 한 번에 최대 1m).
+        private Vector3 ProjectToContour(Vector3 point, float contour)
+        {
+            for (int iteration = 0; iteration < 6; iteration++)
+            {
+                Vector3 gradient = Gradient(point);
+                if (gradient.sqrMagnitude < 0.0001f) break;
+
+                Vector3 move = gradient * ((contour - Relief(point)) / gradient.sqrMagnitude);
+                point += Vector3.ClampMagnitude(move, 1f);
+            }
+            return point;
+        }
+
+        private static bool Near(List<Vector3> points, Vector3 point, float distance, int count)
+        {
+            for (int index = 0; index < count; index++)
+                if (FlatDistance(points[index], point) < distance) return true;
+            return false;
         }
 
         // 기존 경로 검사는 칸마다 중심 ±1.1m 격자 표본이 0.4m 안에서 보행 면을 찾아야 합니다.
         // NavMesh는 담 두께의 절반에 캐릭터 반지름(0.35m)을 더한 폭만큼 깎이므로, 표본이 그 안으로 0.38m보다
         // 깊이 들어가면 막힙니다. 얇은 울타리는 거의 항상 놓이고, 두꺼운 돌담은 표본 근처에서 틈이 됩니다.
-        private static bool CrossesSample(HashSet<Vector2Int> cells, Vector3 point, Vector3 outward, float depth)
+        private static bool CrossesSample(HashSet<Vector2Int> cells, Vector3 point, Vector3 outward, float depth, float halfLength)
         {
             Vector3 along = Vector3.Cross(Vector3.up, outward);
             Vector2Int near = Cell(point);
@@ -389,7 +454,7 @@ namespace Nomad.Terrain
                 {
                     Vector3 offset = new Vector3(cell.x * MicroTerrainTile.Size + x, 0f, cell.y * MicroTerrainTile.Size + z) - point;
                     offset.y = 0f;
-                    if (Mathf.Abs(Vector3.Dot(offset, along)) <= MicroTerrainTile.Size * 0.5f + 0.3f
+                    if (Mathf.Abs(Vector3.Dot(offset, along)) <= halfLength + 0.3f
                         && Mathf.Abs(Vector3.Dot(offset, outward)) < depth * 0.5f + 0.35f - 0.38f) return true;
                 }
 
@@ -398,7 +463,7 @@ namespace Nomad.Terrain
                 {
                     Vector3 offset = new Vector3(cell.x * MicroTerrainTile.Size, 0f, cell.y * MicroTerrainTile.Size) + port - point;
                     offset.y = 0f;
-                    if (Mathf.Abs(Vector3.Dot(offset, along)) <= MicroTerrainTile.Size * 0.5f + 0.1f
+                    if (Mathf.Abs(Vector3.Dot(offset, along)) <= halfLength + 0.1f
                         && Mathf.Abs(Vector3.Dot(offset, outward)) < depth * 0.5f + 0.1f) return true;
                 }
             }
@@ -431,14 +496,14 @@ namespace Nomad.Terrain
             if (core != null) core.size = new Vector3(0.8f / scale, core.size.y, 0.8f / scale);
         }
 
-        // position을 중심으로, outward에 수직인 방향으로 3m 길이의 벽·울타리 한 칸을 세웁니다.
-        private void PlaceSegment(GameObject prefab, Vector3 position, Vector3 outward, bool removable)
+        // position을 중심으로, outward에 수직인 방향으로 span 길이의 벽·울타리 한 칸을 세웁니다.
+        private void PlaceSegment(GameObject prefab, Vector3 position, Vector3 outward, bool removable, float span)
         {
             if (!TryLocalBounds(prefab, out Bounds bounds)) return;
 
             bool alongX = bounds.size.x >= bounds.size.z;
             float length = alongX ? bounds.size.x : bounds.size.z;
-            float stretch = MicroTerrainTile.Size / Mathf.Max(0.01f, length);
+            float stretch = span / Mathf.Max(0.01f, length);
 
             Vector3 along = Vector3.Cross(Vector3.up, outward);
             Quaternion facing = Quaternion.LookRotation(alongX ? outward : along);
