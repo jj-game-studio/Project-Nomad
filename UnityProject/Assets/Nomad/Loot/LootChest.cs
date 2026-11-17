@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using Nomad.Inventory;
 using Nomad.Interaction;
 using UnityEngine;
@@ -78,17 +77,41 @@ namespace Nomad.Loot
                 TryLoot(context.Inventory);
         }
 
+        internal void Inspect()
+        {
+            if (Status != LootStatus.Closed)
+                return;
+
+            Status = LootStatus.Remaining;
+            Message = "Opened";
+            RefreshVisuals();
+            Changed?.Invoke();
+        }
+
         // A의 공용 계약/거리/시야/구르기 검증 후 호출할 B 소유 수량 전송입니다.
         public int TryLoot(PlayerInventory inventory)
         {
-            if (busy || inventory == null || !isActiveAndEnabled)
+            return Transfer(inventory, 0, contents.Length);
+        }
+
+        public int TryLootStack(PlayerInventory inventory, int index)
+        {
+            if ((uint)index >= (uint)contents.Length || contents[index].Count <= 0)
+                return 0;
+
+            return Transfer(inventory, index, index + 1);
+        }
+
+        private int Transfer(PlayerInventory inventory, int start, int end)
+        {
+            if (busy || inventory == null || !inventory.isActiveAndEnabled || !isActiveAndEnabled)
                 return 0;
 
             busy = true;
             int total = 0;
             try
             {
-                for (int index = 0; index < contents.Length; index++)
+                for (int index = start; index < end; index++)
                 {
                     LootStack stack = contents[index];
                     if (stack.Count <= 0)

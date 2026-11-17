@@ -16,6 +16,7 @@ namespace Nomad.Inventory
         private readonly List<int> stackOrder = new(Capacity);
 
         public int UsedSlots => stackOrder.Count;
+        internal InventoryPanel Panel { get; set; }
         public event Action Changed;
 
         private void Awake()
@@ -42,6 +43,12 @@ namespace Nomad.Inventory
         public ItemStack GetSlot(int index)
         {
             return slots[index];
+        }
+
+        internal bool TryGetItem(string itemId, out ItemDefinition item)
+        {
+            item = null;
+            return itemId != null && catalog.TryGetValue(itemId, out item);
         }
 
         public bool MoveStack(int from, int to)

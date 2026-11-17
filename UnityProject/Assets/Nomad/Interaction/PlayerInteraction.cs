@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Nomad.Inventory;
+using Nomad.Loot;
 using Nomad.Player;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -29,16 +30,49 @@ namespace Nomad.Interaction
 
         private void LateUpdate()
         {
+            if (inventory != null && inventory.Panel != null && inventory.Panel.HasOpenChest)
+            {
+                if (Keyboard.current?.eKey.wasPressedThisFrame == true ||
+                    !CanAccessChest(inventory.Panel.OpenChest))
+                    inventory.Panel.CloseChest();
+                return;
+            }
+
             // 이동 Update가 이번 프레임의 위치와 구르기 상태를 갱신한 뒤 입력을 처리합니다.
-            if (Keyboard.current?.eKey.wasPressedThisFrame != true ||
-                movement == null || !movement.isActiveAndEnabled || movement.IsRolling ||
-                inventory == null || !inventory.isActiveAndEnabled || controller == null || !controller.enabled)
+            if (Keyboard.current?.eKey.wasPressedThisFrame != true || !CanInteract())
                 return;
 
             var context = new InteractionContext(transform, inventory);
             Vector3 body = transform.TransformPoint(controller.center);
             Vector3 feet = transform.TransformPoint(controller.center - Vector3.up * (controller.height * 0.5f));
-            FindTarget(context, body, feet)?.Interact(context);
+            IInteractable target = FindTarget(context, body, feet);
+            if (target is LootChest chest)
+                InventoryPanel.GetOrCreate(inventory)?.ShowChest(chest, this);
+            else
+                target?.Interact(context);
+        }
+
+        private void OnDisable()
+        {
+            if (inventory != null && inventory.Panel != null)
+                inventory.Panel.CloseChest();
+        }
+
+        internal bool CanAccessChest(LootChest chest)
+        {
+            if (!isActiveAndEnabled || chest == null || !chest.isActiveAndEnabled || !CanInteract())
+                return false;
+
+            Vector3 body = transform.TransformPoint(controller.center);
+            Vector3 feet = transform.TransformPoint(controller.center - Vector3.up * (controller.height * 0.5f));
+            Vector3 point = chest.InteractionPoint;
+            return (point - feet).sqrMagnitude <= Reach * Reach && !IsObstructed(body, point, chest.transform);
+        }
+
+        private bool CanInteract()
+        {
+            return movement != null && movement.isActiveAndEnabled && !movement.IsRolling &&
+                   inventory != null && inventory.isActiveAndEnabled && controller != null && controller.enabled;
         }
 
         private IInteractable FindTarget(InteractionContext context, Vector3 body, Vector3 feet)

@@ -91,48 +91,60 @@ namespace Nomad.Loot.Editor
                     Press(Key.E);
                     break;
                 case 1:
-                    Require(Scrap() == 99 && chest.GetStack(0).Count == 7, "generated cube E partial loot");
+                    Require(Scrap() == 96 && chest.GetStack(0).Count == 10, "generated cube E opens before looting");
+                    TakeAll();
+                    Require(Scrap() == 99 && chest.GetStack(0).Count == 7, "generated cube partial loot");
                     Press(Key.V);
                     break;
                 case 2:
                     Require(Scrap() == 0, "V frees scrap without conflicting G gallery");
+                    TakeAll();
                     Press(Key.E);
                     break;
                 case 3:
-                    Require(Scrap() == 7 && chest.Status == LootStatus.Empty, "remaining seven collected");
-                    Press(Key.E);
-                    break;
-                case 4:
-                    Require(Scrap() == 7 && chest.GetComponent<BoxCollider>().enabled, "empty cube preserves collider and no duplicate");
+                    Require(Scrap() == 7 && chest.Status == LootStatus.Empty && LootPanel() == null,
+                        "remaining seven collected and E closes the UI");
+                    Require(chest.GetComponent<BoxCollider>().enabled, "empty cube preserves collider");
                     Require(controls.GetComponent<TerrainLootIntegration>().Summary.Contains("0/10 Empty"), "saved scene HUD shows loot state");
                     TerrainIntegrationValidation.Capture(controls, 0, "terrain-loot-player");
                     previous = chest;
                     Press(Key.T);
                     break;
-                case 5:
+                case 4:
                     Require(previous == null || !previous.gameObject.activeInHierarchy, "regeneration retires previous chest");
                     Require(Chests().Length == count && Signature() == signature && Chests().All(c => c.GetStack(0).Count == 10), "same seed regenerates same placements with fresh contents");
                     Require(Scrap() == 7, "regeneration preserves player inventory");
                     MoveToChest();
                     Press(Key.E);
                     break;
-                case 6:
-                    Require(Scrap() == 17 && chest.Status == LootStatus.Empty, "regenerated cube E works");
+                case 5:
+                    Require(Scrap() == 7 && chest.Status == LootStatus.Remaining, "regenerated cube E opens new chest");
+                    TakeAll();
+                    Require(Scrap() == 17 && chest.Status == LootStatus.Empty, "regenerated cube loot works");
                     Press(Key.P);
                     break;
-                case 7:
-                    Require(Chests().Length == 0 && Scrap() == 17, "P removes loot with props");
+                case 6:
+                    Require(Chests().Length == 0 && Scrap() == 17 && LootPanel() == null, "P removes loot and closes stale panel");
                     Press(Key.P);
                     break;
                 default:
                     Require(Chests().Length == count && Scrap() == 17, "P restores same placements and keeps inventory");
                     TerrainIntegrationValidation.Capture(controls, 1, "terrain-loot-overview");
-                    string report = $"TERRAIN_LOOT_PASS frame={frame} time={Time.time:F2} chests={count}: saved scene E/F/V/T/P, partial 3+7, empty, stable collider, HUD, generation cleanup and replay";
+                    string report = $"TERRAIN_LOOT_PASS frame={frame} time={Time.time:F2} chests={count}: saved scene E opens UI, Take all, F/V/T/P, partial 3+7, empty, stable collider, HUD, generation cleanup and replay";
                     System.IO.File.WriteAllText("Artifacts/terrain-loot-results.txt", report);
                     Debug.Log(report);
                     Finish(0);
                     break;
             }
+        }
+
+        private static Transform LootPanel() => GameObject.Find("ChestLootPanel")?.transform;
+
+        private static void TakeAll()
+        {
+            Transform panel = LootPanel();
+            Require(panel != null, "loot panel opens for the generated chest");
+            panel.Find("Take All").GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
         }
 
         private static LootChest[] Chests() => Object.FindObjectsByType<LootChest>(FindObjectsSortMode.None);

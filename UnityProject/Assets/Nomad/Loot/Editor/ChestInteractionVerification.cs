@@ -21,12 +21,13 @@ namespace Nomad.Loot.Editor
         private static int calls;
         private static float rollStart;
         private static Keyboard keyboard;
+        private static Mouse mouse;
         private static PlayerMovement player;
         private static PlayerInventory inventory;
         private static LootChest chest;
         private static GameObject wall;
 
-        [MenuItem("Nomad/Loot/Open B Chest E Key Preview")]
+        [MenuItem("Nomad/Loot/Open Chest Loot Preview")]
         public static void OpenPreview()
         {
             if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
@@ -42,7 +43,7 @@ namespace Nomad.Loot.Editor
             foreach (var label in Object.FindObjectsByType<UnityEngine.UI.Text>(FindObjectsInactive.Include, FindObjectsSortMode.None))
             {
                 if (label.text.Contains("Add scrap"))
-                    label.text = "E Loot    F Fill inventory    G Free scrap    Tab Inventory";
+                    label.text = "E Open chest    F Fill backpack    G Free scrap    Tab Backpack";
             }
 
             chest = CreateChest("b-e-key-chest", player.transform.position + new Vector3(-0.9f, 0, 1.1f));
@@ -54,7 +55,7 @@ namespace Nomad.Loot.Editor
             data.FindProperty("keyboardControls").boolValue = true;
             data.ApplyModifiedPropertiesWithoutUndo();
             Selection.activeGameObject = chest.gameObject;
-            Debug.Log("B CHEST PREVIEW: Play + Game. E loot 3/10, G free scrap, E loot remaining 7. F fill inventory. Tab inventory.");
+            Debug.Log("B CHEST PREVIEW: Play + Game. E opens loot, double-click a row or use Take all. F fills inventory, G frees scrap.");
         }
 
         private static LootChest CreateChest(string id, Vector3 position)
@@ -66,7 +67,7 @@ namespace Nomad.Loot.Editor
             collider.center = Vector3.up * 0.4f;
             collider.size = new Vector3(1, 0.8f, 1);
             var target = root.AddComponent<LootChest>();
-            target.Initialize(id, new[] { new LootStack("scrap", 10) });
+            target.Initialize(id, new[] { new LootStack("scrap", 10), new LootStack("field-vest", 1) });
             var point = new GameObject("Interaction Point").transform;
             point.SetParent(root.transform, false);
             point.localPosition = collider.center;
@@ -132,6 +133,8 @@ namespace Nomad.Loot.Editor
                     InputSystem.settings.editorInputBehaviorInPlayMode = InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
                     keyboard = InputSystem.AddDevice<Keyboard>();
                     keyboard.MakeCurrent();
+                    mouse = InputSystem.AddDevice<Mouse>();
+                    mouse.MakeCurrent();
                     Physics.SyncTransforms();
                     Queue(Key.E);
                     return;
@@ -150,38 +153,79 @@ namespace Nomad.Loot.Editor
             switch (++stage)
             {
                 case 1:
-                    Require(Scrap() == 99 && chest.GetStack(0).Count == 7 && calls == 1, "E partial 3/10");
+                    Require(Panel() != null && chest.Status == LootStatus.Remaining && Scrap() == 96 &&
+                        chest.GetStack(0).Count == 10 && calls == 1, "E opens both panels without transferring");
+                    Require(((RectTransform)Panel().Find("Title")).rect.height > 0 &&
+                        ((RectTransform)Panel().Find("Summary")).rect.height > 0 &&
+                        ((RectTransform)Panel().Find("Close")).rect.height > 0, "loot header and close button have visible bounds");
                     CheckCollider();
                     break;
                 case 2:
-                    Require(calls == 1 && Scrap() == 99, "hold does not repeat");
-                    Capture();
+                    Require(calls == 1 && Panel() != null, "holding E does not repeat");
                     Queue();
+                    Click("Viewport/Loot Stacks/Loot Stack 0", true);
                     break;
-                case 3: Queue(Key.E); break;
+                case 3:
+                    Click("Viewport/Loot Stacks/Loot Stack 0", false);
+                    break;
                 case 4:
-                    Require(calls == 2 && chest.GetStack(0).Count == 7 && Scrap() == 99, "full inventory retry preserves 7");
-                    Queue(Key.G);
+                    Require(Scrap() == 96, "single click does not take a stack");
+                    Click("Viewport/Loot Stacks/Loot Stack 0", true);
                     break;
                 case 5:
-                    Require(Scrap() == 0, "G frees real player inventory");
-                    Queue(Key.E);
+                    Click("Viewport/Loot Stacks/Loot Stack 0", false);
                     break;
                 case 6:
-                    Require(Scrap() == 7 && chest.Status == LootStatus.Empty && calls == 3, "E receives remaining 7");
-                    CheckCollider();
-                    Queue();
+                    Require(Scrap() == 99 && chest.GetStack(0).Count == 7 && chest.GetStack(1).Count == 1 &&
+                        calls == 2 && Feedback().Contains("Not enough space"), "double-click transfers only the selected stack");
+                    Require(Panel().Find("Viewport/Loot Stacks/Loot Stack 0/Count")
+                        .GetComponent<UnityEngine.UI.Text>().text == "×7", "chest row displays remaining quantity");
+                    if (SystemInfo.graphicsDeviceType != UnityEngine.Rendering.GraphicsDeviceType.Null)
+                        Capture();
+                    Click("Take All", true);
                     break;
-                case 7: Queue(Key.E); break;
+                case 7:
+                    Click("Take All", false);
+                    break;
                 case 8:
-                    Require(Scrap() == 7 && calls == 3, "empty chest excluded, no duplicate");
+                    Require(calls == 3 && chest.GetStack(0).Count == 7 && chest.GetStack(1).Count == 1 &&
+                        Feedback().Contains("Not enough"), "full inventory preserves all remaining items");
+                    Queue(Key.G);
+                    break;
+                case 9:
+                    Require(Scrap() == 0, "G frees a slot");
+                    inventory.Remove("field-knife", 1);
+                    Queue();
+                    Click("Take All", true);
+                    break;
+                case 10:
+                    Click("Take All", false);
+                    break;
+                case 11:
+                    Require(Scrap() == 7 && chest.Status == LootStatus.Empty && calls == 4 &&
+                        chest.GetStack(1).Count == 0 && !Panel().Find("Take All").GetComponent<UnityEngine.UI.Button>().interactable,
+                        "Take all collects remaining items and disables the button");
+                    CheckCollider();
+                    Click("Close", true);
+                    break;
+                case 12:
+                    Click("Close", false);
+                    break;
+                case 13:
+                    Require(Panel() == null, "close button closes an open chest");
+                    Queue(Key.E);
+                    break;
+                case 14:
+                    Require(Panel() == null && Scrap() == 7 && calls == 4, "empty chest cannot duplicate items");
                     chest.gameObject.SetActive(false);
                     chest = CreateChest("b-gate-check", player.transform.position + Vector3.forward * 3);
                     Queue();
                     break;
-                case 9: Queue(Key.E); break;
-                case 10:
-                    Require(chest.Status == LootStatus.Closed && Scrap() == 7, "outside 2m excluded");
+                case 15:
+                    Queue(Key.E);
+                    break;
+                case 16:
+                    Require(Panel() == null && chest.Status == LootStatus.Closed, "outside reach excluded");
                     chest.transform.position = player.transform.position + new Vector3(-0.9f, 0, 0);
                     wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
                     wall.transform.position = player.transform.position + new Vector3(-0.45f, 0.6f, 0);
@@ -189,41 +233,70 @@ namespace Nomad.Loot.Editor
                     Physics.SyncTransforms();
                     Queue();
                     break;
-                case 11: Queue(Key.E); break;
-                case 12:
-                    Require(chest.Status == LootStatus.Closed && Scrap() == 7, "wall blocks real chest");
+                case 17:
+                    Queue(Key.E);
+                    break;
+                case 18:
+                    Require(Panel() == null && chest.Status == LootStatus.Closed, "wall blocks real chest");
                     wall.SetActive(false);
                     Physics.SyncTransforms();
                     Queue();
                     break;
-                case 13:
+                case 19:
                     rollStart = Time.time;
                     Queue(Key.LeftShift, Key.E);
                     break;
-                case 14:
-                    Require(player.IsRolling && chest.Status == LootStatus.Closed && Scrap() == 7, "roll start blocks E");
+                case 20:
+                    Require(player.IsRolling && chest.Status == LootStatus.Closed && Panel() == null, "roll start blocks E");
                     Queue();
                     break;
-                case 15:
+                case 21:
                     if (Time.time - rollStart < 0.4f) { stage--; return; }
-                    Require(!player.IsRolling && chest.Status == LootStatus.Closed, "roll input not reserved");
+                    Require(!player.IsRolling && chest.Status == LootStatus.Closed, "roll input is not reserved");
                     chest.transform.position = player.transform.position + new Vector3(-0.9f, 0, 0);
                     Physics.SyncTransforms();
                     Queue(Key.E);
                     break;
-                case 16:
-                    Require(chest.Status == LootStatus.Empty && Scrap() == 17, "fresh E works after roll");
-                    Debug.Log($"B_CHEST_INTERACTION_PASS frame={Time.frameCount}: real E partial/full/retry/hold/empty/collider/2m/wall/roll");
+                case 22:
+                    Require(chest.Status == LootStatus.Remaining && Panel() != null, "fresh E opens after roll");
+                    Click("Take All", true);
+                    break;
+                case 23:
+                    chest.transform.position += Vector3.forward * 3;
+                    Physics.SyncTransforms();
+                    Click("Take All", false);
+                    break;
+                case 24:
+                    Require(Panel() == null && Scrap() == 7 && chest.GetStack(0).Count == 10,
+                        "moving the chest out of reach closes the panel and preserves its contents");
+                    Debug.Log($"B_CHEST_INTERACTION_PASS frame={Time.frameCount}: E open, double-click, Take all, hold, partial, full, empty, collider, reach, wall, roll");
                     Finish(0);
                     break;
             }
+        }
+
+        private static Transform Panel() => GameObject.Find("ChestLootPanel")?.transform;
+
+        private static string Feedback() => Panel().Find("Feedback").GetComponent<UnityEngine.UI.Text>().text;
+
+        private static void Click(string target, bool pressed)
+        {
+            Canvas.ForceUpdateCanvases();
+            Vector2 point = RectTransformUtility.WorldToScreenPoint(null, Panel().Find(target).position);
+            QueueMouse(point, pressed);
+        }
+
+        private static void QueueMouse(Vector2 position, bool pressed)
+        {
+            var state = new MouseState { position = position }.WithButton(MouseButton.Left, pressed);
+            InputSystem.QueueStateEvent(mouse, state);
         }
 
         private static void Capture()
         {
             Directory.CreateDirectory("Artifacts");
             var camera = Camera.main;
-            var canvas = Object.FindAnyObjectByType<Canvas>();
+            var canvas = Panel().GetComponentInParent<Canvas>();
             var target = new RenderTexture(1280, 720, 24);
             var pixels = new Texture2D(1280, 720, TextureFormat.RGB24, false);
             RenderTexture previous = RenderTexture.active;
@@ -238,7 +311,7 @@ namespace Nomad.Loot.Editor
                 RenderTexture.active = target;
                 pixels.ReadPixels(new Rect(0, 0, 1280, 720), 0, 0);
                 pixels.Apply();
-                File.WriteAllBytes("Artifacts/chest-e-preview.png", pixels.EncodeToPNG());
+                File.WriteAllBytes("Artifacts/chest-loot-preview.png", pixels.EncodeToPNG());
             }
             finally
             {
