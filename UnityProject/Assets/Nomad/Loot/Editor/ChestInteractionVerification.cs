@@ -396,7 +396,45 @@ namespace Nomad.Loot.Editor
                     if (frame < layoutReadyFrame) { stage--; return; }
                     Require(chest.Status == LootStatus.Empty && !LootScroll().verticalScrollbar.gameObject.activeSelf,
                         "scrollbar hides when loot fits again");
-                    Debug.Log($"B_CHEST_INTERACTION_PASS frame={Time.frameCount}: E open, double-click, Take all, hold, partial, full, empty, bidirectional drag, exact slot, merge, incompatible slot, stale drop, collider, reach, wall, roll, scrollbar auto-hide, wheel and thumb");
+                    ClickBackpackScrap();
+                    break;
+                case 46:
+                    ClickBackpackScrap(false);
+                    break;
+                case 47:
+                    Require(Scrap() == 4 && chest.GetStack(0).Count == 0, "one backpack click does not store");
+                    ClickBackpackScrap();
+                    break;
+                case 48:
+                    ClickBackpackScrap(false);
+                    break;
+                case 49:
+                    // 상자 화면에서만 Shift가 무시되는지 구르기 쿨다운이 끝난 뒤 검사합니다.
+                    if (Time.time - rollStart < 1.1f) { stage--; return; }
+                    Require(Scrap() == 3 && chest.GetStack(0).Count == 1 && Feedback() == "Stored 1",
+                        "double-click stores one item from a backpack stack");
+                    Queue(Key.LeftShift);
+                    ClickBackpackScrap();
+                    break;
+                case 50:
+                    Require(!player.IsRolling && Panel() != null && Scrap() == 3,
+                        "holding Shift while the chest is open does not roll or transfer before release");
+                    ClickBackpackScrap(false);
+                    break;
+                case 51:
+                    Require(!player.IsRolling && Panel() != null && Scrap() == 0 &&
+                        chest.GetStack(0).Count == 4 && Feedback() == "Stored 3",
+                        "Shift-click stores the remaining backpack stack and preserves totals");
+                    Queue(Key.E);
+                    break;
+                case 52:
+                    Require(Panel() == null, "close the chest after storing");
+                    Queue(Key.LeftShift);
+                    break;
+                case 53:
+                    Require(player.IsRolling && chest.GetStack(0).Count == 4,
+                        "Shift starts a normal roll when the chest is closed");
+                    Debug.Log($"B_CHEST_INTERACTION_PASS frame={Time.frameCount}: E open, chest double-click, Take all, bidirectional drag, exact slot, merge, stale drop, reach, wall, roll, scrollbar, backpack double-click one and Shift-click stack");
                     Finish(0);
                     break;
             }
@@ -422,14 +460,14 @@ namespace Nomad.Loot.Editor
             QueueMouse(point, pressed);
         }
 
-        private static void ClickBackpackScrap()
+        private static void ClickBackpackScrap(bool pressed = true)
         {
             int slot = 0;
             while (slot < PlayerInventory.Capacity && inventory.GetSlot(slot).Item?.ItemId != "scrap")
                 slot++;
 
             Require(slot < PlayerInventory.Capacity, "backpack has scrap to drag");
-            ClickBackpackSlot(slot, true);
+            ClickBackpackSlot(slot, pressed);
         }
 
         private static void ClickBackpackSlot(int slot, bool pressed)

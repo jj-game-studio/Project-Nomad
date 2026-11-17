@@ -253,6 +253,11 @@ namespace Nomad.Loot.Editor
                 chest.GetStack(2).Count == 93, "다른 아이템과 잘못된 대상 슬롯 차단");
             Require(chest.TryLootStackToSlot(inventory, 2, 2) == 93 && inventory.GetSlot(2).Count == 93 &&
                 inventory.GetSlot(1).Item == null && chest.GetStack(2).Count == 0, "드롭한 빈 슬롯으로 스택 이전");
+            int usedSlotsBeforePartialStore = inventory.UsedSlots;
+            Require(chest.TryStoreStack(inventory, 2, 0) == 0 &&
+                chest.TryStoreStack(inventory, 2, 1) == 1 && inventory.GetSlot(2).Count == 92 &&
+                chest.GetStack(2).Count == 1 && inventory.UsedSlots == usedSlotsBeforePartialStore,
+                "보관 수량이 일부이면 원래 가방 슬롯에 남은 수량을 보존");
             Object.Destroy(chest.gameObject);
             Object.Destroy(inventory.gameObject);
         }

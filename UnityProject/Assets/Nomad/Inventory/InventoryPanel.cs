@@ -11,6 +11,7 @@ namespace Nomad.Inventory
     public sealed class InventoryPanel : MonoBehaviour
     {
         private const float DragThreshold = 5f;
+        private const float StoreDoubleClickInterval = 0.3f;
 
         [SerializeField] private PlayerInventory inventory;
         [SerializeField] private GameObject panel;
@@ -24,6 +25,10 @@ namespace Nomad.Inventory
         private SlotView dragPreview;
         private Mouse dragMouse;
         private Vector2 pressPosition;
+        private bool shiftAtPress;
+        private int previousStoreClickSlot = -1;
+        private float previousStoreClickTime;
+        private Mouse previousStoreClickMouse;
         private int hoveredIndex = -1;
         private int dragSource = -1;
         private int lootDragSource = -1;
@@ -214,12 +219,19 @@ namespace Nomad.Inventory
             if (mouse != null)
             {
                 Vector2 position = mouse.position.ReadValue();
-                if (mouse.leftButton.wasPressedThisFrame && pointerSlot >= 0 &&
-                    inventory.GetSlot(pointerSlot).Item != null)
+                if (mouse.leftButton.wasPressedThisFrame)
                 {
-                    dragSource = pointerSlot;
-                    dragMouse = mouse;
-                    pressPosition = position;
+                    if (pointerSlot != previousStoreClickSlot)
+                        previousStoreClickSlot = -1;
+
+                    if (pointerSlot >= 0 && inventory.GetSlot(pointerSlot).Item != null)
+                    {
+                        dragSource = pointerSlot;
+                        dragMouse = mouse;
+                        pressPosition = position;
+                        Keyboard keyboard = Keyboard.current;
+                        shiftAtPress = keyboard != null && (keyboard.leftShiftKey.isPressed || keyboard.rightShiftKey.isPressed);
+                    }
                 }
 
                 if (dragSource >= 0)
@@ -247,15 +259,37 @@ namespace Nomad.Inventory
                 return;
 
             int source = dragSource;
-            bool drop = preview.activeSelf && mouse.leftButton.wasReleasedThisFrame;
-            CancelDrag();
-            if (!drop)
+            bool released = mouse.leftButton.wasReleasedThisFrame;
+            bool dragged = preview.activeSelf;
+            bool shift = shiftAtPress;
+            bool click = released && !dragged && source == pointerSlot;
+            CancelDrag(resetClick: !click);
+            if (!released)
                 return;
 
-            if (overChest)
+            if (click && HasOpenChest)
+                StoreFromClick(source, mouse, shift);
+            else if (dragged && overChest)
                 chestPanel.Deposit(source);
-            else if (pointerSlot >= 0)
+            else if (dragged && pointerSlot >= 0)
                 inventory.MoveStack(source, pointerSlot);
+        }
+
+        private void StoreFromClick(int slot, Mouse mouse, bool shift)
+        {
+            float now = Time.unscaledTime;
+            bool doubleClick = previousStoreClickSlot == slot && previousStoreClickMouse == mouse &&
+                now - previousStoreClickTime <= StoreDoubleClickInterval;
+            if (shift || doubleClick)
+            {
+                previousStoreClickSlot = -1;
+                chestPanel.Deposit(slot, shift ? int.MaxValue : 1);
+                return;
+            }
+
+            previousStoreClickSlot = slot;
+            previousStoreClickTime = now;
+            previousStoreClickMouse = mouse;
         }
 
         internal void BeginLootDrag(int source, PlayerInventory.ItemStack stack, Vector2 position)
@@ -318,8 +352,10 @@ namespace Nomad.Inventory
                 dragPreview.Rect.position = worldPoint;
         }
 
-        private void CancelDrag()
+        private void CancelDrag(bool resetClick = true)
         {
+            if (resetClick)
+                previousStoreClickSlot = -1;
             if (dragSource < 0 && lootDragSource < 0)
                 return;
 

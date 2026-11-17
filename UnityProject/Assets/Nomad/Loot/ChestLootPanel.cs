@@ -129,7 +129,7 @@ namespace Nomad.Loot
             Chest = chest;
             interaction = owner;
             Chest.Changed += Refresh;
-            feedback.text = "Drag items between panels";
+            feedback.text = "Backpack: double-click 1 · Shift-click stack";
             backdrop.gameObject.SetActive(true);
             root.gameObject.SetActive(true);
             Refresh();
@@ -194,13 +194,13 @@ namespace Nomad.Loot
             dropOutline.enabled = highlighted;
         }
 
-        public void Deposit(int fromSlot)
+        public void Deposit(int fromSlot, int count = int.MaxValue)
         {
             LootChest chest = Chest;
             if (interaction == null || !interaction.CanAccessChest(chest))
                 return;
 
-            int stored = chest.TryStoreStack(inventory, fromSlot);
+            int stored = chest.TryStoreStack(inventory, fromSlot, count);
             if (stored > 0 && Chest == chest)
                 feedback.text = $"Stored {stored}";
         }

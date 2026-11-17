@@ -140,24 +140,25 @@ namespace Nomad.Loot
             }
         }
 
-        public int TryStoreStack(PlayerInventory inventory, int slotIndex)
+        public int TryStoreStack(PlayerInventory inventory, int slotIndex, int requestedCount = int.MaxValue)
         {
-            if (!CanTransfer(inventory) || (uint)slotIndex >= PlayerInventory.Capacity)
+            if (!CanTransfer(inventory) || (uint)slotIndex >= PlayerInventory.Capacity || requestedCount <= 0)
                 return 0;
 
             PlayerInventory.ItemStack stack = inventory.GetSlot(slotIndex);
             if (stack.Item == null)
                 return 0;
 
+            int moved = Mathf.Min(requestedCount, stack.Count);
             busy = true;
             try
             {
-                LootStack[] updated = BuildStoredContents(stack);
+                LootStack[] updated = BuildStoredContents(new PlayerInventory.ItemStack(stack.Item, moved));
                 // 재진입하는 구독자에게도 가방과 상자 양쪽이 반영된 상태를 보여 줍니다.
-                inventory.RemoveSlotForTransfer(slotIndex);
+                inventory.RemoveFromSlotForTransfer(slotIndex, moved);
                 contents = updated;
                 PublishTransfer("Items stored", inventory);
-                return stack.Count;
+                return moved;
             }
             finally
             {

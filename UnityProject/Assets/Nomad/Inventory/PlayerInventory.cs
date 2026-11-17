@@ -65,10 +65,13 @@ namespace Nomad.Inventory
             return added;
         }
 
-        internal void RemoveSlotForTransfer(int index)
+        internal void RemoveFromSlotForTransfer(int index, int count)
         {
-            slots[index] = default;
-            stackOrder.Remove(index);
+            ItemStack stack = slots[index];
+            int remaining = stack.Count - count;
+            slots[index] = remaining == 0 ? default : new ItemStack(stack.Item, remaining);
+            if (remaining == 0)
+                stackOrder.Remove(index);
         }
 
         internal void NotifyChanged()
