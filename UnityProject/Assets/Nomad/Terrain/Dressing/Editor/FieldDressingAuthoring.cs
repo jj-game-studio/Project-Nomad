@@ -299,6 +299,21 @@ namespace Nomad.Terrain.Editor
                 if (result.Pieces.Any(piece => piece.GetComponentsInChildren<BoxCollider>().Any(box => box.enabled)))
                     throw new System.InvalidOperationException($"seed {result.Seed} 켜진 타일 BoxCollider가 남았습니다.");
 
+                // 언덕 지형은 절벽 없이 모두 걸을 수 있어야 하고(최대 경사 45° 미만), 0/1/2m 단이 나뉘어야 합니다.
+                UnityEngine.Terrain surface = fieldRoot.GetComponentInChildren<UnityEngine.Terrain>();
+                float steepest = 0f;
+                var levels = new HashSet<int>();
+                for (int row = 0; row <= 64; row++)
+                for (int column = 0; column <= 64; column++)
+                {
+                    float u = column / 64f, v = row / 64f;
+                    steepest = Mathf.Max(steepest, surface.terrainData.GetSteepness(u, v));
+                    levels.Add(Mathf.RoundToInt(surface.terrainData.GetInterpolatedHeight(u, v)));
+                }
+                if (steepest >= 45f)
+                    throw new System.InvalidOperationException($"seed {result.Seed} 걸을 수 없는 급경사 {steepest:F1}°가 있습니다.");
+                Debug.Log($"FIELD_TERRAIN seed={result.Seed} steepest={steepest:F1} levels={string.Join("/", levels.OrderBy(level => level))}");
+
                 // 시작점이 덤불·나무 충돌체 안에 있으면 플레이어가 갇힙니다.
                 // 플레이어 캡슐(반지름 0.35m, 높이 1.8m)과 실제로 겹치는 꾸밈 충돌체가 있는지 확인합니다.
                 Vector3 start = field.PlayerPosition;

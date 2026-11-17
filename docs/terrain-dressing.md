@@ -58,14 +58,20 @@ unity run '<checkout>/UnityProject' --timeout 1500 --log-file '<checkout>/UnityP
 - O키 전체 보기에서는 그림자 거리 밖이라 지면이 평평하게 보입니다.
 - 외곽 돌벽은 각 타일 윗면 높이에 세우므로 높이가 다른 외곽 타일 사이에는 벽 높이 단차가 있습니다.
 
-## 2단계: Terrain 지면·경사로·경로
+## 2단계: Perlin 언덕 Terrain 지면·경로
 
-TerrainTest의 `FieldDressing`(기본 `terrainSurface` 켬)은 꾸밈보다 먼저 생성 결과를 하나의 Unity Terrain으로 바꿉니다. 꾸밈 목록(비공개)이 없어도 동작합니다.
+TerrainTest의 `FieldDressing`(기본 `terrainSurface` 켬)은 꾸밈보다 먼저 생성 필드 범위를 하나의 Unity Terrain으로 덮습니다. 꾸밈 목록(비공개)이 없어도 동작합니다.
 
-- **높이**: WFC 높이 골격(0/1/2m)을 그대로 씁니다. 평지는 타일 높이, 계단 칸은 `ContinuousHeight`의 연속 경사(3m에 1m, 약 18°)라 걸어서 오르내리는 경사로가 됩니다. 높이 차 경계는 샘플 하나(0.25m 이하) 폭에서 1~2m가 바뀌어 76° 이상이므로 NavMesh(최대 45°)와 캐릭터 모두 절벽으로 취급합니다.
-- **충돌·경로**: Terrain에 `TerrainCollider`를 두고, 타일의 외형과 `BoxCollider`는 끕니다. 타일 오브젝트는 생성 결과·연결 정보로 남습니다.
-- **칠**: 잔디 / 경사로와 저주파 노이즈 흙 패치 / 50° 이상 급경사 암벽색. 레이어 텍스처는 코드로 만든 단색(±2.5% 얼룩)이며 구매 애셋을 쓰지 않습니다.
-- **공용 코드(동작 범위 확장, 시그니처 변경 없음)**: `MicroTerrainWalkability.Build`는 생성 루트 아래 Terrain을 NavMesh 소스로 넣고 꺼진 BoxCollider를 뺍니다. 바닥 판정(`FieldNavigation`·`PropScatter`·`FieldPreview`)은 새 `FieldGround.BelongsTo`로 "조각 자신 또는 그 칸을 덮는 필드 Terrain"을 바닥으로 인정합니다. Terrain이 없는 씬(`TerrainIntegration.unity` 포함)은 기존과 같습니다.
-- 생성기 내부의 1차 도달성 검사는 Terrain을 만들기 전 타일 기준으로 실행되고, 이후 꾸밈 복구·`FieldNavigation` 준비는 Terrain 기준으로 다시 검사합니다.
+- **높이**: seed 기반 2옥타브 Perlin(주기 약 28m)을 0~2로 펴고, 각 단의 앞 50%는 평지, 뒤 50%만 smoothstep으로 다음 단까지 올립니다. 결과는 0/1/2m 세 단의 넓은 평지와 그 사이의 걸을 수 있는 경사(검증 seed 최대 26~34°)입니다. 수직 절벽은 없습니다.
+- **WFC 타일**: 기존 계약(`FieldGenerationResult`, 적·상자 후보 순회, 연결 정보)을 위한 논리 칸으로 남고 외형·`BoxCollider`는 꺼집니다. 지면 모양은 타일 높이와 무관합니다.
+- **칠**: 단 사이 경사는 흙길처럼, 저주파 노이즈 일부는 흙 패치, 드문 급경사는 암벽색입니다. 레이어 텍스처는 코드로 만든 단색(±2.5% 얼룩)이며, Terrain Lit이 알파를 매끄러움으로 읽으므로 알파 0으로 반들거림을 없앴습니다.
+- **꾸밈**: 모든 소품을 표면 높이에 맞춥니다. 나무·엄폐물은 경사가 걸친 단 가장자리의 완만한 자리(15° 미만)에만 두고, 평평한 단 한가운데는 상자·전투 공간으로 비웁니다. 절벽 바위는 두지 않습니다.
+- **공용 코드(시그니처 변경 없음, Terrain이 없으면 동작 동일)**:
+  - `MicroTerrainWalkability`: Terrain을 NavMesh 소스로 포함, 꺼진 BoxCollider 제외, 시작점·경로 표본 높이를 Terrain 표면에서 읽음
+  - `FieldGround`(신규): Terrain 바닥 소유 판정과 표면 높이
+  - `FieldNavigation`·`PropScatter`·`FieldPreview`: 바닥 판정을 `FieldGround.BelongsTo`로, 연결부 광선 6m, 상자 광선 시작 높이를 최고 단 위로
+- 생성기 내부 1차 도달성 검사는 Terrain 생성 전 타일 기준이고, 이후 꾸밈 복구·`FieldNavigation` 준비는 Terrain 기준으로 다시 검사합니다.
 
-검증은 위 `CreateAndVerify`가 Terrain 존재와 켜진 타일 BoxCollider가 없음을 함께 확인하고 `Artifacts/terrain-test-ramp.png`를 남깁니다. 기존 `TerrainIntegrationValidation.Run` 회귀로 Terrain이 없는 경로가 그대로임을 확인합니다.
+검증 `CreateAndVerify`는 Terrain 존재, 켜진 타일 BoxCollider 없음, 최대 경사 45° 미만, 0/1/2m 단 존재(`FIELD_TERRAIN`)를 확인하고 경로·후보를 꾸밈 전과 비교합니다. 기존 `TerrainIntegrationValidation.Run` 회귀로 Terrain이 없는 경로가 그대로임을 확인합니다.
+
+알려진 영향: 평지가 단 위로 한정되어 상자 후보(평평하고 2m가 트인 자리)가 줄어듭니다. 고정 seed 6개 기준 32 → 14개입니다(1단계 타일 지면은 20개).

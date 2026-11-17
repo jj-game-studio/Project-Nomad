@@ -23,6 +23,7 @@ namespace Nomad.Terrain
 
         private readonly List<GameObject> blockers = new List<GameObject>();
         private readonly FieldTerrainSurface surface = new FieldTerrainSurface();
+        private UnityEngine.Terrain ground;
         private GameObject root;
         private Vector2 noiseOffset;
 
@@ -75,7 +76,7 @@ namespace Nomad.Terrain
 
             // 지면은 구매 애셋 없이 만들 수 있으므로 꾸밈 목록이 없어도 먼저 Terrain으로 바꿉니다.
             // 이후 소품 배치·경로 검사는 모두 이 Terrain을 바닥으로 사용합니다.
-            if (terrainSurface) surface.Build(result, result.Seed);
+            ground = terrainSurface ? surface.Build(result, result.Seed) : null;
 
             FieldDressingSet source = set != null ? set : Resources.Load<FieldDressingSet>(FieldDressingSet.ResourcePath);
             if (source == null) return;
@@ -83,7 +84,7 @@ namespace Nomad.Terrain
             root = new GameObject("FieldDressing");
             root.transform.SetParent(obstacleOwner != null ? obstacleOwner.transform : transform, false);
             var random = new System.Random(unchecked(result.Seed * 7919 + 17));
-            Dictionary<Vector2Int, float> tops = BuildTopMap(result.Pieces);
+            Dictionary<Vector2Int, float> tops = ground != null ? BuildTerrainTopMap(result.Pieces) : BuildTopMap(result.Pieces);
 
             // 군락 밀도와 테마는 seed별로 이동한 저주파 노이즈로 정해 이웃 타일끼리 비슷해지게 합니다.
             noiseOffset = new Vector2(Range(random, 0f, 1000f), Range(random, 0f, 1000f));
@@ -94,11 +95,14 @@ namespace Nomad.Terrain
                 if (tile == null) continue;
                 if (!terrainSurface) ApplyGround(piece, source.groundMaterial, tile.Level + (tile.IsStair ? 0.5f : 0f));
 
+                // Terrain 지면에서는 칸 중심의 실제 표면 높이를, 타일 지면에서는 타일 높이를 기준으로 삼습니다.
                 Vector3 center = piece.transform.position + Vector3.up * tile.Level;
+                center.y = GroundY(center, center.y);
                 PlaceBorderWalls(source, center, tops);
-                if (tile.IsStair) continue;
+                if (ground == null && tile.IsStair) continue;
 
-                PlaceCliffRocks(source, center, tops, random);
+                // Terrain 언덕에는 수직 절벽이 없으므로 절벽 바위는 타일 지면에서만 둡니다.
+                if (ground == null) PlaceCliffRocks(source, center, tops, random);
 
                 // 식생 노이즈가 낮은 빈터는 상자·전투 공간으로 비워 두고, 군락에만 식생과 장애물을 둡니다.
                 float density = Density(center);
@@ -125,6 +129,28 @@ namespace Nomad.Terrain
             }
             return tops;
         }
+
+        // Terrain 지면에서는 칸 안 다섯 지점이 모두 같은 높이일 때만 평지로 보고, 경사가 걸친 칸은 NaN입니다.
+        // 나무·엄폐물·울타리는 같은 높이 평지끼리만 배치되므로 경사로를 막지 않습니다.
+        private Dictionary<Vector2Int, float> BuildTerrainTopMap(IReadOnlyList<TerrainPiece> pieces)
+        {
+            var tops = new Dictionary<Vector2Int, float>();
+            foreach (TerrainPiece piece in pieces)
+            {
+                Vector3 center = piece.transform.position;
+                float height = GroundY(center, center.y);
+                bool flat = true;
+                foreach (Vector2Int side in Sides)
+                {
+                    Vector3 probe = center + new Vector3(side.x, 0f, side.y) * 1.3f;
+                    flat &= Mathf.Abs(GroundY(probe, height) - height) < 0.03f;
+                }
+                tops[Cell(center)] = flat ? height : float.NaN;
+            }
+            return tops;
+        }
+
+        private float GroundY(Vector3 point, float fallback) => FieldGround.SurfaceHeight(ground, point, fallback);
 
         private static Vector2Int Cell(Vector3 position) => new Vector2Int(
             Mathf.RoundToInt(position.x / MicroTerrainTile.Size), Mathf.RoundToInt(position.z / MicroTerrainTile.Size));
@@ -283,6 +309,7 @@ namespace Nomad.Terrain
             Vector3 along = Vector3.Cross(Vector3.up, outward);
             Quaternion facing = Quaternion.LookRotation(alongX ? outward : along);
             Vector3 position = center + outward * (MicroTerrainTile.Size * 0.5f + depth * outside);
+            position.y = GroundY(position, position.y);
 
             GameObject segment = Spawn(prefab, position, 0f, 1f);
             segment.transform.rotation = facing;
@@ -326,8 +353,18 @@ namespace Nomad.Terrain
             return new Vector3(index % 2 == 0 ? -inset : inset, 0f, index < 2 ? -inset : inset);
         }
 
-        private static bool OpenCorner(Vector3 center, int index, Dictionary<Vector2Int, float> tops)
+        private bool OpenCorner(Vector3 center, int index, Dictionary<Vector2Int, float> tops)
         {
+            // 언덕 지형에서는 단 가장자리(경사가 걸친 칸)의 완만한 자리(15° 미만)에만 둡니다.
+            // 평평한 단 한가운데는 상자·전투 공간으로 비워 두고, 경로를 막는지는 이후 복구 단계가 확인합니다.
+            if (ground != null)
+            {
+                if (tops.TryGetValue(Cell(center), out float top) && !float.IsNaN(top)) return false;
+                Vector3 local = center + Corner(index) - ground.transform.position;
+                Vector3 size = ground.terrainData.size;
+                return ground.terrainData.GetSteepness(local.x / size.x, local.z / size.z) < 15f;
+            }
+
             Vector2Int cell = Cell(center);
             var x = new Vector2Int(index % 2 == 0 ? -1 : 1, 0);
             var z = new Vector2Int(0, index < 2 ? -1 : 1);
@@ -341,6 +378,8 @@ namespace Nomad.Terrain
 
         private GameObject Spawn(GameObject prefab, Vector3 position, float yaw, float scale)
         {
+            // Terrain 지면에서는 놓을 자리의 실제 표면 높이에 맞춥니다.
+            position.y = GroundY(position, position.y);
             GameObject instance = Instantiate(prefab, position, Quaternion.Euler(0f, yaw, 0f), root.transform);
             instance.transform.localScale = prefab.transform.localScale * scale;
 
@@ -438,6 +477,7 @@ namespace Nomad.Terrain
             Placed = 0;
             RemovedBlockers = 0;
             surface.Release();
+            ground = null;
             if (root == null) return;
 
             root.SetActive(false);

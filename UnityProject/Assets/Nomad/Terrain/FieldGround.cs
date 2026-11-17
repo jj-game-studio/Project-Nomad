@@ -21,5 +21,16 @@ namespace Nomad.Terrain
             return Mathf.Abs(local.x - occupancy.center.x) <= occupancy.extents.x + 0.001f
                 && Mathf.Abs(local.z - occupancy.center.z) <= occupancy.extents.z + 0.001f;
         }
+
+        // 조각들이 속한 생성 루트의 필드 Terrain입니다. 없으면 null입니다.
+        public static UnityEngine.Terrain FindTerrain(TerrainPiece piece)
+        {
+            Transform root = piece != null ? piece.transform.parent : null;
+            return root != null ? root.GetComponentInChildren<UnityEngine.Terrain>() : null;
+        }
+
+        // 필드 Terrain이 있으면 그 표면 높이를, 없으면 타일 기준 높이(fallback)를 돌려줍니다.
+        public static float SurfaceHeight(UnityEngine.Terrain field, Vector3 point, float fallback) =>
+            field == null ? fallback : field.transform.position.y + field.SampleHeight(point);
     }
 }
