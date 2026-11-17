@@ -125,6 +125,11 @@ namespace Nomad.Hud.Editor
                 {
                     case 0:
                         Check(hud.HealthLabel == "100 / 100", "initial Health");
+                        var initialPreview = hud.GetComponent<HudPreview>();
+                        Check(!initialPreview.ComparisonEnabled && !initialPreview.OriginalButton.gameObject.activeSelf &&
+                            !initialPreview.MedievalButton.gameObject.activeSelf && hud.Style == PlayerHud.HudStyle.Medieval,
+                            "comparison disabled and accepted style selected by default");
+                        initialPreview.SetComparisonEnabled(true);
                         hud.GetComponent<HudPreview>().enabled = false;
                         hud.SetResources(0, 100, 100, 100);
                         Check(hud.ManaFraction == 0 && hud.StaminaFraction == 1, "empty/full resources");
@@ -154,6 +159,7 @@ namespace Nomad.Hud.Editor
                         hud.enabled = true;
                         Check(hud.Canvas.gameObject.activeSelf, "HUD returns on enable");
                         VerifyStyleSwitches();
+                        hud.GetComponent<HudPreview>().SetComparisonEnabled(false);
                         foreach (Vector2Int size in Sizes)
                             VerifyLayout(size);
                         hud.GetComponent<HudPreview>().enabled = true;
@@ -167,14 +173,19 @@ namespace Nomad.Hud.Editor
                         InputSystem.QueueStateEvent(testKeyboard, new KeyboardState(Key.F6));
                         break;
                     case 3:
-                        Check(hud.Style == PlayerHud.HudStyle.Original, "F6 selects original");
+                        Check(hud.Style == PlayerHud.HudStyle.Medieval, "F6 cannot switch when comparison disabled");
+                        hud.GetComponent<HudPreview>().OriginalButton.onClick.Invoke();
+                        Check(hud.Style == PlayerHud.HudStyle.Medieval, "disabled callback cannot switch");
+                        hud.GetComponent<HudPreview>().SetComparisonEnabled(true);
                         InputSystem.QueueStateEvent(testKeyboard, new KeyboardState());
                         break;
                     case 4:
                         InputSystem.QueueStateEvent(testKeyboard, new KeyboardState(Key.F6));
                         break;
                     case 5:
-                        Check(hud.Style == PlayerHud.HudStyle.Medieval, "F6 restores medieval");
+                        Check(hud.Style == PlayerHud.HudStyle.Original, "developer comparison remains available when explicitly enabled");
+                        hud.GetComponent<HudPreview>().SetComparisonEnabled(false);
+                        Check(hud.Style == PlayerHud.HudStyle.Medieval, "disabling comparison restores accepted style");
                         RemoveKeyboard();
                         break;
                     case 6:
@@ -185,6 +196,8 @@ namespace Nomad.Hud.Editor
                         hud = UnityEngine.Object.FindAnyObjectByType<PlayerHud>();
                         if (hud == null || hud.HealthLabel != "100 / 100")
                             return;
+                        Check(!hud.GetComponent<HudPreview>().ComparisonEnabled && hud.Style == PlayerHud.HudStyle.Medieval,
+                            "restart keeps comparison disabled and accepted style");
                         PrepareCapture();
                         break;
                     case 8:
@@ -219,6 +232,7 @@ namespace Nomad.Hud.Editor
         private static void VerifyStyleSwitches()
         {
             var preview = hud.GetComponent<HudPreview>();
+            preview.SetComparisonEnabled(true);
             var healthGraphic = hud.Canvas.transform.Find("Bottom Bar/Health/Health Track/Fill").GetComponent<HudArtwork>();
             var heart = hud.Canvas.transform.Find("Bottom Bar/Health/Heart").GetComponent<HudArtwork>();
             var healthLabel = hud.Canvas.transform.Find("Bottom Bar/Health/Health Track/Health Value").GetComponent<TMP_Text>();
