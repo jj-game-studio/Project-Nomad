@@ -17,6 +17,7 @@ namespace Nomad.Loot.Editor
         private const string SessionKey = "Nomad.Loot.ChestInteractionVerify";
         private static double deadline;
         private static int frame;
+        private static int layoutReadyFrame;
         private static int stage;
         private static int calls;
         private static float rollStart;
@@ -58,7 +59,7 @@ namespace Nomad.Loot.Editor
             Debug.Log("B CHEST PREVIEW: Play + Game. E opens loot, double-click a row or use Take all. F fills inventory, G frees scrap.");
         }
 
-        private static LootChest CreateChest(string id, Vector3 position)
+        private static LootChest CreateChest(string id, Vector3 position, LootStack[] contents = null)
         {
             var root = new GameObject(id);
             root.SetActive(false);
@@ -67,7 +68,7 @@ namespace Nomad.Loot.Editor
             collider.center = Vector3.up * 0.4f;
             collider.size = new Vector3(1, 0.8f, 1);
             var target = root.AddComponent<LootChest>();
-            target.Initialize(id, new[] { new LootStack("scrap", 10), new LootStack("field-vest", 1) });
+            target.Initialize(id, contents ?? new[] { new LootStack("scrap", 10), new LootStack("field-vest", 1) });
             var point = new GameObject("Interaction Point").transform;
             point.SetParent(root.transform, false);
             point.localPosition = collider.center;
@@ -162,6 +163,7 @@ namespace Nomad.Loot.Editor
                     break;
                 case 2:
                     Require(calls == 1 && Panel() != null, "holding E does not repeat");
+                    Require(!LootScroll().verticalScrollbar.gameObject.activeSelf, "short loot list hides the scrollbar");
                     Queue();
                     Click("Viewport/Loot Stacks/Loot Stack 0", true);
                     break;
@@ -318,6 +320,7 @@ namespace Nomad.Loot.Editor
                     break;
                 case 34:
                     Require(chest.Status == LootStatus.Remaining && Panel() != null, "fresh E opens after roll");
+                    Queue();
                     ClickBackpackScrap();
                     break;
                 case 35:
@@ -331,13 +334,84 @@ namespace Nomad.Loot.Editor
                 case 37:
                     Require(Panel() == null && Scrap() == 4 && chest.GetStack(0).Count == 10,
                         "moving the chest out of reach closes the panel and preserves its contents");
-                    Debug.Log($"B_CHEST_INTERACTION_PASS frame={Time.frameCount}: E open, double-click, Take all, hold, partial, full, empty, bidirectional drag, exact slot, merge, incompatible slot, stale drop, collider, reach, wall, roll");
+                    inventory.Remove("field-knife", int.MaxValue);
+                    var shortList = new LootStack[5];
+                    for (int i = 0; i < shortList.Length; i++)
+                        shortList[i] = new LootStack("field-knife", 1);
+                    chest = CreateChest("b-scroll-check", player.transform.position + new Vector3(-0.9f, 0, 0), shortList);
+                    Physics.SyncTransforms();
+                    Queue(Key.E);
+                    break;
+                case 38:
+                    Require(Panel() != null && !LootScroll().verticalScrollbar.gameObject.activeSelf,
+                        "five rows fit in the opened chest");
+                    Require(inventory.Add("field-knife", 5) == 5, "prepare five more loot stacks");
+                    for (int i = 0; i < 5; i++)
+                        Require(chest.TryStoreStack(inventory, i) == 1, "add more rows while the chest is open");
+                    layoutReadyFrame = frame + 3;
+                    Queue();
+                    break;
+                case 39:
+                {
+                    if (frame < layoutReadyFrame) { stage--; return; }
+                    var scroll = LootScroll();
+                    Require(scroll.verticalScrollbar.gameObject.activeSelf && scroll.verticalNormalizedPosition > 0.99f,
+                        $"adding loot to an open chest shows the scrollbar: active={scroll.verticalScrollbar.gameObject.activeSelf}, " +
+                        $"position={scroll.verticalNormalizedPosition:F3}, content={scroll.content.rect.height}, view={scroll.viewport.rect.height}");
+                    Vector2 point = RectTransformUtility.WorldToScreenPoint(null, scroll.viewport.position);
+                    InputSystem.QueueStateEvent(mouse, new MouseState { position = point, scroll = new Vector2(0, -120) });
+                    break;
+                }
+                case 40:
+                {
+                    var scroll = LootScroll();
+                    Require(scroll.verticalNormalizedPosition < 0.99f, "mouse wheel scrolls the overflowing list");
+                    Vector2 point = RectTransformUtility.WorldToScreenPoint(null, scroll.verticalScrollbar.handleRect.position);
+                    QueueMouse(point, true);
+                    break;
+                }
+                case 41:
+                    QueueMouse(ScrollbarBottom(), true);
+                    break;
+                case 42:
+                    QueueMouse(ScrollbarBottom(), false);
+                    break;
+                case 43:
+                {
+                    var scroll = LootScroll();
+                    Transform lastRow = scroll.content.GetChild(9);
+                    Require(scroll.verticalNormalizedPosition < 0.05f &&
+                        scroll.viewport.rect.Contains(scroll.viewport.InverseTransformPoint(lastRow.position)),
+                        "dragging scrollbar reaches the last loot row");
+                    if (SystemInfo.graphicsDeviceType != UnityEngine.Rendering.GraphicsDeviceType.Null)
+                        Capture("chest-scrollbar-preview");
+                    Click("Take All", true);
+                    break;
+                }
+                case 44:
+                    Click("Take All", false);
+                    layoutReadyFrame = frame + 4;
+                    break;
+                case 45:
+                    if (frame < layoutReadyFrame) { stage--; return; }
+                    Require(chest.Status == LootStatus.Empty && !LootScroll().verticalScrollbar.gameObject.activeSelf,
+                        "scrollbar hides when loot fits again");
+                    Debug.Log($"B_CHEST_INTERACTION_PASS frame={Time.frameCount}: E open, double-click, Take all, hold, partial, full, empty, bidirectional drag, exact slot, merge, incompatible slot, stale drop, collider, reach, wall, roll, scrollbar auto-hide, wheel and thumb");
                     Finish(0);
                     break;
             }
         }
 
         private static Transform Panel() => GameObject.Find("ChestLootPanel")?.transform;
+
+        private static UnityEngine.UI.ScrollRect LootScroll() => Panel().GetComponent<UnityEngine.UI.ScrollRect>();
+
+        private static Vector2 ScrollbarBottom()
+        {
+            var track = (RectTransform)LootScroll().verticalScrollbar.transform;
+            Vector3 bottom = track.TransformPoint(new Vector3(track.rect.center.x, track.rect.yMin + 1));
+            return RectTransformUtility.WorldToScreenPoint(null, bottom);
+        }
 
         private static string Feedback() => Panel().Find("Feedback").GetComponent<UnityEngine.UI.Text>().text;
 

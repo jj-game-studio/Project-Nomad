@@ -11,6 +11,8 @@ namespace Nomad.Loot
     {
         private const float Width = 358f;
         private const float Gap = 16f;
+        private const float ListTop = 86f;
+        private const float ListBottom = 89f;
         private static readonly Color Background = new Color32(19, 20, 22, 248);
         private static readonly Color Ink = new Color32(233, 234, 228, 255);
         private static readonly Color Muted = new Color32(170, 177, 174, 255);
@@ -62,7 +64,7 @@ namespace Nomad.Loot
             Dock(summary.rectTransform, 22, 22, -80, -54, 1);
 
             RectTransform viewport = CreateRect("Viewport", root);
-            Dock(viewport, 20, 20, 89, -86);
+            Dock(viewport, 20, 20, ListBottom, -ListTop);
             viewport.gameObject.AddComponent<RectMask2D>();
             dropArea = viewport.gameObject.AddComponent<Image>();
             dropArea.color = ViewportFill;
@@ -87,6 +89,8 @@ namespace Nomad.Loot
             scroll.horizontal = false;
             scroll.movementType = ScrollRect.MovementType.Clamped;
             scroll.scrollSensitivity = 28;
+            scroll.verticalScrollbar = CreateScrollbar();
+            scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
 
             feedback = AddLabel(root, "Feedback", "", 15, Accent, TextAnchor.MiddleLeft);
             Dock(feedback.rectTransform, 22, 22, 52, 82, 0);
@@ -94,6 +98,30 @@ namespace Nomad.Loot
             Dock((RectTransform)takeAll.transform, 20, 20, 14, 49, 0);
             root.gameObject.SetActive(false);
             backdrop.gameObject.SetActive(false);
+        }
+
+        private Scrollbar CreateScrollbar()
+        {
+            RectTransform track = CreateRect("Vertical Scrollbar", root);
+            SetRect(track, Vector2.right, Vector2.one,
+                new Vector2(-16, ListBottom), new Vector2(-6, -ListTop));
+            track.gameObject.AddComponent<Image>().color = new Color32(45, 48, 49, 255);
+
+            RectTransform slidingArea = CreateRect("Sliding Area", track);
+            SetRect(slidingArea, Vector2.zero, Vector2.one, Vector2.one, -Vector2.one);
+            RectTransform handle = CreateRect("Handle", slidingArea);
+            SetRect(handle, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            Image grip = handle.gameObject.AddComponent<Image>();
+            grip.color = Accent;
+            grip.raycastTarget = false;
+
+            Scrollbar scrollbar = track.gameObject.AddComponent<Scrollbar>();
+            scrollbar.direction = Scrollbar.Direction.BottomToTop;
+            scrollbar.handleRect = handle;
+            scrollbar.targetGraphic = grip;
+            scrollbar.navigation = new Navigation { mode = Navigation.Mode.None };
+            track.gameObject.SetActive(false);
+            return scrollbar;
         }
 
         public void Show(LootChest chest, PlayerInteraction owner)
