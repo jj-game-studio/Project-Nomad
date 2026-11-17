@@ -21,6 +21,7 @@ namespace Nomad.Inventory.Editor
         private static int frame;
         private static int stage;
         private static int changes;
+        private static int changesBeforeDrag;
 
         public static void Run()
         {
@@ -124,11 +125,87 @@ namespace Nomad.Inventory.Editor
                         Require(inventory.Remove("field-knife", int.MaxValue) == 18 && inventory.UsedSlots == 1, "무기 중첩 제한");
                         Require(inventory.Add("scrap", int.MaxValue) == 19 * 99 && inventory.UsedSlots == 20, "대량 요청과 용량 제한");
                         Require(changes == 7, "성공한 변경당 알림 한 번");
-                        Queue(Key.Tab);
+                        inventory.Remove("scrap", int.MaxValue);
+                        inventory.Remove("field-vest", int.MaxValue);
+                        inventory.Add("scrap", 106);
+                        inventory.Add("field-knife", 1);
+                        changesBeforeDrag = changes;
+                        MovePointerToSlot(2, held: true);
                         break;
                     case 7:
+                        MovePointerToSlot(19, held: true);
+                        break;
+                    case 8:
+                        Require(panel.Find("DragPreview").gameObject.activeSelf, "드래그 미리보기 표시");
+                        Require(SlotBorder(19) == (Color)new Color32(224, 182, 104, 255), "빈 드롭 대상 강조");
+                        Require(inventory.GetSlot(2).Item.ItemId == "field-knife" && changes == changesBeforeDrag,
+                            "놓기 전 인벤토리 보존");
+                        MovePointerToSlot(19);
+                        break;
+                    case 9:
+                        Require(inventory.GetSlot(2).Item == null && inventory.GetSlot(19).Item.ItemId == "field-knife" &&
+                            inventory.GetStack(2).Item.ItemId == "field-knife" && inventory.UsedSlots == 3,
+                            "먼 빈 칸으로 이동하고 기존 스택 순회 유지");
+                        Require(changes == changesBeforeDrag + 1 && !panel.Find("DragPreview").gameObject.activeSelf,
+                            "성공 후 한 번 알림 및 미리보기 정리");
+                        MovePointerToSlot(19, held: true);
+                        break;
+                    case 10:
+                        MovePointerToSlot(0, held: true);
+                        break;
+                    case 11:
+                        MovePointerToSlot(0);
+                        break;
+                    case 12:
+                        Require(inventory.GetSlot(19).Count == 99 && inventory.GetSlot(0).Item.ItemId == "field-knife",
+                            "다른 아이템과 교환");
+                        MovePointerToSlot(19, held: true);
+                        break;
+                    case 13:
+                        MovePointerToSlot(1, held: true);
+                        break;
+                    case 14:
+                        MovePointerToSlot(1);
+                        break;
+                    case 15:
+                        Require(inventory.GetSlot(1).Count == 99 && inventory.GetSlot(19).Count == 7 &&
+                            inventory.UsedSlots == 3, "최대 수량까지만 합치고 나머지 보존");
+                        MovePointerToSlot(19, held: true);
+                        break;
+                    case 16:
+                        QueuePointer(new Vector2(-20, -20), held: true);
+                        break;
+                    case 17:
+                        QueuePointer(new Vector2(-20, -20), held: false);
+                        break;
+                    case 18:
+                        Require(inventory.GetSlot(19).Count == 7 && changes == changesBeforeDrag + 3 &&
+                            !panel.Find("DragPreview").gameObject.activeSelf, "가방 밖에 놓으면 원래 칸으로 복귀");
+                        inventory.Remove("scrap", 99);
+                        inventory.Add("scrap", 99);
+                        Require(inventory.GetSlot(1).Count == 7 && inventory.GetStack(2).Count == 7 &&
+                            !inventory.MoveStack(1, 1) && !inventory.MoveStack(1, -1) && !inventory.MoveStack(1, 19),
+                            "빈 칸 재사용 및 잘못된 이동·가득 찬 스택 무시");
+                        Require(inventory.MoveStack(19, 1), "합칠 수 있는 스택으로 이동");
+                        inventory.Remove("scrap", 8);
+                        Require(inventory.MoveStack(19, 1) && inventory.GetSlot(19).Item == null &&
+                            inventory.GetSlot(1).Count == 98 && inventory.UsedSlots == 2,
+                            "전량 합치면 출발 슬롯 반환");
+                        inventory.MoveStack(0, 19);
+                        MovePointerToSlot(19, held: true);
+                        break;
+                    case 19:
+                        MovePointerToSlot(0, held: true);
+                        break;
+                    case 20:
+                        Require(panel.Find("DragPreview").gameObject.activeSelf, "닫기 직전 드래그 중");
+                        Queue(Key.Tab);
+                        break;
+                    case 21:
                         Require(!panel.gameObject.activeSelf, "Tab 화면 닫기");
-                        Debug.Log($"INVENTORY_PLAYMODE_PASS: keyboard, 5x4 grid, icons, hover, stacks, partial add, removal, notifications, frame={frame}");
+                        Require(inventory.GetSlot(19).Item.ItemId == "field-knife" &&
+                            !panel.Find("DragPreview").gameObject.activeSelf, "가방 닫으면 드래그 취소");
+                        Debug.Log($"INVENTORY_PLAYMODE_PASS: keyboard, 5x4 grid, icons, hover, drag/drop, stacks, partial add, removal, notifications, frame={frame}");
                         Finish(0);
                         break;
                 }
@@ -166,10 +243,16 @@ namespace Nomad.Inventory.Editor
             return grid.GetChild(index).GetComponent<UnityEngine.UI.Outline>().effectColor;
         }
 
-        private static void MovePointerToSlot(int index)
+        private static void MovePointerToSlot(int index, bool held = false)
         {
             Vector2 position = RectTransformUtility.WorldToScreenPoint(null, grid.GetChild(index).position);
-            InputSystem.QueueStateEvent(mouse, new MouseState { position = position });
+            QueuePointer(position, held);
+        }
+
+        private static void QueuePointer(Vector2 position, bool held)
+        {
+            var state = new MouseState { position = position }.WithButton(MouseButton.Left, held);
+            InputSystem.QueueStateEvent(mouse, state);
         }
 
         private static void Queue(params Key[] keys)

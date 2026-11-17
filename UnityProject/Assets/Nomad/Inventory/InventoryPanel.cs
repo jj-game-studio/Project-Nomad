@@ -6,6 +6,8 @@ namespace Nomad.Inventory
     [DisallowMultipleComponent]
     public sealed class InventoryPanel : MonoBehaviour
     {
+        private const float DragThreshold = 5f;
+
         [SerializeField] private PlayerInventory inventory;
         [SerializeField] private GameObject panel;
         [SerializeField] private UnityEngine.UI.Text capacity;
@@ -15,7 +17,13 @@ namespace Nomad.Inventory
 
         private readonly SlotView[] slots = new SlotView[PlayerInventory.Capacity];
         private Canvas canvas;
+        private SlotView dragPreview;
+        private Mouse dragMouse;
+        private Vector2 pressPosition;
         private int hoveredIndex = -1;
+        private int dragSource = -1;
+
+        private Camera EventCamera => canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
 
         private void Awake()
         {
@@ -27,6 +35,12 @@ namespace Nomad.Inventory
                 slot.SetActive(true);
             }
 
+            GameObject preview = Instantiate(slotTemplate, panel.transform);
+            preview.name = "DragPreview";
+            dragPreview = new SlotView(preview);
+            dragPreview.Group.alpha = 0.85f;
+            dragPreview.Group.blocksRaycasts = false;
+            preview.SetActive(false);
             panel.SetActive(false);
         }
 
@@ -38,12 +52,20 @@ namespace Nomad.Inventory
         private void OnDisable()
         {
             inventory.Changed -= Refresh;
+            CancelDrag();
+        }
+
+        private void OnApplicationFocus(bool hasFocus)
+        {
+            if (!hasFocus)
+                CancelDrag();
         }
 
         private void Update()
         {
             if (Keyboard.current?.tabKey.wasPressedThisFrame == true)
             {
+                CancelDrag();
                 hoveredIndex = -1;
                 panel.SetActive(!panel.activeSelf);
                 if (panel.activeSelf)
@@ -51,7 +73,7 @@ namespace Nomad.Inventory
             }
 
             if (panel.activeSelf)
-                UpdateHover();
+                ProcessPointer();
         }
 
         private void Refresh()
@@ -59,21 +81,83 @@ namespace Nomad.Inventory
             if (!panel.activeSelf)
                 return;
 
+            // 획득이나 제거로 내용이 바뀌면 기존 드래그를 취소합니다.
+            CancelDrag();
             capacity.text = $"{inventory.UsedSlots} / {PlayerInventory.Capacity} slots";
             for (int index = 0; index < slots.Length; index++)
-            {
-                PlayerInventory.ItemStack stack = index < inventory.UsedSlots
-                    ? inventory.GetStack(index)
-                    : default;
-                slots[index].Bind(stack, index == hoveredIndex);
-            }
+                slots[index].Bind(inventory.GetSlot(index), index == hoveredIndex);
 
-            UpdateHover(refreshDetails: true);
+            UpdateHover(FindPointerSlot(Mouse.current), refreshDetails: true);
         }
 
-        private void UpdateHover(bool refreshDetails = false)
+        private void ProcessPointer()
         {
-            int nextHoveredIndex = FindHoveredSlot();
+            Mouse mouse = Mouse.current;
+            int pointerSlot = FindPointerSlot(mouse);
+            if (dragSource >= 0 && (mouse != dragMouse || Keyboard.current?.escapeKey.wasPressedThisFrame == true))
+                CancelDrag();
+
+            if (mouse != null)
+            {
+                Vector2 position = mouse.position.ReadValue();
+                if (mouse.leftButton.wasPressedThisFrame && pointerSlot >= 0 &&
+                    inventory.GetSlot(pointerSlot).Item != null)
+                {
+                    dragSource = pointerSlot;
+                    dragMouse = mouse;
+                    pressPosition = position;
+                }
+
+                if (dragSource >= 0)
+                    UpdateDrag(mouse, position, pointerSlot);
+            }
+
+            UpdateHover(pointerSlot);
+        }
+
+        private void UpdateDrag(Mouse mouse, Vector2 position, int pointerSlot)
+        {
+            GameObject preview = dragPreview.Rect.gameObject;
+            if (!preview.activeSelf && (position - pressPosition).sqrMagnitude >= DragThreshold * DragThreshold)
+            {
+                dragPreview.Bind(inventory.GetSlot(dragSource), false);
+                dragPreview.Rect.sizeDelta = slots[dragSource].Rect.rect.size;
+                slots[dragSource].Group.alpha = 0.45f;
+                preview.SetActive(true);
+            }
+
+            if (preview.activeSelf && RectTransformUtility.ScreenPointToWorldPointInRectangle(
+                (RectTransform)panel.transform, position, EventCamera, out Vector3 worldPoint))
+            {
+                dragPreview.Rect.position = worldPoint;
+            }
+
+            if (mouse.leftButton.isPressed)
+                return;
+
+            int source = dragSource;
+            bool drop = preview.activeSelf && mouse.leftButton.wasReleasedThisFrame && pointerSlot >= 0;
+            CancelDrag();
+            if (drop)
+                inventory.MoveStack(source, pointerSlot);
+        }
+
+        private void CancelDrag()
+        {
+            if (dragSource < 0)
+                return;
+
+            slots[dragSource].Group.alpha = 1f;
+            dragPreview.Rect.gameObject.SetActive(false);
+            dragSource = -1;
+            dragMouse = null;
+        }
+
+        private void UpdateHover(int pointerSlot, bool refreshDetails = false)
+        {
+            bool dragging = dragPreview.Rect.gameObject.activeSelf;
+            PlayerInventory.ItemStack stack = pointerSlot >= 0 ? inventory.GetSlot(pointerSlot) : default;
+            int nextHoveredIndex = stack.Item != null || dragging ? pointerSlot : -1;
             if (nextHoveredIndex == hoveredIndex && !refreshDetails)
                 return;
 
@@ -86,25 +170,17 @@ namespace Nomad.Inventory
                     slots[hoveredIndex].SetHighlighted(true);
             }
 
-            string details = string.Empty;
-            if (hoveredIndex >= 0)
-            {
-                PlayerInventory.ItemStack stack = inventory.GetStack(hoveredIndex);
-                details = $"{stack.Item.DisplayName}  ×{stack.Count}";
-            }
-
-            if (itemDetails.text != details)
-                itemDetails.text = details;
+            itemDetails.text = stack.Item != null ? $"{stack.Item.DisplayName}  ×{stack.Count}" : string.Empty;
         }
 
-        private int FindHoveredSlot()
+        private int FindPointerSlot(Mouse mouse)
         {
-            if (Mouse.current == null)
+            if (mouse == null)
                 return -1;
 
-            Vector2 position = Mouse.current.position.ReadValue();
-            Camera eventCamera = canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
-            for (int index = 0; index < inventory.UsedSlots; index++)
+            Vector2 position = mouse.position.ReadValue();
+            Camera eventCamera = EventCamera;
+            for (int index = 0; index < slots.Length; index++)
             {
                 if (RectTransformUtility.RectangleContainsScreenPoint(slots[index].Rect, position, eventCamera))
                     return index;
@@ -129,10 +205,12 @@ namespace Nomad.Inventory
             private bool occupied;
 
             public RectTransform Rect => background.rectTransform;
+            public CanvasGroup Group { get; }
 
             public SlotView(GameObject slot)
             {
                 background = slot.GetComponent<UnityEngine.UI.Image>();
+                Group = slot.AddComponent<CanvasGroup>();
                 border = slot.AddComponent<UnityEngine.UI.Outline>();
                 border.effectDistance = new Vector2(1, -1);
                 border.useGraphicAlpha = false;

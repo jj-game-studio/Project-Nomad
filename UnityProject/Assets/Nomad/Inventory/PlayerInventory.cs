@@ -12,9 +12,10 @@ namespace Nomad.Inventory
         [SerializeField] private ItemDefinition[] items = Array.Empty<ItemDefinition>();
 
         private readonly Dictionary<string, ItemDefinition> catalog = new(StringComparer.Ordinal);
-        private readonly List<ItemStack> stacks = new(Capacity);
+        private readonly ItemStack[] slots = new ItemStack[Capacity];
+        private readonly List<int> stackOrder = new(Capacity);
 
-        public int UsedSlots => stacks.Count;
+        public int UsedSlots => stackOrder.Count;
         public event Action Changed;
 
         private void Awake()
@@ -34,7 +35,49 @@ namespace Nomad.Inventory
 
         public ItemStack GetStack(int index)
         {
-            return stacks[index];
+            // 가방에서 자리를 옮겨도 기존 호출자는 스택이 추가된 순서로 읽습니다.
+            return slots[stackOrder[index]];
+        }
+
+        public ItemStack GetSlot(int index)
+        {
+            return slots[index];
+        }
+
+        public bool MoveStack(int from, int to)
+        {
+            if ((uint)from >= Capacity || (uint)to >= Capacity || from == to)
+                return false;
+
+            ItemStack source = slots[from];
+            if (source.Item == null)
+                return false;
+
+            ItemStack destination = slots[to];
+            if (destination.Item == source.Item)
+            {
+                int moved = Mathf.Min(source.Count, source.Item.MaxStack - destination.Count);
+                if (moved == 0)
+                    return false;
+
+                slots[to] = new ItemStack(source.Item, destination.Count + moved);
+                slots[from] = moved == source.Count ? default : new ItemStack(source.Item, source.Count - moved);
+                if (moved == source.Count)
+                    stackOrder.Remove(from);
+            }
+            else
+            {
+                slots[from] = destination;
+                slots[to] = source;
+                int sourceOrder = stackOrder.IndexOf(from);
+                int destinationOrder = stackOrder.IndexOf(to);
+                stackOrder[sourceOrder] = to;
+                if (destinationOrder >= 0)
+                    stackOrder[destinationOrder] = from;
+            }
+
+            Changed?.Invoke();
+            return true;
         }
 
         public int Add(string itemId, int requestedCount)
@@ -44,21 +87,28 @@ namespace Nomad.Inventory
 
             int remaining = requestedCount;
             // 같은 아이템의 빈 공간을 먼저 채운 뒤 새 슬롯을 사용합니다.
-            for (int index = 0; index < stacks.Count && remaining > 0; index++)
+            foreach (int index in stackOrder)
             {
-                ItemStack stack = stacks[index];
+                if (remaining == 0)
+                    break;
+
+                ItemStack stack = slots[index];
                 if (stack.Item != item)
                     continue;
 
                 int added = Mathf.Min(remaining, item.MaxStack - stack.Count);
-                stacks[index] = new ItemStack(item, stack.Count + added);
+                slots[index] = new ItemStack(item, stack.Count + added);
                 remaining -= added;
             }
 
-            while (remaining > 0 && stacks.Count < Capacity)
+            for (int index = 0; index < slots.Length && UsedSlots < Capacity && remaining > 0; index++)
             {
+                if (slots[index].Item != null)
+                    continue;
+
                 int added = Mathf.Min(remaining, item.MaxStack);
-                stacks.Add(new ItemStack(item, added));
+                slots[index] = new ItemStack(item, added);
+                stackOrder.Add(index);
                 remaining -= added;
             }
 
@@ -71,18 +121,18 @@ namespace Nomad.Inventory
                 return 0;
 
             int remaining = requestedCount;
-            for (int index = stacks.Count - 1; index >= 0 && remaining > 0; index--)
+            for (int orderIndex = stackOrder.Count - 1; orderIndex >= 0 && remaining > 0; orderIndex--)
             {
-                ItemStack stack = stacks[index];
+                int index = stackOrder[orderIndex];
+                ItemStack stack = slots[index];
                 if (stack.Item != item)
                     continue;
 
                 int removed = Mathf.Min(remaining, stack.Count);
                 int count = stack.Count - removed;
+                slots[index] = count == 0 ? default : new ItemStack(item, count);
                 if (count == 0)
-                    stacks.RemoveAt(index);
-                else
-                    stacks[index] = new ItemStack(item, count);
+                    stackOrder.RemoveAt(orderIndex);
 
                 remaining -= removed;
             }
