@@ -91,7 +91,8 @@ namespace Nomad.Props
                     // 3m 평지/절벽에는 중앙 상자를 최대 하나만 확률적으로 배치합니다.
                     if (propsPerPiece == 0 || random.NextDouble() >= 0.07) continue;
                     CandidateChecks++;
-                    Vector3 center = piece.transform.TransformPoint(new Vector3(0f, micro.Level + 1f, 0f));
+                    // 필드 Terrain 표면이 타일 높이보다 높을 수 있으므로 최고 높이(2m) 위에서 내려 쏩니다.
+                    Vector3 center = piece.transform.TransformPoint(new Vector3(0f, Mathf.Max(micro.Level, 2) + 1f, 0f));
                     if (!TryFloor(piece, center, out center) || !ClearSpace(center)) continue;
 
                     GameObject crate = Instantiate(propPrefab, generatedRoot.transform);
@@ -151,7 +152,7 @@ namespace Nomad.Props
         {
             point = default;
             if (!Physics.Raycast(origin, Vector3.down, out RaycastHit hit, 10f, ~0, QueryTriggerInteraction.Ignore)
-                || !hit.collider.transform.IsChildOf(piece.transform) || hit.normal.y < 0.99f) return false;
+                || !FieldGround.BelongsTo(hit.collider, hit.point, piece) || hit.normal.y < 0.99f) return false;
             point = hit.point;
 
             // 네 모서리 바닥을 확인하여 낭떠러지·작은 받침·높이 차에 걸친 배치를 막습니다.
@@ -160,7 +161,7 @@ namespace Nomad.Props
             {
                 Vector3 sample = point + new Vector3(x * placementRadius, 0.5f, z * placementRadius);
                 if (!Physics.Raycast(sample, Vector3.down, out RaycastHit support, 0.55f, ~0, QueryTriggerInteraction.Ignore)
-                    || !support.collider.transform.IsChildOf(piece.transform) || support.normal.y < 0.99f
+                    || !FieldGround.BelongsTo(support.collider, support.point, piece) || support.normal.y < 0.99f
                     || Mathf.Abs(support.point.y - point.y) > 0.02f) return false;
             }
             return true;

@@ -191,14 +191,14 @@ namespace Nomad.Terrain
         {
             floor = default;
             if (!Physics.Raycast(origin, Vector3.down, out RaycastHit hit, 20f, ~0, QueryTriggerInteraction.Ignore)
-                || !hit.collider.transform.IsChildOf(piece.transform) || hit.normal.y < 0.99f) return false;
+                || !FieldGround.BelongsTo(hit.collider, hit.point, piece) || hit.normal.y < 0.99f) return false;
             floor = hit.point;
             foreach (Vector2 offset in new[] { new Vector2(-1f, -1f), new Vector2(1f, -1f),
                 new Vector2(-1f, 1f), new Vector2(1f, 1f) })
             {
                 Vector3 sample = floor + new Vector3(offset.x * radius, 0.5f, offset.y * radius);
                 if (!Physics.Raycast(sample, Vector3.down, out RaycastHit support, 0.55f, ~0, QueryTriggerInteraction.Ignore)
-                    || !support.collider.transform.IsChildOf(piece.transform) || support.normal.y < 0.99f
+                    || !FieldGround.BelongsTo(support.collider, support.point, piece) || support.normal.y < 0.99f
                     || Mathf.Abs(support.point.y - floor.y) > 0.02f) return false;
             }
             return !Physics.CheckCapsule(floor + Vector3.up * (radius + 0.05f),
@@ -246,9 +246,10 @@ namespace Nomad.Terrain
                 {
                     Vector3 inside = connection.Position - connection.transform.forward * 0.45f;
                     // 계단의 포트 바닥과 첫 단 높이는 다르므로 실제 표면에 투영합니다.
+                    // 필드 Terrain 표면은 타일 연결점 높이와 2m까지 다를 수 있어 아래로 넉넉히 내려 쏩니다.
                     if (!Physics.Raycast(inside + Vector3.up * 3f, Vector3.down, out RaycastHit floor,
-                        4f, ~0, QueryTriggerInteraction.Ignore)
-                        || floor.collider.GetComponentInParent<TerrainPiece>() != connection.GetComponentInParent<TerrainPiece>()
+                        6f, ~0, QueryTriggerInteraction.Ignore)
+                        || !FieldGround.BelongsTo(floor.collider, floor.point, connection.GetComponentInParent<TerrainPiece>())
                         || !Sample(floor.point, out Vector3 hit) || !Reachable(start, hit))
                     { reason = $"도달할 수 없는 필수 연결부: {connection.transform.parent.name}/{connection.name} inside={inside} floor={floor.point}"; return false; }
                 }
