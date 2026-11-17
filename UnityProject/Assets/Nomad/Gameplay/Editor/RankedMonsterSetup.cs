@@ -63,6 +63,7 @@ namespace Nomad.Gameplay.Editor
             EditorUtility.SetDirty(controller);
             AssetDatabase.SaveAssets();
             GameplayIntegrationSetup.Apply();
+            MonsterDebugSetup.Apply();
             CapturePreview();
             Debug.Log("RANKED_MONSTER_SETUP_PASS");
         }
@@ -74,6 +75,7 @@ namespace Nomad.Gameplay.Editor
             importer.animationType = ModelImporterAnimationType.Generic;
             importer.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
             importer.importAnimation = animation;
+            importer.isReadable = path.EndsWith("/dragon.dae");
             importer.materialImportMode = ModelImporterMaterialImportMode.None;
             importer.SaveAndReimport();
         }
@@ -93,6 +95,7 @@ namespace Nomad.Gameplay.Editor
                 AnimationUtility.SetEditorCurve(copy, binding, curve);
             }
             string path = Output + "/Dragon_" + label + ".anim";
+            copy.EnsureQuaternionContinuity();
             AnimationClip saved = AssetDatabase.LoadAssetAtPath<AnimationClip>(path);
             if (saved == null) AssetDatabase.CreateAsset(copy, path);
             else
@@ -113,7 +116,8 @@ namespace Nomad.Gameplay.Editor
                 material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
                 AssetDatabase.CreateAsset(material, materialPath);
             }
-            material.SetTexture("_BaseMap", AssetDatabase.LoadAssetAtPath<Texture2D>(texture));
+            Texture2D albedo = AssetDatabase.LoadAssetAtPath<Texture2D>(texture);
+            material.SetTexture("_BaseMap", label == "Dragon" ? DragonLowPolyMesh.Palette(albedo, Output + "/DragonPalette.png") : albedo);
             material.SetColor("_BaseColor", Color.white);
             var wrapper = new GameObject(label);
             var model = Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(path), wrapper.transform);
@@ -127,6 +131,9 @@ namespace Nomad.Gameplay.Editor
                 controller.animationClips.First(clip => clip.name.Contains("idle")).SampleAnimation(model, 0.2f);
             }
             Renderer[] bodies = model.GetComponentsInChildren<Renderer>();
+            if (label == "Dragon")
+                foreach (SkinnedMeshRenderer skin in model.GetComponentsInChildren<SkinnedMeshRenderer>())
+                    skin.sharedMesh = DragonLowPolyMesh.Create(skin.sharedMesh, Output + "/DragonLowPoly.asset");
             if (bodies.Length == 0) throw new InvalidOperationException("Empty model: " + path);
             Bounds bounds = VisualBounds(bodies[0]);
             foreach (Renderer body in bodies)

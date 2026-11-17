@@ -61,6 +61,7 @@ namespace Nomad.Monsters.Tests
         {
             player.transform.position = new Vector3(3f, 0f, 4f);
             Call("SetKind", 0);
+            Set(Settings(0), "normalStyle", 1);
             Health actor = (Health)Call("SpawnAt", new Vector3(3f, 0f, -2f));
             actor.GetComponent<NavMeshAgent>().speed = 0f;
             MonsterRangedAttack ranged = actor.GetComponent<MonsterRangedAttack>();

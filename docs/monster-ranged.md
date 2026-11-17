@@ -33,3 +33,7 @@ Keep download page URL and license with each source. No purchase, paid download 
 ## Review / verification
 
 Open the same saved TerrainIntegration scene; normal6 + elite1 + boss1 remain. Restart Play after script/assets refresh to recreate actors using updated settings. The user editor remains open; tests run in an isolated ranged-validation copy. Evidence and accepted commit are recorded on Issue65. Human size, weapon grip, pose and gameplay acceptance and standalone build are separate from automated checks.
+
+## Later three-style and debug update (#68)
+
+Current normal lineup is Warrior sword / Rogue crossbow / Mage staff (two each in the integrated field), with actual procedural swing/aim/cast actions. Golem gait and Dragon bounded legs were refined; Dragon uses a reduced flat-shaded mesh and palette. See [monster-debug.md](monster-debug.md) for the dedicated debug arena, controls, exact triangle counts and limitations. Earlier all-normal ranged assignment above is superseded by the sword melee specialization.

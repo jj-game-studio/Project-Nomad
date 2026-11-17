@@ -32,7 +32,7 @@ namespace Nomad.Gameplay
         private string generationId;
         private bool restarting;
         private bool diagnostics;
-        private bool detection;
+        private bool detection = true;
         private bool travel;
         private bool flash = true;
         private bool numbers = true;
@@ -108,7 +108,7 @@ namespace Nomad.Gameplay
                 if (enemy == null) continue;
                 enemy.GetComponent<MonsterHitFeedback>().SetEffects(flash, numbers, shards);
                 var ranges = enemy.GetComponent<MonsterTestRanges>();
-                ranges.ShowDetection = diagnostics && detection && !enemy.IsDead;
+                ranges.ShowDetection = detection && !enemy.IsDead;
                 ranges.ShowTravel = diagnostics && travel && !enemy.IsDead;
             }
         }
@@ -155,7 +155,9 @@ namespace Nomad.Gameplay
 
                 MonsterRank rank = normals < normalCount ? MonsterRank.Normal :
                     elites < eliteCount ? MonsterRank.Elite : MonsterRank.Boss;
-                Health enemy = factory.CreateRanked(player, MonsterTestSettings.Defaults(rank), rank,
+                MonsterTestSettings settings = MonsterTestSettings.Defaults(rank);
+                if (rank == MonsterRank.Normal) settings.normalStyle = normals % 3;
+                Health enemy = factory.CreateRanked(player, settings, rank,
                     point.Position, point.Rotation, rank + " " + point.Id, enemyRoot.transform);
                 enemy.gameObject.AddComponent<MonsterTestRanges>();
                 enemies.Add(enemy);

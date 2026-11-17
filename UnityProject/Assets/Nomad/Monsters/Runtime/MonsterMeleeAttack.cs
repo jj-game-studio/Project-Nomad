@@ -47,6 +47,8 @@ namespace Nomad.Monsters
         public float CurrentAttackRange => IsRangedAttack ? ranged.Range : IsHeavyAttack ? heavyRange : attackRange;
         public float CurrentAttackAngle => IsRangedAttack ? 12f : IsHeavyAttack ? heavyAngle : 360f;
         public float WindupProgress { get; private set; }
+        public float RecoveryProgress => Phase == MeleePhase.Recovery ? Mathf.Clamp01(phaseElapsed /
+            (IsRangedAttack ? ranged.Recovery : IsHeavyAttack ? heavyRecoverySeconds : recoverySeconds)) : 0f;
         public void Configure(Health victim, bool heavy, int lightDamage, int strongDamage,
             float range, float strongRange, float speed)
         {

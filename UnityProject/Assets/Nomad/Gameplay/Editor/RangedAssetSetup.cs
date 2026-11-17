@@ -14,7 +14,7 @@ namespace Nomad.Gameplay.Editor
 
         public static void Apply(MonsterAppearanceSet catalog)
         {
-            foreach (string name in new[] { "Staff", "Crossbow", "Arrow" })
+            foreach (string name in new[] { "Staff", "Crossbow", "Arrow", "Blade" })
             {
                 var importer = (ModelImporter)AssetImporter.GetAtPath($"{Weapons}/Skeleton_{name}.fbx");
                 importer.materialImportMode = ModelImporterMaterialImportMode.None;
@@ -22,6 +22,8 @@ namespace Nomad.Gameplay.Editor
                 importer.SaveAndReimport();
             }
             Material skeleton = AssetDatabase.LoadAssetAtPath<Material>(Skeletons + "/Skeleton.mat");
+            catalog.normal = new[] { "Warrior", "Rogue", "Mage" }.Select(name =>
+                AssetDatabase.LoadAssetAtPath<GameObject>($"{Skeletons}/Skeleton_{name}.prefab")).ToArray();
             foreach (GameObject prefab in catalog.normal)
             {
                 string path = AssetDatabase.GetAssetPath(prefab);
@@ -32,11 +34,15 @@ namespace Nomad.Gameplay.Editor
                     Transform previous = hand.Find("Ranged weapon");
                     if (previous != null) Object.DestroyImmediate(previous.gameObject);
                     bool mage = prefab.name.Contains("Mage");
+                    bool sword = prefab.name.Contains("Warrior");
                     var weapon = Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(
-                        Weapons + (mage ? "/Skeleton_Staff.fbx" : "/Skeleton_Crossbow.fbx")), hand);
+                        Weapons + (mage ? "/Skeleton_Staff.fbx" : sword ? "/Skeleton_Blade.fbx" : "/Skeleton_Crossbow.fbx")), hand);
                     weapon.name = "Ranged weapon";
                     weapon.transform.localPosition = Vector3.zero;
                     weapon.transform.localRotation = Quaternion.identity;
+                    var muzzle = new GameObject("WeaponMuzzle").transform;
+                    muzzle.SetParent(weapon.transform, false);
+                    muzzle.localPosition = Vector3.forward * 0.4f;
                     foreach (Renderer renderer in weapon.GetComponentsInChildren<Renderer>())
                         renderer.sharedMaterials = Enumerable.Repeat(skeleton, renderer.sharedMaterials.Length).ToArray();
                 }

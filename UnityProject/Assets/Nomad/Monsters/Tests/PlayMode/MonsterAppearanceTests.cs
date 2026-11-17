@@ -47,12 +47,12 @@ namespace Nomad.Monsters.Tests
         }
 
         [UnityTest]
-        public IEnumerator FourNormalVariantsHaveSkinsMaterialsAndIdleAnimation()
+        public IEnumerator ThreeNormalWeaponStylesHaveSkinsMaterialsAndIdleAnimation()
         {
-            Assert.That(catalog.normal.Length, Is.EqualTo(4));
+            Assert.That(catalog.normal.Length, Is.EqualTo(3));
             Assert.That(catalog.elite, Is.Not.Null, "Iron Golem test elite");
             Assert.That(catalog.boss, Is.Not.Null, "Dragon test boss");
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < 3; i++)
             {
                 Health actor = Create("variant-" + i, new Vector3(4f, 0f, -3f));
                 yield return null;

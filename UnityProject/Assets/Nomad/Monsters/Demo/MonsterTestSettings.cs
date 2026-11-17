@@ -16,6 +16,7 @@ namespace Nomad.Monsters.Demo
         public int damage = 20;
         public int heavyDamage = 40;
         public bool ranged = true;
+        public int normalStyle = -1;
         public float rangedRange = 12f;
         public float projectileSpeed = 9f;
         public int rangedDamage = 15;

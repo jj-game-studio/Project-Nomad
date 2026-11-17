@@ -247,7 +247,8 @@ if (monsters.Count >= 12)
         private bool OverPanels(Vector2 pointer)
         {
             Vector2 gui = new Vector2(pointer.x, Screen.height - pointer.y) / UiScale;
-            return SpawnPanel.Contains(gui) || LogPanel.Contains(gui);
+            return SpawnPanel.Contains(gui) || LogPanel.Contains(gui) ||
+                (GetComponent<MonsterDebugArena>() != null && new Rect(12f, Screen.height - 100f, 370f, 88f).Contains(gui));
         }
 
         private string State(Entry entry)
@@ -336,6 +337,12 @@ if (monsters.Count >= 12)
 
         private void DrawSettings(MonsterTestSettings c)
         {
+            if (kind == 0)
+            {
+                GUILayout.Label("Normal weapon / attack style");
+                c.normalStyle = GUILayout.Toolbar(c.normalStyle + 1, new[] { "Mix", "Sword", "Crossbow", "Staff" }) - 1;
+                if (c.normalStyle == 0) GUILayout.Label("Sword uses melee swings; ranged settings apply to other styles.");
+            }
             c.ranged = GUILayout.Toggle(c.ranged, "Ranged attacks enabled");
             if (c.ranged)
             {
@@ -359,6 +366,15 @@ if (monsters.Count >= 12)
                 c.heavyDamage = Mathf.RoundToInt(Slider("Heavy damage", c.heavyDamage, 1f, 150f));
             }
             if (GUILayout.Button("Reset type defaults")) settings[kind] = MonsterTestSettings.Defaults((MonsterRank)kind);
+        }
+
+        public void ShowDetection(bool value) => detection = value;
+
+        public void SpawnNormalStyle(int style, Vector3 position)
+        {
+            SetKind(0);
+            settings[0].normalStyle = style;
+            SpawnAt(position);
         }
 
         private float Slider(string caption, float value, float min, float max)

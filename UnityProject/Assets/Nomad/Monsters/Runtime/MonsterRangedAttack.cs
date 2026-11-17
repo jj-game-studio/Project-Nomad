@@ -14,6 +14,7 @@ namespace Nomad.Monsters
         public int Damage { get; private set; }
         public int ShotsFired { get; private set; }
         private Vector3 muzzle;
+        public Transform WeaponMuzzle { get; set; }
 
         public void Configure(GameObject visual, float range, float speed, int damage,
             float windup, float recovery, Vector3 localMuzzle)
@@ -41,7 +42,8 @@ namespace Nomad.Monsters
         public void Release(Health target, Vector3 lockedAim)
         {
             if (GetComponent<Health>().IsDead || !enabled) return;
-            if (MonsterBolt.Launch(Visual, transform, target, transform.TransformPoint(muzzle),
+            Vector3 origin = WeaponMuzzle != null ? WeaponMuzzle.position : transform.TransformPoint(muzzle);
+            if (MonsterBolt.Launch(Visual, transform, target, origin,
                 lockedAim, Speed, Range, Damage)) ShotsFired++;
         }
     }

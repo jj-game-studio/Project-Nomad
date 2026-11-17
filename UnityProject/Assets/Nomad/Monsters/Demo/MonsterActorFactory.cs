@@ -39,7 +39,10 @@ namespace Nomad.Monsters.Demo
             root.transform.SetParent(parent, true);
             root.transform.SetPositionAndRotation(position, rotation);
             GameObject prefab = rank == MonsterRank.Boss ? appearances?.boss : elite ? appearances?.elite :
-                appearances != null && appearances.normal.Length > 0 ? appearances.normal[Variant(actorName) % appearances.normal.Length] : null;
+                appearances != null && appearances.normal.Length > 0 ? appearances.normal[
+                    (config.normalStyle >= 0 ? config.normalStyle : Variant(actorName)) % appearances.normal.Length] : null;
+            MonsterWeaponStyle style = prefab != null && prefab.name.Contains("Mage") ? MonsterWeaponStyle.Staff :
+                prefab != null && prefab.name.Contains("Warrior") ? MonsterWeaponStyle.Sword : MonsterWeaponStyle.Crossbow;
             GameObject body = prefab != null ? Instantiate(prefab) : GameObject.CreatePrimitive(PrimitiveType.Capsule);
             body.name = "Body";
             body.transform.SetParent(root.transform, false);
@@ -64,7 +67,9 @@ namespace Nomad.Monsters.Demo
 
             Health health = root.AddComponent<Health>();
             JsonUtility.FromJsonOverwrite("{\"maxHealth\":" + config.health + "}", health);
-            root.AddComponent<MonsterIdentity>().Configure(rank);
+            MonsterIdentity identity = root.AddComponent<MonsterIdentity>();
+            identity.Configure(rank);
+            identity.Weapon = style;
             SegmentedHealthBar bar = root.AddComponent<SegmentedHealthBar>();
             bar.Boss = rank == MonsterRank.Boss;
             bar.WorldOffset = Vector3.up * (rank == MonsterRank.Elite ? 4.1f : 2.4f);
@@ -74,18 +79,23 @@ namespace Nomad.Monsters.Demo
             MonsterTracker tracker = root.AddComponent<MonsterTracker>();
             tracker.BindTarget(target.transform);
             tracker.Configure(config.sightRange, config.abandonRange, config.homeRange);
-            if (config.ranged && appearances != null)
+            if (config.ranged && appearances != null && (rank != MonsterRank.Normal || style != MonsterWeaponStyle.Sword))
             {
                 GameObject bolt = rank == MonsterRank.Boss ? appearances.fireBolt : rank == MonsterRank.Elite ?
                     appearances.rockBolt : prefab != null && prefab.name.Contains("Mage") ? appearances.magicBolt : appearances.arrow;
                 root.AddComponent<MonsterRangedAttack>().Configure(bolt, config.rangedRange, config.projectileSpeed,
                     config.rangedDamage, config.rangedWindup, config.rangedRecovery,
                     new Vector3(0f, rank == MonsterRank.Boss ? 1.8f : rank == MonsterRank.Elite ? 2.2f : 1.3f, 0.5f));
+                if (rank == MonsterRank.Normal)
+                    root.GetComponent<MonsterRangedAttack>().WeaponMuzzle = System.Array.Find(
+                        body.GetComponentsInChildren<Transform>(), part => part.name == "WeaponMuzzle");
             }
             MonsterMeleeAttack attack = root.AddComponent<MonsterMeleeAttack>();
             attack.Configure(target, elite, config.damage, config.heavyDamage,
                 config.attackRange, config.heavyRange, config.attackSpeed);
             if (rank == MonsterRank.Elite && prefab != null) root.AddComponent<GolemMotion>();
+            if (rank == MonsterRank.Boss && prefab != null) root.AddComponent<DragonLegMotion>();
+            if (rank == MonsterRank.Normal && prefab != null) root.AddComponent<MonsterWeaponMotion>();
 
             LineRenderer outline = new GameObject("Attack Outline").AddComponent<LineRenderer>();
             outline.transform.SetParent(root.transform, false);
