@@ -58,7 +58,9 @@ namespace Nomad.Inventory.Editor
                         return;
 
                     Require(inventory.UsedSlots == 3, "초기 테스트 아이템");
-                    panel = (RectTransform)GameObject.Find("InventoryCanvas").transform.Find("InventoryPanel");
+                    var inventoryView = UnityEngine.Object.FindAnyObjectByType<InventoryPanel>();
+                    Require(inventoryView != null, "가방 프리팹 연결");
+                    panel = (RectTransform)inventoryView.transform.Find("InventoryPanel");
                     capacity = panel.Find("Capacity").GetComponent<UnityEngine.UI.Text>();
                     itemDetails = panel.Find("ItemDetails").GetComponent<UnityEngine.UI.Text>();
                     grid = (RectTransform)panel.Find("Slots");

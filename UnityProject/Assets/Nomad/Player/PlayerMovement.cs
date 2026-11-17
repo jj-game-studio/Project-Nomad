@@ -1,4 +1,5 @@
 using Nomad.Combat;
+using Nomad.Inventory;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -23,6 +24,7 @@ namespace Nomad.Player
 
         private CharacterController controller;
         private Health health;
+        private PlayerInventory inventory;
         private float verticalSpeed;
         private float rollTime;
         private float cooldownTime;
@@ -40,6 +42,7 @@ namespace Nomad.Player
         {
             controller = GetComponent<CharacterController>();
             TryGetComponent(out health);
+            TryGetComponent(out inventory);
         }
 
         private void OnEnable()
@@ -76,7 +79,8 @@ namespace Nomad.Player
 
             if (controller.isGrounded && !IsRolling)
             {
-                if (cooldownTime <= 0f && keyboard?.leftShiftKey.wasPressedThisFrame == true)
+                if (cooldownTime <= 0f && keyboard?.leftShiftKey.wasPressedThisFrame == true &&
+                    inventory?.Panel?.HasOpenChest != true)
                     StartRoll(direction);
                 else if (keyboard?.spaceKey.wasPressedThisFrame == true)
                     verticalSpeed = Mathf.Sqrt(2f * Gravity * JumpHeight);

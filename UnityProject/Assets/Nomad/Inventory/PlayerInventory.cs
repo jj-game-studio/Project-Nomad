@@ -16,6 +16,7 @@ namespace Nomad.Inventory
         private readonly List<int> stackOrder = new(Capacity);
 
         public int UsedSlots => stackOrder.Count;
+        internal InventoryPanel Panel { get; set; }
         public event Action Changed;
 
         private void Awake()
@@ -42,6 +43,46 @@ namespace Nomad.Inventory
         public ItemStack GetSlot(int index)
         {
             return slots[index];
+        }
+
+        internal int SpaceInSlot(int index, ItemDefinition item)
+        {
+            ItemStack slot = slots[index];
+            return slot.Item == null || slot.Item == item ? item.MaxStack - slot.Count : 0;
+        }
+
+        // 전송은 양쪽 수량을 먼저 반영한 뒤 알림을 보냅니다.
+        internal int AddToSlotForTransfer(int index, ItemDefinition item, int requestedCount)
+        {
+            int added = Mathf.Min(requestedCount, SpaceInSlot(index, item));
+            if (added <= 0)
+                return 0;
+
+            ItemStack slot = slots[index];
+            if (slot.Item == null)
+                stackOrder.Add(index);
+            slots[index] = new ItemStack(item, slot.Count + added);
+            return added;
+        }
+
+        internal void RemoveFromSlotForTransfer(int index, int count)
+        {
+            ItemStack stack = slots[index];
+            int remaining = stack.Count - count;
+            slots[index] = remaining == 0 ? default : new ItemStack(stack.Item, remaining);
+            if (remaining == 0)
+                stackOrder.Remove(index);
+        }
+
+        internal void NotifyChanged()
+        {
+            Changed?.Invoke();
+        }
+
+        internal bool TryGetItem(string itemId, out ItemDefinition item)
+        {
+            item = null;
+            return itemId != null && catalog.TryGetValue(itemId, out item);
         }
 
         public bool MoveStack(int from, int to)
@@ -76,7 +117,7 @@ namespace Nomad.Inventory
                     stackOrder[destinationOrder] = from;
             }
 
-            Changed?.Invoke();
+            NotifyChanged();
             return true;
         }
 
@@ -143,7 +184,7 @@ namespace Nomad.Inventory
         private int NotifyChange(int changedCount)
         {
             if (changedCount > 0)
-                Changed?.Invoke();
+                NotifyChanged();
 
             return changedCount;
         }

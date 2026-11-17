@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using Nomad.Inventory;
 using Nomad.Interaction;
 using UnityEngine;
@@ -24,6 +23,8 @@ namespace Nomad.Loot
     [DisallowMultipleComponent]
     public sealed class LootChest : MonoBehaviour, IInteractable
     {
+        private const string RemainingMessage = "Items remain - inventory full or unknown item";
+
         [SerializeField] private string chestId;
         [SerializeField] private Transform interactionPoint;
         [SerializeField] private LootStack[] contents = Array.Empty<LootStack>();
@@ -40,6 +41,15 @@ namespace Nomad.Loot
         public int StackCount => contents.Length;
         public LootStack GetStack(int index) => contents[index];
         public event Action Changed;
+
+        internal long CountItems()
+        {
+            long count = 0;
+            foreach (LootStack stack in contents)
+                count += stack.Count;
+
+            return count;
+        }
 
         private void Awake()
         {
@@ -68,27 +78,151 @@ namespace Nomad.Loot
         {
             return isActiveAndEnabled && !busy && !string.IsNullOrWhiteSpace(chestId) &&
                    context.Player != null && context.Inventory != null &&
-                   context.Inventory.isActiveAndEnabled && Array.Exists(contents, stack => stack.Count > 0);
+                   context.Inventory.isActiveAndEnabled;
         }
 
         public void Interact(InteractionContext context)
         {
             // 거리·시야·구르기는 A의 PlayerInteraction에서 검사합니다.
-            if (CanInteract(context))
+            if (CanInteract(context) && HasLoot())
                 TryLoot(context.Inventory);
+        }
+
+        internal void Inspect()
+        {
+            if (Status != LootStatus.Closed)
+                return;
+
+            Status = HasLoot() ? LootStatus.Remaining : LootStatus.Empty;
+            Message = Status == LootStatus.Empty ? "Empty" : "Opened";
+            RefreshVisuals();
+            Changed?.Invoke();
         }
 
         // A의 공용 계약/거리/시야/구르기 검증 후 호출할 B 소유 수량 전송입니다.
         public int TryLoot(PlayerInventory inventory)
         {
-            if (busy || inventory == null || !isActiveAndEnabled)
+            return Transfer(inventory, 0, contents.Length);
+        }
+
+        public int TryLootStack(PlayerInventory inventory, int index)
+        {
+            if ((uint)index >= (uint)contents.Length || contents[index].Count <= 0)
+                return 0;
+
+            return Transfer(inventory, index, index + 1);
+        }
+
+        public int TryLootStackToSlot(PlayerInventory inventory, int index, int slotIndex)
+        {
+            if (!CanTransfer(inventory) || (uint)index >= (uint)contents.Length ||
+                (uint)slotIndex >= PlayerInventory.Capacity)
+                return 0;
+
+            LootStack stack = contents[index];
+            if (stack.Count <= 0 || !inventory.TryGetItem(stack.ItemId, out ItemDefinition item))
+                return 0;
+
+            busy = true;
+            try
+            {
+                int moved = inventory.AddToSlotForTransfer(slotIndex, item, stack.Count);
+                if (moved == 0)
+                    return 0;
+
+                contents[index].Count -= moved;
+                PublishTransfer(RemainingMessage, inventory);
+                return moved;
+            }
+            finally
+            {
+                busy = false;
+            }
+        }
+
+        public int TryStoreStack(PlayerInventory inventory, int slotIndex, int requestedCount = int.MaxValue)
+        {
+            if (!CanTransfer(inventory) || (uint)slotIndex >= PlayerInventory.Capacity || requestedCount <= 0)
+                return 0;
+
+            PlayerInventory.ItemStack stack = inventory.GetSlot(slotIndex);
+            if (stack.Item == null)
+                return 0;
+
+            int moved = Mathf.Min(requestedCount, stack.Count);
+            busy = true;
+            try
+            {
+                LootStack[] updated = BuildStoredContents(new PlayerInventory.ItemStack(stack.Item, moved));
+                // 재진입하는 구독자에게도 가방과 상자 양쪽이 반영된 상태를 보여 줍니다.
+                inventory.RemoveFromSlotForTransfer(slotIndex, moved);
+                contents = updated;
+                PublishTransfer("Items stored", inventory);
+                return moved;
+            }
+            finally
+            {
+                busy = false;
+            }
+        }
+
+        private LootStack[] BuildStoredContents(PlayerInventory.ItemStack stack)
+        {
+            var updated = (LootStack[])contents.Clone();
+            int remaining = stack.Count;
+            int empty = -1;
+            for (int i = 0; i < updated.Length && remaining > 0; i++)
+            {
+                LootStack stored = updated[i];
+                if (stored.Count <= 0)
+                {
+                    if (empty < 0)
+                        empty = i;
+                    continue;
+                }
+
+                if (stored.ItemId != stack.Item.ItemId || stored.Count >= stack.Item.MaxStack)
+                    continue;
+
+                int added = Mathf.Min(remaining, stack.Item.MaxStack - stored.Count);
+                updated[i].Count += added;
+                remaining -= added;
+            }
+
+            if (remaining > 0)
+            {
+                if (empty < 0)
+                {
+                    empty = updated.Length;
+                    Array.Resize(ref updated, empty + 1);
+                }
+
+                updated[empty] = new LootStack(stack.Item.ItemId, remaining);
+            }
+
+            return updated;
+        }
+
+        private bool CanTransfer(PlayerInventory inventory)
+        {
+            return !busy && inventory != null && inventory.isActiveAndEnabled && isActiveAndEnabled;
+        }
+
+        private bool HasLoot()
+        {
+            return Array.Exists(contents, stack => stack.Count > 0);
+        }
+
+        private int Transfer(PlayerInventory inventory, int start, int end)
+        {
+            if (!CanTransfer(inventory))
                 return 0;
 
             busy = true;
             int total = 0;
             try
             {
-                for (int index = 0; index < contents.Length; index++)
+                for (int index = start; index < end; index++)
                 {
                     LootStack stack = contents[index];
                     if (stack.Count <= 0)
@@ -117,12 +251,18 @@ namespace Nomad.Loot
             }
             finally
             {
-                Status = Array.Exists(contents, stack => stack.Count > 0) ? LootStatus.Remaining : LootStatus.Empty;
-                Message = Status == LootStatus.Empty ? "Empty" : "Items remain - inventory full or unknown item";
-                RefreshVisuals();
-                try { Changed?.Invoke(); }
+                try { PublishTransfer(RemainingMessage); }
                 finally { busy = false; }
             }
+        }
+
+        private void PublishTransfer(string remainingMessage, PlayerInventory inventory = null)
+        {
+            Status = HasLoot() ? LootStatus.Remaining : LootStatus.Empty;
+            Message = Status == LootStatus.Empty ? "Empty" : remainingMessage;
+            RefreshVisuals();
+            try { inventory?.NotifyChanged(); }
+            finally { Changed?.Invoke(); }
         }
 
         private static int Count(PlayerInventory inventory, string id)
