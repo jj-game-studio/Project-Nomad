@@ -8,6 +8,8 @@ namespace Nomad.Terrain
     // 이동을 막는 물체는 BoxCollider만 가지며, 소품 소유자 하위에 두어 이후 경로 검사에 포함됩니다.
     public sealed class FieldDressing : MonoBehaviour
     {
+        private static readonly int BaseColor = Shader.PropertyToID("_BaseColor");
+
         private static readonly Vector2Int[] Sides =
             { new Vector2Int(0, 1), new Vector2Int(1, 0), new Vector2Int(0, -1), new Vector2Int(-1, 0) };
 
@@ -19,6 +21,7 @@ namespace Nomad.Terrain
 
         private readonly List<GameObject> blockers = new List<GameObject>();
         private GameObject root;
+        private Vector2 noiseOffset;
 
         public int Placed { get; private set; }
         public int Blockers => blockers.Count;
@@ -73,16 +76,28 @@ namespace Nomad.Terrain
             var random = new System.Random(unchecked(result.Seed * 7919 + 17));
             Dictionary<Vector2Int, float> tops = BuildTopMap(result.Pieces);
 
+            // 군락 밀도와 테마는 seed별로 이동한 저주파 노이즈로 정해 이웃 타일끼리 비슷해지게 합니다.
+            noiseOffset = new Vector2(Range(random, 0f, 1000f), Range(random, 0f, 1000f));
+
             foreach (TerrainPiece piece in result.Pieces)
             {
                 MicroTerrainTile tile = piece.GetComponent<MicroTerrainTile>();
-                ApplyGround(piece, source.groundMaterial);
-                if (tile == null || tile.IsStair) continue;
+                if (tile == null) continue;
+                ApplyGround(piece, source.groundMaterial, tile.Level + (tile.IsStair ? 0.5f : 0f));
 
                 Vector3 center = piece.transform.position + Vector3.up * tile.Level;
-                PlaceGroundCover(source, center, random);
-                PlaceCliffRocks(source, center, tile.Level, tops, random);
+                PlaceBorderWalls(source, center, tops);
+                if (tile.IsStair) continue;
+
+                PlaceCliffRocks(source, center, tops, random);
+
+                // 식생 노이즈가 낮은 빈터는 상자·전투 공간으로 비워 두고, 군락에만 식생과 장애물을 둡니다.
+                float density = Density(center);
+                if (density < source.coverThreshold) continue;
+
+                PlaceGroundCover(source, center, density, random);
                 PlaceBlockers(source, center, tops, random);
+                PlaceFence(source, center, tops, random);
             }
 
             Physics.SyncTransforms();
@@ -105,54 +120,159 @@ namespace Nomad.Terrain
         private static Vector2Int Cell(Vector3 position) => new Vector2Int(
             Mathf.RoundToInt(position.x / MicroTerrainTile.Size), Mathf.RoundToInt(position.z / MicroTerrainTile.Size));
 
-        private static void ApplyGround(TerrainPiece piece, Material material)
+        // 단색 지면에서도 높이 차가 읽히도록 높은 층일수록 조금 밝게 칠합니다.
+        private static void ApplyGround(TerrainPiece piece, Material material, float level)
         {
             if (material == null) return;
+
+            var block = new MaterialPropertyBlock();
+            block.SetColor(BaseColor, material.GetColor(BaseColor) * (1f + level * 0.08f));
             foreach (MeshRenderer renderer in piece.GetComponentsInChildren<MeshRenderer>())
             {
                 if (!renderer.enabled) continue;
                 var materials = new Material[renderer.sharedMaterials.Length];
                 for (int index = 0; index < materials.Length; index++) materials[index] = material;
                 renderer.sharedMaterials = materials;
+                renderer.SetPropertyBlock(block);
             }
         }
 
-        private void PlaceGroundCover(FieldDressingSet source, Vector3 center, System.Random random)
+        private float Density(Vector3 center)
         {
-            for (int count = 0; count < source.groundCoverPerTile; count++)
+            Vector2 cell = Cell(center);
+            return Mathf.PerlinNoise(noiseOffset.x + cell.x * 0.17f, noiseOffset.y + cell.y * 0.17f);
+        }
+
+        // 노이즈가 높을수록 한 테마의 식생을 더 많이 둡니다.
+        private void PlaceGroundCover(FieldDressingSet source, Vector3 center, float density, System.Random random)
+        {
+            if (source.coverThemes == null || source.coverThemes.Length == 0) return;
+
+            Vector2 cell = Cell(center);
+            float spread = (density - source.coverThreshold) / Mathf.Max(0.01f, 1f - source.coverThreshold);
+            int count = 1 + Mathf.FloorToInt(spread * source.coverMaxPerTile);
+            float themeNoise = Mathf.PerlinNoise(noiseOffset.y + cell.x * 0.08f, noiseOffset.x + cell.y * 0.08f);
+            int theme = Mathf.Clamp(Mathf.FloorToInt(themeNoise * source.coverThemes.Length), 0, source.coverThemes.Length - 1);
+
+            for (int index = 0; index < count; index++)
             {
-                GameObject prefab = Pick(source.groundCover, random);
+                GameObject prefab = Pick(source.coverThemes[theme].prefabs, random);
                 if (prefab == null) return;
 
                 Vector3 offset = new Vector3(Range(random, -1.3f, 1.3f), 0f, Range(random, -1.3f, 1.3f));
-                Spawn(prefab, center + offset, Range(random, 0f, 360f), Range(random, 0.8f, 1.2f));
+                Spawn(prefab, center + offset, Range(random, 0f, 360f), Range(random, 0.85f, 1.15f));
             }
         }
 
-        // 낮은 이웃이나 맵 바깥 쪽 변에 바위 절벽을 세워 블록 단면을 가립니다. 충돌은 기존 타일이 담당합니다.
-        private void PlaceCliffRocks(FieldDressingSet source, Vector3 center, int level, Dictionary<Vector2Int, float> tops,
+        // 내부 높이 차 경계 일부에만 원래 비율의 큰 바위를 절벽 면에 박아 넣습니다.
+        // 작게 축소하면 디테일이 뭉개져 보이므로 폭 3.4m 기준으로 키우고, 남는 높이는 땅속에 묻습니다.
+        // 충돌은 기존 타일이 담당합니다.
+        private void PlaceCliffRocks(FieldDressingSet source, Vector3 center, Dictionary<Vector2Int, float> tops,
             System.Random random)
         {
             Vector2Int cell = Cell(center);
             foreach (Vector2Int side in Sides)
             {
-                bool hasNeighbor = tops.TryGetValue(cell + side, out float neighborTop);
-                if (hasNeighbor && (float.IsNaN(neighborTop) || neighborTop >= center.y - 0.01f)) continue;
+                if (!tops.TryGetValue(cell + side, out float neighborTop) || float.IsNaN(neighborTop)) continue;
+                if (neighborTop >= center.y - 0.01f || random.NextDouble() >= source.cliffRockChance) continue;
 
                 GameObject prefab = Pick(source.cliffRocks, random);
+                if (prefab == null || !TryLocalBounds(prefab, out Bounds bounds) || bounds.size.y < 0.01f) return;
+
+                float scale = 3.4f / Mathf.Max(bounds.size.x, bounds.size.z);
+                Vector3 outward = new Vector3(side.x, 0f, side.y);
+                Vector3 edge = new Vector3(center.x, 0f, center.z) + outward * (MicroTerrainTile.Size * 0.5f);
+
+                GameObject rock = Spawn(prefab, edge, 0f, 1f);
+                rock.transform.rotation = Quaternion.LookRotation(outward) * Quaternion.Euler(0f, Range(random, -15f, 15f), 0f);
+                rock.transform.localScale = Vector3.one * scale;
+
+                // 윗면 위로는 0.1m만 드러나고, 두께의 15%만 낮은 쪽으로 튀어나오게 절벽 안에 묻습니다.
+                float top = center.y + 0.1f;
+                float front = bounds.size.z * scale * 0.15f - bounds.max.z * scale;
+                rock.transform.position = new Vector3(edge.x, top - bounds.max.y * scale, edge.z) + outward * front;
+            }
+        }
+
+        // 맵 외곽 변에 돌벽을 세웁니다. 타일 바깥에 두므로 경로 표본을 가리지 않고 맵 밖 이탈만 막습니다.
+        private void PlaceBorderWalls(FieldDressingSet source, Vector3 center, Dictionary<Vector2Int, float> tops)
+        {
+            Vector2Int cell = Cell(center);
+            for (int index = 0; index < Sides.Length; index++)
+            {
+                Vector2Int side = Sides[index];
+                if (tops.ContainsKey(cell + side)) continue;
+
+                // 같은 변에는 위치로 정한 같은 종류를 써서 벽 줄이 들쭉날쭉하지 않게 합니다.
+                GameObject prefab = source.borderWalls == null || source.borderWalls.Length == 0 ? null
+                    : source.borderWalls[Mathf.Abs(cell.x * 31 + cell.y * 17 + index) % source.borderWalls.Length];
                 if (prefab == null) return;
 
-                float bottom = hasNeighbor ? neighborTop : center.y - Mathf.Max(1f, level + 0.5f);
+                float bottom = float.IsNaN(tops[cell]) ? center.y : tops[cell];
                 Vector3 outward = new Vector3(side.x, 0f, side.y);
-                Vector3 edge = new Vector3(center.x, bottom, center.z) + outward * (MicroTerrainTile.Size * 0.5f);
-                GameObject rock = Spawn(prefab, edge, 0f, 1f);
-                rock.transform.rotation = Quaternion.LookRotation(outward) * Quaternion.Euler(0f, Range(random, -8f, 8f), 0f);
-                FitHeight(rock, center.y - bottom + 0.15f, MicroTerrainTile.Size * 1.1f);
-
-                // 바위 앞뒤 두께의 대부분을 바깥으로 밀어 윗면 보행 영역을 가리지 않게 합니다.
-                if (TryLocalBounds(rock, out Bounds bounds))
-                    rock.transform.position += outward * Mathf.Max(0f, bounds.size.z * rock.transform.localScale.z * 0.5f - 0.2f);
+                PlaceEdgeSegment(prefab, new Vector3(center.x, bottom, center.z), outward, 0.5f, removable: false);
             }
+        }
+
+        // 같은 높이 평지끼리 맞닿은 변을 따라 2~3칸짜리 울타리 줄을 드물게 둡니다.
+        // 한 칸짜리 조각은 어색하므로 두 칸 미만이면 놓지 않습니다. 경로를 막으면 복구 단계에서 제거됩니다.
+        private void PlaceFence(FieldDressingSet source, Vector3 center, Dictionary<Vector2Int, float> tops,
+            System.Random random)
+        {
+            if (random.NextDouble() >= source.fenceChance) return;
+
+            Vector2Int side = Sides[random.Next(2)];
+            var along = new Vector2Int(side.y, side.x);
+            int length = 2 + random.Next(2);
+            Vector2Int start = Cell(center);
+
+            for (int step = 0; step < length; step++)
+            {
+                Vector2Int cell = start + along * step;
+                if (!SameLevel(tops, cell, center.y) || !SameLevel(tops, cell + side, center.y))
+                {
+                    length = step;
+                    break;
+                }
+            }
+            if (length < 2) return;
+
+            GameObject prefab = Pick(source.fences, random);
+            if (prefab == null) return;
+
+            var outward = new Vector3(side.x, 0f, side.y);
+            for (int step = 0; step < length; step++)
+            {
+                Vector3 cellCenter = center + new Vector3(along.x, 0f, along.y) * (MicroTerrainTile.Size * step);
+                PlaceEdgeSegment(prefab, cellCenter, outward, 0f, removable: true);
+            }
+        }
+
+        private static bool SameLevel(Dictionary<Vector2Int, float> tops, Vector2Int cell, float height) =>
+            tops.TryGetValue(cell, out float top) && !float.IsNaN(top) && Mathf.Abs(top - height) < 0.01f;
+
+        // 프리팹의 긴 축을 타일 변 방향(3m)에 맞추고 높이와 두께는 원래 비율을 유지합니다.
+        private void PlaceEdgeSegment(GameObject prefab, Vector3 center, Vector3 outward, float outside, bool removable)
+        {
+            if (!TryLocalBounds(prefab, out Bounds bounds)) return;
+
+            bool alongX = bounds.size.x >= bounds.size.z;
+            float length = alongX ? bounds.size.x : bounds.size.z;
+            float depth = alongX ? bounds.size.z : bounds.size.x;
+            float stretch = MicroTerrainTile.Size / Mathf.Max(0.01f, length);
+
+            Vector3 along = Vector3.Cross(Vector3.up, outward);
+            Quaternion facing = Quaternion.LookRotation(alongX ? outward : along);
+            Vector3 position = center + outward * (MicroTerrainTile.Size * 0.5f + depth * outside);
+
+            GameObject segment = Spawn(prefab, position, 0f, 1f);
+            segment.transform.rotation = facing;
+            segment.transform.localScale = alongX ? new Vector3(stretch, 1f, 1f) : new Vector3(1f, 1f, stretch);
+
+            // 프리팹 피벗이 중심이 아니어도 변의 중앙에 오도록 맞춥니다.
+            Vector3 pivotOffset = segment.transform.TransformVector(new Vector3(bounds.center.x, 0f, bounds.center.z));
+            segment.transform.position = position - pivotOffset + Vector3.up * -bounds.min.y;
+            AddBlocker(segment, trunkOnly: false, removable, limitFootprint: false);
         }
 
         // 나무와 엄폐물은 사분면 안쪽(중심에서 ±0.75m)에 둡니다. 기존 경로 검사는 타일마다 ±1.1m 격자 표본을
@@ -211,13 +331,13 @@ namespace Nomad.Terrain
             return instance;
         }
 
-        private void AddBlocker(GameObject instance, bool trunkOnly)
+        private void AddBlocker(GameObject instance, bool trunkOnly, bool removable = true, bool limitFootprint = true)
         {
             if (!TryLocalBounds(instance, out Bounds bounds)) return;
 
             // 경로 표본 사이에 들어가지 않는 큰 엄폐물은 배치하지 않습니다.
             Vector3 scale = instance.transform.localScale;
-            if (!trunkOnly && Mathf.Max(bounds.size.x * scale.x, bounds.size.z * scale.z) > 0.9f)
+            if (limitFootprint && !trunkOnly && Mathf.Max(bounds.size.x * scale.x, bounds.size.z * scale.z) > 0.9f)
             {
                 instance.SetActive(false);
                 Release(instance);
@@ -231,19 +351,9 @@ namespace Nomad.Terrain
                 ? new Vector3(0.4f / scale.x, bounds.size.y, 0.4f / scale.z)
                 : bounds.size;
             if (trunkOnly) box.center = new Vector3(0f, box.center.y, 0f);
-            blockers.Add(instance);
-        }
 
-        private static void FitHeight(GameObject instance, float height, float width)
-        {
-            if (!TryLocalBounds(instance, out Bounds bounds) || bounds.size.y <= 0.01f) return;
-
-            float horizontal = Mathf.Max(bounds.size.x, bounds.size.z, 0.01f);
-            float scale = width / horizontal;
-            instance.transform.localScale = new Vector3(scale, height / bounds.size.y, scale);
-
-            // 바위 바닥을 아래 지면에 맞춥니다.
-            instance.transform.position -= Vector3.up * (bounds.min.y * instance.transform.localScale.y);
+            // 외곽 벽처럼 경로 복구로 지우면 안 되는 물체는 목록에 넣지 않습니다.
+            if (removable) blockers.Add(instance);
         }
 
         private static bool TryLocalBounds(GameObject instance, out Bounds bounds)

@@ -32,41 +32,78 @@ namespace Nomad.Terrain.Editor
             }
 
             set.groundMaterial = CreateGroundMaterial();
-            set.groundCover = Load(Environments, "Grass_Tuft_01", "Grass_Tuft_02", "Grass_Tuft_03", "Fern_01", "Fern_02",
-                "Flowers_01", "Flowers_02", "Bush_Small_01", "Bush_Small_02", "Bush_Small_03");
+            set.coverThemes = new[]
+            {
+                Theme("Meadow", Load(Environments, "Grass_Tuft_01", "Grass_Tuft_02", "Grass_Tuft_03"),
+                    Load(Kingdom + "Prefabs/Generic/SM_Generic_", "Grass_Patch_01", "Grass_Patch_02", "Grass_Patch_03")),
+                Theme("Flowers", Load(Environments, "Flowers_01", "Flowers_02", "Flowers_03", "Flowers_04",
+                    "Bush_Small_03", "Grass_Tuft_01")),
+                Theme("Ferns", Load(Environments, "Fern_01", "Fern_02", "Fern_03", "Fern_04", "Bush_Small_01", "Bush_Small_02"),
+                    Load(Kingdom + "Prefabs/Items/SM_Item_", "Mushroom_01", "Mushroom_02")),
+                Theme("Shrubs", Load(Environments, "Bush_01", "Bush_02", "Bush_03", "Bush_04", "Grass_Tuft_02", "Rock_Chunk_01"),
+                    Load(Kingdom + "Prefabs/Generic/SM_Generic_", "Small_Rocks_01", "Small_Rocks_02")),
+            };
             set.cliffRocks = Load(Environments, "Rock_Cliff_01", "Rock_Cliff_02", "Rock_Cliff_03", "Rock_Cliff_04", "Rock_Cliff_05");
             set.trees = Load(Environments, "Tree_Round_01", "Tree_Round_02", "Tree_Round_03", "Tree_Round_04",
                 "Tree_Thin_01", "Tree_Thin_02", "Tree_Thin_03");
-            set.cover = Load(Kingdom + "Prefabs/Props/SM_Prop_", "Barrel_01", "Barrel_Stack_01", "Crate_Wood_01",
-                "Crate_Stack_01", "Hay_Bale_01", "Sack_01", "Sack_02");
+            set.cover = Load(Kingdom + "Prefabs/Props/SM_Prop_", "Barrel_01", "Crate_Wood_01", "Hay_Bale_01", "Sack_01", "Sack_02")
+                .Concat(Load(Kingdom + "Prefabs/Generic/SM_Generic_", "TreeStump_01")).ToArray();
+            set.fences = Load(Kingdom + "Prefabs/Props/SM_Prop_", "Fence_01", "Fence_02", "Fence_03", "Fence_04");
+            set.borderWalls = Load(Environments, "StoneWall_01", "StoneWall_02", "StoneWall_03");
+
+            // 기존 에셋을 갱신할 때도 밀도를 현재 기준값으로 맞춥니다.
+            set.coverThreshold = 0.48f;
+            set.coverMaxPerTile = 3;
+            set.treeChance = 0.16f;
+            set.coverChance = 0.08f;
+            set.fenceChance = 0.03f;
+            set.cliffRockChance = 0.4f;
 
             EditorUtility.SetDirty(set);
             AssetDatabase.SaveAssets();
-            Debug.Log($"FIELD_DRESSING_SET ground={set.groundMaterial != null} cover={set.groundCover.Length} "
-                + $"rocks={set.cliffRocks.Length} trees={set.trees.Length} props={set.cover.Length}");
+            Debug.Log($"FIELD_DRESSING_SET ground={set.groundMaterial != null} themes={set.coverThemes.Length} "
+                + $"rocks={set.cliffRocks.Length} trees={set.trees.Length} props={set.cover.Length} "
+                + $"fences={set.fences.Length} walls={set.borderWalls.Length}");
+            LogSizes(set.cliffRocks.Concat(set.fences).Concat(set.borderWalls).Concat(set.cover));
         }
 
-        // 원본 Grass_01은 위에서 내려다볼 때 햇빛 정반사로 노랗게 번쩍이므로, 반사를 끈 사본을 비공개 폴더에 둡니다.
+        private static FieldDressingSet.CoverTheme Theme(string name, params GameObject[][] groups) =>
+            new FieldDressingSet.CoverTheme { name = name, prefabs = groups.SelectMany(group => group).ToArray() };
+
+        // 배치 배율 조정의 근거가 되도록 원본 크기를 로그로 남깁니다.
+        private static void LogSizes(IEnumerable<GameObject> prefabs)
+        {
+            foreach (GameObject prefab in prefabs)
+            {
+                Bounds bounds = default;
+                bool found = false;
+                foreach (Renderer renderer in prefab.GetComponentsInChildren<Renderer>())
+                {
+                    if (found) bounds.Encapsulate(renderer.bounds);
+                    else bounds = renderer.bounds;
+                    found = true;
+                }
+                Debug.Log($"FIELD_DRESSING_SIZE {prefab.name} size={bounds.size:F2}");
+            }
+        }
+
+        // 원본 Grass 재질은 삼각 무늬 텍스처가 3m 타일마다 반복되어 어색하므로, 텍스처 없는 무광 잔디색을 씁니다.
+        // 2단계 Terrain Layer 도입 전까지의 임시 지면입니다.
         private static Material CreateGroundMaterial()
         {
-            string path = Path.GetDirectoryName(Path.GetDirectoryName(Path.GetDirectoryName(SetPath))) + "/FieldGround.mat";
-            Material source = AssetDatabase.LoadAssetAtPath<Material>(Kingdom + "Materials/Ground/Grass_01.mat");
-            Material material = AssetDatabase.LoadAssetAtPath<Material>(path);
-            if (material == null)
-            {
-                material = new Material(source);
-                AssetDatabase.CreateAsset(material, path.Replace('\\', '/'));
-            }
-            else material.CopyPropertiesFromMaterial(source);
+            string path = (Path.GetDirectoryName(Path.GetDirectoryName(Path.GetDirectoryName(SetPath))) + "/FieldGround.mat")
+                .Replace('\\', '/');
+            AssetDatabase.DeleteAsset(path);
 
+            var material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            material.SetColor("_BaseColor", new Color(0.34f, 0.43f, 0.2f));
             material.SetFloat("_Smoothness", 0f);
-            material.SetFloat("_Glossiness", 0f);
             material.SetFloat("_SpecularHighlights", 0f);
             material.SetFloat("_EnvironmentReflections", 0f);
             material.EnableKeyword("_SPECULARHIGHLIGHTS_OFF");
             material.EnableKeyword("_ENVIRONMENTREFLECTIONS_OFF");
             material.enableInstancing = true;
-            EditorUtility.SetDirty(material);
+            AssetDatabase.CreateAsset(material, path);
             return material;
         }
 
@@ -227,13 +264,27 @@ namespace Nomad.Terrain.Editor
             TerrainIntegrationControls controls = Object.FindAnyObjectByType<TerrainIntegrationControls>();
             FieldDressing dressing = controls.GetComponent<FieldDressing>();
             var source = new SerializedObject(controls);
-            dressing.Configure(controls.Generator, (PropScatter)source.FindProperty("scatter").objectReferenceValue);
+            var scatter = (PropScatter)source.FindProperty("scatter").objectReferenceValue;
+            int[] seeds = { 51, 7, 1234, 2024, 99, 4242 };
 
             int totalBlockers = 0;
-            for (int run = 0; run < 6; run++)
+            int baselineChests = 0;
+            int dressedChests = 0;
+            for (int run = 0; run < seeds.Length; run++)
             {
-                TerrainGenerationResult result = controls.Regenerate(run > 0);
+                // 같은 seed에서 꾸밈 없는 기준 결과를 먼저 만들어 상자·적 후보 수를 비교합니다.
+                source.Update();
+                source.FindProperty("seed").intValue = seeds[run];
+                source.ApplyModifiedPropertiesWithoutUndo();
+                dressing.Configure(null, scatter);
+                controls.Regenerate(false);
+                FieldGenerationResult baseline = controls.Navigation.LastResult;
+
+                dressing.Configure(controls.Generator, scatter);
+                TerrainGenerationResult result = controls.Regenerate(false);
                 FieldGenerationResult field = controls.Navigation.LastResult;
+                baselineChests += baseline.ChestPoints.Count;
+                dressedChests += field.ChestPoints.Count;
                 if (!result.Success || field == null || !field.Success)
                     throw new System.InvalidOperationException($"seed {result.Seed} 준비 실패: {controls.NavigationFailure}");
                 if (dressing.Placed == 0 || dressing.Root == null)
@@ -242,8 +293,8 @@ namespace Nomad.Terrain.Editor
                     throw new System.InvalidOperationException("꾸밈에 BoxCollider 이외의 충돌체가 남았습니다.");
 
                 Debug.Log($"FIELD_DRESSING_SEED seed={result.Seed} placed={dressing.Placed} blockers={dressing.Blockers} "
-                    + $"removed={dressing.RemovedBlockers} enemies={field.EnemyPoints.Count} chests={field.ChestPoints.Count} "
-                    + $"paths={controls.Generator.ReachableSamples}");
+                    + $"removed={dressing.RemovedBlockers} enemies={baseline.EnemyPoints.Count}->{field.EnemyPoints.Count} "
+                    + $"chests={baseline.ChestPoints.Count}->{field.ChestPoints.Count} paths={controls.Generator.ReachableSamples}");
                 totalBlockers += dressing.Blockers;
                 if (run == 0)
                 {
@@ -255,11 +306,18 @@ namespace Nomad.Terrain.Editor
                     Debug.Log($"FIELD_DRESSING_MATERIALS {materials}");
                     TerrainIntegrationValidation.Capture(controls, 1, "terrain-test-overview");
                     TerrainIntegrationValidation.Capture(controls, 0, "terrain-test-player");
+
+                    // 외곽 돌벽과 절벽 바위를 가까이에서 확인합니다.
+                    Transform wall = dressing.Root.Cast<Transform>().FirstOrDefault(child => child.name.Contains("StoneWall"));
+                    Transform rock = dressing.Root.Cast<Transform>().FirstOrDefault(child => child.name.Contains("Rock_Cliff"));
+                    if (wall == null) throw new System.InvalidOperationException("외곽 돌벽이 배치되지 않았습니다.");
+                    TerrainIntegrationValidation.Capture(controls, 0, "terrain-test-border", wall.position);
+                    if (rock != null) TerrainIntegrationValidation.Capture(controls, 0, "terrain-test-cliff", rock.position);
                 }
             }
             if (totalBlockers == 0)
                 throw new System.InvalidOperationException("모든 seed에서 나무·엄폐물이 경로 복구로 제거되었습니다.");
-            Debug.Log($"FIELD_DRESSING_PASS blockers={totalBlockers}");
+            Debug.Log($"FIELD_DRESSING_PASS blockers={totalBlockers} chests={baselineChests}->{dressedChests}");
         }
     }
 }
