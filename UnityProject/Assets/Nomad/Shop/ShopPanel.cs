@@ -18,7 +18,8 @@ namespace Nomad.Shop
             internal Text Name;
             internal Text Count;
             internal Text Price;
-            internal Outline Border;
+            internal ShopRoundedRect Frame;
+            internal ShopRoundedRect CountBadge;
         }
 
         private Shopkeeper shop;
@@ -29,6 +30,7 @@ namespace Nomad.Shop
         private Text gold;
         private Text detail;
         private Text status;
+        private Text capacity;
         private InputField quantityInput;
         private Button less;
         private Button more;
@@ -86,33 +88,45 @@ namespace Nomad.Shop
             shade.anchorMin = Vector2.zero;
             shade.anchorMax = Vector2.one;
             shade.offsetMin = shade.offsetMax = Vector2.zero;
-            ShopUi.Background(shade, new Color(0.02f, 0.035f, 0.04f, 0.86f));
+            ShopUi.Background(shade, new Color(0.06f, 0.12f, 0.09f, 0.76f));
 
-            RectTransform panel = ShopUi.Rect(transform, "Shop Window", 0, 0, 1160, 760);
+            RectTransform panel = ShopUi.Rect(transform, "Shop Window", 0, 0, 1160, 800);
             panel.anchorMin = panel.anchorMax = panel.pivot = Vector2.one * 0.5f;
-            ShopUi.Background(panel, new Color(ShopUi.Slot.r, ShopUi.Slot.g, ShopUi.Slot.b));
-            ShopUi.Label(panel, "Title", "Temporary Shop", 28, 16, 520, 42, 29);
-            gold = ShopUi.Label(panel, "Gold", "", 660, 18, 330, 42, 24, ShopUi.Gold);
-            ShopUi.Button(panel, "Close", "Close [Esc]", 1010, 22, 122, 38, Close);
-            ShopUi.Label(panel, "Hint", "Shift + click: select full stack. Enter a quantity below, then buy or sell.", 28, 68, 1104, 28, 18, ShopUi.Muted);
-            ShopUi.Label(panel, "Player Heading", "Backpack  /  Sell", 28, 120, 530, 30, 22);
-            ShopUi.Label(panel, "Shop Heading", "Shop stock  /  Buy", 602, 120, 530, 30, 22);
+            ShopUi.Shadow(ShopUi.Rounded(panel, ShopUi.Cream, 26, 3, ShopUi.Forest), 8, 0.3f);
+            ShopUi.Rounded(ShopUi.Rect(panel, "Header", 12, 12, 1136, 100), ShopUi.Forest, 20, 1, ShopUi.Border);
+            ShopUi.Purse(panel, 32, 32);
+            ShopUi.Heading(panel, "Title", "TRADING POST", 106, 24, 570, 44, 36, ShopUi.Cream);
+            ShopUi.Label(panel, "Hint", "Good supplies. Better adventures.", 108, 72, 570, 22, 16, ShopUi.Cream);
+            ShopUi.Rounded(ShopUi.Rect(panel, "Wallet badge", 812, 32, 190, 52), ShopUi.Cream, 18, 2, ShopUi.Gold);
+            ShopUi.Heading(panel, "Wallet icon", "G", 826, 42, 30, 30, 24, ShopUi.GoldInk);
+            gold = ShopUi.Label(panel, "Gold", "", 862, 40, 126, 36, 23, ShopUi.Ink);
+            gold.alignment = TextAnchor.MiddleRight;
+            ShopUi.Button(panel, "Close", "Close", 1030, 35, 90, 46, Close);
+            ShopUi.Heading(panel, "Player Heading", "YOUR SATCHEL", 28, 122, 340, 32, 23);
+            ShopUi.Heading(panel, "Shop Heading", "MERCHANT GOODS", 602, 122, 370, 32, 23);
+            capacity = ShopUi.Label(panel, "Capacity", "", 378, 128, 180, 24, 14, ShopUi.Muted);
+            capacity.alignment = TextAnchor.MiddleRight;
+            Text stockHint = ShopUi.Label(panel, "Stock hint", "Price per item", 958, 128, 174, 24, 14, ShopUi.Muted);
+            stockHint.alignment = TextAnchor.MiddleRight;
 
             playerSlots = BuildSlots(ShopUi.Grid(panel, "Backpack", 28), PlayerInventory.Capacity, false);
             merchantSlots = BuildSlots(ShopUi.Grid(panel, "Stock", 602), shop.Catalog.Count, true);
-            detail = ShopUi.Label(panel, "Selection", "", 28, 610, 1104, 30, 20, ShopUi.Gold);
-            ShopUi.Label(panel, "Quantity Label", "Quantity", 28, 650, 80, 40, 16, ShopUi.Muted);
-            less = ShopUi.Button(panel, "Less", "-", 115, 650, 38, 40, () => ChangeQuantity(-1));
-            quantityInput = ShopUi.QuantityInput(panel, 161, 650);
+            ShopUi.Rounded(ShopUi.Rect(panel, "Trade tray", 20, 610, 1120, 148), new Color(0.92f, 0.90f, 0.82f), 18, 1, ShopUi.Border);
+            detail = ShopUi.Label(panel, "Selection", "", 48, 622, 1064, 32, 19, ShopUi.Ink);
+            ShopUi.Label(panel, "Quantity Label", "Quantity", 48, 666, 80, 40, 16, ShopUi.Muted);
+            less = ShopUi.Button(panel, "Less", "-", 145, 666, 40, 40, () => ChangeQuantity(-1));
+            quantityInput = ShopUi.QuantityInput(panel, 193, 666);
             quantityInput.onValueChanged.AddListener(EditQuantity);
             quantityInput.onEndEdit.AddListener(_ => CommitQuantity());
-            more = ShopUi.Button(panel, "More", "+", 281, 650, 38, 40, () => ChangeQuantity(1));
-            maximum = ShopUi.Button(panel, "Maximum", "Max", 331, 650, 80, 40, SelectAll);
-            buy = ShopUi.Button(panel, "Buy", "Buy [B]", 650, 650, 230, 40, () => Trade(true));
-            sell = ShopUi.Button(panel, "Sell", "Sell [V]", 902, 650, 230, 40, () => Trade(false));
-            status = ShopUi.Label(panel, "Status", "", 28, 697, 1104, 24, 16, ShopUi.Gold);
-            ShopUi.Label(panel, "Keys", "Arrows: select   Tab: switch list   +/-: quantity   Enter: trade / confirm input   E / Esc: close",
-                28, 729, 1104, 20, 15, ShopUi.Muted);
+            more = ShopUi.Button(panel, "More", "+", 313, 666, 40, 40, () => ChangeQuantity(1));
+            maximum = ShopUi.Button(panel, "Maximum", "Max", 365, 666, 80, 40, SelectAll);
+            buy = ShopUi.Button(panel, "Buy", "Buy [B]", 654, 664, 210, 48, () => Trade(true));
+            buy.targetGraphic.color = ShopUi.Forest;
+            sell = ShopUi.Button(panel, "Sell", "Sell [V]", 886, 664, 226, 48, () => Trade(false));
+            sell.targetGraphic.color = ShopUi.Gold;
+            status = ShopUi.Label(panel, "Status", "", 48, 723, 1064, 24, 14, ShopUi.GoldInk);
+            ShopUi.Label(panel, "Keys", "Arrows: select   |   Shift+click: all   |   Tab: switch   |   +/-: quantity   |   Enter: trade   |   E / Esc: close",
+                28, 772, 1104, 20, 13, ShopUi.Muted);
         }
 
         private SlotView[] BuildSlots(RectTransform parent, int count, bool merchant)
@@ -121,23 +135,31 @@ namespace Nomad.Shop
             for (int index = 0; index < count; index++)
             {
                 int captured = index;
-                Button button = ShopUi.Button(parent, $"Slot {index}", "", 0, 0, 98, 98,
+                Button button = ShopUi.Button(parent, $"Slot {index}", "", 0, 0, ShopUi.CellSize, ShopUi.CellSize,
                     () => Select(merchant, captured, Keyboard.current?.leftShiftKey.isPressed == true ||
                         Keyboard.current?.rightShiftKey.isPressed == true));
-                button.GetComponent<Image>().color = ShopUi.Surface;
                 Destroy(button.transform.Find("Label").gameObject);
-                Image icon = ShopUi.Rect(button.transform, "Icon", 29, 5, 40, 40).gameObject.AddComponent<Image>();
+                Image icon = ShopUi.Rect(button.transform, "Icon", 24, 7, 48, 44).gameObject.AddComponent<Image>();
                 icon.preserveAspect = true;
                 icon.raycastTarget = false;
+                ShopRoundedRect badge = ShopUi.Rounded(ShopUi.Rect(button.transform, "Count badge", 54, 5, 36, 20),
+                    ShopUi.Forest, 7, 0);
+                badge.raycastTarget = false;
                 result[index] = new SlotView
                 {
                     Button = button, Icon = icon,
-                    Name = ShopUi.Label(button.transform, "Name", "", 4, 45, 90, 18, 14),
-                    Count = ShopUi.Label(button.transform, "Count", "", 4, 63, 90, 17, 13, ShopUi.Muted),
-                    Price = ShopUi.Label(button.transform, "Price", "", 4, 80, 90, 18, 14, ShopUi.Gold),
-                    Border = button.gameObject.AddComponent<Outline>()
+                    Name = ShopUi.Label(button.transform, "Name", "", 4, 52, 88, 20, 13),
+                    Count = ShopUi.Label(button.transform, "Count", "", 54, 5, 36, 20, 11, ShopUi.Cream),
+                    Price = ShopUi.Label(button.transform, "Price", "", 4, 74, 88, 20, 13, ShopUi.GoldInk),
+                    Frame = (ShopRoundedRect)button.targetGraphic,
+                    CountBadge = badge
                 };
-                result[index].Border.effectDistance = new Vector2(2, -2);
+                result[index].Name.alignment = TextAnchor.MiddleCenter;
+                result[index].Price.alignment = TextAnchor.MiddleCenter;
+                result[index].Count.alignment = TextAnchor.MiddleCenter;
+                result[index].Count.resizeTextForBestFit = true;
+                result[index].Count.resizeTextMinSize = 7;
+                result[index].Count.resizeTextMaxSize = 11;
             }
 
             return result;
@@ -156,7 +178,8 @@ namespace Nomad.Shop
             less.interactable = quantity > 1;
             more.interactable = quantity < available;
             maximum.interactable = available > 0 && quantity != available;
-            gold.text = $"YOUR GOLD   {wallet.Gold:N0} G";
+            gold.text = $"{wallet.Gold:N0} G";
+            capacity.text = $"{inventory.UsedSlots} / {PlayerInventory.Capacity} slots";
             for (int index = 0; index < playerSlots.Length; index++)
             {
                 PlayerInventory.ItemStack stack = inventory.GetSlot(index);
@@ -179,8 +202,8 @@ namespace Nomad.Shop
             long buyTotal = (long)selected.BuyPrice * quantity;
             buy.interactable = merchantSelected && quantity > 0 && shop.StockAt(merchantIndex) >= quantity && wallet.Gold >= buyTotal;
             sell.interactable = !merchantSelected && quantity > 0 && owned.Item != null && owned.Count >= quantity && sellPrice > 0;
-            buy.GetComponentInChildren<Text>().color = buy.interactable ? ShopUi.Ink : ShopUi.Muted * 0.6f;
-            sell.GetComponentInChildren<Text>().color = sell.interactable ? ShopUi.Ink : ShopUi.Muted * 0.6f;
+            buy.GetComponentInChildren<Text>().color = buy.interactable ? ShopUi.Cream : ShopUi.Muted;
+            sell.GetComponentInChildren<Text>().color = sell.interactable ? ShopUi.Ink : ShopUi.Muted;
             detail.text = merchantSelected
                 ? $"BUY  {selected.Item.DisplayName}  /  {selected.BuyPrice:N0} G each  /  Total {buyTotal:N0} G"
                 : owned.Item == null ? "Select an item from your backpack."
@@ -192,11 +215,13 @@ namespace Nomad.Shop
         {
             view.Icon.sprite = item != null ? item.Icon : null;
             view.Icon.enabled = view.Icon.sprite != null;
-            view.Name.text = item != null ? item.DisplayName : "Empty";
+            view.Name.text = item != null ? item.DisplayName : "";
             view.Name.color = item != null ? ShopUi.Ink : ShopUi.Muted;
             view.Count.text = item != null ? $"x{count}" : "";
+            view.CountBadge.gameObject.SetActive(item != null);
             view.Price.text = item == null ? "" : price > 0 ? $"{(buying ? "Buy" : "Sell")} {price:N0} G" : "Not bought";
-            view.Border.effectColor = selected ? ShopUi.Gold : new Color(0.2f, 0.29f, 0.3f, 0.7f);
+            view.Frame.color = selected ? new Color(0.91f, 0.94f, 0.82f) : item != null ? ShopUi.Surface : new Color(0.92f, 0.90f, 0.83f);
+            view.Frame.Style(12, selected ? 2.5f : 1.25f, selected ? ShopUi.Gold : ShopUi.Border);
         }
 
         private int AvailableQuantity => merchantSelected ? shop.StockAt(merchantIndex) : inventory.GetSlot(playerIndex).Count;
@@ -221,8 +246,8 @@ namespace Nomad.Shop
             float top = -rect.anchoredPosition.y;
             float offset = scroll.content.anchoredPosition.y;
             float height = scroll.viewport.rect.height;
-            if (top < offset || top + 98 > offset + height)
-                scroll.content.anchoredPosition = new Vector2(0, Mathf.Max(0, top < offset ? top : top + 98 - height));
+            if (top < offset || top + rect.rect.height > offset + height)
+                scroll.content.anchoredPosition = new Vector2(0, Mathf.Max(0, top < offset ? top : top + rect.rect.height - height));
         }
 
         private void ChangeQuantity(int delta)

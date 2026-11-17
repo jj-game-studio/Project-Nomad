@@ -1,5 +1,15 @@
 # Temporary shop
 
+## UI 테마
+
+크림색 카드·짙은 숲색 헤더·금색 선택 테두리를 사용합니다. 창·슬롯·버튼·수량 칸은
+`ShopRoundedRect`가 둥근 모서리와 일정한 테두리를 직접 그려 크기가 바뀌어도 모서리가 늘어나지 않습니다.
+아이템 수량은 별도 배지에 표시하고 빈 칸의 반복 문구는 생략합니다.
+
+제목은 Lilita One, 본문은 Varela Round입니다. 원본 폰트를 수정 없이 사용하며,
+출처·SHA-256·SIL OFL 1.1 원문은 `Assets/StreamingAssets/ThirdPartyLicenses/ShopFonts/`에 보관합니다.
+StreamingAssets의 라이선스 파일은 플레이어 빌드에도 포함됩니다.
+
 ## 플레이
 
 `Nomad > Shop > Open Shop Debug`에서 씬을 열고 Play를 누릅니다.

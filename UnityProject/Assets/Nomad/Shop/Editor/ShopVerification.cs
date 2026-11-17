@@ -114,6 +114,14 @@ namespace Nomad.Shop.Editor
                         Capture("shop-ui.png");
                         RequireVisible("Backpack/Content/Slot 0/Count");
                         RequireVisible("Stock/Content/Slot 0/Count");
+                        RequireVisible("Backpack/Content/Slot 0/Name");
+                        RequireVisible("Stock/Content/Slot 0/Price");
+                        Font headingFont = Resources.Load<Font>("ShopFonts/LilitaOne-Regular");
+                        Font bodyFont = Resources.Load<Font>("ShopFonts/VarelaRound-Regular");
+                        Require(headingFont != null && bodyFont != null && Node("Title").GetComponent<Text>().font == headingFont &&
+                            Quantity.textComponent.font == bodyFont, "게임용 제목·본문 폰트 연결");
+                        Require(Node("Stock/Content/Slot 0").GetComponent<ShopRoundedRect>().Radius >= 10 &&
+                            Node("Quantity").GetComponent<ShopRoundedRect>() != null, "둥근 카드·입력 칸 연결");
                         Queue(Key.B);
                         break;
                     case 2:
@@ -160,7 +168,11 @@ namespace Nomad.Shop.Editor
                         Queue(Key.W, Key.Space, Key.LeftShift);
                         break;
                     case 17:
-                        Require(Vector3.Distance(position, inventory.transform.position) < 0.01f, "거래 중 이동·점프·구르기 차단");
+                        Vector3 drift = inventory.transform.position - position;
+                        // 거래 중에도 중력에 의한 바닥 정착은 유지하므로 수평 이동·점프·구르기를 구분합니다.
+                        Require(new Vector2(drift.x, drift.z).sqrMagnitude < 0.0001f && drift.y <= 0.01f &&
+                            !inventory.GetComponent<Nomad.Player.PlayerMovement>().IsRolling,
+                            "거래 중 이동·점프·구르기 차단: " + drift);
                         Queue(Key.E);
                         break;
                     case 18:
@@ -304,7 +316,7 @@ namespace Nomad.Shop.Editor
                         break;
                     case 60: Pointer("Stock/Content/Slot 0", false); break;
                     case 61:
-                        Capture("shop-ui.png");
+                        Capture("shop-ui-after-trade.png");
                         inventory.GetComponent<Health>().TryApplyDamage(1000);
                         Queue();
                         break;
