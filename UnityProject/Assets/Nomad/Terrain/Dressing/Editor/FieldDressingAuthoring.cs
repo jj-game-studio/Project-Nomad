@@ -40,7 +40,7 @@ namespace Nomad.Terrain.Editor
                     "Bush_Small_03", "Grass_Tuft_01")),
                 Theme("Ferns", Load(Environments, "Fern_01", "Fern_02", "Fern_03", "Fern_04", "Bush_Small_01", "Bush_Small_02"),
                     Load(Kingdom + "Prefabs/Items/SM_Item_", "Mushroom_01", "Mushroom_02")),
-                Theme("Shrubs", Load(Environments, "Bush_01", "Bush_02", "Bush_03", "Bush_04", "Grass_Tuft_02", "Rock_Chunk_01"),
+                Theme("Shrubs", Load(Environments, "Bush_Small_04", "Bush_Small_05", "Grass_Tuft_02", "Rock_Chunk_01"),
                     Load(Kingdom + "Prefabs/Generic/SM_Generic_", "Small_Rocks_01", "Small_Rocks_02")),
             };
             set.cliffRocks = Load(Environments, "Rock_Cliff_01", "Rock_Cliff_02", "Rock_Cliff_03", "Rock_Cliff_04", "Rock_Cliff_05");
