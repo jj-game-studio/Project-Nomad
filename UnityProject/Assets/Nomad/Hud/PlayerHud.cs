@@ -148,7 +148,9 @@ namespace Nomad.Hud
                 quickIcons[index].sprite = item == null ? null : item.Icon;
                 quickIcons[index].enabled = item != null && item.Icon != null;
                 quickNames[index].text = item != null && item.Icon == null ? item.DisplayName : string.Empty;
+                quickNames[index].gameObject.SetActive(item != null && item.Icon == null);
                 quickCounts[index].text = item == null ? string.Empty : $"×{QuickSlots.GetCount(index)}";
+                quickCounts[index].gameObject.SetActive(item != null);
             }
         }
 

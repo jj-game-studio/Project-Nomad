@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.IO;
+using Nomad.Combat;
 using Nomad.Inventory;
 using TMPro;
 using UnityEditor;
@@ -39,7 +40,23 @@ namespace Nomad.Hud.Editor
                 return;
 
             var scene = EditorSceneManager.OpenScene("Assets/Nomad/Inventory/A_PlayerInventory.unity");
-            UnityEngine.Object.FindAnyObjectByType<PlayerInventory>().gameObject.AddComponent<PlayerHud>();
+            GameObject player = UnityEngine.Object.FindAnyObjectByType<PlayerInventory>().gameObject;
+            if (player.GetComponent<Health>() == null)
+                player.AddComponent<Health>();
+            player.AddComponent<PlayerHud>();
+
+            // 기존 데모 안내를 위로 옮겨 하단 퀵슬롯을 가리지 않도록 합니다.
+            foreach (var label in UnityEngine.Object.FindObjectsByType<UnityEngine.UI.Text>())
+            {
+                if (label.name != "Controls")
+                    continue;
+                RectTransform rect = (RectTransform)label.transform.parent;
+                rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(.5f, 1f);
+                rect.anchoredPosition = new Vector2(0, -16);
+                rect.sizeDelta = new Vector2(1200, 92);
+                label.text = "TAB: Backpack    Drag items to quick slots 1-4    1/2/3: demo add/remove";
+            }
+
             EditorSceneManager.SaveScene(scene, ScenePath);
             AssetDatabase.SaveAssets();
         }
@@ -71,6 +88,7 @@ namespace Nomad.Hud.Editor
                 return;
 
             steps = null;
+            failed = false;
             checks = 0;
             frame = -1;
             deadline = EditorApplication.timeSinceStartup + 90;
@@ -130,6 +148,9 @@ namespace Nomad.Hud.Editor
             yield return null;
             Check(panel.gameObject.activeSelf, "Tab opens inventory");
             Canvas.ForceUpdateCanvases();
+            var controls = GameObject.Find("DemoControls").GetComponent<RectTransform>();
+            Check(RectTransformUtility.WorldToScreenPoint(null, controls.position).y > Screen.height / 2f,
+                "preview controls stay above HUD");
 
             int inventoryChanges = 0;
             inventory.Changed += () => inventoryChanges++;
@@ -200,30 +221,53 @@ namespace Nomad.Hud.Editor
             yield return null;
             Check(quick.GetItem(0).ItemId == "field-knife", "inventory change cancels stale drag");
 
-            Pointer(Bag(0), true);
+            inventory.Add("field-vest", 1);
+
+            Pointer(Bag(2), true);
             yield return null;
-            Pointer(Vector2.one * 3, true);
+            Pointer(new Vector2(5, Screen.height - 5), true);
             yield return null;
-            Pointer(Vector2.one * 3, false);
+            Pointer(new Vector2(5, Screen.height - 5), false);
             yield return null;
-            Check(quick.GetItem(0).ItemId == "field-knife" && inventory.GetSlot(0).Count == 99, "outside drop preserves state");
+            Check(quick.GetItem(0).ItemId == "field-knife" && inventory.GetSlot(2).Item.ItemId == "field-vest",
+                "drop outside keeps registration and inventory");
+
+            Pointer(Bag(2), true);
+            yield return null;
+            Pointer(Slot(0), true);
+            yield return null;
+            view.SendMessage("OnApplicationFocus", false);
+            Pointer(Slot(0), false);
+            yield return null;
+            Check(quick.GetItem(0).ItemId == "field-knife" && !SlotRect(0).Find("Drop Highlight").gameObject.activeSelf,
+                "focus loss cancels drag and highlight");
 
             hud.enabled = false;
-            Check(hud.FindQuickSlot(Slot(0)) == -1, "disabled HUD rejects drops");
-            inventory.Remove("scrap", int.MaxValue);
-            inventory.Remove("field-knife", 1);
+            Check(hud.FindQuickSlot(Slot(0)) == -1, "hidden HUD rejects drops");
+            inventory.Remove("scrap", 10);
             hud.enabled = true;
-            for (int index = 0; index < PlayerQuickSlots.Capacity; index++)
-                Check(quick.GetItem(index) == null && SlotRect(index).Find("Empty Content").gameObject.activeSelf,
-                    "depletion clears references and re-enable refreshes slot " + index);
+            Check(quick.GetCount(1) == 96 && SlotRect(1).Find("Item Count").GetComponent<TMP_Text>().text == "×96",
+                "HUD reenable refreshes current count");
+            inventory.Remove("field-knife", 1);
+            Check(quick.GetItem(0) == null, "last item removal clears registration");
+            inventory.Remove("scrap", int.MaxValue);
+            Check(quick.GetItem(1) == null && quick.GetItem(2) == null && quick.GetItem(3) == null,
+                "depletion clears all duplicates");
 
-            inventory.Add("scrap", 96);
+            // 최종 렌더는 등록된 아이템과 열린 가방을 함께 보여줍니다.
+            inventory.Add("scrap", 106);
             inventory.Add("field-knife", 1);
             quick.Register(0, 1);
-            quick.Register(1, 0);
-            Canvas.ForceUpdateCanvases();
-            Capture();
-            Debug.Log($"QUICK_SLOTS_VERIFY_PASS: {checks} checks; pointer registration/replacement/cancellation/counts/depletion.");
+            for (int index = 0; index < PlayerInventory.Capacity; index++)
+            {
+                if (inventory.GetSlot(index).Item?.ItemId == "field-knife")
+                    quick.Register(index, 0);
+            }
+            yield return null;
+            IEnumerator capture = Capture();
+            while (capture.MoveNext())
+                yield return capture.Current;
+            Debug.Log($"QUICK_SLOTS_PLAYMODE_PASS checks={checks} frame={Time.frameCount}");
         }
 
         private static RectTransform SlotRect(int index) =>
@@ -246,15 +290,15 @@ namespace Nomad.Hud.Editor
                 checks++;
         }
 
-        private static void Capture()
+        private static IEnumerator Capture()
         {
             Camera camera = Camera.main;
             Canvas[] canvases = UnityEngine.Object.FindObjectsByType<Canvas>(FindObjectsSortMode.None);
             var modes = new RenderMode[canvases.Length];
             var cameras = new Camera[canvases.Length];
             var distances = new float[canvases.Length];
-            var target = new RenderTexture(Screen.width, Screen.height, 24);
-            var pixels = new Texture2D(Screen.width, Screen.height, TextureFormat.RGB24, false);
+            var target = new RenderTexture(1920, 1080, 24);
+            var pixels = new Texture2D(1920, 1080, TextureFormat.RGB24, false);
             RenderTexture previous = RenderTexture.active;
             RenderTexture previousTarget = camera.targetTexture;
             try
@@ -270,10 +314,12 @@ namespace Nomad.Hud.Editor
                 }
 
                 camera.targetTexture = target;
+                yield return null;
+                yield return null;
                 Canvas.ForceUpdateCanvases();
                 camera.Render();
                 RenderTexture.active = target;
-                pixels.ReadPixels(new Rect(0, 0, Screen.width, Screen.height), 0, 0);
+                pixels.ReadPixels(new Rect(0, 0, 1920, 1080), 0, 0);
                 pixels.Apply();
                 Directory.CreateDirectory("Artifacts/quick-slots");
                 File.WriteAllBytes("Artifacts/quick-slots/registered.png", pixels.EncodeToPNG());
