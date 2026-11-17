@@ -1,0 +1,194 @@
+using Nomad.Combat;
+using TMPro;
+using UnityEngine;
+
+namespace Nomad.Hud
+{
+    [DisallowMultipleComponent]
+    public sealed class PlayerHud : MonoBehaviour
+    {
+        [SerializeField] private Health health;
+        [SerializeField] private TMP_FontAsset font;
+
+        private Canvas canvas;
+        private RectTransform healthFill;
+        private TMP_Text healthText;
+        private TMP_Text weaponText;
+        private HudArtwork manaRing;
+        private HudArtwork staminaRing;
+        private TMP_Text manaText;
+        private TMP_Text staminaText;
+        private GameObject root;
+        private int shownHealth = -1;
+        private int shownMaxHealth = -1;
+
+        public Canvas Canvas => canvas;
+        public float ManaFraction => manaRing == null ? 0f : manaRing.Fraction;
+        public float StaminaFraction => staminaRing == null ? 0f : staminaRing.Fraction;
+        public string HealthLabel => healthText == null ? string.Empty : healthText.text;
+
+        private static readonly Color Panel = new Color32(12, 17, 29, 225);
+        private static readonly Color Red = new Color32(255, 104, 112, 255);
+        private static readonly Color Blue = new Color32(102, 204, 255, 255);
+        private static readonly Color Amber = new Color32(255, 193, 104, 255);
+
+        private void Awake()
+        {
+            if (health == null)
+                health = GetComponentInParent<Health>();
+
+            Build();
+            SetResources(0, 0, 0, 0);
+            SetWeapon(null);
+        }
+
+        private void OnEnable()
+        {
+            if (root != null)
+                root.SetActive(true);
+        }
+
+        private void OnDisable()
+        {
+            if (root != null)
+                root.SetActive(false);
+        }
+
+        private void LateUpdate()
+        {
+            int current = health == null ? 0 : health.CurrentHealth;
+            int maximum = health == null ? 0 : health.MaxHealth;
+            if (current == shownHealth && maximum == shownMaxHealth)
+                return;
+
+            shownHealth = current;
+            shownMaxHealth = maximum;
+            healthText.text = maximum > 0 ? $"{current} / {maximum}" : "-- / --";
+            healthFill.anchorMax = new Vector2(maximum > 0 ? Mathf.Clamp01((float)current / maximum) : 0f, 1f);
+        }
+
+        // 표시만 갱신합니다. 자원 소모/회복과 장착 규칙은 해당 시스템에서 소유합니다.
+        public void SetResources(float mana, float maxMana, float stamina, float maxStamina)
+        {
+            SetResource(manaRing, manaText, mana, maxMana);
+            SetResource(staminaRing, staminaText, stamina, maxStamina);
+        }
+
+        public void SetWeapon(string displayName)
+        {
+            weaponText.text = string.IsNullOrWhiteSpace(displayName) ? "UNASSIGNED" : displayName;
+        }
+
+        private static void SetResource(HudArtwork ring, TMP_Text label, float current, float maximum)
+        {
+            bool available = maximum > 0 && !float.IsInfinity(maximum) && !float.IsNaN(maximum);
+            ring.Fraction = available ? current / maximum : 0;
+            label.text = available ? $"{Mathf.RoundToInt(ring.Fraction * 100)}%" : "--";
+        }
+
+        private void Build()
+        {
+            if (font == null)
+            {
+                font = Resources.Load<TMP_FontAsset>("NomadHudFont");
+            }
+
+            root = new GameObject("Player HUD", typeof(RectTransform), typeof(Canvas), typeof(UnityEngine.UI.CanvasScaler));
+            canvas = root.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 5;
+            var scaler = root.GetComponent<UnityEngine.UI.CanvasScaler>();
+            scaler.uiScaleMode = UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920, 1080);
+            scaler.matchWidthOrHeight = .5f;
+
+            // 상태 표시는 입력을 받지 않아 기존 조준/상자 UI의 클릭 판정을 가리지 않습니다.
+            RectTransform bar = Rect("Bottom Bar", root.transform, new Vector2(1020, 154));
+            bar.anchorMin = bar.anchorMax = new Vector2(.5f, 0f);
+            bar.pivot = new Vector2(.5f, 0f);
+            bar.anchoredPosition = new Vector2(0, 22);
+
+            RectTransform hp = Rect("Health", bar, new Vector2(270, 54), new Vector2(-358, -12));
+            Art("Track", hp, new Vector2(270, 54), Vector2.zero, HudArtwork.Shape.Panel, Panel);
+            Art("Heart", hp, new Vector2(35, 36), new Vector2(-108, 0), HudArtwork.Shape.Heart, Red);
+            RectTransform track = Rect("Health Track", hp, new Vector2(211, 30), new Vector2(20, 0));
+            Art("Empty", track, new Vector2(211, 30), Vector2.zero, HudArtwork.Shape.Panel, new Color32(80, 36, 48, 255));
+            healthFill = Art("Fill", track, new Vector2(211, 30), Vector2.zero, HudArtwork.Shape.Panel, Red).rectTransform;
+            healthFill.anchorMin = Vector2.zero;
+            healthFill.anchorMax = Vector2.one;
+            healthFill.offsetMin = healthFill.offsetMax = Vector2.zero;
+            healthText = Label("Health Value", track, "", new Vector2(210, 30), Vector2.zero, 21);
+            Label("Health Caption", hp, "HEALTH", new Vector2(240, 20), new Vector2(0, -44), 12);
+
+            manaRing = Resource(bar, "Mana", -157, Blue, HudArtwork.Shape.Crystal, out manaText);
+            staminaRing = Resource(bar, "Stamina", -49, Amber, HudArtwork.Shape.Bolt, out staminaText);
+            for (int index = 0; index < 4; index++)
+            {
+                float x = 99 + index * 112;
+                RectTransform slot = Rect($"Slot {index + 1}", bar, new Vector2(92, 92), new Vector2(x, 0));
+                if (index == 0)
+                    Art("Selection", slot, new Vector2(100, 100), Vector2.zero, HudArtwork.Shape.Panel, Amber);
+                Art("Background", slot, new Vector2(92, 92), Vector2.zero, HudArtwork.Shape.Panel, Panel);
+                if (index == 0)
+                {
+                    Art("Weapon", slot, new Vector2(75, 65), new Vector2(0, 3), HudArtwork.Shape.Weapon, new Color32(217, 210, 190, 255));
+                    weaponText = Label("Weapon Name", slot, "", new Vector2(190, 26), new Vector2(0, 76), 16);
+                    Label("Current", slot, "CURRENT", new Vector2(120, 20), new Vector2(0, 55), 11);
+                }
+                else
+                    Label("Empty", slot, "+", new Vector2(32, 32), Vector2.zero, 23).color = new Color32(94, 104, 121, 255);
+
+                Label("Key", slot, (index + 1).ToString(), new Vector2(24, 24), new Vector2(0, -64), 16);
+            }
+        }
+
+        private HudArtwork Resource(Transform parent, string name, float x, Color tint, HudArtwork.Shape icon, out TMP_Text text)
+        {
+            RectTransform group = Rect(name, parent, new Vector2(86, 86), new Vector2(x, -3));
+            Art("Background", group, new Vector2(86, 86), Vector2.zero, HudArtwork.Shape.Panel, Panel);
+            Art("Track", group, new Vector2(84, 84), Vector2.zero, HudArtwork.Shape.Ring, new Color32(50, 65, 83, 255), 5);
+            HudArtwork ring = Art("Fill", group, new Vector2(84, 84), Vector2.zero, HudArtwork.Shape.Ring, tint, 5);
+            Art("Icon", group, new Vector2(31, 36), new Vector2(0, 8), icon, tint);
+            text = Label("Value", group, "--", new Vector2(70, 20), new Vector2(0, -21), 15);
+            Label("Caption", group, name.ToUpperInvariant(), new Vector2(105, 20), new Vector2(0, -61), 12);
+            return ring;
+        }
+
+        private HudArtwork Art(string name, Transform parent, Vector2 size, Vector2 position, HudArtwork.Shape shape, Color color, float line = 4)
+        {
+            HudArtwork artwork = Rect(name, parent, size, position).gameObject.AddComponent<HudArtwork>();
+            artwork.Configure(shape, color, line);
+            return artwork;
+        }
+
+        private TMP_Text Label(string name, Transform parent, string value, Vector2 size, Vector2 position, int fontSize)
+        {
+            var text = Rect(name, parent, size, position).gameObject.AddComponent<TextMeshProUGUI>();
+            text.font = font;
+            text.text = value;
+            text.fontSize = fontSize;
+            text.color = new Color32(242, 242, 235, 255);
+            text.alignment = TextAlignmentOptions.Center;
+            text.raycastTarget = false;
+            text.fontStyle = FontStyles.Bold;
+            return text;
+        }
+
+        private static RectTransform Rect(string name, Transform parent, Vector2 size, Vector2 position = default)
+        {
+            var rect = new GameObject(name, typeof(RectTransform)).GetComponent<RectTransform>();
+            rect.SetParent(parent, false);
+            rect.anchorMin = rect.anchorMax = new Vector2(.5f, .5f);
+            rect.sizeDelta = size;
+            rect.anchoredPosition = position;
+            return rect;
+        }
+
+        private void OnDestroy()
+        {
+            if (root != null)
+                Destroy(root);
+
+        }
+    }
+}
