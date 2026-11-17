@@ -1048,7 +1048,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1771576376
+--- !u!1 &1847007751
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1056,8 +1056,8 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1771576378}
-  - component: {fileID: 1771576377}
+  - component: {fileID: 1847007753}
+  - component: {fileID: 1847007752}
   m_Layer: 0
   m_Name: TerrainTestVolume
   m_TagString: Untagged
@@ -1065,13 +1065,13 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1771576377
+--- !u!114 &1847007752
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1771576376}
+  m_GameObject: {fileID: 1847007751}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 172515602e62fb746b5d573b38a5fe58, type: 3}
@@ -1082,13 +1082,13 @@ MonoBehaviour:
   blendDistance: 0
   weight: 1
   sharedProfile: {fileID: 11400000, guid: 50c3b673c41b2244b9c08aef80310985, type: 2}
---- !u!4 &1771576378
+--- !u!4 &1847007753
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1771576376}
+  m_GameObject: {fileID: 1847007751}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -1226,6 +1226,7 @@ MonoBehaviour:
   obstacleOwner: {fileID: 1751394749}
   set: {fileID: 0}
   repairLimit: 24
+  terrainSurface: 1
 --- !u!1 &1951189840
 GameObject:
   m_ObjectHideFlags: 0
@@ -1404,4 +1405,4 @@ SceneRoots:
   - {fileID: 451336758}
   - {fileID: 1930808193}
   - {fileID: 1408716222}
-  - {fileID: 1771576378}
+  - {fileID: 1847007753}

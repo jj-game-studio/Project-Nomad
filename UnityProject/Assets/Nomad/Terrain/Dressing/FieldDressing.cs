@@ -18,8 +18,11 @@ namespace Nomad.Terrain
         [Tooltip("비어 있으면 Resources의 비공개 꾸밈 목록을 사용합니다. 둘 다 없으면 꾸밈 없이 동작합니다.")]
         [SerializeField] private FieldDressingSet set;
         [SerializeField, Range(0, 32)] private int repairLimit = 24;
+        [Tooltip("켜면 타일 블록 대신 Unity Terrain을 지면·충돌·경로로 사용합니다(계단 칸은 경사로).")]
+        [SerializeField] private bool terrainSurface = true;
 
         private readonly List<GameObject> blockers = new List<GameObject>();
+        private readonly FieldTerrainSurface surface = new FieldTerrainSurface();
         private GameObject root;
         private Vector2 noiseOffset;
 
@@ -65,11 +68,17 @@ namespace Nomad.Terrain
         public void Dress(TerrainGenerationResult result)
         {
             Clear();
-            FieldDressingSet source = set != null ? set : Resources.Load<FieldDressingSet>(FieldDressingSet.ResourcePath);
-            if (source == null || result == null || !result.Success || result.Pieces.Count == 0) return;
+            if (result == null || !result.Success || result.Pieces.Count == 0) return;
 
             // 이전 10m 비교 모드(L)는 꾸밈 대상이 아닙니다.
             if (result.Pieces[0].GetComponent<MicroTerrainTile>() == null) return;
+
+            // 지면은 구매 애셋 없이 만들 수 있으므로 꾸밈 목록이 없어도 먼저 Terrain으로 바꿉니다.
+            // 이후 소품 배치·경로 검사는 모두 이 Terrain을 바닥으로 사용합니다.
+            if (terrainSurface) surface.Build(result, result.Seed);
+
+            FieldDressingSet source = set != null ? set : Resources.Load<FieldDressingSet>(FieldDressingSet.ResourcePath);
+            if (source == null) return;
 
             root = new GameObject("FieldDressing");
             root.transform.SetParent(obstacleOwner != null ? obstacleOwner.transform : transform, false);
@@ -83,7 +92,7 @@ namespace Nomad.Terrain
             {
                 MicroTerrainTile tile = piece.GetComponent<MicroTerrainTile>();
                 if (tile == null) continue;
-                ApplyGround(piece, source.groundMaterial, tile.Level + (tile.IsStair ? 0.5f : 0f));
+                if (!terrainSurface) ApplyGround(piece, source.groundMaterial, tile.Level + (tile.IsStair ? 0.5f : 0f));
 
                 Vector3 center = piece.transform.position + Vector3.up * tile.Level;
                 PlaceBorderWalls(source, center, tops);
@@ -428,6 +437,7 @@ namespace Nomad.Terrain
             blockers.Clear();
             Placed = 0;
             RemovedBlockers = 0;
+            surface.Release();
             if (root == null) return;
 
             root.SetActive(false);

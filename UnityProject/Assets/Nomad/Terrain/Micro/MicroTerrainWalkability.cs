@@ -38,6 +38,9 @@ namespace Nomad.Terrain
             if (extraObstacles != null) boxes.AddRange(extraObstacles.GetComponentsInChildren<BoxCollider>());
             foreach (BoxCollider box in boxes)
             {
+                // 필드 Terrain으로 대체해 끈 타일 충돌체는 보행 면에서 제외합니다.
+                if (!box.enabled) continue;
+
                 Matrix4x4 matrix = box.transform.localToWorldMatrix * Matrix4x4.Translate(box.center);
                 sources.Add(new NavMeshBuildSource { shape = NavMeshBuildSourceShape.Box, size = box.size,
                     transform = matrix, area = (box.GetComponentInParent<MicroTerrainWalls>(true) != null || !box.transform.IsChildOf(root.transform)) ? 1 : 0 });
@@ -46,6 +49,16 @@ namespace Nomad.Terrain
                 for (int z = -1; z <= 1; z += 2)
                     bounds.Encapsulate(matrix.MultiplyPoint3x4(Vector3.Scale(box.size, new Vector3(x, y, z)) * 0.5f));
             }
+            // 생성 루트 아래의 필드 Terrain(경사로 포함)을 보행 면으로 굽습니다. 없으면 기존과 같습니다.
+            foreach (UnityEngine.Terrain field in root.GetComponentsInChildren<UnityEngine.Terrain>())
+            {
+                Vector3 origin = field.transform.position;
+                sources.Add(new NavMeshBuildSource { shape = NavMeshBuildSourceShape.Terrain,
+                    sourceObject = field.terrainData, transform = Matrix4x4.Translate(origin), area = 0 });
+                bounds.Encapsulate(origin);
+                bounds.Encapsulate(origin + field.terrainData.size);
+            }
+
             bounds.Expand(new Vector3(2f, 4f, 2f));
             if (reservations != null)
             {

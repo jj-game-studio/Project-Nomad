@@ -292,6 +292,13 @@ namespace Nomad.Terrain.Editor
                 if (dressing.Root.GetComponentsInChildren<Collider>().Any(collider => !(collider is BoxCollider)))
                     throw new System.InvalidOperationException("꾸밈에 BoxCollider 이외의 충돌체가 남았습니다.");
 
+                // 2단계: 지면·충돌이 Terrain으로 바뀌고 타일 BoxCollider는 모두 꺼져 있어야 합니다.
+                Transform fieldRoot = result.Pieces[0].transform.parent;
+                if (fieldRoot.GetComponentInChildren<UnityEngine.Terrain>() == null)
+                    throw new System.InvalidOperationException($"seed {result.Seed} 필드 Terrain이 없습니다.");
+                if (result.Pieces.Any(piece => piece.GetComponentsInChildren<BoxCollider>().Any(box => box.enabled)))
+                    throw new System.InvalidOperationException($"seed {result.Seed} 켜진 타일 BoxCollider가 남았습니다.");
+
                 // 시작점이 덤불·나무 충돌체 안에 있으면 플레이어가 갇힙니다.
                 // 플레이어 캡슐(반지름 0.35m, 높이 1.8m)과 실제로 겹치는 꾸밈 충돌체가 있는지 확인합니다.
                 Vector3 start = field.PlayerPosition;
@@ -321,6 +328,8 @@ namespace Nomad.Terrain.Editor
                     if (wall == null) throw new System.InvalidOperationException("외곽 돌벽이 배치되지 않았습니다.");
                     TerrainIntegrationValidation.Capture(controls, 0, "terrain-test-border", wall.position);
                     if (rock != null) TerrainIntegrationValidation.Capture(controls, 0, "terrain-test-cliff", rock.position);
+                    TerrainPiece ramp = result.Pieces.FirstOrDefault(piece => piece.GetComponent<MicroTerrainTile>().IsStair);
+                    if (ramp != null) TerrainIntegrationValidation.Capture(controls, 0, "terrain-test-ramp", ramp.transform.position);
                 }
             }
             if (totalBlockers == 0)

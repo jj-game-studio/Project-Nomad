@@ -67,7 +67,7 @@ namespace Nomad.Loot
                 Vector3 origin = piece.WorldOccupancy.center;
                 origin.y = piece.WorldOccupancy.max.y + 1f;
                 if (!Physics.Raycast(origin, Vector3.down, out RaycastHit hit, 10f, ~0,
-                    QueryTriggerInteraction.Ignore) || !hit.collider.transform.IsChildOf(piece.transform)
+                    QueryTriggerInteraction.Ignore) || !FieldGround.BelongsTo(hit.collider, hit.point, piece)
                     || hit.normal.y < 0.99f) continue;
 
                 point = hit.point + Vector3.up * 0.05f;

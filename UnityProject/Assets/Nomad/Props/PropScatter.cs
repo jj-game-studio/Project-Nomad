@@ -151,7 +151,7 @@ namespace Nomad.Props
         {
             point = default;
             if (!Physics.Raycast(origin, Vector3.down, out RaycastHit hit, 10f, ~0, QueryTriggerInteraction.Ignore)
-                || !hit.collider.transform.IsChildOf(piece.transform) || hit.normal.y < 0.99f) return false;
+                || !FieldGround.BelongsTo(hit.collider, hit.point, piece) || hit.normal.y < 0.99f) return false;
             point = hit.point;
 
             // 네 모서리 바닥을 확인하여 낭떠러지·작은 받침·높이 차에 걸친 배치를 막습니다.
@@ -160,7 +160,7 @@ namespace Nomad.Props
             {
                 Vector3 sample = point + new Vector3(x * placementRadius, 0.5f, z * placementRadius);
                 if (!Physics.Raycast(sample, Vector3.down, out RaycastHit support, 0.55f, ~0, QueryTriggerInteraction.Ignore)
-                    || !support.collider.transform.IsChildOf(piece.transform) || support.normal.y < 0.99f
+                    || !FieldGround.BelongsTo(support.collider, support.point, piece) || support.normal.y < 0.99f
                     || Mathf.Abs(support.point.y - point.y) > 0.02f) return false;
             }
             return true;

@@ -57,3 +57,15 @@ unity run '<checkout>/UnityProject' --timeout 1500 --log-file '<checkout>/UnityP
 - 장애물이 빈터 경계를 쪼개면 `FieldNavigation`의 상자 후보(주변 2m 개방 조건)가 줄 수 있습니다. 고정 seed 6개 기준 32개 → 26개였습니다(seed 99: 7 → 1). 사람 검토에서 이 수준을 수용했습니다. 적 후보 64개와 경로 표본 2916개는 변하지 않았습니다.
 - O키 전체 보기에서는 그림자 거리 밖이라 지면이 평평하게 보입니다.
 - 외곽 돌벽은 각 타일 윗면 높이에 세우므로 높이가 다른 외곽 타일 사이에는 벽 높이 단차가 있습니다.
+
+## 2단계: Terrain 지면·경사로·경로
+
+TerrainTest의 `FieldDressing`(기본 `terrainSurface` 켬)은 꾸밈보다 먼저 생성 결과를 하나의 Unity Terrain으로 바꿉니다. 꾸밈 목록(비공개)이 없어도 동작합니다.
+
+- **높이**: WFC 높이 골격(0/1/2m)을 그대로 씁니다. 평지는 타일 높이, 계단 칸은 `ContinuousHeight`의 연속 경사(3m에 1m, 약 18°)라 걸어서 오르내리는 경사로가 됩니다. 높이 차 경계는 샘플 하나(0.25m 이하) 폭에서 1~2m가 바뀌어 76° 이상이므로 NavMesh(최대 45°)와 캐릭터 모두 절벽으로 취급합니다.
+- **충돌·경로**: Terrain에 `TerrainCollider`를 두고, 타일의 외형과 `BoxCollider`는 끕니다. 타일 오브젝트는 생성 결과·연결 정보로 남습니다.
+- **칠**: 잔디 / 경사로와 저주파 노이즈 흙 패치 / 50° 이상 급경사 암벽색. 레이어 텍스처는 코드로 만든 단색(±2.5% 얼룩)이며 구매 애셋을 쓰지 않습니다.
+- **공용 코드(동작 범위 확장, 시그니처 변경 없음)**: `MicroTerrainWalkability.Build`는 생성 루트 아래 Terrain을 NavMesh 소스로 넣고 꺼진 BoxCollider를 뺍니다. 바닥 판정(`FieldNavigation`·`PropScatter`·`FieldPreview`)은 새 `FieldGround.BelongsTo`로 "조각 자신 또는 그 칸을 덮는 필드 Terrain"을 바닥으로 인정합니다. Terrain이 없는 씬(`TerrainIntegration.unity` 포함)은 기존과 같습니다.
+- 생성기 내부의 1차 도달성 검사는 Terrain을 만들기 전 타일 기준으로 실행되고, 이후 꾸밈 복구·`FieldNavigation` 준비는 Terrain 기준으로 다시 검사합니다.
+
+검증은 위 `CreateAndVerify`가 Terrain 존재와 켜진 타일 BoxCollider가 없음을 함께 확인하고 `Artifacts/terrain-test-ramp.png`를 남깁니다. 기존 `TerrainIntegrationValidation.Run` 회귀로 Terrain이 없는 경로가 그대로임을 확인합니다.
