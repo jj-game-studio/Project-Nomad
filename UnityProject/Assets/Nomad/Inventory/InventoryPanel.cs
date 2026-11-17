@@ -1,4 +1,5 @@
 using Nomad.Interaction;
+using Nomad.Hud;
 using Nomad.Loot;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -37,6 +38,7 @@ namespace Nomad.Inventory
         private GameObject lootEventSystem;
         private Vector2 backpackPosition;
         private bool runtimeInstance;
+        private PlayerHud dragHud;
 
         internal bool HasOpenChest => chestPanel != null && chestPanel.IsOpen;
         internal LootChest OpenChest => chestPanel?.Chest;
@@ -255,6 +257,10 @@ namespace Nomad.Inventory
 
             bool overChest = preview.activeSelf && HasOpenChest && chestPanel.ContainsDropPoint(position, EventCamera);
             chestPanel?.HighlightDrop(overChest);
+            if (dragHud == null)
+                dragHud = inventory.GetComponentInChildren<PlayerHud>();
+            int quickSlot = preview.activeSelf && dragHud != null ? dragHud.FindQuickSlot(position) : -1;
+            dragHud?.HighlightQuickSlot(quickSlot);
             if (mouse.leftButton.isPressed)
                 return;
 
@@ -273,6 +279,8 @@ namespace Nomad.Inventory
                 chestPanel.Deposit(source);
             else if (dragged && pointerSlot >= 0)
                 inventory.MoveStack(source, pointerSlot);
+            else if (dragged && quickSlot >= 0)
+                dragHud.QuickSlots.Register(source, quickSlot);
         }
 
         private void StoreFromClick(int slot, Mouse mouse, bool shift)
@@ -365,6 +373,7 @@ namespace Nomad.Inventory
             if (dragPreview.Rect.parent != panel.transform)
                 dragPreview.Rect.SetParent(panel.transform, false);
             chestPanel?.HighlightDrop(false);
+            dragHud?.HighlightQuickSlot(-1);
             dragSource = -1;
             lootDragSource = -1;
             lootDragItem = null;

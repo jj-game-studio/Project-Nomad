@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Nomad.Combat;
+using Nomad.Inventory;
 using TMPro;
 using UnityEngine;
 
@@ -26,6 +27,14 @@ namespace Nomad.Hud
         private readonly List<HudArtwork> surfaces = new List<HudArtwork>();
         private readonly List<GameObject> trims = new List<GameObject>();
         private HudArtwork selection;
+        private readonly RectTransform[] quickRects = new RectTransform[PlayerQuickSlots.Capacity];
+        private readonly UnityEngine.UI.Image[] quickIcons = new UnityEngine.UI.Image[PlayerQuickSlots.Capacity];
+        private readonly TMP_Text[] quickNames = new TMP_Text[PlayerQuickSlots.Capacity];
+        private readonly TMP_Text[] quickCounts = new TMP_Text[PlayerQuickSlots.Capacity];
+        private readonly HudArtwork[] dropHighlights = new HudArtwork[PlayerQuickSlots.Capacity];
+        private readonly GameObject[] emptyContents = new GameObject[PlayerQuickSlots.Capacity];
+
+        public PlayerQuickSlots QuickSlots { get; private set; }
 
         public HudStyle Style => style;
         private int shownHealth = -1;
@@ -46,6 +55,14 @@ namespace Nomad.Hud
             if (health == null)
                 health = GetComponentInParent<Health>();
 
+            PlayerInventory inventory = GetComponentInParent<PlayerInventory>();
+            if (inventory != null)
+            {
+                QuickSlots = inventory.GetComponent<PlayerQuickSlots>();
+                if (QuickSlots == null)
+                    QuickSlots = inventory.gameObject.AddComponent<PlayerQuickSlots>();
+            }
+
             Build();
             SetResources(0, 0, 0, 0);
             SetWeapon(null);
@@ -56,12 +73,18 @@ namespace Nomad.Hud
         {
             if (root != null)
                 root.SetActive(true);
+            if (QuickSlots != null)
+                QuickSlots.Changed += RefreshQuickSlots;
+            RefreshQuickSlots();
         }
 
         private void OnDisable()
         {
             if (root != null)
                 root.SetActive(false);
+            if (QuickSlots != null)
+                QuickSlots.Changed -= RefreshQuickSlots;
+            HighlightQuickSlot(-1);
         }
 
         private void LateUpdate()
@@ -87,6 +110,46 @@ namespace Nomad.Hud
         public void SetWeapon(string displayName)
         {
             weaponText.text = string.IsNullOrWhiteSpace(displayName) ? "UNASSIGNED" : displayName;
+        }
+
+        public int FindQuickSlot(Vector2 screenPoint)
+        {
+            if (!isActiveAndEnabled || QuickSlots == null || !QuickSlots.isActiveAndEnabled || !root.activeInHierarchy)
+                return -1;
+
+            Camera eventCamera = canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
+            for (int index = 0; index < quickRects.Length; index++)
+            {
+                if (RectTransformUtility.RectangleContainsScreenPoint(quickRects[index], screenPoint, eventCamera))
+                    return index;
+            }
+
+            return -1;
+        }
+
+        public void HighlightQuickSlot(int index)
+        {
+            for (int slot = 0; slot < dropHighlights.Length; slot++)
+            {
+                if (dropHighlights[slot] != null)
+                    dropHighlights[slot].gameObject.SetActive(slot == index);
+            }
+        }
+
+        private void RefreshQuickSlots()
+        {
+            if (root == null)
+                return;
+
+            for (int index = 0; index < quickRects.Length; index++)
+            {
+                ItemDefinition item = QuickSlots == null ? null : QuickSlots.GetItem(index);
+                emptyContents[index].SetActive(item == null);
+                quickIcons[index].sprite = item == null ? null : item.Icon;
+                quickIcons[index].enabled = item != null && item.Icon != null;
+                quickNames[index].text = item != null && item.Icon == null ? item.DisplayName : string.Empty;
+                quickCounts[index].text = item == null ? string.Empty : $"×{QuickSlots.GetCount(index)}";
+            }
         }
 
         // 표시를 재생성하지 않고 같은 체력·자원·슬롯 상태로 스타일만 비교합니다.
@@ -150,21 +213,37 @@ namespace Nomad.Hud
 
             manaRing = Resource(bar, "Mana", -157, Blue, HudArtwork.Shape.Crystal, out manaText);
             staminaRing = Resource(bar, "Stamina", -49, Amber, HudArtwork.Shape.Bolt, out staminaText);
-            for (int index = 0; index < 4; index++)
+            for (int index = 0; index < PlayerQuickSlots.Capacity; index++)
             {
                 float x = 99 + index * 112;
                 RectTransform slot = Rect($"Slot {index + 1}", bar, new Vector2(92, 92), new Vector2(x, 0));
                 if (index == 0)
                     selection = Art("Selection", slot, new Vector2(100, 100), Vector2.zero, HudArtwork.Shape.Panel, Amber);
                 Surface("Background", slot, new Vector2(92, 92));
+                quickRects[index] = slot;
+                dropHighlights[index] = Art("Drop Highlight", slot, new Vector2(96, 96), Vector2.zero,
+                    HudArtwork.Shape.Fittings, Amber);
+                dropHighlights[index].gameObject.SetActive(false);
+                RectTransform empty = Rect("Empty Content", slot, new Vector2(92, 92));
+                emptyContents[index] = empty.gameObject;
                 if (index == 0)
                 {
-                    Art("Weapon", slot, new Vector2(75, 65), new Vector2(0, 3), HudArtwork.Shape.Weapon, new Color32(217, 210, 190, 255));
-                    weaponText = Label("Weapon Name", slot, "", new Vector2(190, 26), new Vector2(0, 76), 16);
-                    Label("Current", slot, "CURRENT", new Vector2(120, 20), new Vector2(0, 55), 11);
+                    Art("Weapon", empty, new Vector2(75, 65), new Vector2(0, 3), HudArtwork.Shape.Weapon, new Color32(217, 210, 190, 255));
+                    weaponText = Label("Weapon Name", empty, "", new Vector2(190, 26), new Vector2(0, 76), 16);
+                    Label("Current", empty, "CURRENT", new Vector2(120, 20), new Vector2(0, 55), 11);
                 }
                 else
-                    Label("Empty", slot, "+", new Vector2(32, 32), Vector2.zero, 23).color = new Color32(94, 104, 121, 255);
+                    Label("Empty", empty, "+", new Vector2(32, 32), Vector2.zero, 23).color = new Color32(94, 104, 121, 255);
+
+                var icon = Rect("Item Icon", slot, new Vector2(64, 64), new Vector2(0, 6))
+                    .gameObject.AddComponent<UnityEngine.UI.Image>();
+                icon.raycastTarget = false;
+                icon.preserveAspect = true;
+                quickIcons[index] = icon;
+                quickNames[index] = Label("Item Name", slot, "", new Vector2(80, 54), new Vector2(0, 6), 14);
+                quickNames[index].enableAutoSizing = true;
+                quickNames[index].fontSizeMin = 8;
+                quickCounts[index] = Label("Item Count", slot, "", new Vector2(80, 20), new Vector2(0, -32), 15);
 
                 Label("Key", slot, (index + 1).ToString(), new Vector2(24, 24), new Vector2(0, -64), 16);
             }
