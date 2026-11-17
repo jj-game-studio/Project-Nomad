@@ -50,7 +50,7 @@ namespace Nomad.Village.Editor
             floor.transform.localScale = new Vector3(Half * 2f + 40f, 1f, Half * 2f + 40f);
             Object.DestroyImmediate(floor.GetComponent<MeshRenderer>());
 
-            // 잔디 바닥 조각을 크기에 맞춰 타일링합니다.
+            // 잔디 바닥 조각을 크기에 맞춰 타일링합니다(조각 사이 흙길 무늬는 의도).
             Transform tiles = Group(root, "Ground");
             GameObject tile = Load("SM_Env_Ground_Flat_01");
             Vector3 size = MeasureSize(tile);
@@ -85,10 +85,15 @@ namespace Nomad.Village.Editor
             // 광장에서 남쪽 입구까지 돌길
             Transform path = Group(plaza, "Path To Gate");
             GameObject brick = Load("SM_Env_Path_Brick_Group_01");
-            float step = Mathf.Max(2f, MeasureSize(brick).z);
+            Vector3 brickSize = MeasureSize(brick);
+            float step = Mathf.Max(0.5f, brickSize.z * 0.9f);
 
             for (float z = -6f; z > -Half - 2f; z -= step)
-                Place(brick, path, new Vector3(0f, 0.01f, z), 0f, false, false);
+            {
+                // 폭을 넓히려 세 줄로 깝니다.
+                for (int column = -1; column <= 1; column++)
+                    Place(brick, path, new Vector3(column * brickSize.x * 0.9f, 0.01f, z), 0f, false, false);
+            }
 
             // 소품: 상자·통 더미
             Place(Load("SM_Prop_Barrel_Stack_01"), plaza, new Vector3(6f, 0f, -6f), 20f, true, true);
@@ -106,10 +111,10 @@ namespace Nomad.Village.Editor
             AddBuilding(buildings, "Tavern (Inn/Storage)", "SM_Bld_Preset_Tavern_01_Optimized", 90f, 23f);
             AddBuilding(buildings, "Church (Recovery)", "SM_Bld_Preset_Church_01_A_Optimized", 135f, 24f);
             AddBuilding(buildings, "Stables", "SM_Bld_Preset_Stables_01_Optimized", 180f, 23f);
-            AddBuilding(buildings, "House 03", "SM_Bld_Preset_House_03_Optimized", 215f, 24f);
-            AddBuilding(buildings, "House 07", "SM_Bld_Preset_House_07_Optimized", 250f, 25f);
-            AddBuilding(buildings, "House 05", "SM_Bld_Preset_House_05_Optimized", 290f, 25f);
-            AddBuilding(buildings, "House 08", "SM_Bld_Preset_House_08_Optimized", 325f, 24f);
+            AddBuilding(buildings, "House 03", "SM_Bld_Preset_House_03_Optimized", 212f, 26f);
+            AddBuilding(buildings, "House 07", "SM_Bld_Preset_House_07_Optimized", 250f, 27f);
+            AddBuilding(buildings, "House 05", "SM_Bld_Preset_House_05_Optimized", 290f, 27f);
+            AddBuilding(buildings, "House 08", "SM_Bld_Preset_House_08_Optimized", 328f, 26f);
         }
 
         private static void AddBuilding(Transform parent, string label, string prefab, float angle, float radius)
