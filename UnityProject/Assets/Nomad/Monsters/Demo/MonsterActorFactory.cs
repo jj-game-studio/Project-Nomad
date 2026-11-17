@@ -63,7 +63,8 @@ namespace Nomad.Monsters.Demo
             agent.height = 1.8f;
             agent.speed = config.moveSpeed;
             agent.stoppingDistance = Mathf.Min(1.2f, config.attackRange * 0.7f);
-            agent.angularSpeed = 360f;
+            agent.angularSpeed = 540f;
+            agent.acceleration = rank == MonsterRank.Normal ? 20f : 28f;
 
             Health health = root.AddComponent<Health>();
             JsonUtility.FromJsonOverwrite("{\"maxHealth\":" + config.health + "}", health);
@@ -79,6 +80,10 @@ namespace Nomad.Monsters.Demo
             MonsterTracker tracker = root.AddComponent<MonsterTracker>();
             tracker.BindTarget(target.transform);
             tracker.Configure(config.sightRange, config.abandonRange, config.homeRange);
+            if (rank != MonsterRank.Normal && config.skills)
+                root.AddComponent<MonsterTactics>().Configure(target, config.chargeMin, config.chargeMax,
+                    config.chargeSpeed, config.chargeCooldown, config.areaRadius, config.areaCooldown,
+                    config.skillWindup, config.skillRecovery, config.heavyDamage);
             if (config.ranged && appearances != null && (rank != MonsterRank.Normal || style != MonsterWeaponStyle.Sword))
             {
                 GameObject bolt = rank == MonsterRank.Boss ? appearances.fireBolt : rank == MonsterRank.Elite ?
@@ -91,8 +96,10 @@ namespace Nomad.Monsters.Demo
                         body.GetComponentsInChildren<Transform>(), part => part.name == "WeaponMuzzle");
             }
             MonsterMeleeAttack attack = root.AddComponent<MonsterMeleeAttack>();
-            attack.Configure(target, elite, config.damage, config.heavyDamage,
+            attack.Configure(target, elite && config.skills, config.damage, config.heavyDamage,
                 config.attackRange, config.heavyRange, config.attackSpeed);
+            attack.ConfigureTempo(config.basicWindup, config.basicRecovery, config.skillWindup, config.skillRecovery);
+            attack.ConfigureBasicAngle(rank == MonsterRank.Boss ? 120f : rank == MonsterRank.Elite ? 140f : 360f);
             if (rank == MonsterRank.Elite && prefab != null) root.AddComponent<GolemMotion>();
             if (rank == MonsterRank.Boss && prefab != null) root.AddComponent<DragonLegMotion>();
             if (rank == MonsterRank.Normal && prefab != null) root.AddComponent<MonsterWeaponMotion>();

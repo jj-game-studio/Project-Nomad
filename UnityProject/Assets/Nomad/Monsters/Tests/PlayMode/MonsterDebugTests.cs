@@ -25,7 +25,7 @@ namespace Nomad.Monsters.Tests
         public IEnumerator SetUp()
         {
             previous = SceneManager.GetActiveScene();
-            const string path = "Assets/Nomad/Monsters/MonsterDebug.unity";
+            const string path = "Assets/Nomad/Monsters/MonsterAnimationLab.unity";
             yield return EditorSceneManager.LoadSceneAsyncInPlayMode(path, new LoadSceneParameters(LoadSceneMode.Additive));
             scene = SceneManager.GetSceneByPath(path);
             SceneManager.SetActiveScene(scene);

@@ -21,6 +21,7 @@ namespace Nomad.Monsters
         private float death;
         private float gait;
         private Transform[] hands;
+        private MonsterTactics tactics;
 
         private void Awake()
         {
@@ -35,6 +36,7 @@ namespace Nomad.Monsters
             agent = GetComponent<NavMeshAgent>();
             attack = GetComponent<MonsterMeleeAttack>();
             health = GetComponent<Health>();
+            tactics = GetComponent<MonsterTactics>();
             Animator animator = model.GetComponentInChildren<Animator>();
             if (animator != null) animator.enabled = false;
             PoseArms(0f, 1f);
@@ -43,10 +45,11 @@ namespace Nomad.Monsters
         private void LateUpdate()
         {
             float speed = agent.enabled && agent.isOnNavMesh ? agent.velocity.magnitude : 0f;
+            if (tactics != null && tactics.IsDashing) speed = 6f;
             gait = Mathf.MoveTowards(gait, health.IsDead ? 0f : Mathf.Clamp01(speed / 2f), Time.deltaTime * 3f);
             phase += Time.deltaTime * (speed > 0.1f ? speed * 1.8f : 1f);
             if (health.IsDead) death = Mathf.MoveTowards(death, 1f, Time.deltaTime * 1.5f);
-            float swing = Mathf.Sin(phase) * gait * 22f;
+            float swing = Mathf.Sin(phase) * gait * 30f;
             float lift = attack.Phase == MeleePhase.Windup ? Mathf.Sin(attack.WindupProgress * Mathf.PI * 0.5f) : 0f;
             for (int i = 0; i < bones.Length; i++)
             {
@@ -60,7 +63,8 @@ namespace Nomad.Monsters
             }
             if (!health.IsDead) PoseArms(lift, 1f - Mathf.Exp(-Time.deltaTime * 14f));
             model.localPosition = basePosition + Vector3.up * (Mathf.Sin(phase * 2f) * 0.035f * (1f - death) - death * 0.4f);
-            model.localRotation = baseRotation * Quaternion.Euler(death * 80f, 0f, Mathf.Sin(phase) * 1.5f * (1f - death));
+            model.localRotation = baseRotation * Quaternion.Euler(death * 80f + (tactics != null && tactics.IsDashing ? 12f : gait * 4f),
+                0f, Mathf.Sin(phase) * 3f * gait * (1f - death));
         }
 
         private void PoseArms(float lift, float blend)
@@ -74,6 +78,16 @@ namespace Nomad.Monsters
                 Vector3 neutral = shoulder - Vector3.up * 0.75f + transform.forward * 0.38f;
                 Vector3 raised = shoulder + Vector3.up * 0.35f + transform.forward * 0.6f;
                 Vector3 goal = Vector3.Lerp(neutral, raised, lift) + transform.forward * (Mathf.Sin(phase) * gait * sign * 0.12f);
+                if (attack.Phase == MeleePhase.Windup && !attack.IsSkillAttack)
+                {
+                    float punch = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.45f, 1f, attack.WindupProgress));
+                    bool striking = side == attack.AttackSequence % 2;
+                    goal = shoulder + transform.forward * (striking ? 0.25f + punch * 0.9f : 0.3f) - Vector3.up * 0.2f;
+                }
+                else if (attack.Skill == MonsterSkill.Area && attack.Phase == MeleePhase.Windup)
+                    goal = Vector3.Lerp(raised + Vector3.up * 0.15f,
+                        shoulder + transform.forward * 0.8f - Vector3.up * 0.6f,
+                        Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.65f, 1f, attack.WindupProgress)));
                 MonsterWeaponMotion.SolveArm(bones[side], bones[side + 2], hands[side], goal,
                     transform.right * sign - Vector3.up * 0.3f, blend);
             }

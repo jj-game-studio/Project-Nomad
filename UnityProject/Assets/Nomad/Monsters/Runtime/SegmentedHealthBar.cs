@@ -17,6 +17,8 @@ namespace Nomad.Monsters
         private float holdTrail;
         private float lastRatio = 1f;
         public float DamageTrailRatio => delayedRatio;
+        public float HudRightInset { get; set; }
+        public float HudTop { get; set; } = 12f;
 
         public int SegmentCount => segments;
 
@@ -94,23 +96,24 @@ namespace Nomad.Monsters
 
         private void DrawBoss()
         {
-            float width = Mathf.Min(760f, Screen.width * 0.58f);
-            float x = (Screen.width - width) * 0.5f;
+            float viewport = Screen.width - HudRightInset;
+            float width = Mathf.Min(760f, viewport * 0.58f);
+            float x = (viewport - width) * 0.5f;
             Color gold = new Color(0.85f, 0.65f, 0.28f);
-            Paint(new Rect(x - 10f, 12f, width + 20f, 74f), new Color(0.05f, 0.04f, 0.06f, 0.94f));
-            Paint(new Rect(x - 10f, 12f, width + 20f, 2f), gold);
+            Paint(new Rect(x - 10f, HudTop, width + 20f, 74f), new Color(0.05f, 0.04f, 0.06f, 0.94f));
+            Paint(new Rect(x - 10f, HudTop, width + 20f, 2f), gold);
             if (title == null) title = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter };
             title.fontSize = Mathf.Clamp(Mathf.RoundToInt(width / 32f), 14, 22);
             title.normal.textColor = gold;
-            GUI.Label(new Rect(x, 16f, width, 28f), "ASHEN TYRANT  -  FINAL GUARDIAN", title);
-            Rect bar = new Rect(x, 48f, width, 17f);
+            GUI.Label(new Rect(x, HudTop + 4f, width, 28f), "ASHEN TYRANT  -  FINAL GUARDIAN", title);
+            Rect bar = new Rect(x, HudTop + 36f, width, 17f);
             Paint(bar, new Color(0.16f, 0.08f, 0.1f));
             Paint(new Rect(bar.x, bar.y, width * delayedRatio, bar.height), gold);
             Paint(new Rect(bar.x, bar.y, width * health.CurrentHealth / health.MaxHealth, bar.height), new Color(0.72f, 0.09f, 0.08f));
             for (int i = 1; i < 4; i++) Paint(new Rect(x + width * i / 4f, bar.y, 2f, bar.height), new Color(0.12f, 0.05f, 0.07f));
             title.fontSize = 12;
             title.normal.textColor = Color.white;
-            GUI.Label(new Rect(x, 64f, width, 19f), $"{health.CurrentHealth:N0} / {health.MaxHealth:N0}", title);
+            GUI.Label(new Rect(x, HudTop + 52f, width, 19f), $"{health.CurrentHealth:N0} / {health.MaxHealth:N0}", title);
         }
 
         private static void Paint(Rect rect, Color color)

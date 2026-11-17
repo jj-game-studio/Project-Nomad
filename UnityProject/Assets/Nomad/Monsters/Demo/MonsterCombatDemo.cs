@@ -20,6 +20,7 @@ namespace Nomad.Monsters.Demo
         private float fillAngle = -1f;
         private MonsterHitFeedback hitFeedback;
         private Renderer[] bodies;
+        public bool ShowSkillWarnings { get; set; } = true;
 
         public void ConfigureDisplay(Health victim, Health owner, MonsterMeleeAttack melee,
             Renderer body, LineRenderer outline, MeshFilter fill)
@@ -74,7 +75,7 @@ namespace Nomad.Monsters.Demo
             if (heavyWarning == null)
                 return;
 
-            heavyWarning.enabled = !monster.IsDead && attack.Phase == MeleePhase.Windup && attack.IsSkillAttack;
+            heavyWarning.enabled = ShowSkillWarnings && !monster.IsDead && attack.Phase == MeleePhase.Windup && attack.IsSkillAttack;
             if (fillRenderer != null)
                 fillRenderer.enabled = heavyWarning.enabled;
             if (!heavyWarning.enabled)
@@ -85,6 +86,28 @@ namespace Nomad.Monsters.Demo
             }
 
             Vector3 origin = monster.transform.position + Vector3.up * 0.04f;
+            if (attack.Skill == MonsterSkill.Charge)
+            {
+                float half = attack.ChargeWidth * 0.5f;
+                Vector3 side = Quaternion.AngleAxis(90f, Vector3.up) * attack.AttackDirection * half;
+                Vector3 end = origin + attack.AttackDirection * attack.CurrentAttackRange;
+                heavyWarning.positionCount = 5;
+                heavyWarning.SetPositions(new[] { origin - side, origin + side, end + side, end - side, origin - side });
+                if (warningFill != null)
+                {
+                    if (fillAngle != -99f)
+                    {
+                        fillAngle = -99f;
+                        fillMesh.Clear();
+                        fillMesh.vertices = new[] { new Vector3(-1f, 0f, 0f), new Vector3(1f, 0f, 0f), new Vector3(1f, 0f, 1f), new Vector3(-1f, 0f, 1f) };
+                        fillMesh.triangles = new[] { 0, 2, 1, 0, 3, 2 };
+                        fillMesh.RecalculateBounds();
+                    }
+                    warningFill.transform.SetPositionAndRotation(origin, Quaternion.LookRotation(attack.AttackDirection));
+                    warningFill.transform.localScale = new Vector3(half, 1f, attack.CurrentAttackRange * attack.WindupProgress);
+                }
+                return;
+            }
             bool circle = attack.CurrentAttackAngle >= 359.9f;
             heavyWarning.positionCount = circle ? 17 : 19;
             if (!circle)

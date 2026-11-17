@@ -30,6 +30,7 @@ namespace Nomad.Monsters
         private void LateUpdate()
         {
             float speed = !health.IsDead && agent.enabled && agent.isOnNavMesh ? agent.velocity.magnitude : 0f;
+            if (GetComponent<MonsterTactics>()?.IsDashing == true) speed = 6f;
             gait = Mathf.MoveTowards(gait, Mathf.Clamp01(speed / 2f), Time.deltaTime * 3f);
             phase += speed * Time.deltaTime * 1.65f;
             float blend = 1f - Mathf.Exp(-Time.deltaTime * 14f);

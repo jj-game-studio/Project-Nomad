@@ -21,6 +21,13 @@ namespace Nomad.Monsters.Demo
         [SerializeField] private Material warningMaterial;
         [SerializeField] private Material fillMaterial;
         [SerializeField] private MonsterAppearanceSet appearances;
+        [SerializeField] private bool compactUi;
+        private int page;
+        private int tuningTab;
+        private int skillTab;
+        private bool showLogs;
+        private bool skillWarnings = true;
+        private bool healthBars = true;
 
         private sealed class Entry
         {
@@ -63,13 +70,14 @@ namespace Nomad.Monsters.Demo
         public bool Invincible => invincible;
         private float UiScale => Mathf.Min(1f, Screen.width / 1280f, Screen.height / 800f);
         public Rect SpawnPanel => new Rect(Screen.width / UiScale - 346f, 12f, 334f, Screen.height / UiScale - 24f);
-        public Rect LogPanel => new Rect(12f, 12f, 365f, 270f);
+        public Rect LogPanel => compactUi ? new Rect(12f, 12f, 290f, showLogs ? 170f : 34f) : new Rect(12f, 12f, 365f, 270f);
 
         private void Start()
         {
             previousTimeScale = Time.timeScale;
             previousPlayerHp = player.CurrentHealth;
-            factory = gameObject.AddComponent<MonsterActorFactory>();
+            factory = GetComponent<MonsterActorFactory>();
+            if (factory == null) factory = gameObject.AddComponent<MonsterActorFactory>();
             factory.ConfigureMaterials(normalMaterial, eliteMaterial, warningMaterial, fillMaterial);
             factory.ConfigureAppearances(appearances);
             var bar = player.GetComponent<SegmentedHealthBar>();
@@ -84,10 +92,13 @@ namespace Nomad.Monsters.Demo
                 events.AddComponent<EventSystem>();
             }
             gameObject.AddComponent<MonsterTestInputBlocker>().Panel = this;
-            selected = Register(initialMonster, initialElite);
-            kind = initialElite ? 1 : 0;
-            MonsterTestSettings config = settings[kind];
-            selected.tracker.Configure(config.sightRange, config.abandonRange, config.homeRange);
+            if (initialMonster != null)
+            {
+                selected = Register(initialMonster, initialElite);
+                kind = initialElite ? 1 : 0;
+                MonsterTestSettings config = settings[kind];
+                selected.tracker.Configure(config.sightRange, config.abandonRange, config.homeRange);
+            }
             Log("Ready: WASD / LMB shoot / Shift roll / R reset");
         }
 
@@ -117,7 +128,7 @@ namespace Nomad.Monsters.Demo
                         notice = "Choose a clear, walkable floor position.";
                 }
             }
-            if (Keyboard.current?.rKey.wasPressedThisFrame == true)
+            if (!compactUi && Keyboard.current?.rKey.wasPressedThisFrame == true)
                 Restart();
 
             foreach (Entry entry in monsters)
@@ -125,6 +136,15 @@ namespace Nomad.Monsters.Demo
                 entry.ranges.ShowDetection = detection && !entry.health.IsDead;
                 entry.ranges.ShowTravel = travel && !entry.health.IsDead;
                 entry.feedback.SetEffects(hitFlash, damageNumbers, hitShards);
+                var display = entry.health.GetComponentInChildren<MonsterCombatDemo>();
+                if (display != null) display.ShowSkillWarnings = skillWarnings;
+                entry.health.GetComponent<SegmentedHealthBar>().enabled = healthBars;
+                if (compactUi)
+                {
+                    var bar = entry.health.GetComponent<SegmentedHealthBar>();
+                    bar.HudRightInset = (SpawnPanel.width + 24f) * UiScale;
+                    bar.HudTop = (showLogs ? 190f : 52f) * UiScale;
+                }
                 string state = State(entry);
                 if (state != entry.previousState)
                 {
@@ -256,7 +276,8 @@ if (monsters.Count >= 12)
             if (entry.health.IsDead) return "DEAD";
             if (entry.tracker.IsReturning) return "RETURN HOME";
             if (entry.attack.Phase != MeleePhase.Idle)
-                return (entry.attack.IsHeavyAttack ? "HEAVY " : "LIGHT ") + entry.attack.Phase;
+                return (entry.attack.Skill != MonsterSkill.None ? entry.attack.Skill.ToString() :
+                    entry.attack.IsRangedAttack ? "RANGED" : entry.attack.IsHeavyAttack ? "HEAVY" : "BASIC") + " " + entry.attack.Phase;
             if (entry.tracker.PathBlocked) return "PATH BLOCKED";
             return entry.tracker.IsTracking ? (entry.tracker.HasLineOfSight ? "CHASE" : "SEARCH LAST SEEN") : "IDLE";
         }
@@ -272,6 +293,12 @@ if (monsters.Count >= 12)
         {
             Matrix4x4 previousMatrix = GUI.matrix;
             GUI.matrix = Matrix4x4.TRS(Vector3.zero, Quaternion.identity, Vector3.one * UiScale);
+            if (compactUi)
+            {
+                DrawCompact();
+                GUI.matrix = previousMatrix;
+                return;
+            }
             GUI.Box(LogPanel, "ACTION LOG");
             GUILayout.BeginArea(new Rect(LogPanel.x + 10f, 35f, LogPanel.width - 20f, 235f));
             for (int i = Mathf.Max(0, logs.Count - 9); i < logs.Count; i++)
@@ -380,10 +407,139 @@ if (monsters.Count >= 12)
         private float Slider(string caption, float value, float min, float max)
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label(caption, GUILayout.Width(175f));
-            GUILayout.Label(value.ToString("0.#"), GUILayout.Width(50f));
+            GUILayout.Label(caption, GUILayout.Width(compactUi ? 145f : 175f));
+            GUILayout.Label(value.ToString("0.#"), GUILayout.Width(45f));
             GUILayout.EndHorizontal();
             return GUILayout.HorizontalSlider(value, min, max);
+        }
+
+        private void DrawCompact()
+        {
+            if (GUI.Button(new Rect(LogPanel.x, LogPanel.y, LogPanel.width, 30f), showLogs ? "Action log  [-]" : "Action log  [+]")) showLogs = !showLogs;
+            if (showLogs)
+            {
+                GUI.Box(new Rect(LogPanel.x, LogPanel.y + 30f, LogPanel.width, 140f), GUIContent.none);
+                GUILayout.BeginArea(new Rect(22f, 47f, 270f, 126f));
+                for (int i = Mathf.Max(0, logs.Count - 5); i < logs.Count; i++) GUILayout.Label(logs[i]);
+                GUILayout.EndArea();
+            }
+            GUI.Box(SpawnPanel, "MONSTER LAB");
+            GUILayout.BeginArea(new Rect(SpawnPanel.x + 10f, 38f, SpawnPanel.width - 20f, SpawnPanel.height - 34f));
+            page = GUILayout.Toolbar(page, new[] { "Spawn", "Tune", "Display" });
+            GUILayout.Space(6f);
+            if (kind == 0 && settings[0].normalStyle < 0) settings[0].normalStyle = 0;
+            int type = kind == 0 ? settings[0].normalStyle : kind + 2;
+            int next = GUILayout.Toolbar(type, new[] { "Sword", "Bow", "Mage", "Golem", "Dragon" });
+            if (next != type) { SetKind(next < 3 ? 0 : next - 2); if (next < 3) settings[0].normalStyle = next; }
+            scroll = GUILayout.BeginScrollView(scroll);
+            if (page == 0)
+            {
+                if (GUILayout.Button(placing ? "Click walkable floor / Esc cancels" : "Place on map", GUILayout.Height(30f))) placing = !placing;
+                if (GUILayout.Button("Spawn 5m ahead")) SpawnAt(player.transform.position + player.transform.forward * 5f);
+                GUILayout.Label(notice);
+                GUILayout.Space(6f);
+                GUILayout.Label($"Actors {monsters.Count}/12 - select");
+                foreach (Entry entry in monsters)
+                    if (GUILayout.Button((selected == entry ? "> " : "") + entry.health.GetComponent<MonsterIdentity>().DisplayName +
+                        $"   {entry.health.CurrentHealth}/{entry.health.MaxHealth}"))
+                    {
+                        selected = entry;
+                        SetKind((int)entry.rank);
+                        if (kind == 0) settings[0].normalStyle = (int)entry.health.GetComponent<MonsterIdentity>().Weapon;
+                    }
+                if (selected != null)
+                {
+                    GUILayout.Label(State(selected));
+                    var skills = selected.health.GetComponent<MonsterTactics>();
+                    if (skills != null) GUILayout.Label($"Charge {skills.ChargeRemaining:0.0}s | AoE {skills.AreaRemaining:0.0}s");
+                    if (GUILayout.Button("Remove selected")) RemoveSelected();
+                }
+                if (GUILayout.Button("Remove all")) ClearMonsters();
+            }
+            else if (page == 1) DrawCompactTuning();
+            else
+            {
+                detection = GUILayout.Toggle(detection, "Detection circles");
+                travel = GUILayout.Toggle(travel, "Leash / travel limits");
+                skillWarnings = GUILayout.Toggle(skillWarnings, "Skill telegraphs");
+                healthBars = GUILayout.Toggle(healthBars, "Monster HP bars");
+                hitFlash = GUILayout.Toggle(hitFlash, "Hit flash");
+                damageNumbers = GUILayout.Toggle(damageNumbers, "Damage numbers");
+                hitShards = GUILayout.Toggle(hitShards, "Hit shards");
+            }
+            GUILayout.EndScrollView();
+            GUILayout.Space(4f);
+            bool immune = GUILayout.Toggle(invincible, "Player invincible");
+            if (immune != invincible) SetInvincible(immune);
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Restore HP")) RestorePlayer();
+            if (GUILayout.Button(paused ? "Resume" : "Pause")) SetPaused(!paused);
+            GUILayout.EndHorizontal();
+            GUILayout.Label("WASD / LMB / Shift\nR new map / T same seed / Esc cancel");
+            GUILayout.EndArea();
+        }
+
+        private void DrawCompactTuning()
+        {
+            MonsterTestSettings c = settings[kind];
+            tuningTab = GUILayout.Toolbar(tuningTab, new[] { "Move / HP", "Basic", "Skills" });
+            if (tuningTab == 0)
+            {
+                c.health = Mathf.RoundToInt(Slider("Health", c.health, 25f, 2500f));
+                c.moveSpeed = Slider("Move speed", c.moveSpeed, 0f, 10f);
+                c.sightRange = Slider("Detect radius", c.sightRange, 1f, 25f);
+                c.abandonRange = Slider("Target leash", c.abandonRange, c.sightRange, 35f);
+                c.homeRange = Slider("Home leash", c.homeRange, 2f, 35f);
+            }
+            else if (tuningTab == 1)
+            {
+                c.attackSpeed = Slider("Attack speed", c.attackSpeed, 0.2f, 4f);
+                c.damage = Mathf.RoundToInt(Slider("Basic damage", c.damage, 1f, 100f));
+                c.attackRange = Slider("Basic reach", c.attackRange, 0.5f, 6f);
+                c.basicWindup = Slider("Basic windup", c.basicWindup, 0.1f, 1.5f);
+                c.basicRecovery = Slider("Basic recovery", c.basicRecovery, 0.1f, 2f);
+                if (kind == 0) DrawProjectileTuning(c);
+            }
+            else if (kind != 0)
+            {
+                skillTab = GUILayout.Toolbar(skillTab, new[] { "Charge / AoE", "Projectile" });
+                if (skillTab == 1) DrawProjectileTuning(c);
+                else
+                {
+                    c.skills = GUILayout.Toggle(c.skills, "Charge / AoE / Heavy");
+                    c.chargeMin = Slider("Charge min", c.chargeMin, 3f, 12f);
+                    c.chargeMax = Slider("Charge max", c.chargeMax, c.chargeMin, 25f);
+                    c.chargeSpeed = Slider("Charge speed", c.chargeSpeed, 5f, 25f);
+                    c.chargeCooldown = Slider("Charge cooldown", c.chargeCooldown, 1f, 12f);
+                    c.areaRadius = Slider("AoE radius", c.areaRadius, 2f, 9f);
+                    c.areaCooldown = Slider("AoE cooldown", c.areaCooldown, 1f, 12f);
+                    c.skillWindup = Slider("Skill windup", c.skillWindup, 0.3f, 2f);
+                    c.skillRecovery = Slider("Skill recovery", c.skillRecovery, 0.1f, 2f);
+                    c.heavyDamage = Mathf.RoundToInt(Slider("Skill damage", c.heavyDamage, 1f, 150f));
+                }
+            }
+            else GUILayout.Label("Sword / bow / mage use basic attacks.");
+            if (GUILayout.Button("Reset type defaults"))
+            {
+                int style = c.normalStyle;
+                settings[kind] = MonsterTestSettings.Defaults((MonsterRank)kind);
+                if (kind == 0) settings[0].normalStyle = style;
+            }
+            GUI.enabled = selected != null && (int)selected.rank == kind;
+            if (GUILayout.Button("Apply + reset selected")) ApplySelected();
+            GUI.enabled = true;
+            GUILayout.Label("Changes apply to new/reset actors.");
+        }
+
+        private void DrawProjectileTuning(MonsterTestSettings c)
+        {
+            c.ranged = GUILayout.Toggle(c.ranged, "Projectiles (except sword)");
+            if (!c.ranged) return;
+            c.rangedRange = Slider("Shot range", c.rangedRange, 3f, 25f);
+            c.projectileSpeed = Slider("Shot speed", c.projectileSpeed, 2f, 25f);
+            c.rangedDamage = Mathf.RoundToInt(Slider("Shot damage", c.rangedDamage, 1f, 100f));
+            c.rangedWindup = Slider("Shot windup", c.rangedWindup, 0.2f, 2f);
+            c.rangedRecovery = Slider("Shot recovery", c.rangedRecovery, 0.1f, 2f);
         }
 
         public void ApplySelected()

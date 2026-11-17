@@ -11,22 +11,36 @@ namespace Nomad.Gameplay.Editor
     {
         public const string Path = "Assets/Nomad/Monsters/MonsterDebug.unity";
 
+        [MenuItem("Nomad/Monsters/Rebuild Map Debug From Integration")]
+        public static void Rebuild()
+        {
+            if (EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) Apply();
+        }
+
         public static void Apply()
         {
-            EditorSceneManager.OpenScene("Assets/Nomad/Monsters/MonsterElite.unity");
-            GameObject controls = Object.FindFirstObjectByType<MonsterTestPanel>().gameObject;
-            if (controls.GetComponent<MonsterDebugArena>() == null) controls.AddComponent<MonsterDebugArena>();
-            var data = new SerializedObject(controls.GetComponent<MonsterTestPanel>());
+            const string lab = "Assets/Nomad/Monsters/MonsterAnimationLab.unity";
+            if (!System.IO.File.Exists(lab)) AssetDatabase.CopyAsset(Path, lab);
+            EditorSceneManager.OpenScene("Assets/Nomad/Terrain/Wfc/TerrainIntegration.unity");
+            var controls = Object.FindFirstObjectByType<Nomad.Terrain.TerrainIntegrationControls>();
+            var integration = controls.GetComponent<GameplayIntegration>();
+            var old = new SerializedObject(integration).FindProperty("diagnosticPanels");
+            for (int i = 0; i < old.arraySize; i++)
+                if (old.GetArrayElementAtIndex(i).objectReferenceValue is GameObject panelRoot) panelRoot.SetActive(false);
+            Object.DestroyImmediate(integration);
+            var panel = controls.gameObject.AddComponent<MonsterTestPanel>();
+            var data = new SerializedObject(panel);
+            data.FindProperty("player").objectReferenceValue = controls.Player.GetComponent<Nomad.Combat.Health>();
+            data.FindProperty("compactUi").boolValue = true;
             data.FindProperty("appearances").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Nomad.Monsters.MonsterAppearanceSet>(
                 "Assets/ThirdParty/Nomad/Monsters/Skeletons/SkeletonAppearances.asset");
+            string folder = "Assets/Nomad/Monsters/Demo/CombatMaterials/";
+            data.FindProperty("normalMaterial").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Material>(folder + "Monster.mat");
+            data.FindProperty("eliteMaterial").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Material>(folder + "Elite.mat");
+            data.FindProperty("warningMaterial").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Material>(folder + "HeavyWarning.mat");
+            data.FindProperty("fillMaterial").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Material>(folder + "WarningFill.mat");
             data.ApplyModifiedPropertiesWithoutUndo();
-            GameObject.Find("Floor").transform.localScale = new Vector3(38f, 0.5f, 42f);
-            GameObject.Find("Floor").transform.position = new Vector3(0f, -0.25f, 8f);
-            GameObject.Find("Player").transform.position = new Vector3(0f, 0.05f, -5f);
-            Object.DestroyImmediate(Camera.main.GetComponent<Nomad.Player.TopDownCamera>());
-            Camera.main.orthographic = true;
-            Camera.main.orthographicSize = 21f;
-            Camera.main.transform.SetPositionAndRotation(new Vector3(0f, 30f, -14f), Quaternion.LookRotation(new Vector3(0f, -30f, 22f)));
+            controls.gameObject.AddComponent<MonsterMapDebug>();
             EditorSceneManager.SaveScene(SceneManager.GetActiveScene(), Path);
             AssetDatabase.SaveAssets();
             Debug.Log("MONSTER_DEBUG_SETUP_PASS");

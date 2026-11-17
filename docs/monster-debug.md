@@ -37,3 +37,7 @@ Final pose QA: actual rendered crossbow still pointed down after the first angle
 Golem hands now use world-space front targets and a shared two-bone solver instead of wrong local-axis shoulder offsets; idle, walk and windup must keep both hands in front of the shoulders. Debug normal types are arranged on the same front row and labelled SWORD/CROSSBOW/MAGE above HP and in the selection list. Integrated HUD shows each type count and regression verifies two of each. Normal melee, arrow and magic attacks have no ground warning; heavy attacks and elite/boss ranged skills keep warnings. Faint detection circles are independent and remain enabled/toggleable. Restart Play to rebuild actors after updates.
 
 Reset lineup also restores the player start position before spawning; otherwise standing on a normal spawn point could reject that type in the capsule-clearance check. Regression explicitly occupies the crossbow slot before reset and requires all five actors to exist afterward.
+
+## Current map sandbox and tactics (#71)
+
+The default MonsterDebug menu now opens the generated-map sandbox with the actual play camera and an empty population. The previous flat lineup is MonsterAnimationLab (test fixture). Spawn/Tune/Display tabs, distance-based charge/AoE, faster basic recovery and current controls are documented in [monster-tactics-debug.md](monster-tactics-debug.md). Earlier overview/F2 and automatic lineup instructions above describe the retained lab, not the new default debug scene.

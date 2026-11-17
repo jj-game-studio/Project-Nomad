@@ -38,6 +38,8 @@ namespace Nomad.Monsters.Tests
             Assert.That(panel, Is.Not.Null);
             yield return null;
             Call("ClearMonsters");
+            Set(Settings(1), "skills", false);
+            Set(Settings(2), "skills", false);
             yield return null;
             foreach (MonoBehaviour component in player.GetComponents<MonoBehaviour>())
             {
