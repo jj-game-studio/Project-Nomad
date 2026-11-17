@@ -112,6 +112,8 @@ namespace Nomad.Shop.Editor
                         Require(Node("Backpack/Content").childCount == 20 &&
                             Node("Stock/Content").childCount == 3, "가방 20칸·상점 목록 표시");
                         Capture("shop-ui.png");
+                        RequireVisible("Backpack/Content/Slot 0/Count");
+                        RequireVisible("Stock/Content/Slot 0/Count");
                         Queue(Key.B);
                         break;
                     case 2:
@@ -149,7 +151,7 @@ namespace Nomad.Shop.Editor
                         Queue(Key.Equals);
                         break;
                     case 15:
-                        Require(Read("Quantity") == "Qty 2", "키로 수량 증가");
+                        Require(Quantity.text == "2", "키로 수량 증가");
                         Queue(Key.Enter);
                         break;
                     case 16:
@@ -204,11 +206,109 @@ namespace Nomad.Shop.Editor
                         break;
                     case 29: Queue(Key.E); break;
                     case 30:
-                        Require(Object.FindAnyObjectByType<ShopPanel>() != null, "범위 복귀 상점 열기");
+                        panel = Object.FindAnyObjectByType<ShopPanel>();
+                        Require(panel != null, "범위 복귀 상점 열기");
+                        Queue(Key.LeftShift);
+                        Pointer("Backpack/Content/Slot 0", true);
+                        break;
+                    case 31: Pointer("Backpack/Content/Slot 0", false); break;
+                    case 32:
+                        Require(Quantity.text == "9" && wallet.Gold == 803, "Shift+클릭 보유 칸 전량 선택·즉시 판매 없음");
+                        Queue();
+                        Pointer("Stock/Content/Slot 0", true);
+                        break;
+                    case 33: Pointer("Stock/Content/Slot 0", false); break;
+                    case 34:
+                        Require(Quantity.text == "1", "일반 클릭 수량 초기화");
+                        Queue(Key.RightShift);
+                        Pointer("Stock/Content/Slot 0", true);
+                        break;
+                    case 35: Pointer("Stock/Content/Slot 0", false); break;
+                    case 36:
+                        Require(Quantity.text == shop.StockAt(0).ToString() && wallet.Gold == 803,
+                            "오른쪽 Shift+클릭 상점 재고 전량 선택·즉시 구매 없음");
+                        Queue();
+                        Pointer("Quantity", true);
+                        break;
+                    case 37: Pointer("Quantity", false); break;
+                    case 38:
+                        Require(Quantity.isFocused, "수량 입력 칸 포커스");
+                        Quantity.ProcessEvent(Event.KeyboardEvent("^a"));
+                        break;
+                    case 39: Quantity.ProcessEvent(Event.KeyboardEvent("backspace")); break;
+                    case 40:
+                        Require(Quantity.text == "" && !Node("Buy").GetComponent<Button>().interactable,
+                            "입력 중 빈 값 거래 차단");
+                        Queue();
+                        TypeQuantity("3");
+                        break;
+                    case 41:
+                        Require(Quantity.text == "3", "InputField 키 이벤트로 수량 지정");
+                        Queue(Key.B, Key.V, Key.E);
+                        break;
+                    case 42:
+                        Require(wallet.Gold == 803 && panel != null, "편집 중 거래·닫기 단축키 차단");
+                        Queue(Key.Enter);
+                        break;
+                    case 43:
+                        Require(wallet.Gold == 803 && Quantity.text == "3" && !Quantity.isFocused,
+                            "입력 Enter는 확정만 하고 거래하지 않음");
+                        Queue();
+                        Pointer("Buy", true);
+                        break;
+                    case 44: Pointer("Buy", false); break;
+                    case 45:
+                        Require(wallet.Gold == 788 && inventory.GetSlot(0).Count == 12,
+                            "직접 입력한 수량 3개 구매");
+                        Pointer("Quantity", true);
+                        break;
+                    case 46: Pointer("Quantity", false); break;
+                    case 47: Quantity.ProcessEvent(Event.KeyboardEvent("^a")); break;
+                    case 48:
+                        Quantity.ProcessEvent(Event.KeyboardEvent("backspace"));
+                        TypeQuantity("-a9999999999");
+                        break;
+                    case 49:
+                        Require(Quantity.text == shop.StockAt(0).ToString(), "음수·문자 제외 및 초과 입력 재고로 제한");
+                        Queue(Key.Enter);
+                        break;
+                    case 50:
+                        Require(wallet.Gold == 788, "초과 수량 입력 확정 시 거래 없음");
+                        Queue();
+                        Pointer("Stock/Content/Slot 1", true);
+                        break;
+                    case 51: Pointer("Stock/Content/Slot 1", false); break;
+                    case 52: Pointer("Maximum", true); break;
+                    case 53: Pointer("Maximum", false); break;
+                    case 54:
+                        Require(Quantity.text == "5", "Max 버튼 전체 선택");
+                        Pointer("Backpack/Content/Slot 0", true);
+                        break;
+                    case 55: Pointer("Backpack/Content/Slot 0", false); break;
+                    case 56:
+                        Quantity.text = "4";
+                        Require(Read("Selection").Contains("Total 8 G"), "판매 직접 입력과 총액 갱신");
+                        Queue(Key.V);
+                        break;
+                    case 57:
+                        Require(wallet.Gold == 796 && inventory.GetSlot(0).Count == 8, "직접 지정한 수량 4개 판매");
+                        Queue(Key.LeftShift);
+                        Pointer("Backpack/Content/Slot 19", true);
+                        break;
+                    case 58: Pointer("Backpack/Content/Slot 19", false); break;
+                    case 59:
+                        Require(Quantity.text == "0" && !Quantity.interactable &&
+                            !Node("Sell").GetComponent<Button>().interactable, "빈 칸 전체 선택 시 거래 불가");
+                        Queue();
+                        Pointer("Stock/Content/Slot 0", true);
+                        break;
+                    case 60: Pointer("Stock/Content/Slot 0", false); break;
+                    case 61:
+                        Capture("shop-ui.png");
                         inventory.GetComponent<Health>().TryApplyDamage(1000);
                         Queue();
                         break;
-                    case 31:
+                    case 62:
                         Require(Object.FindAnyObjectByType<ShopPanel>() == null &&
                             !shop.TryBuy(inventory, 0, 1, out _), "사망 시 닫기·거래 금지");
                         Require(File.Exists(Path.Combine(Application.dataPath, "../Artifacts/shop-ui.png")), "화면 캡처 생성");
@@ -225,7 +325,21 @@ namespace Nomad.Shop.Editor
         }
 
         private static Transform Node(string path) => panel.transform.Find("Shop Window/" + path);
+        private static InputField Quantity => Node("Quantity").GetComponent<InputField>();
         private static string Read(string path) => Node(path).GetComponent<Text>().text;
+
+        private static void RequireVisible(string path)
+        {
+            Text text = Node(path).GetComponent<Text>();
+            Require(text.cachedTextGenerator.characterCountVisible >= text.text.Length, "슬롯 수량 글자 잘림 없음: " + path);
+        }
+
+        private static void TypeQuantity(string value)
+        {
+            // InputSystem 가상 키 상태는 IMGUI 문자 큐를 생성하지 않으므로 uGUI의 키 처리 API를 사용합니다.
+            foreach (char character in value)
+                Quantity.ProcessEvent(new Event { type = EventType.KeyDown, character = character });
+        }
 
         private static void Pointer(string path, bool held)
         {

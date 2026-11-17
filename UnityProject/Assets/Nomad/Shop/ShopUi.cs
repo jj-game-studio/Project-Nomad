@@ -55,6 +55,30 @@ namespace Nomad.Shop
             return button;
         }
 
+        internal static InputField QuantityInput(Transform parent, float x, float y)
+        {
+            RectTransform rect = Rect(parent, "Quantity", x, y, 112, 40);
+            Background(rect, Surface);
+            var border = rect.gameObject.AddComponent<Outline>();
+            border.effectColor = Muted * new Color(0.5f, 0.5f, 0.5f, 1);
+            border.effectDistance = new Vector2(1, -1);
+            Text text = Label(rect, "Value", "1", 8, 0, 96, 40, 20);
+            text.alignment = TextAnchor.MiddleCenter;
+
+            InputField input = rect.gameObject.AddComponent<InputField>();
+            input.targetGraphic = rect.GetComponent<Image>();
+            input.textComponent = text;
+            input.contentType = InputField.ContentType.IntegerNumber;
+            input.characterValidation = InputField.CharacterValidation.None;
+            input.onValidateInput = (_, _, character) => character >= '0' && character <= '9' ? character : '\0';
+            input.characterLimit = 10;
+            input.navigation = new Navigation { mode = Navigation.Mode.None };
+            input.selectionColor = new Color(Gold.r, Gold.g, Gold.b, 0.35f);
+            input.customCaretColor = true;
+            input.caretColor = Ink;
+            return input;
+        }
+
         internal static RectTransform Grid(Transform parent, string name, float x)
         {
             RectTransform viewport = Rect(parent, name, x, 166, 530, 430);
