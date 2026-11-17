@@ -1,5 +1,18 @@
 # 3m 지형과 단일 통합 테스트
 
+## PolygonFantasyKingdom 외형 (#66)
+
+필드와 마을은 PolygonFantasyKingdom 애셋으로 제작합니다. 현재 필드에서는 `SM_Env_Ground_Flat_01`의 메시·UV·지표면 텍스처를 기존 3m 타일의 바닥과 계단에 맞춰 사용합니다. 원본 지표면의 굴곡을 평탄화하고 외곽을 타일 경계에 맞추며, 높이 차의 흙 단면은 기존 볼륨으로 채웁니다. 원본 램프·절벽을 그대로 랜덤 배치하거나 마을을 구현한 단계는 아닙니다.
+
+WFC 높이 골격·29개 후보·시드·충돌체·NavMesh·상자 계약은 유지합니다. `KingdomTerrainVisuals`는 기존 타일의 `Visual` 메시·재질만 교체합니다. 라이브러리는 비공개 애셋 저장소 `Nomad/Terrain/Kingdom/Resources/Nomad/KingdomTerrainVisuals.asset`에 있으며, 해당 라이브러리가 없는 환경은 기존 블록 외형을 사용합니다. 구매 파생 메시와 재질을 공개 프로젝트로 복사하지 않습니다.
+
+- 기존 통합 씬을 열고 Play 하면 Kingdom 외형을 적용합니다. R/T 재생성, G 원형 갤러리 등 기존 입력을 그대로 사용합니다.
+- `Nomad > Terrain > Kingdom > Rebuild Visuals`는 비공개 서브모듈에 외형 11종을 다시 생성합니다. 원본 구매 애셋과 공개 타일 프리팹·카탈로그는 수정하지 않습니다.
+- `Nomad.Terrain.Editor.KingdomTerrainAuthoring.Verify`는 라이브러리를 재생성하고 모든 생성 타일의 private 메시 적용·점유 경계·이동 경로를 검사한 후 기존 20개 시드 반복과 최소/최대 격자 회귀를 실행합니다. `Artifacts/kingdom-overview.png`, `kingdom-player.png`로 렌더를 확인합니다.
+- Play 검증은 기존 `MicroTerrainPlayVerification.Run`과 `Nomad.Loot.Editor.TerrainLootVerification.Run`을 사용합니다. 비동기 검증이 자체 종료하므로 `-quit` 없이 실행해야 합니다. CLI `unity run`은 자동 `-quit`로 완료 전에 종료할 수 있으므로 성공 종료 코드만으로 Play 통과를 판단하지 않습니다.
+
+외형 방향과 플레이 경험의 최종 수용은 Issue #66의 사람 검토 대상으로 남깁니다.
+
 ## 현재 규격
 
 - 생성 단위는 **3×3m 정사각형**입니다. 기존10m 원형을 단순 축소하는 대신 평지·직선 계단·볼록/오목 코너로 재구성합니다.

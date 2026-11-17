@@ -21,6 +21,7 @@ namespace Nomad.Terrain
             {
                 WfcTileVariant variant = wfcCatalog.variants[choices[cell]];
                 TerrainPiece piece = Instantiate(variant.prefab, generatedRoot.transform);
+                KingdomTerrainVisuals.Apply(piece.GetComponent<MicroTerrainTile>());
                 piece.transform.SetPositionAndRotation(transform.position + rotation * new Vector3(cell % gridWidth * 3f, 0f, cell / gridWidth * 3f),
                     rotation * Quaternion.Euler(0f, variant.turn * 90f, 0f));
                 piece.name = variant.prefab.name + "_R" + variant.turn;

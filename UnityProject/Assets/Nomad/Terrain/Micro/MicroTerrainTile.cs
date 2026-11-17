@@ -14,6 +14,8 @@ namespace Nomad.Terrain
         public bool IsStair => shape == MicroTerrainShape.Stair || shape == MicroTerrainShape.ConvexCorner || shape == MicroTerrainShape.ConcaveCorner;
         public bool IsCliff => shape == MicroTerrainShape.Cliff;
 
+        private void Awake() => KingdomTerrainVisuals.Apply(this);
+
         public void Configure(MicroTerrainShape kind, int baseLevel)
         {
             shape = kind;
