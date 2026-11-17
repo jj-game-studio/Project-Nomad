@@ -7,6 +7,8 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.LowLevel;
 using UnityEngine.InputSystem.UI;
 using UnityEngine.SceneManagement;
 
@@ -25,6 +27,10 @@ namespace Nomad.Hud.Editor
         private static RenderTexture captureTarget;
         private static int captureIndex;
         private static int captureFrame;
+        private static Keyboard testKeyboard;
+        private static Keyboard previousKeyboard;
+        private static InputSettings.BackgroundBehavior previousBackground;
+        private static InputSettings.EditorInputBehaviorInPlayMode previousEditorInput;
         private static readonly Vector2Int[] Sizes = { new Vector2Int(1920, 1080), new Vector2Int(1280, 720), new Vector2Int(2560, 1080) };
 
         [MenuItem("Nomad/HUD/Create Preview")]
@@ -100,6 +106,7 @@ namespace Nomad.Hud.Editor
             {
                 if (EditorApplication.timeSinceStartup > deadline)
                     throw new InvalidOperationException("HUD verification timed out at " + stage);
+                EditorApplication.QueuePlayerLoopUpdate();
                 if (!Application.isPlaying || Time.frameCount < 8)
                     return;
                 if (frame == Time.frameCount)
@@ -146,11 +153,29 @@ namespace Nomad.Hud.Editor
                         Check(!hud.Canvas.gameObject.activeSelf, "HUD hides on disable");
                         hud.enabled = true;
                         Check(hud.Canvas.gameObject.activeSelf, "HUD returns on enable");
+                        VerifyStyleSwitches();
+                        foreach (Vector2Int size in Sizes)
+                            VerifyLayout(size);
+                        hud.GetComponent<HudPreview>().enabled = true;
+                        previousBackground = InputSystem.settings.backgroundBehavior;
+                        previousEditorInput = InputSystem.settings.editorInputBehaviorInPlayMode;
+                        InputSystem.settings.backgroundBehavior = InputSettings.BackgroundBehavior.IgnoreFocus;
+                        InputSystem.settings.editorInputBehaviorInPlayMode = InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
+                        previousKeyboard = Keyboard.current;
+                        testKeyboard = InputSystem.AddDevice<Keyboard>();
+                        testKeyboard.MakeCurrent();
+                        InputSystem.QueueStateEvent(testKeyboard, new KeyboardState(Key.F6));
                         break;
                     case 3:
+                        Check(hud.Style == PlayerHud.HudStyle.Original, "F6 selects original");
+                        InputSystem.QueueStateEvent(testKeyboard, new KeyboardState());
+                        break;
                     case 4:
+                        InputSystem.QueueStateEvent(testKeyboard, new KeyboardState(Key.F6));
+                        break;
                     case 5:
-                        VerifyLayout(Sizes[stage - 3]);
+                        Check(hud.Style == PlayerHud.HudStyle.Medieval, "F6 restores medieval");
+                        RemoveKeyboard();
                         break;
                     case 6:
                         // 새로운 플레이어로 재시작 화면을 만들어 최종 시안을 캡처합니다.
@@ -167,7 +192,7 @@ namespace Nomad.Hud.Editor
                             return;
                         Capture();
                         captureIndex++;
-                        if (captureIndex < Sizes.Length)
+                        if (captureIndex < Sizes.Length * 2)
                         {
                             PrepareCapture();
                             return;
@@ -183,6 +208,7 @@ namespace Nomad.Hud.Editor
             catch (Exception exception)
             {
                 failure = exception.ToString();
+                RemoveKeyboard();
                 Debug.LogException(exception);
                 SessionState.SetBool(VerifyKey, false);
                 EditorApplication.update -= Tick;
@@ -190,9 +216,60 @@ namespace Nomad.Hud.Editor
             }
         }
 
+        private static void VerifyStyleSwitches()
+        {
+            var preview = hud.GetComponent<HudPreview>();
+            var healthGraphic = hud.Canvas.transform.Find("Bottom Bar/Health/Health Track/Fill").GetComponent<HudArtwork>();
+            var heart = hud.Canvas.transform.Find("Bottom Bar/Health/Heart").GetComponent<HudArtwork>();
+            var healthLabel = hud.Canvas.transform.Find("Bottom Bar/Health/Health Track/Health Value").GetComponent<TMP_Text>();
+            Color healthColor = healthGraphic.color;
+            Color heartColor = heart.color;
+            TMP_FontAsset font = healthLabel.font;
+            string label = hud.HealthLabel;
+            int objects = hud.Canvas.GetComponentsInChildren<RectTransform>(true).Length;
+            hud.SetResources(50, 100, 30, 100);
+
+            for (int iteration = 0; iteration < 12; iteration++)
+            {
+                preview.OriginalButton.onClick.Invoke();
+                Check(hud.Style == PlayerHud.HudStyle.Original, "original button");
+                preview.MedievalButton.onClick.Invoke();
+                Check(hud.Style == PlayerHud.HudStyle.Medieval, "medieval button");
+                Check(hud.HealthLabel == label && healthGraphic.color == healthColor && heart.color == heartColor,
+                    "health display remains unchanged");
+                Check(healthLabel.font == font, "font unchanged");
+                Check(Mathf.Approximately(hud.ManaFraction, .5f) && Mathf.Approximately(hud.StaminaFraction, .3f),
+                    "resources preserved across style switches");
+                Check(hud.Canvas.GetComponentsInChildren<RectTransform>(true).Length == objects, "no UI rebuild/duplication");
+            }
+
+            Canvas.ForceUpdateCanvases();
+            var hits = new System.Collections.Generic.List<RaycastResult>();
+            var pointer = new PointerEventData(EventSystem.current)
+            {
+                position = RectTransformUtility.WorldToScreenPoint(null, preview.OriginalButton.transform.position)
+            };
+            EventSystem.current.RaycastAll(pointer, hits);
+            Check(hits.Exists(hit => hit.gameObject == preview.OriginalButton.gameObject), "option button raycast blocks shooting");
+            Debug.Log("HUD_STYLE_SWITCH_PASS buttons/state/health/font/input/reuse");
+        }
+
+        private static void RemoveKeyboard()
+        {
+            if (testKeyboard != null)
+            {
+                InputSystem.RemoveDevice(testKeyboard);
+                InputSystem.settings.backgroundBehavior = previousBackground;
+                InputSystem.settings.editorInputBehaviorInPlayMode = previousEditorInput;
+            }
+            testKeyboard = null;
+            previousKeyboard?.MakeCurrent();
+        }
+
         private static void PrepareCapture()
         {
-            Vector2Int size = Sizes[captureIndex];
+            Vector2Int size = Sizes[captureIndex % Sizes.Length];
+            hud.SetStyle(captureIndex < Sizes.Length ? PlayerHud.HudStyle.Original : PlayerHud.HudStyle.Medieval);
             captureTarget = new RenderTexture(size.x, size.y, 24);
             Camera.main.targetTexture = captureTarget;
             hud.Canvas.renderMode = RenderMode.ScreenSpaceCamera;
@@ -203,7 +280,7 @@ namespace Nomad.Hud.Editor
 
         private static void Capture()
         {
-            Vector2Int size = Sizes[captureIndex];
+            Vector2Int size = Sizes[captureIndex % Sizes.Length];
             var pixels = new Texture2D(size.x, size.y, TextureFormat.RGB24, false);
             RenderTexture previous = RenderTexture.active;
             try
@@ -220,7 +297,7 @@ namespace Nomad.Hud.Editor
                 pixels.ReadPixels(new Rect(0, 0, size.x, size.y), 0, 0);
                 pixels.Apply();
                 Directory.CreateDirectory("Artifacts/hud");
-                File.WriteAllBytes($"Artifacts/hud/hud-{size.x}x{size.y}.png", pixels.EncodeToPNG());
+                File.WriteAllBytes($"Artifacts/hud/hud-{hud.Style.ToString().ToLowerInvariant()}-{size.x}x{size.y}.png", pixels.EncodeToPNG());
             }
             finally
             {
@@ -257,6 +334,8 @@ namespace Nomad.Hud.Editor
             EditorApplication.playModeStateChanged -= PlayState;
             if (Application.isBatchMode)
                 EditorApplication.Exit(failure == null ? 0 : 1);
+            else if (failure == null)
+                EditorApplication.delayCall += EditorApplication.EnterPlaymode;
         }
 
         private static void Check(bool condition, string message)

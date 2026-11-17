@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Nomad.Combat;
 using TMPro;
 using UnityEngine;
@@ -7,6 +8,9 @@ namespace Nomad.Hud
     [DisallowMultipleComponent]
     public sealed class PlayerHud : MonoBehaviour
     {
+        public enum HudStyle { Original, Medieval }
+
+        [SerializeField] private HudStyle style = HudStyle.Medieval;
         [SerializeField] private Health health;
         [SerializeField] private TMP_FontAsset font;
 
@@ -19,6 +23,15 @@ namespace Nomad.Hud
         private TMP_Text manaText;
         private TMP_Text staminaText;
         private GameObject root;
+        private readonly List<HudArtwork> surfaces = new List<HudArtwork>();
+        private readonly List<GameObject> trims = new List<GameObject>();
+        private HudArtwork selection;
+        private HudArtwork manaTrack;
+        private HudArtwork staminaTrack;
+        private HudArtwork manaIcon;
+        private HudArtwork staminaIcon;
+
+        public HudStyle Style => style;
         private int shownHealth = -1;
         private int shownMaxHealth = -1;
 
@@ -40,6 +53,7 @@ namespace Nomad.Hud
             Build();
             SetResources(0, 0, 0, 0);
             SetWeapon(null);
+            SetStyle(style);
         }
 
         private void OnEnable()
@@ -79,6 +93,35 @@ namespace Nomad.Hud
             weaponText.text = string.IsNullOrWhiteSpace(displayName) ? "UNASSIGNED" : displayName;
         }
 
+        // 표시를 재생성하지 않고 같은 체력·자원·슬롯 상태로 스타일만 비교합니다.
+        public void SetStyle(HudStyle next)
+        {
+            style = next;
+            bool medieval = next == HudStyle.Medieval;
+            if (root == null)
+                return;
+
+            foreach (HudArtwork surface in surfaces)
+                surface.Configure(medieval ? HudArtwork.Shape.Leather : HudArtwork.Shape.Panel,
+                    medieval ? new Color32(43, 33, 26, 245) : Panel);
+            foreach (GameObject trim in trims)
+                trim.SetActive(medieval);
+
+            selection.Configure(HudArtwork.Shape.Panel, medieval ? new Color32(216, 182, 109, 255) : Amber);
+            StyleResource(manaTrack, manaRing, manaIcon, medieval, Blue, HudArtwork.Shape.Crystal, HudArtwork.Shape.FacetedCrystal);
+            StyleResource(staminaTrack, staminaRing, staminaIcon, medieval, Amber, HudArtwork.Shape.Bolt, HudArtwork.Shape.Boot);
+        }
+
+        private static void StyleResource(HudArtwork track, HudArtwork ring, HudArtwork icon,
+            bool medieval, Color tint, HudArtwork.Shape originalIcon, HudArtwork.Shape fantasyIcon)
+        {
+            track.Configure(medieval ? HudArtwork.Shape.MetalRing : HudArtwork.Shape.Ring,
+                medieval ? new Color32(121, 98, 71, 255) : new Color32(50, 65, 83, 255), medieval ? 10 : 5);
+            ring.rectTransform.sizeDelta = medieval ? new Vector2(72, 72) : new Vector2(84, 84);
+            ring.Configure(HudArtwork.Shape.Ring, tint, medieval ? 4 : 5);
+            icon.Configure(medieval ? fantasyIcon : originalIcon, tint);
+        }
+
         private static void SetResource(HudArtwork ring, TMP_Text label, float current, float maximum)
         {
             bool available = maximum > 0 && !float.IsInfinity(maximum) && !float.IsNaN(maximum);
@@ -109,7 +152,7 @@ namespace Nomad.Hud
             bar.anchoredPosition = new Vector2(0, 22);
 
             RectTransform hp = Rect("Health", bar, new Vector2(270, 54), new Vector2(-358, -12));
-            Art("Track", hp, new Vector2(270, 54), Vector2.zero, HudArtwork.Shape.Panel, Panel);
+            Surface("Track", hp, new Vector2(270, 54));
             Art("Heart", hp, new Vector2(35, 36), new Vector2(-108, 0), HudArtwork.Shape.Heart, Red);
             RectTransform track = Rect("Health Track", hp, new Vector2(211, 30), new Vector2(20, 0));
             Art("Empty", track, new Vector2(211, 30), Vector2.zero, HudArtwork.Shape.Panel, new Color32(80, 36, 48, 255));
@@ -127,8 +170,8 @@ namespace Nomad.Hud
                 float x = 99 + index * 112;
                 RectTransform slot = Rect($"Slot {index + 1}", bar, new Vector2(92, 92), new Vector2(x, 0));
                 if (index == 0)
-                    Art("Selection", slot, new Vector2(100, 100), Vector2.zero, HudArtwork.Shape.Panel, Amber);
-                Art("Background", slot, new Vector2(92, 92), Vector2.zero, HudArtwork.Shape.Panel, Panel);
+                    selection = Art("Selection", slot, new Vector2(100, 100), Vector2.zero, HudArtwork.Shape.Panel, Amber);
+                Surface("Background", slot, new Vector2(92, 92));
                 if (index == 0)
                 {
                     Art("Weapon", slot, new Vector2(75, 65), new Vector2(0, 3), HudArtwork.Shape.Weapon, new Color32(217, 210, 190, 255));
@@ -145,13 +188,26 @@ namespace Nomad.Hud
         private HudArtwork Resource(Transform parent, string name, float x, Color tint, HudArtwork.Shape icon, out TMP_Text text)
         {
             RectTransform group = Rect(name, parent, new Vector2(86, 86), new Vector2(x, -3));
-            Art("Background", group, new Vector2(86, 86), Vector2.zero, HudArtwork.Shape.Panel, Panel);
-            Art("Track", group, new Vector2(84, 84), Vector2.zero, HudArtwork.Shape.Ring, new Color32(50, 65, 83, 255), 5);
+            Surface("Background", group, new Vector2(86, 86));
+            HudArtwork track = Art("Track", group, new Vector2(84, 84), Vector2.zero, HudArtwork.Shape.Ring, new Color32(50, 65, 83, 255), 5);
             HudArtwork ring = Art("Fill", group, new Vector2(84, 84), Vector2.zero, HudArtwork.Shape.Ring, tint, 5);
-            Art("Icon", group, new Vector2(31, 36), new Vector2(0, 8), icon, tint);
+            HudArtwork symbol = Art("Icon", group, new Vector2(31, 36), new Vector2(0, 8), icon, tint);
+            if (name == "Mana") { manaTrack = track; manaIcon = symbol; }
+            else { staminaTrack = track; staminaIcon = symbol; }
             text = Label("Value", group, "--", new Vector2(70, 20), new Vector2(0, -21), 15);
             Label("Caption", group, name.ToUpperInvariant(), new Vector2(105, 20), new Vector2(0, -61), 12);
             return ring;
+        }
+
+        private void Surface(string name, Transform parent, Vector2 size)
+        {
+            HudArtwork border = Art(name + " Brass", parent, size + new Vector2(4, 4), Vector2.zero,
+                HudArtwork.Shape.Panel, new Color32(121, 98, 71, 255));
+            trims.Add(border.gameObject);
+            surfaces.Add(Art(name, parent, size, Vector2.zero, HudArtwork.Shape.Panel, Panel));
+            HudArtwork fittings = Art(name + " Fittings", parent, size, Vector2.zero,
+                HudArtwork.Shape.Fittings, new Color32(216, 182, 109, 255));
+            trims.Add(fittings.gameObject);
         }
 
         private HudArtwork Art(string name, Transform parent, Vector2 size, Vector2 position, HudArtwork.Shape shape, Color color, float line = 4)

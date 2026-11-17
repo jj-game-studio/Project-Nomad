@@ -15,3 +15,11 @@ Unity 6000.6.9f1에서 `Nomad > HUD > Open Preview`를 열고 Play합니다.
 도형과 무기 실루엣은 코드로 그린 임시 시안입니다. 글꼴은 Unity uGUI 2.6.0 번들 TMP Essential Resources의 Liberation Sans SDF와 원본 TTF입니다. Fonts의 OFL을 함께 보존했습니다. 필요한 TMP Mobile SDF 셰이더와 include는 같은 번들에서 가져왔으며 Shaders/Unity-LICENSE.md를 보존했습니다. 별도 GUID를 사용해 이후 TMP Essentials 가져오기와 충돌하지 않도록 했습니다. 현재 라벨은 영문이며 한국어 표시에는 별도 CJK 글꼴 구성이 필요합니다.
 
 TMP가 처음 사용되는 프로젝트를 위해 Hud/Resources의 기본 TMP Settings를 함께 제공합니다. 기존 TMP 설정이 있는 프로젝트에서는 해당 설정을 우선 사용합니다.
+
+## 기존/중세 판타지 비교
+
+Play에서 왼쪽 위 `Original` / `Medieval fantasy` 버튼 또는 F6으로 전환합니다. 체력·자원 값은 유지되며 R 초기화 후에도 마지막으로 선택한 스타일을 유지합니다(현재 Editor 세션 기준).
+
+새 스타일은 가죽색 패널·황동 테두리와 작은 금속 장식, 마나 수정/금속 원환, 스태미나 장화/원환, 금색 선택 강조와 슬롯 배경을 적용합니다. 체력 막대·하트·수치, 글꼴·문구·배치·기존 무기 실루엣은 유지합니다. 슬롯 숫자는 비교용 표시이며 장착 조작은 아닙니다.
+
+검증 렌더는 `hud-original-{해상도}.png`와 `hud-medieval-{해상도}.png`로 분리합니다. 옵션 버튼은 사격을 차단하며 하단 HUD는 입력을 받지 않습니다.
