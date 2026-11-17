@@ -26,10 +26,6 @@ namespace Nomad.Hud
         private readonly List<HudArtwork> surfaces = new List<HudArtwork>();
         private readonly List<GameObject> trims = new List<GameObject>();
         private HudArtwork selection;
-        private HudArtwork manaTrack;
-        private HudArtwork staminaTrack;
-        private HudArtwork manaIcon;
-        private HudArtwork staminaIcon;
 
         public HudStyle Style => style;
         private int shownHealth = -1;
@@ -103,23 +99,12 @@ namespace Nomad.Hud
 
             foreach (HudArtwork surface in surfaces)
                 surface.Configure(medieval ? HudArtwork.Shape.Leather : HudArtwork.Shape.Panel,
-                    medieval ? new Color32(43, 33, 26, 245) : Panel);
+                    medieval ? new Color32(34, 29, 26, 240) : Panel);
             foreach (GameObject trim in trims)
                 trim.SetActive(medieval);
 
-            selection.Configure(HudArtwork.Shape.Panel, medieval ? new Color32(216, 182, 109, 255) : Amber);
-            StyleResource(manaTrack, manaRing, manaIcon, medieval, Blue, HudArtwork.Shape.Crystal, HudArtwork.Shape.FacetedCrystal);
-            StyleResource(staminaTrack, staminaRing, staminaIcon, medieval, Amber, HudArtwork.Shape.Bolt, HudArtwork.Shape.Boot);
-        }
-
-        private static void StyleResource(HudArtwork track, HudArtwork ring, HudArtwork icon,
-            bool medieval, Color tint, HudArtwork.Shape originalIcon, HudArtwork.Shape fantasyIcon)
-        {
-            track.Configure(medieval ? HudArtwork.Shape.MetalRing : HudArtwork.Shape.Ring,
-                medieval ? new Color32(121, 98, 71, 255) : new Color32(50, 65, 83, 255), medieval ? 10 : 5);
-            ring.rectTransform.sizeDelta = medieval ? new Vector2(72, 72) : new Vector2(84, 84);
-            ring.Configure(HudArtwork.Shape.Ring, tint, medieval ? 4 : 5);
-            icon.Configure(medieval ? fantasyIcon : originalIcon, tint);
+            // 선택 강조와 자원 게이지는 두 스타일에서 동일하게 유지합니다.
+            selection.Configure(HudArtwork.Shape.Panel, Amber);
         }
 
         private static void SetResource(HudArtwork ring, TMP_Text label, float current, float maximum)
@@ -189,11 +174,9 @@ namespace Nomad.Hud
         {
             RectTransform group = Rect(name, parent, new Vector2(86, 86), new Vector2(x, -3));
             Surface("Background", group, new Vector2(86, 86));
-            HudArtwork track = Art("Track", group, new Vector2(84, 84), Vector2.zero, HudArtwork.Shape.Ring, new Color32(50, 65, 83, 255), 5);
+            Art("Track", group, new Vector2(84, 84), Vector2.zero, HudArtwork.Shape.Ring, new Color32(50, 65, 83, 255), 5);
             HudArtwork ring = Art("Fill", group, new Vector2(84, 84), Vector2.zero, HudArtwork.Shape.Ring, tint, 5);
-            HudArtwork symbol = Art("Icon", group, new Vector2(31, 36), new Vector2(0, 8), icon, tint);
-            if (name == "Mana") { manaTrack = track; manaIcon = symbol; }
-            else { staminaTrack = track; staminaIcon = symbol; }
+            Art("Icon", group, new Vector2(31, 36), new Vector2(0, 8), icon, tint);
             text = Label("Value", group, "--", new Vector2(70, 20), new Vector2(0, -21), 15);
             Label("Caption", group, name.ToUpperInvariant(), new Vector2(105, 20), new Vector2(0, -61), 12);
             return ring;
@@ -202,11 +185,11 @@ namespace Nomad.Hud
         private void Surface(string name, Transform parent, Vector2 size)
         {
             HudArtwork border = Art(name + " Brass", parent, size + new Vector2(4, 4), Vector2.zero,
-                HudArtwork.Shape.Panel, new Color32(121, 98, 71, 255));
+                HudArtwork.Shape.Panel, new Color32(103, 89, 70, 255));
             trims.Add(border.gameObject);
             surfaces.Add(Art(name, parent, size, Vector2.zero, HudArtwork.Shape.Panel, Panel));
             HudArtwork fittings = Art(name + " Fittings", parent, size, Vector2.zero,
-                HudArtwork.Shape.Fittings, new Color32(216, 182, 109, 255));
+                HudArtwork.Shape.Fittings, new Color32(172, 147, 104, 255));
             trims.Add(fittings.gameObject);
         }
 

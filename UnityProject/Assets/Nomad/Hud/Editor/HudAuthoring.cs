@@ -229,6 +229,20 @@ namespace Nomad.Hud.Editor
             int objects = hud.Canvas.GetComponentsInChildren<RectTransform>(true).Length;
             hud.SetResources(50, 100, 30, 100);
 
+            hud.SetStyle(PlayerHud.HudStyle.Original);
+            var preservedPaths = new[] { "Mana/Track", "Mana/Fill", "Mana/Icon", "Stamina/Track", "Stamina/Fill", "Stamina/Icon", "Slot 1/Selection" };
+            var preserved = new HudArtwork[preservedPaths.Length];
+            var shapes = new int[preservedPaths.Length];
+            var colors = new Color[preservedPaths.Length];
+            var sizes = new Vector2[preservedPaths.Length];
+            for (int index = 0; index < preservedPaths.Length; index++)
+            {
+                preserved[index] = hud.Canvas.transform.Find("Bottom Bar/" + preservedPaths[index]).GetComponent<HudArtwork>();
+                shapes[index] = new SerializedObject(preserved[index]).FindProperty("shape").enumValueIndex;
+                colors[index] = preserved[index].color;
+                sizes[index] = preserved[index].rectTransform.sizeDelta;
+            }
+
             for (int iteration = 0; iteration < 12; iteration++)
             {
                 preview.OriginalButton.onClick.Invoke();
@@ -238,6 +252,12 @@ namespace Nomad.Hud.Editor
                 Check(hud.HealthLabel == label && healthGraphic.color == healthColor && heart.color == heartColor,
                     "health display remains unchanged");
                 Check(healthLabel.font == font, "font unchanged");
+                for (int index = 0; index < preserved.Length; index++)
+                {
+                    int shape = new SerializedObject(preserved[index]).FindProperty("shape").enumValueIndex;
+                    Check(shape == shapes[index] && preserved[index].color == colors[index] && preserved[index].rectTransform.sizeDelta == sizes[index],
+                        "original resource/selection artwork preserved: " + preservedPaths[index]);
+                }
                 Check(Mathf.Approximately(hud.ManaFraction, .5f) && Mathf.Approximately(hud.StaminaFraction, .3f),
                     "resources preserved across style switches");
                 Check(hud.Canvas.GetComponentsInChildren<RectTransform>(true).Length == objects, "no UI rebuild/duplication");
@@ -251,7 +271,7 @@ namespace Nomad.Hud.Editor
             };
             EventSystem.current.RaycastAll(pointer, hits);
             Check(hits.Exists(hit => hit.gameObject == preview.OriginalButton.gameObject), "option button raycast blocks shooting");
-            Debug.Log("HUD_STYLE_SWITCH_PASS buttons/state/health/font/input/reuse");
+            Debug.Log("HUD_STYLE_SWITCH_PASS buttons/state/health/font/input/reuse/original-resource-and-selection-artwork");
         }
 
         private static void RemoveKeyboard()
