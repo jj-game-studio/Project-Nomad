@@ -59,3 +59,7 @@ Unity6000.6.9f1에서 `Nomad > Gameplay > Open Integrated Gameplay`를 실행합
 - 기존 지형 `MICRO_PLAY_PASS`, 종료0:동일 저장 씬324타일/2916도달성 표본, T/R/O/G/L/P/W 입력, 원형11종 갤러리, 카메라/이동/낙하 복귀 검사 통과.
 - Editor 기반 통합/상자/지형 실행 로그에는 기존 `UnityEditor.Search.SearchDatabase` 초기 색인의 `ArgumentOutOfRangeException`이 남아 있습니다. 기능 검사는 성공 표식/종료0까지 완료했지만 전체 로그가 무오류라고 보고하지 않습니다.
 - 로컬 근거:`Artifacts/gameplay-integration-results.txt`, `gameplay-integration-verification.log`, `gameplay-loot-regression.log`, `gameplay-terrain-regression.log`. 실제 게임 화면 캡처는 `Artifacts/integrated-gameplay-player.png`입니다. Artifacts는 Git 추적에서 제외합니다.
+
+## Three-rank test placement (#64)
+
+Current test population is normal6 + Iron Golem elite1 + Dragon boss1. Death produces a visual equipment marker only (no pickup or inventory); drop tables and real equipment remain follow-up work. See [monster-drops.md](monster-drops.md).

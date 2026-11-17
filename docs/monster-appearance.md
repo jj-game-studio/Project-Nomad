@@ -28,3 +28,7 @@
 2026-11-17 전체49/49 통과(79.9초), 실제 뼈 회전 검사를 보완한 뒤 관련3/3 재검사 통과(8.9초). 실패/건너뛰기/로그 진단0、종료0. 근거 `Artifacts/tests/monster-tracking/20261117-032551-005dd03d` 및 `20261117-032749-98c52bce`. 새 외형을 사용하는 생성 필드의 실제 사격·근접 피해·파밍·사망/재시작도 `skeleton-gameplay-verification.log`의 GAMEPLAY_INTEGRATION_PASS/종료0으로 확인했습니다.
 
 네이티브 시각 검토 시 Windows 잠금 화면을 관측해 화면 조작을 멈추고 사용자에게 잠금 해제를 요청했습니다. 실제 색상/크기 갤러리 화면은 확인 대기이며 자동 검사 통과를 최종 아트 수용으로 간주하지 않습니다. 보스·엘리트 지정 모델 파일과 사람의 시각 확인이 남아 #60은 완료하지 않습니다.
+
+## Superseding test-role request (#64)
+
+The later request applies Iron Golem to elite and Dragon to boss with normal skeletons, and places all three in the integrated field. Exact missing EXTRA models were not found. Earlier missing-role notes above describe #60 history; current test implementation and limitations are in [monster-drops.md](monster-drops.md).

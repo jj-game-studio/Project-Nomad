@@ -30,6 +30,7 @@ namespace Nomad.Monsters.Demo
             public MonsterTestRanges ranges;
             public MonsterHitFeedback feedback;
             public bool elite;
+            public MonsterRank rank;
             public int previousHp;
             public string previousState;
         }
@@ -37,7 +38,7 @@ namespace Nomad.Monsters.Demo
         private readonly List<Entry> monsters = new List<Entry>();
         private readonly List<string> logs = new List<string>();
         private readonly MonsterTestSettings[] settings =
-            { MonsterTestSettings.Defaults(false), MonsterTestSettings.Defaults(true) };
+            { MonsterTestSettings.Defaults(false), MonsterTestSettings.Defaults(true), MonsterTestSettings.Defaults(MonsterRank.Boss) };
         private Entry selected;
         private MonsterActorFactory factory;
         private int kind;
@@ -152,6 +153,7 @@ namespace Nomad.Monsters.Demo
         private Entry Register(Health value, bool elite)
         {
             var entry = new Entry { health = value, elite = elite, previousHp = value.CurrentHealth,
+                rank = value.GetComponent<MonsterIdentity>()?.Rank ?? (elite ? MonsterRank.Elite : MonsterRank.Normal),
                 tracker = value.GetComponent<MonsterTracker>(), attack = value.GetComponent<MonsterMeleeAttack>() };
             entry.ranges = value.GetComponent<MonsterTestRanges>();
             entry.feedback = value.GetComponent<MonsterHitFeedback>();
@@ -160,18 +162,15 @@ namespace Nomad.Monsters.Demo
             entry.feedback.SetEffects(hitFlash, damageNumbers, hitShards);
             if (entry.ranges == null)
                 entry.ranges = value.gameObject.AddComponent<MonsterTestRanges>();
+            if (value.GetComponent<MonsterDeathDrop>() == null)
+                value.gameObject.AddComponent<MonsterDeathDrop>().Configure(transform);
             monsters.Add(entry);
             return entry;
         }
 
         public Health SpawnAt(Vector3 point)
         {
-            if (kind == 2)
-            {
-                notice = "Boss is not implemented.";
-                return null;
-            }
-            if (monsters.Count >= 12)
+if (monsters.Count >= 12)
             {
                 notice = "Limit: 12 monsters. Remove some first.";
                 return null;
@@ -189,12 +188,12 @@ namespace Nomad.Monsters.Demo
                 return null;
             }
 
-            bool elite = kind == 1;
+            bool elite = kind != 0;
             MonsterTestSettings config = settings[kind];
             Vector3 facing = Vector3.ProjectOnPlane(player.transform.position - hit.position, Vector3.up);
             Quaternion rotation = facing.sqrMagnitude > 0.01f ? Quaternion.LookRotation(facing) : Quaternion.identity;
-            Health health = factory.Create(player, config, elite, hit.position, rotation,
-                (elite ? "Elite #" : "Normal #") + ++serial);
+            Health health = factory.CreateRanked(player, config, (MonsterRank)kind, hit.position, rotation,
+                ((MonsterRank)kind + " #") + ++serial);
             selected = Register(health, elite);
             notice = "Spawned " + health.name;
             Log(notice);
@@ -215,6 +214,11 @@ namespace Nomad.Monsters.Demo
                 Destroy(entry.health.gameObject);
             }
             monsters.Clear();
+            foreach (PlaceholderEquipmentDrop drop in GetComponentsInChildren<PlaceholderEquipmentDrop>())
+            {
+                drop.gameObject.SetActive(false);
+                Destroy(drop.gameObject);
+            }
             selected = null;
             Log("All monsters removed.");
         }
@@ -276,9 +280,9 @@ namespace Nomad.Monsters.Demo
             int nextKind = GUILayout.Toolbar(kind, new[] { "Normal", "Elite", "Boss" });
             if (nextKind != kind) SetKind(nextKind);
             if (kind == 2)
-                GUILayout.Label("BOSS: NOT IMPLEMENTED");
+                GUILayout.Label("BOSS: temporary melee pattern / visual drop");
 
-            GUI.enabled = kind != 2;
+            GUI.enabled = true;
             if (GUILayout.Button(placing ? "Click floor to spawn (Esc cancels)" : "Place on floor..."))
                 placing = !placing;
             if (GUILayout.Button("Spawn 5m in front of player"))
@@ -291,8 +295,7 @@ namespace Nomad.Monsters.Demo
             damageNumbers = GUILayout.Toggle(damageNumbers, "Damage numbers");
             hitShards = GUILayout.Toggle(hitShards, "Hit shards");
             GUILayout.Label("SETTINGS: new spawn / apply + reset");
-            if (kind != 2)
-                DrawSettings(settings[kind]);
+            DrawSettings(settings[kind]);
             GUILayout.Space(5f);
             GUILayout.Label($"MONSTERS ({monsters.Count}/12) - select to inspect");
             foreach (Entry entry in monsters)
@@ -302,13 +305,13 @@ namespace Nomad.Monsters.Demo
                 if (GUILayout.Button(caption))
                 {
                     selected = entry;
-                    SetKind(entry.elite ? 1 : 0);
+                    SetKind((int)entry.rank);
                 }
             }
             if (selected != null)
             {
                 GUILayout.Label("Selected: " + State(selected));
-                GUI.enabled = kind != 2 && kind == (selected.elite ? 1 : 0);
+                GUI.enabled = kind == (int)selected.rank;
                 if (GUILayout.Button("Apply settings + reset selected")) ApplySelected();
                 GUI.enabled = true;
                 if (GUILayout.Button("Remove selected")) RemoveSelected();
@@ -337,12 +340,12 @@ namespace Nomad.Monsters.Demo
             c.attackRange = Slider("Attack range (m)", c.attackRange, 0.5f, 5f);
             c.health = Mathf.RoundToInt(Slider("Max HP", c.health, 25f, 1000f));
             c.damage = Mathf.RoundToInt(Slider("Damage", c.damage, 1f, 100f));
-            if (kind == 1)
+            if (kind != 0)
             {
                 c.heavyRange = Slider("Heavy range (m)", c.heavyRange, c.attackRange, 8f);
                 c.heavyDamage = Mathf.RoundToInt(Slider("Heavy damage", c.heavyDamage, 1f, 150f));
             }
-            if (GUILayout.Button("Reset type defaults")) settings[kind] = MonsterTestSettings.Defaults(kind == 1);
+            if (GUILayout.Button("Reset type defaults")) settings[kind] = MonsterTestSettings.Defaults((MonsterRank)kind);
         }
 
         private float Slider(string caption, float value, float min, float max)

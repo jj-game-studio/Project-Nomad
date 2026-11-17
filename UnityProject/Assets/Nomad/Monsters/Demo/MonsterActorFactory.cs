@@ -26,13 +26,19 @@ namespace Nomad.Monsters.Demo
 
         public Health Create(Health target, MonsterTestSettings config, bool elite, Vector3 position,
             Quaternion rotation, string actorName, Transform parent = null)
+            => CreateRanked(target, config, elite ? MonsterRank.Elite : MonsterRank.Normal,
+                position, rotation, actorName, parent);
+
+        public Health CreateRanked(Health target, MonsterTestSettings config, MonsterRank rank, Vector3 position,
+            Quaternion rotation, string actorName, Transform parent = null)
         {
+            bool elite = rank != MonsterRank.Normal;
             var root = new GameObject(actorName);
             SceneManager.MoveGameObjectToScene(root, gameObject.scene);
             root.SetActive(false);
             root.transform.SetParent(parent, true);
             root.transform.SetPositionAndRotation(position, rotation);
-            GameObject prefab = elite ? appearances?.elite :
+            GameObject prefab = rank == MonsterRank.Boss ? appearances?.boss : elite ? appearances?.elite :
                 appearances != null && appearances.normal.Length > 0 ? appearances.normal[Variant(actorName) % appearances.normal.Length] : null;
             GameObject body = prefab != null ? Instantiate(prefab) : GameObject.CreatePrimitive(PrimitiveType.Capsule);
             body.name = "Body";
@@ -58,7 +64,11 @@ namespace Nomad.Monsters.Demo
 
             Health health = root.AddComponent<Health>();
             JsonUtility.FromJsonOverwrite("{\"maxHealth\":" + config.health + "}", health);
-            root.AddComponent<SegmentedHealthBar>();
+            root.AddComponent<MonsterIdentity>().Configure(rank);
+            SegmentedHealthBar bar = root.AddComponent<SegmentedHealthBar>();
+            bar.Boss = rank == MonsterRank.Boss;
+            bar.WorldOffset = Vector3.up * (rank == MonsterRank.Elite ? 3.1f : 2.4f);
+            root.AddComponent<MonsterDeathDrop>().Configure(parent != null ? parent : transform);
             root.AddComponent<MonsterHitFeedback>();
             if (prefab != null) root.AddComponent<MonsterAnimationDriver>();
             MonsterTracker tracker = root.AddComponent<MonsterTracker>();

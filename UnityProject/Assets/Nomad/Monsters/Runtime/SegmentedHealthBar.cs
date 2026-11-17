@@ -9,6 +9,8 @@ namespace Nomad.Monsters
         [SerializeField, Range(1, 30)] private int segments = 10;
         [SerializeField] private Vector3 worldOffset = new Vector3(0f, 2.4f, 0f);
         public bool Compact { get; set; }
+        public bool Boss { get; set; }
+        public Vector3 WorldOffset { set => worldOffset = value; }
         private Health health;
         private GUIStyle title;
 
@@ -31,6 +33,15 @@ namespace Nomad.Monsters
             Camera camera = Camera.main;
             if (camera == null || health.IsDead)
                 return;
+
+            if (Boss)
+            {
+                GUI.Box(new Rect(Screen.width * 0.5f - 180f, 12f, 360f, 45f),
+                    $"DRAGON (TEST BOSS)   {health.CurrentHealth}/{health.MaxHealth}");
+                Paint(new Rect(Screen.width * 0.5f - 170f, 40f,
+                    340f * health.CurrentHealth / health.MaxHealth, 8f), new Color(0.9f, 0.3f, 0.15f));
+                return;
+            }
 
             // 월드의 머리 위 위치를 화면 좌표로 바꾸어 이동하는 몬스터를 따라갑니다.
             Vector3 screen = camera.WorldToScreenPoint(transform.position + worldOffset);

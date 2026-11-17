@@ -77,7 +77,7 @@ namespace Nomad.Gameplay.Editor
                     return;
                 }
                 Directory.CreateDirectory("Artifacts");
-                string report = "GAMEPLAY_INTEGRATION_PASS: saved scene, seeds0/7/51 and replay, valid 6+1 actors, generation cleanup/projectiles, real tracker across height, real PlayerCombat/projectiles, UI blocking, E-key chest inventory, real melee death, input lock and scene-reload retry";
+                string report = "GAMEPLAY_INTEGRATION_PASS: saved scene, seeds0/7/51 and replay, valid 6+1+1 actors, generation cleanup/projectiles, real tracker across height, real PlayerCombat/projectiles, UI blocking, E-key chest inventory, real melee death, input lock and scene-reload retry";
                 File.WriteAllText("Artifacts/gameplay-integration-results.txt", report);
                 Debug.Log(report);
                 Finish(0);
@@ -93,7 +93,7 @@ namespace Nomad.Gameplay.Editor
         {
             yield return Until(() => Object.FindFirstObjectByType<GameplayIntegration>()?.Ready == true, "initial field Ready", 30f);
             Bind();
-            Require(gameplay.Enemies.Count == 7, "initial normal6 + elite1");
+            Require(gameplay.Enemies.Count == 8, "initial normal6 + elite1 + boss1");
             Require(gameplay.PlayerHealth.CurrentHealth == 100, "player HP bound");
             Require(controls.Player.GetComponent<PlayerCombat>() != null && controls.Player.GetComponent<PlayerInteraction>() != null,
                 "shooting and interaction share player");
@@ -107,14 +107,26 @@ namespace Nomad.Gameplay.Editor
                 data.ApplyModifiedPropertiesWithoutUndo();
                 controls.Regenerate(false);
                 yield return null;
-                Require(gameplay.Ready && gameplay.Enemies.Count == 7, "seed placement " + seed);
+                Require(gameplay.Ready && gameplay.Enemies.Count == 8, "seed placement " + seed);
+                Require(gameplay.Enemies.Count(enemy => enemy.GetComponent<MonsterIdentity>().Rank == MonsterRank.Normal) == 6 &&
+                    gameplay.Enemies.Count(enemy => enemy.GetComponent<MonsterIdentity>().Rank == MonsterRank.Elite) == 1 &&
+                    gameplay.Enemies.Count(enemy => enemy.GetComponent<MonsterIdentity>().Rank == MonsterRank.Boss) == 1,
+                    "all three ranks placed");
+                foreach (Health actor in gameplay.Enemies)
+                    Require(actor.GetComponentInChildren<SkinnedMeshRenderer>() != null, "real model for every rank");
                 Require(gameplay.GenerationId != previousId, "new generation identity");
                 previousId = gameplay.GenerationId;
                 string signature = Signature();
                 Health[] old = gameplay.Enemies.ToArray();
+                foreach (Health actor in old) actor.TryApplyDamage(10000);
+                PlaceholderEquipmentDrop[] oldDrops = old.Select(actor => actor.GetComponent<MonsterDeathDrop>().SpawnedDrop).ToArray();
+                Require(oldDrops.All(drop => drop != null), "every rank drops equipment marker");
+                Require(Scrap(inventory) == 7, "death drops do not enter inventory");
                 controls.Regenerate(false);
                 Require(old.All(enemy => enemy == null || !enemy.gameObject.activeInHierarchy), "old actors disabled immediately");
+                Require(oldDrops.All(drop => drop == null || !drop.gameObject.activeInHierarchy), "old drops disabled immediately");
                 yield return null;
+                Require(oldDrops.All(drop => drop == null), "regeneration destroys prior drops");
                 Require(Signature() == signature, "same seed actor placement replay " + seed);
                 Require(Scrap(inventory) == 7, "development regeneration preserves inventory");
                 foreach (Health enemy in gameplay.Enemies)
@@ -184,6 +196,10 @@ namespace Nomad.Gameplay.Editor
                 yield return Until(() => target.CurrentHealth == expected, "projectile damage " + shot, 2f);
             }
             Require(target.IsDead, "monster death integration");
+            Require(target.GetComponent<MonsterDeathDrop>().SpawnedDrop != null, "real projectile kill drops marker");
+            yield return Until(() => target.GetComponent<MonsterDeathDrop>().SpawnedDrop.Landed, "equipment marker landed", 2f);
+            ScreenCapture.CaptureScreenshot("Artifacts/monster-drop-playtest.png");
+            yield return null;
 
             // 같은 플레이어의 실제 E키 상호작용으로 상자를 인벤토리에 옮깁니다.
             var chests = Object.FindObjectsByType<LootChest>(FindObjectsSortMode.None);
@@ -206,7 +222,7 @@ namespace Nomad.Gameplay.Editor
             controls.Regenerate(false);
             yield return null;
             Require(Object.FindObjectsByType<Projectile>(FindObjectsSortMode.None).Length == 0, "regeneration cleared projectiles");
-            Require(gameplay.Enemies.Count == 7 && Scrap(inventory) == 10, "new generation and carried loot");
+            Require(gameplay.Enemies.Count == 8 && Scrap(inventory) == 10, "new generation and carried loot");
 
             foreach (Health enemy in gameplay.Enemies) enemy.gameObject.SetActive(false);
             Health attacker = gameplay.Enemies.First();
@@ -227,7 +243,7 @@ namespace Nomad.Gameplay.Editor
             Bind();
             Require(!gameplay.IsDefeated && gameplay.PlayerHealth.CurrentHealth == 100,
                 "retry resets health and defeat state");
-            Require(controls.Player.GetComponent<PlayerInventory>().UsedSlots == 0 && gameplay.Enemies.Count == 7,
+            Require(controls.Player.GetComponent<PlayerInventory>().UsedSlots == 0 && gameplay.Enemies.Count == 8,
                 "retry clears carried loot and restores encounters");
         }
 

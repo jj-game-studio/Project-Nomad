@@ -26,5 +26,17 @@ namespace Nomad.Monsters.Demo
                 homeRange = elite ? 20f : 15f
             };
         }
+
+        public static MonsterTestSettings Defaults(MonsterRank rank)
+        {
+            if (rank != MonsterRank.Boss) return Defaults(rank == MonsterRank.Elite);
+            // 전용 보스 패턴을 확정하기 전 세 등급 배치를 확인하기 위한 임시 값입니다.
+            return new MonsterTestSettings
+            {
+                health = 1000, moveSpeed = 2.5f, sightRange = 10f,
+                abandonRange = 18f, homeRange = 22f, attackRange = 2.6f,
+                heavyRange = 3.5f, damage = 25, heavyDamage = 50, attackSpeed = 0.8f
+            };
+        }
     }
 }

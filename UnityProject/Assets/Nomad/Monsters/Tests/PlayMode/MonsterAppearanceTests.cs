@@ -50,8 +50,8 @@ namespace Nomad.Monsters.Tests
         public IEnumerator FourNormalVariantsHaveSkinsMaterialsAndIdleAnimation()
         {
             Assert.That(catalog.normal.Length, Is.EqualTo(4));
-            Assert.That(catalog.elite, Is.Null, "미확보 EXTRA 모델을 임의 대체하지 않음");
-            Assert.That(catalog.boss, Is.Null);
+            Assert.That(catalog.elite, Is.Not.Null, "Iron Golem test elite");
+            Assert.That(catalog.boss, Is.Not.Null, "Dragon test boss");
             for (int i = 0; i < 4; i++)
             {
                 Health actor = Create("variant-" + i, new Vector3(4f, 0f, -3f));
@@ -119,7 +119,7 @@ namespace Nomad.Monsters.Tests
         private Health Create(string name, Vector3 position)
         {
             Type settingsType = Type.GetType("Nomad.Monsters.Demo.MonsterTestSettings, Assembly-CSharp");
-            object settings = settingsType.GetMethod("Defaults").Invoke(null, new object[] { false });
+            object settings = settingsType.GetMethod("Defaults", new[] { typeof(bool) }).Invoke(null, new object[] { false });
             settingsType.GetField("moveSpeed").SetValue(settings, 0f);
             Health actor = (Health)factory.GetType().GetMethod("Create").Invoke(factory,
                 new[] { (object)player, settings, false, position, Quaternion.identity, name, null });

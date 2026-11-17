@@ -1182,6 +1182,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Gameplay.GameplayIntegration
   normalCount: 6
   eliteCount: 1
+  bossCount: 1
   diagnosticPanels:
   - {fileID: 1951189840}
   - {fileID: 657166042}

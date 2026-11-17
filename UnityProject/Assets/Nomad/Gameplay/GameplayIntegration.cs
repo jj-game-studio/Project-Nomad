@@ -19,6 +19,7 @@ namespace Nomad.Gameplay
     {
         [SerializeField] private int normalCount = 6;
         [SerializeField] private int eliteCount = 1;
+        [SerializeField] private int bossCount = 1;
         [SerializeField] private GameObject[] diagnosticPanels = System.Array.Empty<GameObject>();
         private readonly List<Health> enemies = new List<Health>();
         private TerrainIntegrationControls controls;
@@ -143,22 +144,26 @@ namespace Nomad.Gameplay
 
             int normals = 0;
             int elites = 0;
+            int bosses = 0;
             foreach (FieldSpawnPoint point in candidates)
             {
-                if (normals >= normalCount && elites >= eliteCount) break;
+                if (normals >= normalCount && elites >= eliteCount && bosses >= bossCount) break;
                 if (Vector3.Distance(point.Position, field.PlayerPosition) < 12f) continue;
                 if (Physics.CheckCapsule(point.Position + Vector3.up * 0.4f,
                     point.Position + Vector3.up * 1.5f, 0.35f, Physics.DefaultRaycastLayers,
                     QueryTriggerInteraction.Ignore)) continue;
 
-                bool elite = normals >= normalCount;
-                Health enemy = factory.Create(player, MonsterTestSettings.Defaults(elite), elite,
-                    point.Position, point.Rotation, (elite ? "Elite " : "Normal ") + point.Id, enemyRoot.transform);
+                MonsterRank rank = normals < normalCount ? MonsterRank.Normal :
+                    elites < eliteCount ? MonsterRank.Elite : MonsterRank.Boss;
+                Health enemy = factory.CreateRanked(player, MonsterTestSettings.Defaults(rank), rank,
+                    point.Position, point.Rotation, rank + " " + point.Id, enemyRoot.transform);
                 enemy.gameObject.AddComponent<MonsterTestRanges>();
                 enemies.Add(enemy);
-                if (elite) elites++; else normals++;
+                if (rank == MonsterRank.Boss) bosses++;
+                else if (rank == MonsterRank.Elite) elites++;
+                else normals++;
             }
-            message = $"Explore, loot crates and defeat patrols.\nNormal {normals} / Elite {elites} (test placement)";
+            message = $"Normal {normals} / Elite {elites} / Boss {bosses} (test)\nDeath drops: visual only, no pickup.";
         }
 
         private void ClearGeneration()

@@ -103,9 +103,7 @@ namespace Nomad.Gameplay.Editor
                 catalog.normal[index] = PrefabUtility.SaveAsPrefabAsset(wrapper, path);
                 Object.DestroyImmediate(wrapper);
             }
-            // 없는 EXTRA 모델을 무료 모델로 대체하지 않습니다.
-            catalog.elite = null;
-            catalog.boss = null;
+            // 일반 외형을 재생성해도 별도로 연결한 엘리트/보스 참조는 유지합니다.
             EditorUtility.SetDirty(material);
             EditorUtility.SetDirty(controller);
             EditorUtility.SetDirty(catalog);
@@ -113,7 +111,7 @@ namespace Nomad.Gameplay.Editor
             GameplayIntegrationSetup.Apply();
             ConfigureTestScene("Assets/Nomad/Monsters/MonsterCombat.unity", catalog);
             ConfigureTestScene("Assets/Nomad/Monsters/MonsterElite.unity", catalog);
-            Debug.Log("SKELETON_APPEARANCE_SETUP_PASS: four normal variants; elite/boss awaiting EXTRA models");
+            Debug.Log("SKELETON_APPEARANCE_SETUP_PASS: four normal variants; existing rank references preserved");
         }
 
         private static void ConfigureTestScene(string path, MonsterAppearanceSet catalog)

@@ -10,6 +10,7 @@ namespace Nomad.Monsters
         private NavMeshAgent agent;
         private Nomad.Combat.Health health;
         private MonsterHitFeedback feedback;
+        private MonsterMeleeAttack attack;
         private string current;
 
         private void Awake()
@@ -18,6 +19,7 @@ namespace Nomad.Monsters
             agent = GetComponent<NavMeshAgent>();
             health = GetComponent<Nomad.Combat.Health>();
             feedback = GetComponent<MonsterHitFeedback>();
+            attack = GetComponent<MonsterMeleeAttack>();
         }
 
         private void Update()
@@ -26,6 +28,10 @@ namespace Nomad.Monsters
             float speed = agent.enabled && agent.isOnNavMesh ? agent.velocity.magnitude : 0f;
             string state = health.IsDead ? "Death_A" : feedback.IsFlashing ? "Hit_A" :
                 speed > 2.5f ? "Running_A" : speed > 0.1f ? "Walking_A" : "Idle_A";
+            if (!health.IsDead && attack != null && attack.Phase == MeleePhase.Windup &&
+                animator.HasState(0, Animator.StringToHash("Base Layer.Attack_A")))
+                state = "Attack_A";
+            if (!animator.HasState(0, Animator.StringToHash("Base Layer." + state))) state = "Idle_A";
             if (state == current) return;
             int hash = Animator.StringToHash("Base Layer." + state);
             if (!animator.HasState(0, hash)) return;

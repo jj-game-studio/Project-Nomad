@@ -81,15 +81,77 @@ namespace Nomad.Monsters.Tests
         }
 
         [UnityTest]
-        public IEnumerator BossAndInvalidOrOccupiedSpawnAreRejected()
+        public IEnumerator BossSpawnsWithModelAndInvalidOrOccupiedSpawnAreRejected()
         {
             Call("SetKind", 2);
-            Assert.That(Call("SpawnAt", new Vector3(3f, 0f, -2f)), Is.Null);
+            Health boss = (Health)Call("SpawnAt", new Vector3(3f, 0f, -2f));
+            Assert.That(boss, Is.Not.Null);
+            Assert.That(boss.MaxHealth, Is.EqualTo(1000));
+            Assert.That(boss.GetComponent<MonsterIdentity>().Rank, Is.EqualTo(MonsterRank.Boss));
+            Assert.That(boss.GetComponentInChildren<SkinnedMeshRenderer>(), Is.Not.Null);
             Call("SetKind", 0);
             Assert.That(Call("SpawnAt", new Vector3(100f, 0f, 100f)), Is.Null);
             Assert.That(Call("SpawnAt", player.transform.position), Is.Null);
             Assert.That(Call("SpawnAt", new Vector3(-3f, 0f, 0f)), Is.Null);
             yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator DragonIdleMovesActualBonesAndDeathPlaysSuppliedClip()
+        {
+            Call("SetKind", 2);
+            Health boss = (Health)Call("SpawnAt", new Vector3(3f, 0f, -2f));
+            boss.GetComponent<MonsterMeleeAttack>().enabled = false;
+            boss.GetComponent<NavMeshAgent>().speed = 0f;
+            yield return new WaitForSeconds(0.2f);
+            Animator animator = boss.GetComponentInChildren<Animator>();
+            Assert.That(animator.avatar.isValid, Is.True);
+            Assert.That(animator.GetCurrentAnimatorStateInfo(0).IsName("Base Layer.Idle_A"), Is.True);
+            Transform[] bones = animator.GetComponentsInChildren<Transform>();
+            Quaternion[] rotations = Array.ConvertAll(bones, bone => bone.localRotation);
+            yield return new WaitForSeconds(0.4f);
+            bool moved = false;
+            for (int i = 0; i < bones.Length; i++)
+                moved |= Quaternion.Angle(rotations[i], bones[i].localRotation) > 0.1f;
+            Assert.That(moved, Is.True, "Dragon clip bindings must move the model's actual skeleton");
+            boss.TryApplyDamage(10000);
+            yield return new WaitForSeconds(0.2f);
+            Assert.That(animator.GetCurrentAnimatorStateInfo(0).IsName("Base Layer.Death_A"), Is.True);
+            Assert.That(animator.applyRootMotion, Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator AllRanksDropOneVisualEquipmentMarkerWithoutPickupAndClearTogether()
+        {
+            for (int rank = 0; rank < 3; rank++)
+            {
+                Call("SetKind", rank);
+                Health actor = (Health)Call("SpawnAt", new Vector3(3f + rank * 2f, 0f, -2f));
+                Assert.That(actor, Is.Not.Null);
+                Assert.That(actor.GetComponentInChildren<SkinnedMeshRenderer>(), Is.Not.Null);
+                actor.TryApplyDamage(10000);
+                actor.TryApplyDamage(10000);
+                var drop = actor.GetComponent<MonsterDeathDrop>().SpawnedDrop;
+                Assert.That(drop, Is.Not.Null);
+                Assert.That(drop.SourceRank, Is.EqualTo((MonsterRank)rank));
+                yield return null;
+                Assert.That(drop.GetComponentsInChildren<Collider>().Length, Is.Zero);
+                Assert.That(drop.GetComponentsInChildren<MonoBehaviour>().Length, Is.EqualTo(1),
+                    "visual marker only: no pickup / loot / inventory component");
+            }
+            yield return new WaitForSeconds(0.8f);
+            var drops = panel.GetComponentsInChildren<PlaceholderEquipmentDrop>();
+            Assert.That(drops.Length, Is.EqualTo(3), "one per death, no duplicates");
+            foreach (var drop in drops)
+            {
+                Assert.That(drop.Landed, Is.True);
+                Assert.That(Physics.Raycast(drop.transform.position + Vector3.up, Vector3.down,
+                    out RaycastHit floor, 3f), Is.True);
+                Assert.That(drop.transform.position.y - floor.point.y, Is.EqualTo(0.14f).Within(0.05f));
+            }
+            Call("ClearMonsters");
+            yield return null;
+            Assert.That(panel.GetComponentsInChildren<PlaceholderEquipmentDrop>().Length, Is.Zero);
         }
 
         [UnityTest]
