@@ -17,11 +17,12 @@ namespace Nomad.Terrain
         [SerializeField] private PropScatter obstacleOwner;
         [Tooltip("비어 있으면 Resources의 비공개 꾸밈 목록을 사용합니다. 둘 다 없으면 꾸밈 없이 동작합니다.")]
         [SerializeField] private FieldDressingSet set;
-        [SerializeField, Range(0, 16)] private int repairLimit = 12;
+        [SerializeField, Range(0, 32)] private int repairLimit = 24;
 
         private readonly List<GameObject> blockers = new List<GameObject>();
         private GameObject root;
         private Vector2 noiseOffset;
+        private int reservedCorner = -1;
 
         public int Placed { get; private set; }
         public int Blockers => blockers.Count;
@@ -95,7 +96,8 @@ namespace Nomad.Terrain
                 float density = Density(center);
                 if (density < source.coverThreshold) continue;
 
-                PlaceGroundCover(source, center, density, random);
+                reservedCorner = -1;
+                PlaceGroundCover(source, center, density, tops, random);
                 PlaceBlockers(source, center, tops, random);
                 PlaceFence(source, center, tops, random);
             }
@@ -144,7 +146,8 @@ namespace Nomad.Terrain
         }
 
         // 노이즈가 높을수록 한 테마의 식생을 더 많이 둡니다.
-        private void PlaceGroundCover(FieldDressingSet source, Vector3 center, float density, System.Random random)
+        private void PlaceGroundCover(FieldDressingSet source, Vector3 center, float density,
+            Dictionary<Vector2Int, float> tops, System.Random random)
         {
             if (source.coverThemes == null || source.coverThemes.Length == 0) return;
 
@@ -154,13 +157,33 @@ namespace Nomad.Terrain
             float themeNoise = Mathf.PerlinNoise(noiseOffset.y + cell.x * 0.08f, noiseOffset.x + cell.y * 0.08f);
             int theme = Mathf.Clamp(Mathf.FloorToInt(themeNoise * source.coverThemes.Length), 0, source.coverThemes.Length - 1);
 
+            bool bigPlaced = false;
             for (int index = 0; index < count; index++)
             {
                 GameObject prefab = Pick(source.coverThemes[theme].prefabs, random);
                 if (prefab == null) return;
 
                 Vector3 offset = new Vector3(Range(random, -1.3f, 1.3f), 0f, Range(random, -1.3f, 1.3f));
-                Spawn(prefab, center + offset, Range(random, 0f, 360f), Range(random, 0.85f, 1.15f));
+                GameObject plant = Spawn(prefab, center + offset, Range(random, 0f, 360f), Range(random, 0.85f, 1.15f));
+                if (!TryLocalBounds(plant, out Bounds bounds)
+                    || Mathf.Max(bounds.size.x, bounds.size.z) * plant.transform.localScale.x <= 1f) continue;
+
+                // 폭 1m를 넘는 큰 덤불은 통과하면 어색하므로 나무처럼 다룹니다. 타일당 하나만,
+                // 경로 표본을 덮지 않는 사분면 위치에 두고 0.6m 몸통만 충돌체로 씁니다. 잎 가장자리는 스칠 수 있습니다.
+                int corner = random.Next(4);
+                // 군락 가장자리의 큰 덤불은 빈터의 개방 공간(상자 후보)을 잠식하므로 밀도가 높은 중심부에만 둡니다.
+                if (bigPlaced || spread < 0.5f || corner == reservedCorner || !OpenCorner(center, corner, tops))
+                {
+                    plant.SetActive(false);
+                    Release(plant);
+                    Placed--;
+                    continue;
+                }
+
+                plant.transform.position = center + Corner(corner);
+                AddBlocker(plant, trunkOnly: true, trunk: 0.6f);
+                reservedCorner = corner;
+                bigPlaced = true;
             }
         }
 
@@ -281,12 +304,12 @@ namespace Nomad.Terrain
         private void PlaceBlockers(FieldDressingSet source, Vector3 center, Dictionary<Vector2Int, float> tops,
             System.Random random)
         {
-            int treeCorner = -1;
+            int treeCorner = reservedCorner;
             if (random.NextDouble() < source.treeChance)
             {
                 int corner = random.Next(4);
                 GameObject prefab = Pick(source.trees, random);
-                if (prefab != null && OpenCorner(center, corner, tops))
+                if (prefab != null && corner != reservedCorner && OpenCorner(center, corner, tops))
                 {
                     treeCorner = corner;
                     GameObject tree = Spawn(prefab, center + Corner(corner), Range(random, 0f, 360f), Range(random, 0.85f, 1.15f));
@@ -296,6 +319,7 @@ namespace Nomad.Terrain
 
             if (random.NextDouble() >= source.coverChance) return;
             int coverCorner = (treeCorner + 1 + random.Next(3)) % 4;
+            if (coverCorner == reservedCorner) return;
             GameObject coverPrefab = Pick(source.cover, random);
             if (coverPrefab != null && OpenCorner(center, coverCorner, tops))
                 AddBlocker(Spawn(coverPrefab, center + Corner(coverCorner), random.Next(4) * 90f, 1f), trunkOnly: false);
@@ -331,7 +355,8 @@ namespace Nomad.Terrain
             return instance;
         }
 
-        private void AddBlocker(GameObject instance, bool trunkOnly, bool removable = true, bool limitFootprint = true)
+        private void AddBlocker(GameObject instance, bool trunkOnly, bool removable = true, bool limitFootprint = true,
+            float trunk = 0.4f)
         {
             if (!TryLocalBounds(instance, out Bounds bounds)) return;
 
@@ -348,7 +373,7 @@ namespace Nomad.Terrain
             BoxCollider box = instance.AddComponent<BoxCollider>();
             box.center = new Vector3(bounds.center.x, bounds.min.y + bounds.size.y * 0.5f, bounds.center.z);
             box.size = trunkOnly
-                ? new Vector3(0.4f / scale.x, bounds.size.y, 0.4f / scale.z)
+                ? new Vector3(trunk / scale.x, bounds.size.y, trunk / scale.z)
                 : bounds.size;
             if (trunkOnly) box.center = new Vector3(0f, box.center.y, 0f);
 
@@ -383,7 +408,13 @@ namespace Nomad.Terrain
             for (int attempt = 0; attempt < repairLimit && blockers.Count > 0; attempt++)
             {
                 if (MicroTerrainWalkability.Validate(terrainRoot, result.Pieces, out _, out _, root)) return;
-                if (RemoveBlockersNear(MicroTerrainWalkability.BlockedPoint, 2.5f) == 0) break;
+                if (RemoveBlockersNear(MicroTerrainWalkability.BlockedPoint, 2.5f) > 0) continue;
+
+                // 주변에 없으면 막힌 지점에서 가장 가까운 하나만 지웁니다. 덤불 울타리처럼 멀리서 둘러싼 경우입니다.
+                float nearest = float.PositiveInfinity;
+                foreach (GameObject blocker in blockers)
+                    nearest = Mathf.Min(nearest, FlatDistance(blocker.transform.position, MicroTerrainWalkability.BlockedPoint));
+                RemoveBlockersNear(MicroTerrainWalkability.BlockedPoint, nearest + 0.01f);
             }
 
             if (blockers.Count > 0 && !MicroTerrainWalkability.Validate(terrainRoot, result.Pieces, out _, out _, root))
@@ -395,8 +426,7 @@ namespace Nomad.Terrain
             int removed = 0;
             for (int index = blockers.Count - 1; index >= 0; index--)
             {
-                Vector3 position = blockers[index].transform.position;
-                if (Vector2.Distance(new Vector2(position.x, position.z), new Vector2(point.x, point.z)) > distance) continue;
+                if (FlatDistance(blockers[index].transform.position, point) > distance) continue;
 
                 // Destroy는 지연되므로 먼저 비활성화해 다음 검사에서 제외합니다.
                 blockers[index].SetActive(false);
@@ -425,6 +455,8 @@ namespace Nomad.Terrain
             if (Application.isPlaying) Destroy(target);
             else DestroyImmediate(target);
         }
+
+        private static float FlatDistance(Vector3 a, Vector3 b) => Vector2.Distance(new Vector2(a.x, a.z), new Vector2(b.x, b.z));
 
         private static GameObject Pick(GameObject[] options, System.Random random) =>
             options == null || options.Length == 0 ? null : options[random.Next(options.Length)];

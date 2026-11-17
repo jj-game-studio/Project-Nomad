@@ -292,6 +292,14 @@ namespace Nomad.Terrain.Editor
                 if (dressing.Root.GetComponentsInChildren<Collider>().Any(collider => !(collider is BoxCollider)))
                     throw new System.InvalidOperationException("꾸밈에 BoxCollider 이외의 충돌체가 남았습니다.");
 
+                // 시작점이 덤불·나무 충돌체 안에 있으면 플레이어가 갇힙니다.
+                // 플레이어 캡슐(반지름 0.35m, 높이 1.8m)과 실제로 겹치는 꾸밈 충돌체가 있는지 확인합니다.
+                Vector3 start = field.PlayerPosition;
+                Physics.SyncTransforms();
+                bool trapped = Physics.OverlapCapsule(start + Vector3.up * 0.4f, start + Vector3.up * 1.45f, 0.34f)
+                    .Any(collider => collider.transform.IsChildOf(dressing.Root));
+                if (trapped) throw new System.InvalidOperationException($"seed {result.Seed} 시작점이 꾸밈 충돌체와 겹칩니다.");
+
                 Debug.Log($"FIELD_DRESSING_SEED seed={result.Seed} placed={dressing.Placed} blockers={dressing.Blockers} "
                     + $"removed={dressing.RemovedBlockers} enemies={baseline.EnemyPoints.Count}->{field.EnemyPoints.Count} "
                     + $"chests={baseline.ChestPoints.Count}->{field.ChestPoints.Count} paths={controls.Generator.ReachableSamples}");

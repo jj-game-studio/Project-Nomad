@@ -30,12 +30,13 @@ SSAO는 프로젝트 공용 `PC_Renderer`에 이미 있습니다. 수치는 검�
 - **지면 재질**: 텍스처 없는 무광 잔디색(URP Lit)으로 교체하고, 높은 층일수록 8%씩 밝게 칠해 높이 차가 읽히게 합니다. 원본 Grass 텍스처는 삼각 무늬가 3m 타일마다 반복되어 제외했습니다. 2단계에서 Terrain Layer로 대체할 임시 지면입니다.
 - **군락과 빈터**: seed별 저주파 노이즈로 타일마다 식생 밀도를 정합니다. 기준값(0.48) 미만인 타일은 빈터로 비워 상자·전투 공간을 남기고, 군락 타일에만 식생과 장애물을 둡니다.
 - **지면 덮개**(충돌 없음): 군락 타일에 1~3개를 놓습니다. 군락마다 풀밭·꽃밭·고사리·덤불 중 하나의 테마를 이어서 써서 같은 소품이 맵 전체에 고르게 반복되지 않게 합니다.
+- **큰 덤불**(이동을 막음): 폭 1m를 넘는 덤불은 군락 중심부(밀도 상위 절반)에서 타일당 하나만, 나무와 같은 사분면 위치에 둡니다. 0.6m 몸통만 충돌체로 써서 잎 가장자리는 스칠 수 있습니다.
 - **절벽 바위**(충돌 없음): 내부 높이 차 경계의 40%에만 `Rock_Cliff`를 원래 비율 그대로 폭 3.4m로 키워 절벽 면에 묻습니다. 윗면 위로 0.1m, 낮은 쪽으로 두께의 15%만 드러납니다. 축소한 작은 바위와 맵 외곽 바위는 쓰지 않습니다.
 - **외곽 돌벽**(이동을 막음): 맵 바깥에 접한 변마다 `StoneWall`을 3m 길이로 맞춰 타일 바깥에 세웁니다. 맵 밖 이탈을 막으며 경로 복구 대상이 아닙니다. 기존 통합 씬의 "외곽 벽 없음" 규칙은 바꾸지 않았고 TerrainTest에만 적용됩니다.
 - **울타리**(이동을 막음): 군락 타일에서 같은 높이 평지끼리 맞닿은 변을 따라 2~3칸 길이로 드물게 세웁니다. 한 칸짜리 조각은 놓지 않습니다.
 - **나무·엄폐물**(이동을 막음): 사분면 안쪽(중심에서 ±0.75m)에 놓습니다. 해당 모서리 쪽 이웃 세 칸이 같은 높이 평지일 때만 배치합니다. 나무는 0.4m 기둥, 엄폐물은 외형 크기의 `BoxCollider`만 가지며 0.9m보다 큰 엄폐물은 제외합니다. 원본 프리팹의 충돌체는 모두 제거합니다.
 
-꾸밈은 `PropScatter` 오브젝트 하위의 `FieldDressing` 루트에 생성됩니다. `PropScatter`의 자체 소품 정리와 분리되지만, 같은 오브젝트 하위의 `BoxCollider`가 기존 도달성 검사와 `FieldNavigation` NavMesh에 장애물로 포함됩니다. 배치 직후 자체 경로 검사로 막힌 지점 주변의 나무·엄폐물을 제거합니다(최대 12회 후, 여전히 막히면 제거 가능한 물체 전체 제거).
+꾸밈은 `PropScatter` 오브젝트 하위의 `FieldDressing` 루트에 생성됩니다. `PropScatter`의 자체 소품 정리와 분리되지만, 같은 오브젝트 하위의 `BoxCollider`가 기존 도달성 검사와 `FieldNavigation` NavMesh에 장애물로 포함됩니다. 배치 직후 자체 경로 검사로 막힌 지점 주변의 나무·엄폐물을 제거합니다(막힌 지점 반경 2.5m 안의 물체, 없으면 가장 가까운 하나를 최대 24회 제거한 뒤에도 막히면 제거 가능한 물체 전체 제거).
 
 구매 프리팹 목록은 비공개 Assets 저장소 `Nomad/Terrain/Dressing/Resources/Nomad/FieldDressingSet.asset`에 있습니다. 이 에셋이 없는 환경에서는 꾸밈 없이 기존과 같이 동작합니다. 목록과 밀도는 `Rebuild Kingdom Dressing Set` 메뉴로 다시 만들거나 에셋 Inspector에서 조정합니다.
 
@@ -45,7 +46,7 @@ SSAO는 프로젝트 공용 `PC_Renderer`에 이미 있습니다. 수치는 검�
 unity run '<checkout>/UnityProject' --timeout 1500 --log-file '<checkout>/UnityProject/Artifacts/terrain-test.log' --no-tail -- -executeMethod Nomad.Terrain.Editor.FieldDressingAuthoring.CreateAndVerify
 ```
 
-세트와 씬을 다시 만들고, 고정 seed 6개(51, 7, 1234, 2024, 99, 4242)에서 꾸밈 없는 기준 결과와 꾸민 결과를 차례로 만듭니다. Ready, 경로, 꾸밈 배치, 충돌체 종류, 외곽 돌벽을 확인하고 적·상자 후보 수를 기준과 비교해 기록합니다. 성공 로그는 `FIELD_DRESSING_PASS`이고, seed별 결과는 `FIELD_DRESSING_SEED`입니다. 렌더는 `Artifacts/terrain-test-overview.png`, `terrain-test-player.png`, `terrain-test-border.png`, `terrain-test-cliff.png`입니다. 구매 애셋이 포함된 이미지이므로 공개 저장소에 커밋하지 않습니다.
+세트와 씬을 다시 만들고, 고정 seed 6개(51, 7, 1234, 2024, 99, 4242)에서 꾸밈 없는 기준 결과와 꾸민 결과를 차례로 만듭니다. Ready, 경로, 꾸밈 배치, 충돌체 종류, 외곽 돌벽을 확인하고 적·상자 후보 수를 기준과 비교해 기록합니다. 시작점이 꾸밈 충돌체와 겹치지 않는지도 확인합니다. 성공 로그는 `FIELD_DRESSING_PASS`이고, seed별 결과는 `FIELD_DRESSING_SEED`입니다. 렌더는 `Artifacts/terrain-test-overview.png`, `terrain-test-player.png`, `terrain-test-border.png`, `terrain-test-cliff.png`입니다. 구매 애셋이 포함된 이미지이므로 공개 저장소에 커밋하지 않습니다.
 
 ## 사람 판단
 
@@ -53,6 +54,6 @@ unity run '<checkout>/UnityProject' --timeout 1500 --log-file '<checkout>/UnityP
 
 ## 알려진 영향
 
-- 장애물이 빈터 경계를 쪼개면 `FieldNavigation`의 상자 후보(주변 2m 개방 조건)가 줄 수 있습니다. 고정 seed 6개 기준 32개 → 20개였습니다(seed 99: 7 → 0). 적 후보 64개와 경로 표본 2916개는 변하지 않았습니다.
+- 장애물이 빈터 경계를 쪼개면 `FieldNavigation`의 상자 후보(주변 2m 개방 조건)가 줄 수 있습니다. 고정 seed 6개 기준 32개 → 26개였습니다(seed 99: 7 → 1). 사람 검토에서 이 수준을 수용했습니다. 적 후보 64개와 경로 표본 2916개는 변하지 않았습니다.
 - O키 전체 보기에서는 그림자 거리 밖이라 지면이 평평하게 보입니다.
 - 외곽 돌벽은 각 타일 윗면 높이에 세우므로 높이가 다른 외곽 타일 사이에는 벽 높이 단차가 있습니다.
