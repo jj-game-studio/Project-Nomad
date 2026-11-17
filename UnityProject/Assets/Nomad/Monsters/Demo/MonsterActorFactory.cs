@@ -52,9 +52,9 @@ namespace Nomad.Monsters.Demo
                 body.GetComponent<Renderer>().sharedMaterial = elite ? eliteMaterial : normalMaterial;
             }
             CapsuleCollider capsule = root.AddComponent<CapsuleCollider>();
-            capsule.height = 1.8f;
+            capsule.height = rank == MonsterRank.Boss ? 3.8f : rank == MonsterRank.Elite ? 3.2f : 1.8f;
             capsule.radius = 0.35f;
-            capsule.center = Vector3.up * 0.9f;
+            capsule.center = Vector3.up * (capsule.height * 0.5f);
             NavMeshAgent agent = root.AddComponent<NavMeshAgent>();
             agent.radius = 0.35f;
             agent.height = 1.8f;
@@ -67,16 +67,25 @@ namespace Nomad.Monsters.Demo
             root.AddComponent<MonsterIdentity>().Configure(rank);
             SegmentedHealthBar bar = root.AddComponent<SegmentedHealthBar>();
             bar.Boss = rank == MonsterRank.Boss;
-            bar.WorldOffset = Vector3.up * (rank == MonsterRank.Elite ? 3.1f : 2.4f);
+            bar.WorldOffset = Vector3.up * (rank == MonsterRank.Elite ? 4.1f : 2.4f);
             root.AddComponent<MonsterDeathDrop>().Configure(parent != null ? parent : transform);
             root.AddComponent<MonsterHitFeedback>();
             if (prefab != null) root.AddComponent<MonsterAnimationDriver>();
             MonsterTracker tracker = root.AddComponent<MonsterTracker>();
             tracker.BindTarget(target.transform);
             tracker.Configure(config.sightRange, config.abandonRange, config.homeRange);
+            if (config.ranged && appearances != null)
+            {
+                GameObject bolt = rank == MonsterRank.Boss ? appearances.fireBolt : rank == MonsterRank.Elite ?
+                    appearances.rockBolt : prefab != null && prefab.name.Contains("Mage") ? appearances.magicBolt : appearances.arrow;
+                root.AddComponent<MonsterRangedAttack>().Configure(bolt, config.rangedRange, config.projectileSpeed,
+                    config.rangedDamage, config.rangedWindup, config.rangedRecovery,
+                    new Vector3(0f, rank == MonsterRank.Boss ? 1.8f : rank == MonsterRank.Elite ? 2.2f : 1.3f, 0.5f));
+            }
             MonsterMeleeAttack attack = root.AddComponent<MonsterMeleeAttack>();
             attack.Configure(target, elite, config.damage, config.heavyDamage,
                 config.attackRange, config.heavyRange, config.attackSpeed);
+            if (rank == MonsterRank.Elite && prefab != null) root.AddComponent<GolemMotion>();
 
             LineRenderer outline = new GameObject("Attack Outline").AddComponent<LineRenderer>();
             outline.transform.SetParent(root.transform, false);

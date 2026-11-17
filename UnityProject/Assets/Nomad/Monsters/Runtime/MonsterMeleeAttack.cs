@@ -35,14 +35,17 @@ namespace Nomad.Monsters
         private int previousHealth;
         private int attacksStarted;
         private Vector3 strikeForward;
+        private MonsterRangedAttack ranged;
+        private Vector3 lockedAim;
 
         public MeleePhase Phase { get; private set; }
         public bool IsHeavyAttack { get; private set; }
+        public bool IsRangedAttack { get; private set; }
         public float HeavyAttackRange => heavyRange;
         public float HeavyAttackAngle => heavyAngle;
         public Vector3 AttackDirection => strikeForward;
-        public float CurrentAttackRange => IsHeavyAttack ? heavyRange : attackRange;
-        public float CurrentAttackAngle => IsHeavyAttack ? heavyAngle : 360f;
+        public float CurrentAttackRange => IsRangedAttack ? ranged.Range : IsHeavyAttack ? heavyRange : attackRange;
+        public float CurrentAttackAngle => IsRangedAttack ? 12f : IsHeavyAttack ? heavyAngle : 360f;
         public float WindupProgress { get; private set; }
         public void Configure(Health victim, bool heavy, int lightDamage, int strongDamage,
             float range, float strongRange, float speed)
@@ -73,12 +76,14 @@ namespace Nomad.Monsters
             health = GetComponent<Health>();
             tracker = GetComponent<MonsterTracker>();
             agent = GetComponent<NavMeshAgent>();
+            ranged = GetComponent<MonsterRangedAttack>();
         }
 
         private void OnEnable()
         {
             Phase = MeleePhase.Idle;
             IsHeavyAttack = false;
+            IsRangedAttack = false;
             attacksStarted = 0;
             WindupProgress = 0f;
             previousHealth = health.CurrentHealth;
@@ -135,13 +140,15 @@ namespace Nomad.Monsters
                 if (WindupProgress < 1f)
                 {
                     phaseElapsed += Time.deltaTime * Mathf.Max(0.1f, attackSpeed);
-                    float duration = IsHeavyAttack ? heavyWindupSeconds : windupSeconds;
+                    float duration = IsRangedAttack ? ranged.Windup : IsHeavyAttack ? heavyWindupSeconds : windupSeconds;
                     WindupProgress = Mathf.Clamp01(phaseElapsed / duration);
                     return;
                 }
 
                 // 준비가 끝난 시점에 거리와 벽을 다시 확인하며 피해는 한 번만 전달합니다.
-                if (CanStrike(IsHeavyAttack))
+                if (IsRangedAttack)
+                    ranged.Release(target, lockedAim);
+                else if (CanStrike(IsHeavyAttack))
                     target.TryApplyDamage(IsHeavyAttack ? heavyDamage : damage);
 
                 if (health.IsDead || target.IsDead)
@@ -154,22 +161,27 @@ namespace Nomad.Monsters
             else if (Phase == MeleePhase.Recovery)
             {
                 phaseElapsed += Time.deltaTime * Mathf.Max(0.1f, attackSpeed);
-                if (phaseElapsed < (IsHeavyAttack ? heavyRecoverySeconds : recoverySeconds))
+                if (phaseElapsed < (IsRangedAttack ? ranged.Recovery : IsHeavyAttack ? heavyRecoverySeconds : recoverySeconds))
                     return;
 
                 Phase = MeleePhase.Idle;
                 IsHeavyAttack = false;
+                IsRangedAttack = false;
                 ResumeMovement();
             }
             else if (Phase == MeleePhase.Idle)
             {
                 ResumeMovement();
                 bool nextIsHeavy = enableHeavyAttack && attacksStarted % 3 == 2;
-                if (tracker.IsTracking && tracker.HasLineOfSight && FaceTarget() && CanStrike(nextIsHeavy))
+                bool nextIsRanged = ranged != null && ranged.CanBegin(target, nextIsHeavy ? heavyRange : attackRange);
+                if (tracker.IsTracking && tracker.HasLineOfSight && FaceTarget() &&
+                    (nextIsRanged || CanStrike(nextIsHeavy)))
                 {
-                    IsHeavyAttack = nextIsHeavy;
+                    IsRangedAttack = nextIsRanged;
+                    IsHeavyAttack = !nextIsRanged && nextIsHeavy;
                     attacksStarted++;
                     strikeForward = transform.forward;
+                    lockedAim = target.transform.position + Vector3.up;
                     PauseMovement();
                     Phase = MeleePhase.Windup;
                     WindupProgress = 0f;
@@ -214,6 +226,7 @@ namespace Nomad.Monsters
             Phase = MeleePhase.Dead;
             WindupProgress = 0f;
             IsHeavyAttack = false;
+            IsRangedAttack = false;
             PauseMovement();
         }
 

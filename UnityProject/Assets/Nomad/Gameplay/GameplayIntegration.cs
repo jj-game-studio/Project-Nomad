@@ -176,6 +176,12 @@ namespace Nomad.Gameplay
                 enemyRoot = null;
             }
             enemies.Clear();
+            foreach (MonsterBolt bolt in FindObjectsByType<MonsterBolt>(FindObjectsSortMode.None))
+            {
+                if (bolt.gameObject.scene != gameObject.scene) continue;
+                bolt.gameObject.SetActive(false);
+                Destroy(bolt.gameObject);
+            }
             foreach (Projectile projectile in FindObjectsByType<Projectile>(FindObjectsSortMode.None))
             {
                 if (projectile.gameObject.scene != gameObject.scene) continue;

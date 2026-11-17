@@ -214,6 +214,10 @@ if (monsters.Count >= 12)
                 Destroy(entry.health.gameObject);
             }
             monsters.Clear();
+            foreach (MonsterBolt bolt in FindObjectsByType<MonsterBolt>(FindObjectsSortMode.None))
+            {
+                if (bolt.gameObject.scene == gameObject.scene) Destroy(bolt.gameObject);
+            }
             foreach (PlaceholderEquipmentDrop drop in GetComponentsInChildren<PlaceholderEquipmentDrop>())
             {
                 drop.gameObject.SetActive(false);
@@ -332,6 +336,15 @@ if (monsters.Count >= 12)
 
         private void DrawSettings(MonsterTestSettings c)
         {
+            c.ranged = GUILayout.Toggle(c.ranged, "Ranged attacks enabled");
+            if (c.ranged)
+            {
+                c.rangedRange = Slider("Ranged distance", c.rangedRange, 3f, 20f);
+                c.projectileSpeed = Slider("Projectile speed", c.projectileSpeed, 2f, 20f);
+                c.rangedDamage = Mathf.RoundToInt(Slider("Ranged damage", c.rangedDamage, 1f, 100f));
+                c.rangedWindup = Slider("Ranged windup", c.rangedWindup, 0.3f, 3f);
+                c.rangedRecovery = Slider("Ranged recovery", c.rangedRecovery, 0.3f, 4f);
+            }
             c.moveSpeed = Slider("Move speed (m/s)", c.moveSpeed, 0f, 8f);
             c.sightRange = Slider("Detection radius (m)", c.sightRange, 1f, 20f);
             c.abandonRange = Slider("Target gap limit (m)", c.abandonRange, c.sightRange, 30f);

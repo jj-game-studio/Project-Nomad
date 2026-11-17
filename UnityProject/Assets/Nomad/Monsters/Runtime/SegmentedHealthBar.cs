@@ -13,12 +13,26 @@ namespace Nomad.Monsters
         public Vector3 WorldOffset { set => worldOffset = value; }
         private Health health;
         private GUIStyle title;
+        private float delayedRatio = 1f;
+        private float holdTrail;
+        private float lastRatio = 1f;
+        public float DamageTrailRatio => delayedRatio;
 
         public int SegmentCount => segments;
 
         private void Awake()
         {
             health = GetComponent<Health>();
+        }
+
+        private void Update()
+        {
+            if (!Boss) return;
+            float ratio = (float)health.CurrentHealth / health.MaxHealth;
+            if (ratio < lastRatio) holdTrail = 0.5f;
+            lastRatio = ratio;
+            holdTrail -= Time.deltaTime;
+            if (holdTrail <= 0f) delayedRatio = Mathf.MoveTowards(delayedRatio, ratio, Time.deltaTime * 0.45f);
         }
 
         public float GetSegmentFill(int index)
@@ -36,10 +50,7 @@ namespace Nomad.Monsters
 
             if (Boss)
             {
-                GUI.Box(new Rect(Screen.width * 0.5f - 180f, 12f, 360f, 45f),
-                    $"DRAGON (TEST BOSS)   {health.CurrentHealth}/{health.MaxHealth}");
-                Paint(new Rect(Screen.width * 0.5f - 170f, 40f,
-                    340f * health.CurrentHealth / health.MaxHealth, 8f), new Color(0.9f, 0.3f, 0.15f));
+                DrawBoss();
                 return;
             }
 
@@ -78,6 +89,27 @@ namespace Nomad.Monsters
                 if (fill > 0f)
                     Paint(new Rect(cell.x + 1f, cell.y + 1f, (cell.width - 2f) * fill, cell.height - 2f), color);
             }
+        }
+
+        private void DrawBoss()
+        {
+            float width = Mathf.Min(760f, Screen.width * 0.58f);
+            float x = (Screen.width - width) * 0.5f;
+            Color gold = new Color(0.85f, 0.65f, 0.28f);
+            Paint(new Rect(x - 10f, 12f, width + 20f, 74f), new Color(0.05f, 0.04f, 0.06f, 0.94f));
+            Paint(new Rect(x - 10f, 12f, width + 20f, 2f), gold);
+            if (title == null) title = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter };
+            title.fontSize = Mathf.Clamp(Mathf.RoundToInt(width / 32f), 14, 22);
+            title.normal.textColor = gold;
+            GUI.Label(new Rect(x, 16f, width, 28f), "ASHEN TYRANT  -  FINAL GUARDIAN", title);
+            Rect bar = new Rect(x, 48f, width, 17f);
+            Paint(bar, new Color(0.16f, 0.08f, 0.1f));
+            Paint(new Rect(bar.x, bar.y, width * delayedRatio, bar.height), gold);
+            Paint(new Rect(bar.x, bar.y, width * health.CurrentHealth / health.MaxHealth, bar.height), new Color(0.72f, 0.09f, 0.08f));
+            for (int i = 1; i < 4; i++) Paint(new Rect(x + width * i / 4f, bar.y, 2f, bar.height), new Color(0.12f, 0.05f, 0.07f));
+            title.fontSize = 12;
+            title.normal.textColor = Color.white;
+            GUI.Label(new Rect(x, 64f, width, 19f), $"{health.CurrentHealth:N0} / {health.MaxHealth:N0}", title);
         }
 
         private static void Paint(Rect rect, Color color)

@@ -57,6 +57,106 @@ namespace Nomad.Monsters.Tests
         }
 
         [UnityTest]
+        public IEnumerator RangedWindupLaunchesRealProjectileAndHitsPlayerOnce()
+        {
+            player.transform.position = new Vector3(3f, 0f, 4f);
+            Call("SetKind", 0);
+            Health actor = (Health)Call("SpawnAt", new Vector3(3f, 0f, -2f));
+            actor.GetComponent<NavMeshAgent>().speed = 0f;
+            MonsterRangedAttack ranged = actor.GetComponent<MonsterRangedAttack>();
+            Assert.That(ranged.Visual, Is.Not.Null);
+            float deadline = Time.time + 4f;
+            while (ranged.ShotsFired == 0 && Time.time < deadline) yield return null;
+            Assert.That(ranged.ShotsFired, Is.EqualTo(1));
+            Assert.That(player.CurrentHealth, Is.EqualTo(100), "damage must wait for projectile travel");
+            ranged.enabled = false;
+            while (player.CurrentHealth == 100 && Time.time < deadline) yield return null;
+            Assert.That(player.CurrentHealth, Is.EqualTo(85));
+            yield return new WaitForSeconds(0.2f);
+            Assert.That(player.CurrentHealth, Is.EqualTo(85), "one impact only");
+        }
+
+        [UnityTest]
+        public IEnumerator RangedAimLocksAndPlayerCanDodgeDuringWindup()
+        {
+            player.transform.position = new Vector3(3f, 0f, 4f);
+            Health actor = (Health)Call("SpawnAt", new Vector3(3f, 0f, -2f));
+            actor.GetComponent<NavMeshAgent>().speed = 0f;
+            var attack = actor.GetComponent<MonsterMeleeAttack>();
+            var ranged = actor.GetComponent<MonsterRangedAttack>();
+            float deadline = Time.time + 4f;
+            while (attack.Phase != MeleePhase.Windup && Time.time < deadline) yield return null;
+            Assert.That(attack.IsRangedAttack, Is.True);
+            player.transform.position += Vector3.right * 3f;
+            while (ranged.ShotsFired == 0 && Time.time < deadline) yield return null;
+            Assert.That(ranged.ShotsFired, Is.EqualTo(1));
+            ranged.enabled = false;
+            yield return new WaitForSeconds(1f);
+            Assert.That(player.CurrentHealth, Is.EqualTo(100), "locked aim must not home onto dodging player");
+        }
+
+        [UnityTest]
+        public IEnumerator RangedProjectileIsBlockedByCoverAndDeathCancelsPendingShot()
+        {
+            player.transform.position = new Vector3(3f, 0f, 4f);
+            Health actor = (Health)Call("SpawnAt", new Vector3(3f, 0f, -2f));
+            actor.GetComponent<NavMeshAgent>().speed = 0f;
+            var attack = actor.GetComponent<MonsterMeleeAttack>();
+            var ranged = actor.GetComponent<MonsterRangedAttack>();
+            float deadline = Time.time + 4f;
+            while (attack.Phase != MeleePhase.Windup && Time.time < deadline) yield return null;
+            Assert.That(attack.IsRangedAttack, Is.True);
+            GameObject cover = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            cover.transform.position = new Vector3(3f, 1.5f, 1f);
+            cover.transform.localScale = new Vector3(2f, 3f, 0.3f);
+            while (ranged.ShotsFired == 0 && Time.time < deadline) yield return null;
+            Assert.That(ranged.ShotsFired, Is.EqualTo(1));
+            yield return new WaitForSeconds(0.8f);
+            Assert.That(player.CurrentHealth, Is.EqualTo(100));
+            UnityEngine.Object.Destroy(cover);
+            while (attack.Phase != MeleePhase.Windup && Time.time < deadline + 3f) yield return null;
+            Assert.That(attack.Phase, Is.EqualTo(MeleePhase.Windup));
+            int shots = ranged.ShotsFired;
+            actor.TryApplyDamage(10000);
+            yield return new WaitForSeconds(1.5f);
+            Assert.That(ranged.ShotsFired, Is.EqualTo(shots));
+        }
+
+        [UnityTest]
+        public IEnumerator GolemBonesWalkAndDieAndDragonHasLargerBodyAndDamageTrail()
+        {
+            Call("SetKind", 1);
+            Health golem = (Health)Call("SpawnAt", new Vector3(3f, 0f, -2f));
+            golem.GetComponent<MonsterMeleeAttack>().enabled = false;
+            golem.GetComponent<MonsterRangedAttack>().enabled = false;
+            yield return null;
+            Transform arm = Array.Find(golem.GetComponentsInChildren<Transform>(), t => t.name == "upper_arm.L");
+            Assert.That(arm, Is.Not.Null);
+            Quaternion before = arm.localRotation;
+            NavMeshAgent agent = golem.GetComponent<NavMeshAgent>();
+            agent.speed = 4f;
+            agent.SetDestination(new Vector3(3f, 0f, 4f));
+            yield return new WaitForSeconds(0.4f);
+            Assert.That(Quaternion.Angle(before, arm.localRotation), Is.GreaterThan(1f));
+            Transform body = golem.transform.Find("Body");
+            Quaternion standing = body.localRotation;
+            golem.TryApplyDamage(10000);
+            yield return new WaitForSeconds(0.8f);
+            Assert.That(Quaternion.Angle(standing, body.localRotation), Is.GreaterThan(50f));
+            Call("SetKind", 2);
+            Health boss = (Health)Call("SpawnAt", new Vector3(6f, 0f, -2f));
+            boss.GetComponent<MonsterMeleeAttack>().enabled = false;
+            Assert.That(boss.transform.Find("Body").localScale.x, Is.GreaterThan(0f));
+            var bar = boss.GetComponent<SegmentedHealthBar>();
+            Assert.That(bar.Boss, Is.True);
+            boss.TryApplyDamage(250);
+            yield return null;
+            Assert.That(bar.DamageTrailRatio, Is.GreaterThan(0.75f));
+            yield return new WaitForSeconds(1.5f);
+            Assert.That(bar.DamageTrailRatio, Is.EqualTo(0.75f).Within(0.01f));
+        }
+
+        [UnityTest]
         public IEnumerator SpawnUsesPerTypeHealthSpeedAndTrackingSettings()
         {
             Call("SetKind", 0);
@@ -177,6 +277,7 @@ namespace Nomad.Monsters.Tests
             Call("SetKind", 0);
             object config = Settings(0);
             Set(config, "homeRange", 2f);
+            Set(config, "ranged", false);
             Set(config, "sightRange", 20f);
             Set(config, "abandonRange", 30f);
             Set(config, "attackRange", 0.5f);

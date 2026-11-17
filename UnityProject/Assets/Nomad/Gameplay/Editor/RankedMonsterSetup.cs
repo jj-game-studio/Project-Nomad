@@ -56,8 +56,9 @@ namespace Nomad.Gameplay.Editor
                 Debug.Log($"DRAGON_CLIP {files[i]} duration={animation.length} bindings={AnimationUtility.GetCurveBindings(animation).Length}");
             }
             var catalog = AssetDatabase.LoadAssetAtPath<MonsterAppearanceSet>(Catalog);
-            catalog.elite = Prefab("Iron Golem", Golem + "/Iron_Golem.fbx", Golem + "/Texture.png", 2.5f, null);
-            catalog.boss = Prefab("Dragon", Dragon + "/dragon.dae", Dragon + "/dragon.png", 2.5f, controller);
+            catalog.elite = Prefab("Iron Golem", Golem + "/Iron_Golem.fbx", Golem + "/Texture.png", 3.5f, null);
+            catalog.boss = Prefab("Dragon", Dragon + "/dragon.dae", Dragon + "/dragon.png", 5f, controller);
+            RangedAssetSetup.Apply(catalog);
             EditorUtility.SetDirty(catalog);
             EditorUtility.SetDirty(controller);
             AssetDatabase.SaveAssets();
@@ -116,18 +117,6 @@ namespace Nomad.Gameplay.Editor
             material.SetColor("_BaseColor", Color.white);
             var wrapper = new GameObject(label);
             var model = Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(path), wrapper.transform);
-            Renderer[] bodies = model.GetComponentsInChildren<Renderer>();
-            if (bodies.Length == 0) throw new InvalidOperationException("Empty model: " + path);
-            Bounds bounds = bodies[0].bounds;
-            foreach (Renderer body in bodies)
-            {
-                bounds.Encapsulate(body.bounds);
-                body.sharedMaterials = Enumerable.Repeat(material, body.sharedMaterials.Length).ToArray();
-                if (body is SkinnedMeshRenderer skin) skin.updateWhenOffscreen = true;
-            }
-            if (bounds.size.y < 0.01f) throw new InvalidOperationException("Invalid model bounds");
-            model.transform.localPosition -= Vector3.up * bounds.min.y;
-            wrapper.transform.localScale = Vector3.one * (height / bounds.size.y);
             Animator animator = model.GetComponent<Animator>();
             if (controller != null)
             {
@@ -135,12 +124,37 @@ namespace Nomad.Gameplay.Editor
                 animator.runtimeAnimatorController = controller;
                 animator.applyRootMotion = false;
                 animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+                controller.animationClips.First(clip => clip.name.Contains("idle")).SampleAnimation(model, 0.2f);
             }
+            Renderer[] bodies = model.GetComponentsInChildren<Renderer>();
+            if (bodies.Length == 0) throw new InvalidOperationException("Empty model: " + path);
+            Bounds bounds = VisualBounds(bodies[0]);
+            foreach (Renderer body in bodies)
+            {
+                bounds.Encapsulate(VisualBounds(body));
+                body.sharedMaterials = Enumerable.Repeat(material, body.sharedMaterials.Length).ToArray();
+                if (body is SkinnedMeshRenderer skin) skin.updateWhenOffscreen = true;
+            }
+            if (bounds.size.y < 0.01f) throw new InvalidOperationException("Invalid model bounds");
+            model.transform.localPosition -= Vector3.up * bounds.min.y;
+            wrapper.transform.localScale = Vector3.one * (height / bounds.size.y);
             string prefabPath = Output + "/" + label + ".prefab";
             GameObject result = PrefabUtility.SaveAsPrefabAsset(wrapper, prefabPath);
             Object.DestroyImmediate(wrapper);
             EditorUtility.SetDirty(material);
             return result;
+        }
+
+        private static Bounds VisualBounds(Renderer renderer)
+        {
+            if (!(renderer is SkinnedMeshRenderer skin)) return renderer.bounds;
+            var mesh = new Mesh();
+            skin.BakeMesh(mesh);
+            Vector3[] vertices = mesh.vertices;
+            Bounds bounds = new Bounds(skin.transform.TransformPoint(vertices[0]), Vector3.zero);
+            foreach (Vector3 vertex in vertices) bounds.Encapsulate(skin.transform.TransformPoint(vertex));
+            Object.DestroyImmediate(mesh);
+            return bounds;
         }
 
         private static void CapturePreview()
@@ -153,8 +167,18 @@ namespace Nomad.Gameplay.Editor
             {
                 GameObject actor = Object.Instantiate(models[i]);
                 UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(actor, scene);
-                actor.transform.position = new Vector3((i - 1) * 4f, 0f, 0f);
-                actor.transform.rotation = Quaternion.Euler(0f, 180f, 0f);
+                actor.transform.position = new Vector3((i - 1) * 5f, 0f, 0f);
+                actor.transform.rotation = Quaternion.Euler(0f, i == 2 ? 225f : 180f, 0f);
+                if (i == 1)
+                    foreach (Transform bone in actor.GetComponentsInChildren<Transform>())
+                        if (bone.name == "upper_arm.L" || bone.name == "upper_arm.R")
+                            bone.localRotation *= Quaternion.Euler(0f, 0f, bone.name.EndsWith(".L") ? 65f : -65f);
+                Animator animator = actor.GetComponentInChildren<Animator>();
+                if (animator != null && animator.runtimeAnimatorController != null)
+                {
+                    AnimationClip idle = animator.runtimeAnimatorController.animationClips.FirstOrDefault(c => c.name.Contains("Idle") || c.name.Contains("idle"));
+                    if (idle != null) idle.SampleAnimation(animator.gameObject, 0.2f);
+                }
             }
             var camera = new GameObject("Preview camera").AddComponent<Camera>();
             UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(camera.gameObject, scene);
@@ -162,7 +186,7 @@ namespace Nomad.Gameplay.Editor
             camera.transform.position = new Vector3(0f, 5f, -14f);
             camera.transform.LookAt(new Vector3(0f, 1f, 0f));
             camera.orthographic = true;
-            camera.orthographicSize = 4.5f;
+            camera.orthographicSize = 5.5f;
             camera.clearFlags = CameraClearFlags.SolidColor;
             camera.backgroundColor = new Color(0.12f, 0.15f, 0.2f);
             var light = new GameObject("Preview light").AddComponent<Light>();

@@ -31,3 +31,7 @@ Explicit follow-up: **drop tables are not configured**. Actual equipment and pic
 Raw ZIPs remain in private SourceArchives~. Extracted models/textures and generated prefab/material/controller remain in the private ThirdParty submodule. Dragon publisher declares CC0: https://opengameart.org/content/cethiels-dragon-3d (Drummyfish, original Cethiel). Iron Golem publisher allows personal/commercial game use: https://standout7.itch.io/lowpo-golem ; CC0 metadata conflicts with restrictive body terms, so do not label it unconditionally CC0 or publish standalone source assets. This change uses it for private game testing only. Wyvern is not imported. No bundled license text was fabricated.
 
 Rebuild imports with `Nomad > Gameplay > Apply Three Monster Ranks`. Run this after `SkeletonAppearanceSetup.Apply`, which builds the basic catalog. Verification evidence and final commit are recorded in Issue #64 / PR #59.
+
+## Later visual/combat update (#65)
+
+Golem now uses procedural bone motion at3.5m reference height; Dragon5m with a distinct final-guardian damage-trail HUD. Ranged attacks, weapons and remaining art requests are documented in [monster-ranged.md](monster-ranged.md). Earlier rig-pose-only notes above describe the previous implementation. Visual-only death drops and future equipment ownership remain unchanged.
