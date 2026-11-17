@@ -1,0 +1,806 @@
+VBCSCompilerPreWarmer: watching VBCSCompiler (PID 3064)
+VBCSCompilerPreWarmer: pre-warm launched (dotnet PID 41344)
+VBCSCompiler prewarm took 16.29 ms
+[Licensing::Module] Trying to connect to existing licensing client channel...
+Built from '6000.6/staging' branch; Version is '6000.6.9f1 (8c45277fb9c5) revision 9192743'; Using compiler version '194234433'; Build Type 'Release'
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-JUNGLE" at "2026-11-17T10:24:54.3289537Z"
+OS: 'Windows 11  (10.0.26200) Enterprise' Language: 'ko' Physical Memory: 32406 MB
+BatchMode: 1, IsHumanControllingUs: 0, StartBugReporterOnCrash: 0, Is64bit: 1
+System  architecture: x64
+Process architecture: x64
+Date: 2026-11-17T10:24:54Z
+[Licensing::Client] Code 10 while verifying Licensing Client signature (process Id: 43952, path: "C:/Program Files/Unity Hub/UnityLicensingClient_V1/Unity.Licensing.Client.exe")
+[Licensing::Module] LicensingClient has failed validation; ignoring
+[Licensing::Client] Error: HandshakeResponse reported an error:
+	ResponseCode: 505
+	ResponseStatus: Unsupported protocol version '1.19.0'.
+[Licensing::Module] Error: Failed to handshake to channel: "LicenseClient-JUNGLE"
+[Licensing::IpcConnector] LicenseClient-JUNGLE channel disconnected successfully.
+[Licensing::IpcConnector] Channel LicenseClient-JUNGLE-1.19.0 doesn't exist
+[Licensing::Module] Successfully launched the LicensingClient (PId: 31084)
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-JUNGLE-1.19.0" at "2026-11-17T10:24:54.5303275Z"
+[Licensing::Client] Code 10 while verifying Licensing Client signature (process Id: 31084, path: "C:/Program Files/Unity/Hub/Editor/6000.6.9f1/Editor/Data/Resources/Licensing/Client/Unity.Licensing.Client.exe")
+[Licensing::Module] LicensingClient has failed validation; ignoring
+[Licensing::Client] Handshaking with LicensingClient:
+  Version:                 1.19.0+4cc3dda
+  Session Id:              14f92d61a5164828b5307d25466aeacf
+  Correlation Id:          20f15ff3cbc6c5420c2d0faf91a60d9d
+  External correlation Id: 7146915819281237031
+  Machine Id:              x/OhAKMJPQpKL7cHM1YEBv9uFnE=
+[Licensing::Module] Successfully connected to LicensingClient on channel: "LicenseClient-JUNGLE-1.19.0" (connect: 0.16s, validation: 0.03s, handshake: 0.02s)
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-JUNGLE-1.19.0-notifications" at "2026-11-17T10:24:54.5845676Z"
+[Licensing::Module] Connected to LicensingClient (PId: 31084, launch time: 0.01, total connection time: 0.21s)
+[Licensing::Module] Error: Access token is unavailable; failed to update
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Module] License group:
+  Id: 14569836614136-UnityPersXXXX
+  Product: Unity Personal
+  Type: Assigned
+  Expiration: Unlimited
+[Licensing::Client] Successfully updated license, isAsync: True, time: 0.00
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Module] Licensing Background thread has ended after 0.26s
+
+COMMAND LINE ARGUMENTS:
+C:\Program Files\Unity\Hub\Editor\6000.6.9f1\Editor\Unity.exe
+-batchmode
+-projectPath
+C:/Users/JUNGLE/Desktop/JungleGameTech/JJya/.worktrees/ranged-validation/UnityProject
+-executeMethod
+Nomad.Gameplay.Editor.RankedMonsterSetup.Apply
+-quit
+-logFile
+C:/Users/JUNGLE/Desktop/JungleGameTech/JJya/.worktrees/ranged-validation/UnityProject/Artifacts/debug-animation-setup-final.log
+Successfully changed project path to: C:/Users/JUNGLE/Desktop/JungleGameTech/JJya/.worktrees/ranged-validation/UnityProject
+C:/Users/JUNGLE/Desktop/JungleGameTech/JJya/.worktrees/ranged-validation/UnityProject
+[UnityMemory] Configuration Parameters - Can be set up in boot.config
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-nav-mesh-worker=65536"
+    "memorysetup-temp-allocator-size-audio-worker=65536"
+    "memorysetup-temp-allocator-size-cloud-worker=32768"
+    "memorysetup-temp-allocator-size-gfx=262144"
+    "memorysetup-remapper-allocator-initial-capacity=32768"
+    "memorysetup-temp-allocator-size-preload-manager=33554432"
+    "memorysetup-allocator-temp-initial-block-size-main=262144"
+    "memorysetup-allocator-temp-initial-block-size-worker=262144"
+    "memorysetup-temp-allocator-size-job-worker=262144"
+    "memorysetup-temp-allocator-size-background-worker=32768"
+    "memorysetup-bucket-allocator-granularity=16"
+    "memorysetup-bucket-allocator-bucket-count=8"
+    "memorysetup-bucket-allocator-block-size=33554432"
+    "memorysetup-bucket-allocator-block-count=8"
+    "memorysetup-main-allocator-block-size=16777216"
+    "memorysetup-thread-allocator-block-size=16777216"
+    "memorysetup-main-allocator-mimalloc-enabled=1"
+    "memorysetup-gfx-main-allocator-block-size=16777216"
+    "memorysetup-gfx-thread-allocator-block-size=16777216"
+    "memorysetup-cache-allocator-block-size=4194304"
+    "memorysetup-typetree-allocator-block-size=2097152"
+    "memorysetup-profiler-bucket-allocator-granularity=16"
+    "memorysetup-profiler-bucket-allocator-bucket-count=8"
+    "memorysetup-profiler-bucket-allocator-block-size=33554432"
+    "memorysetup-profiler-bucket-allocator-block-count=8"
+    "memorysetup-profiler-allocator-block-size=16777216"
+    "memorysetup-profiler-editor-allocator-block-size=1048576"
+    "memorysetup-temp-allocator-size-main=16777216"
+    "memorysetup-job-temp-allocator-block-size=2097152"
+    "memorysetup-job-temp-allocator-block-size-background=1048576"
+    "memorysetup-job-temp-allocator-reduction-small-platforms=262144"
+Logging is directed to a specific file, skipping project log.
+Player connection [56620]  Target information:
+
+Player connection [56620]  * "[IP] 172.21.10.66 [Port] 55504 [Flags] 2 [Guid] 2762716765 [EditorId] 2762716765 [Version] 1048832 [Id] WindowsEditor(7,DESKTOP-35FS74Q) [Debug] 1 [PackageName] WindowsEditor [ProjectName] Editor" 
+
+Player connection [56620]  * "[IP] 26.21.84.248 [Port] 55504 [Flags] 2 [Guid] 2762716765 [EditorId] 2762716765 [Version] 1048832 [Id] WindowsEditor(7,DESKTOP-35FS74Q) [Debug] 1 [PackageName] WindowsEditor [ProjectName] Editor" 
+
+Player connection [56620] Host joined multi-casting on [225.0.0.222:54997]...
+Player connection [56620] Host joined alternative multi-casting on [225.0.0.222:34997]...
+Input System module state changed to: Initialized.
+[Physics::Module] Initialized fallback backend.
+[Physics::Module] Id: 0xdecafbad
+[Package Manager] Connected to IPC stream "Upm-43308" after 0.2 seconds.
+[Licensing::Client] Successfully resolved entitlement details
+Library Redirect Path: Library/
+Launching Unity Data Store - C:/Program Files/Unity/Hub/Editor/6000.6.9f1/Editor/Data/Tools/Unity.DataStore.exe 
+Unity Data Store artifact dir = Library/DataStore, working dir = C:/Users/JUNGLE/Desktop/JungleGameTech/JJya/.worktrees/ranged-validation/UnityProjectUnity Data Store running and initialised
+[Physics::Module] Selected backend (deferred post-plugins).
+[Physics::Module] Name: PhysX
+[Physics::Module] Id: 0xf2b8ea05
+[Physics::Module] SDK Version: 4.1.2
+[Physics::Module] Integration Version: 1.0.0
+[Physics::Module] Threading Mode: Multi-Threaded
+Initialize engine version: 6000.6.9f1 (8c45277fb9c5)
+[EntityIdStore] init: VM path (explicit commit), pageSize=4096, blockCount=262144, entitiesPerBlock=1024, blocksPerSlotPage=0, slots reserved=4294967296 bytes
+[Subsystems] Discovering subsystems at path C:/Program Files/Unity/Hub/Editor/6000.6.9f1/Editor/Data/Resources/UnitySubsystems
+[Subsystems] Discovering subsystems at path C:/Users/JUNGLE/Desktop/JungleGameTech/JJya/.worktrees/ranged-validation/UnityProject/Assets
+GfxDevice: creating device client; kGfxThreadingModeNonThreaded
+d3d12: failed to query info queue interface (0x80004002).
+Direct3D:
+    Version:         Direct3D 12 [level 12.2]
+    Renderer:        NVIDIA GeForce RTX 4060 (ID=0x2882)
+    Vendor:          NVIDIA
+    VRAM:            7956 MB
+    App VRAM Budget: 7188 MB
+    Driver:          32.0.16.1714
+Initialize mono
+Mono path[0] = 'C:/Program Files/Unity/Hub/Editor/6000.6.9f1/Editor/Data/Managed'
+Mono path[1] = 'C:/Program Files/Unity/Hub/Editor/6000.6.9f1/Editor/Data/BCLExtensions/runtime/netstandard2.1'
+Mono path[2] = 'C:/Program Files/Unity/Hub/Editor/6000.6.9f1/Editor/Data/MonoBleedingEdge/lib/mono/unityjit-win32'
+Mono config path = 'C:/Program Files/Unity/Hub/Editor/6000.6.9f1/Editor/Data/MonoBleedingEdge/etc'
+Using monoOptions --debugger-agent=transport=dt_socket,embedding=1,server=y,suspend=n,address=127.0.0.1:56308
+CodeReloadManager initialized
+ImportWorker Server TCP listen port: 0
+AcceleratorClientConnectionCallback - disconnected - :0
+Begin MonoManager ReloadAssembly
+Registering precompiled unity dll's ...
+Register platform support module: C:/Program Files/Unity/Hub/Editor/6000.6.9f1/Editor/Data/PlaybackEngines/WebGLSupport/UnityEditor.WebGL.Extensions.dll
+Register platform support module: C:/Program Files/Unity/Hub/Editor/6000.6.9f1/Editor/Data/PlaybackEngines/WindowsStandaloneSupport/UnityEditor.WindowsStandalone.Extensions.dll
+Registered in 0.004457 seconds.
+Native extension for WindowsStandalone target not found
+Native extension for WebGL target not found
+Package Manager log level set to [2]
+ScheduleIndexationOnStartup MainProcess:False IndexOnStartup:True
+Scripting: successfully reloaded assembly
+- Finished resetting the current domain, in  0.651 seconds
+Domain Reload Profiling: 1174ms
+	BeginReloadAssembly (147ms)
+		CreateAndSetChildDomain (4ms)
+	RebuildCommonClasses (5ms)
+	RebuildNativeTypeToScriptingClass (14ms)
+	initialDomainReloadingComplete (67ms)
+	LoadAllAssembliesAndSetupDomain (288ms)
+		LoadAssemblies (138ms)
+		TypeCache.Refresh (194ms)
+			TypeCache.ScanAssembly (181ms)
+		AnalyzeDomain (1ms)
+	FinalizeReload (653ms)
+		SetupLoadedEditorAssemblies (0ms)
+			InitializePlatformSupportModulesInManaged (4ms)
+			BeforeProcessingInitializeOnLoad (85ms)
+			ProcessInitializeOnLoadAttributes (127ms)
+			ProcessInitializeOnLoadMethodAttributes (234ms)
+[Licensing::Client] Successfully resolved entitlement details
+Application.AssetDatabase Initial Refresh Start
+[Package Manager] Restoring resolved packages state from cache
+[Licensing::Client] Successfully resolved entitlement details
+[Package Manager] Registered 57 packages:
+  Packages from [https://packages.unity.com]:
+    com.unity.ai.navigation@2.0.16 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.ai.navigation@d0cf77b009bb)
+    com.unity.collab-proxy@2.14.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.collab-proxy@ac5a9def1e96)
+    com.unity.ide.rider@3.1.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.ide.rider@570989d4a882)
+    com.unity.ide.visualstudio@2.0.28 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.ide.visualstudio@b5edea5f33f4)
+    com.unity.inputsystem@1.20.1 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.inputsystem@2436e68c60c4)
+    com.unity.searcher@4.9.5 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.searcher@a463122f2c00)
+    com.unity.profiling.core@1.0.3 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.profiling.core@8a49f7027d06)
+    com.unity.nuget.mono-cecil@1.11.6 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.nuget.mono-cecil@ecb9724e46ff)
+  Built-in packages:
+    com.unity.render-pipelines.universal@17.6.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.render-pipelines.universal@2a6014b851d8)
+    com.unity.shadergraph@17.6.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.shadergraph@807b608040c3)
+    com.unity.ugui@2.6.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.ugui@ff4f88904a57)
+    com.unity.modules.accessibility@1.0.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.modules.accessibility)
+    com.unity.modules.adaptiveperformance@1.0.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.modules.adaptiveperformance)
+    com.unity.modules.ai@1.0.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.modules.ai)
+    com.unity.modules.androidjni@1.0.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.modules.androidjni)
+    com.unity.modules.animation@1.0.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.modules.animation)
+    com.unity.modules.assetbundle@1.0.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.modules.assetbundle)
+    com.unity.modules.audio@1.0.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.modules.audio)
+    com.unity.modules.cloth@1.0.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.modules.cloth)
+    com.unity.modules.director@1.0.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.modules.director)
+    com.unity.modules.imageconversion@1.0.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.modules.imageconversion)
+    com.unity.modules.imgui@1.0.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.modules.imgui)
+    com.unity.modules.jsonserialize@1.0.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.modules.jsonserialize)
+    com.unity.modules.particlesystem@1.0.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.modules.particlesystem)
+    com.unity.modules.physics@1.0.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.modules.physics)
+    com.unity.modules.physics2d@1.0.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.modules.physics2d)
+    com.unity.modules.physicscore2d@1.0.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.modules.physicscore2d)
+    com.unity.modules.screencapture@1.0.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.modules.screencapture)
+    com.unity.modules.terrain@1.0.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.modules.terrain)
+    com.unity.modules.terrainphysics@1.0.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.modules.terrainphysics)
+    com.unity.modules.tetgen@1.0.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.modules.tetgen)
+    com.unity.modules.tilemap@1.0.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.modules.tilemap)
+    com.unity.modules.timelinefoundation@1.0.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.modules.timelinefoundation)
+    com.unity.modules.ui@1.0.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.modules.ui)
+    com.unity.modules.uielements@1.0.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.modules.uielements)
+    com.unity.modules.umbra@1.0.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.modules.umbra)
+    com.unity.modules.unityanalytics@1.0.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.modules.unityanalytics)
+    com.unity.modules.unitywebrequest@1.0.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.modules.unitywebrequest)
+    com.unity.modules.unitywebrequestassetbundle@1.0.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.modules.unitywebrequestassetbundle)
+    com.unity.modules.unitywebrequestaudio@1.0.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.modules.unitywebrequestaudio)
+    com.unity.modules.unitywebrequesttexture@1.0.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.modules.unitywebrequesttexture)
+    com.unity.modules.unitywebrequestwww@1.0.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.modules.unitywebrequestwww)
+    com.unity.modules.vectorgraphics@1.0.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.modules.vectorgraphics)
+    com.unity.modules.vehicles@1.0.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.modules.vehicles)
+    com.unity.modules.video@1.0.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.modules.video)
+    com.unity.modules.wind@1.0.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.modules.wind)
+    com.unity.modules.xr@1.0.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.modules.xr)
+    com.unity.modules.subsystems@1.0.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.modules.subsystems)
+    com.unity.modules.hierarchycore@1.0.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.modules.hierarchycore)
+    com.unity.render-pipelines.core@17.6.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.render-pipelines.core@77e675a23c5f)
+    com.unity.graph-authoring@1.0.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.graph-authoring@cfd2588851ee)
+    com.unity.render-pipelines.universal-config@17.6.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.render-pipelines.universal-config@561422b74439)
+    com.unity.test-framework@1.8.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.test-framework@01a8b42f9cf6)
+    com.unity.burst@2.0.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.burst@626e66ab421b)
+    com.unity.collections@6.6.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.collections@c70d71c1212e)
+    com.unity.ext.nunit@2.1.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.ext.nunit@0198eae3b53e)
+    com.unity.test-framework.performance@6.6.0 (location: C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Library\PackageCache\com.unity.test-framework.performance@816c370aad5b)
+[Subsystems] No new subsystems found in resolved package list.
+[Package Manager] Done registering packages in 0.02 seconds
+[ScriptCompilation] Requested script compilation because: AssetDatabase observed changes in script compilation related files
+Starting: C:\Program Files\Unity\Hub\Editor\6000.6.9f1\Editor\Data\Tools\BuildPipeline\bee_backend.exe --ipc --defer-dag-verification --dagfile="Library/Bee/1900b0aE.dag" --continue-on-failure --profile="Library/Bee/backend1.traceevents" ScriptAssemblies
+WorkingDir: C:/Users/JUNGLE/Desktop/JungleGameTech/JJya/.worktrees/ranged-validation/UnityProject
+DisplayProgressbar: Compiling Scripts
+Starting: C:\Program Files\Unity\Hub\Editor\6000.6.9f1\Editor\Data\DotNetSdk\dotnet.exe "C:\Program Files\Unity\Hub\Editor\6000.6.9f1\Editor\Data\Tools\BuildPipeline\ScriptCompilationBuildProgram.exe" "Library/Bee/1900b0aE.dag.json" "Library/Bee/1900b0aE-inputdata.json" "Library\Bee\buildprogram0.traceevents"
+ExitCode: 4 Duration: 0s967ms
+WorkingDir: C:/Users/JUNGLE/Desktop/JungleGameTech/JJya/.worktrees/ranged-validation/UnityProject
+Rebuilding DAG because FileSignature timestamp changed: Library/Bee/1900b0aE-inputdata.json
+[682/875    0s] ILPP-Configuration Library/ilpp-configuration.nevergeneratedoutput
+[683/875    0s] Csc Library/Bee/artifacts/1900b0aE.dag/Assembly-CSharp.dll (+2 others)
+Assets\Nomad\Monsters\Demo\MonsterTestPanel.cs(217,73): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+
+Assets\Nomad\Monsters\Demo\MonsterTestPanel.cs(217,42): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+
+Assets\Nomad\Gameplay\GameplayIntegration.cs(181,73): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+
+Assets\Nomad\Gameplay\GameplayIntegration.cs(181,42): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+
+Assets\Nomad\Gameplay\GameplayIntegration.cs(187,77): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+
+Assets\Nomad\Gameplay\GameplayIntegration.cs(187,47): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+[684/875    0s] Csc Library/Bee/artifacts/1900b0aE.dag/Nomad.Monsters.PlayModeTests.dll (+2 others)
+Assets\Nomad\Monsters\Tests\PlayMode\MonsterTestPanelTests.cs(315,78): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+
+Assets\Nomad\Monsters\Tests\PlayMode\MonsterTestPanelTests.cs(315,25): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+
+Assets\Nomad\Monsters\Tests\PlayMode\MonsterTestPanelTests.cs(351,92): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+
+Assets\Nomad\Monsters\Tests\PlayMode\MonsterTestPanelTests.cs(351,39): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+*** Tundra requires additional run (0.92 seconds), 3 items updated, 681 evaluated
+ExitCode: 0 Duration: 0s956ms
+Starting: C:\Program Files\Unity\Hub\Editor\6000.6.9f1\Editor\Data\Tools\BuildPipeline\bee_backend.exe --ipc --defer-dag-verification --dagfile="Library/Bee/1900b0aE.dag" --continue-on-failure --dagfilejson="Library\Bee\1900b0aE.dag.json" --profile="Library/Bee/backend2.traceevents" ScriptAssemblies
+WorkingDir: C:/Users/JUNGLE/Desktop/JungleGameTech/JJya/.worktrees/ranged-validation/UnityProject
+ExitCode: 0 Duration: 2s288ms
+Finished compiling graph: 879 nodes, 16473 flattened edges (14053 ToBuild, 132 ToUse), maximum node priority 973
+[494/875    0s] WriteText Library/Bee/artifacts/1900b0aE.dag/Nomad.Monsters.PlayModeTests.rsp
+[683/875    0s] ILPP-Configuration Library/ilpp-configuration.nevergeneratedoutput
+[864/875    0s] ILPostProcess Library/Bee/artifacts/1900b0aE.dag/post-processed/Assembly-CSharp.dll (+pdb)
+Processing assembly Library/Bee/artifacts/1900b0aE.dag/Assembly-CSharp.dll, with 148 defines and 341 references
+
+processors: Unity.Jobs.CodeGen.JobsILPostProcessor, zzzUnity.Burst.CodeGen.BurstILPostProcessor
+
+1 processor(s) skipped this assembly
+
+running Unity.Jobs.CodeGen.JobsILPostProcessor
+[865/875    0s] CopyFiles Library/ScriptAssemblies/Assembly-CSharp.pdb
+[866/875    0s] CopyFiles Library/ScriptAssemblies/Assembly-CSharp.dll
+[867/875    0s] Csc Library/Bee/artifacts/1900b0aE.dag/Nomad.Monsters.PlayModeTests.dll (+2 others)
+Assets\Nomad\Monsters\Tests\PlayMode\MonsterTestPanelTests.cs(315,78): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+
+Assets\Nomad\Monsters\Tests\PlayMode\MonsterTestPanelTests.cs(315,25): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+
+Assets\Nomad\Monsters\Tests\PlayMode\MonsterTestPanelTests.cs(351,92): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+
+Assets\Nomad\Monsters\Tests\PlayMode\MonsterTestPanelTests.cs(351,39): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+[868/875    0s] ILPostProcess Library/Bee/artifacts/1900b0aE.dag/post-processed/Nomad.Monsters.PlayModeTests.dll (+pdb)
+Processing assembly Library/Bee/artifacts/1900b0aE.dag/Nomad.Monsters.PlayModeTests.dll, with 148 defines and 293 references
+
+processors: Unity.Jobs.CodeGen.JobsILPostProcessor, zzzUnity.Burst.CodeGen.BurstILPostProcessor
+
+1 processor(s) skipped this assembly
+
+running Unity.Jobs.CodeGen.JobsILPostProcessor
+[869/875    0s] CopyFiles Library/ScriptAssemblies/Nomad.Monsters.PlayModeTests.pdb
+[870/875    0s] CopyFiles Library/ScriptAssemblies/Nomad.Monsters.PlayModeTests.dll
+[871/875    0s] Csc Library/Bee/artifacts/1900b0aE.dag/Assembly-CSharp-Editor.dll (+2 others)
+Assets\Nomad\Loot\Editor\ChestInteractionVerification.cs(42,110): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+
+Assets\Nomad\Loot\Editor\ChestInteractionVerification.cs(42,35): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+
+Assets\Nomad\Loot\Editor\TerrainLootVerification.cs(138,84): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+
+Assets\Nomad\Loot\Editor\TerrainLootVerification.cs(138,48): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+
+Assets\Nomad\Gameplay\Editor\GameplayIntegrationSetup.cs(33,28): warning CS0618: 'Object.FindFirstObjectByType<T>()' is obsolete: 'FindFirstObjectByType has been deprecated because it relies on instance ID ordering. Use FindAnyObjectByType instead, which does not depend on ordering.'
+
+Assets\Nomad\Gameplay\Editor\SkeletonAppearanceSetup.cs(121,25): warning CS0618: 'Object.FindFirstObjectByType<T>()' is obsolete: 'FindFirstObjectByType has been deprecated because it relies on instance ID ordering. Use FindAnyObjectByType instead, which does not depend on ordering.'
+
+Assets\Nomad\Gameplay\Editor\SkeletonAppearanceSetup.cs(127,31): warning CS0618: 'Object.FindFirstObjectByType<T>()' is obsolete: 'FindFirstObjectByType has been deprecated because it relies on instance ID ordering. Use FindAnyObjectByType instead, which does not depend on ordering.'
+
+Assets\Nomad\Gameplay\Editor\MonsterDebugSetup.cs(17,35): warning CS0618: 'Object.FindFirstObjectByType<T>()' is obsolete: 'FindFirstObjectByType has been deprecated because it relies on instance ID ordering. Use FindAnyObjectByType instead, which does not depend on ordering.'
+
+Assets\Nomad\Gameplay\Editor\GameplayIntegrationSetup.cs(101,28): warning CS0618: 'Object.FindFirstObjectByType<T>()' is obsolete: 'FindFirstObjectByType has been deprecated because it relies on instance ID ordering. Use FindAnyObjectByType instead, which does not depend on ordering.'
+
+Assets\Nomad\Loot\Editor\FieldPreviewVerification.cs(125,72): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+
+Assets\Nomad\Loot\Editor\FieldPreviewVerification.cs(125,33): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+
+Assets\Nomad\Loot\Editor\FieldPreviewVerification.cs(126,69): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+
+Assets\Nomad\Loot\Editor\FieldPreviewVerification.cs(126,33): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+
+Assets\Nomad\Terrain\Editor\TerrainGenerationValidation.cs(345,21): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+
+Assets\Nomad\Terrain\Editor\TerrainGenerationValidation.cs(344,26): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+
+Assets\Nomad\Loot\Editor\LootVerification.cs(171,93): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+
+Assets\Nomad\Loot\Editor\LootVerification.cs(171,26): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+
+Assets\Nomad\Loot\Editor\LootVerification.cs(172,94): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+
+Assets\Nomad\Loot\Editor\LootVerification.cs(172,26): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+
+Assets\Nomad\Gameplay\Editor\GameplayIntegrationVerification.cs(94,38): warning CS0618: 'Object.FindFirstObjectByType<T>()' is obsolete: 'FindFirstObjectByType has been deprecated because it relies on instance ID ordering. Use FindAnyObjectByType instead, which does not depend on ordering.'
+
+Assets\Nomad\Gameplay\Editor\GameplayIntegrationVerification.cs(205,62): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+
+Assets\Nomad\Gameplay\Editor\GameplayIntegrationVerification.cs(205,26): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+
+Assets\Nomad\Gameplay\Editor\GameplayIntegrationVerification.cs(221,58): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+
+Assets\Nomad\Gameplay\Editor\GameplayIntegrationVerification.cs(221,21): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+
+Assets\Nomad\Gameplay\Editor\GameplayIntegrationVerification.cs(224,58): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+
+Assets\Nomad\Gameplay\Editor\GameplayIntegrationVerification.cs(224,21): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+
+Assets\Nomad\Gameplay\Editor\GameplayIntegrationVerification.cs(241,56): warning CS0618: 'Object.FindFirstObjectByType<T>()' is obsolete: 'FindFirstObjectByType has been deprecated because it relies on instance ID ordering. Use FindAnyObjectByType instead, which does not depend on ordering.'
+
+Assets\Nomad\Gameplay\Editor\GameplayIntegrationVerification.cs(252,24): warning CS0618: 'Object.FindFirstObjectByType<T>()' is obsolete: 'FindFirstObjectByType has been deprecated because it relies on instance ID ordering. Use FindAnyObjectByType instead, which does not depend on ordering.'
+[872/875    0s] ILPostProcess Library/Bee/artifacts/1900b0aE.dag/post-processed/Assembly-CSharp-Editor.dll (+pdb)
+Processing assembly Library/Bee/artifacts/1900b0aE.dag/Assembly-CSharp-Editor.dll, with 146 defines and 361 references
+
+processors: Unity.Jobs.CodeGen.JobsILPostProcessor, zzzUnity.Burst.CodeGen.BurstILPostProcessor
+
+1 processor(s) skipped this assembly
+
+running Unity.Jobs.CodeGen.JobsILPostProcessor
+[873/875    0s] CopyFiles Library/ScriptAssemblies/Assembly-CSharp-Editor.pdb
+[874/875    0s] CopyFiles Library/ScriptAssemblies/Assembly-CSharp-Editor.dll
+*** Tundra build success (2.25 seconds), 13 items updated, 875 evaluated
+Assets\Nomad\Monsters\Demo\MonsterTestPanel.cs(217,73): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+Assets\Nomad\Monsters\Demo\MonsterTestPanel.cs(217,42): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+Assets\Nomad\Gameplay\GameplayIntegration.cs(181,73): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+Assets\Nomad\Gameplay\GameplayIntegration.cs(181,42): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+Assets\Nomad\Gameplay\GameplayIntegration.cs(187,77): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+Assets\Nomad\Gameplay\GameplayIntegration.cs(187,47): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+Assets\Nomad\Monsters\Tests\PlayMode\MonsterTestPanelTests.cs(315,78): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+Assets\Nomad\Monsters\Tests\PlayMode\MonsterTestPanelTests.cs(315,25): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+Assets\Nomad\Monsters\Tests\PlayMode\MonsterTestPanelTests.cs(351,92): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+Assets\Nomad\Monsters\Tests\PlayMode\MonsterTestPanelTests.cs(351,39): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+Assets\Nomad\Monsters\Tests\PlayMode\MonsterTestPanelTests.cs(315,78): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+Assets\Nomad\Monsters\Tests\PlayMode\MonsterTestPanelTests.cs(315,25): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+Assets\Nomad\Monsters\Tests\PlayMode\MonsterTestPanelTests.cs(351,92): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+Assets\Nomad\Monsters\Tests\PlayMode\MonsterTestPanelTests.cs(351,39): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+Assets\Nomad\Loot\Editor\ChestInteractionVerification.cs(42,110): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+Assets\Nomad\Loot\Editor\ChestInteractionVerification.cs(42,35): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+Assets\Nomad\Loot\Editor\TerrainLootVerification.cs(138,84): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+Assets\Nomad\Loot\Editor\TerrainLootVerification.cs(138,48): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+Assets\Nomad\Gameplay\Editor\GameplayIntegrationSetup.cs(33,28): warning CS0618: 'Object.FindFirstObjectByType<T>()' is obsolete: 'FindFirstObjectByType has been deprecated because it relies on instance ID ordering. Use FindAnyObjectByType instead, which does not depend on ordering.'
+Assets\Nomad\Gameplay\Editor\SkeletonAppearanceSetup.cs(121,25): warning CS0618: 'Object.FindFirstObjectByType<T>()' is obsolete: 'FindFirstObjectByType has been deprecated because it relies on instance ID ordering. Use FindAnyObjectByType instead, which does not depend on ordering.'
+Assets\Nomad\Gameplay\Editor\SkeletonAppearanceSetup.cs(127,31): warning CS0618: 'Object.FindFirstObjectByType<T>()' is obsolete: 'FindFirstObjectByType has been deprecated because it relies on instance ID ordering. Use FindAnyObjectByType instead, which does not depend on ordering.'
+Assets\Nomad\Gameplay\Editor\MonsterDebugSetup.cs(17,35): warning CS0618: 'Object.FindFirstObjectByType<T>()' is obsolete: 'FindFirstObjectByType has been deprecated because it relies on instance ID ordering. Use FindAnyObjectByType instead, which does not depend on ordering.'
+Assets\Nomad\Gameplay\Editor\GameplayIntegrationSetup.cs(101,28): warning CS0618: 'Object.FindFirstObjectByType<T>()' is obsolete: 'FindFirstObjectByType has been deprecated because it relies on instance ID ordering. Use FindAnyObjectByType instead, which does not depend on ordering.'
+Assets\Nomad\Loot\Editor\FieldPreviewVerification.cs(125,72): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+Assets\Nomad\Loot\Editor\FieldPreviewVerification.cs(125,33): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+Assets\Nomad\Loot\Editor\FieldPreviewVerification.cs(126,69): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+Assets\Nomad\Loot\Editor\FieldPreviewVerification.cs(126,33): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+Assets\Nomad\Terrain\Editor\TerrainGenerationValidation.cs(345,21): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+Assets\Nomad\Terrain\Editor\TerrainGenerationValidation.cs(344,26): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+Assets\Nomad\Loot\Editor\LootVerification.cs(171,93): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+Assets\Nomad\Loot\Editor\LootVerification.cs(171,26): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+Assets\Nomad\Loot\Editor\LootVerification.cs(172,94): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+Assets\Nomad\Loot\Editor\LootVerification.cs(172,26): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+Assets\Nomad\Gameplay\Editor\GameplayIntegrationVerification.cs(94,38): warning CS0618: 'Object.FindFirstObjectByType<T>()' is obsolete: 'FindFirstObjectByType has been deprecated because it relies on instance ID ordering. Use FindAnyObjectByType instead, which does not depend on ordering.'
+Assets\Nomad\Gameplay\Editor\GameplayIntegrationVerification.cs(205,62): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+Assets\Nomad\Gameplay\Editor\GameplayIntegrationVerification.cs(205,26): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+Assets\Nomad\Gameplay\Editor\GameplayIntegrationVerification.cs(221,58): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+Assets\Nomad\Gameplay\Editor\GameplayIntegrationVerification.cs(221,21): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+Assets\Nomad\Gameplay\Editor\GameplayIntegrationVerification.cs(224,58): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+Assets\Nomad\Gameplay\Editor\GameplayIntegrationVerification.cs(224,21): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+Assets\Nomad\Gameplay\Editor\GameplayIntegrationVerification.cs(241,56): warning CS0618: 'Object.FindFirstObjectByType<T>()' is obsolete: 'FindFirstObjectByType has been deprecated because it relies on instance ID ordering. Use FindAnyObjectByType instead, which does not depend on ordering.'
+Assets\Nomad\Gameplay\Editor\GameplayIntegrationVerification.cs(252,24): warning CS0618: 'Object.FindFirstObjectByType<T>()' is obsolete: 'FindFirstObjectByType has been deprecated because it relies on instance ID ordering. Use FindAnyObjectByType instead, which does not depend on ordering.'
+Total cache size 104242796
+Total cache size after purge 104242796, took 00:00:00.1187423
+AssetDatabase: script compilation time: 5.383256s
+Begin MonoManager ReloadAssembly
+'Packages/com.unity.render-pipelines.core/Editor/Deprecated.cs' contains partial class of Unity.Object, exactly 1 of the partial classes needs to be in a file with the same filename. This is to know the one that can be referenced from ie. GameObjects
+'Packages/com.unity.render-pipelines.core/Editor/Deprecated.cs' contains partial class of Unity.Object, exactly 1 of the partial classes needs to be in a file with the same filename. This is to know the one that can be referenced from ie. GameObjects
+Native extension for WindowsStandalone target not found
+Native extension for WebGL target not found
+ScheduleIndexationOnStartup MainProcess:True IndexOnStartup:True
+Scripting: successfully reloaded assembly
+- Finished resetting the current domain, in  0.908 seconds
+Domain Reload Profiling: 1911ms
+	BeginReloadAssembly (263ms)
+		DisableScriptedObjects (35ms)
+		CreateAndSetChildDomain (50ms)
+	RebuildCommonClasses (10ms)
+	RebuildNativeTypeToScriptingClass (15ms)
+	initialDomainReloadingComplete (68ms)
+	LoadAllAssembliesAndSetupDomain (646ms)
+		LoadAssemblies (374ms)
+		TypeCache.Refresh (144ms)
+			TypeCache.ScanAssembly (128ms)
+		AnalyzeDomain (69ms)
+			BuildScriptInfoCaches (64ms)
+			ResolveRequiredComponents (3ms)
+	FinalizeReload (909ms)
+		SetupLoadedEditorAssemblies (0ms)
+			InitializePlatformSupportModulesInManaged (3ms)
+			BeforeProcessingInitializeOnLoad (104ms)
+			ProcessInitializeOnLoadAttributes (258ms)
+			ProcessInitializeOnLoadMethodAttributes (85ms)
+			AfterProcessingInitializeOnLoad (8ms)
+		AwakeInstancesAfterBackupRestoration (21ms)
+Starting new worker id: 0 with log in C:/Users/JUNGLE/Desktop/JungleGameTech/JJya/.worktrees/ranged-validation/UnityProject/Logs/AssetImportWorkerHW0.log
+Importing 'GUID: 58824af38eb107d44b81dc49d2736c4b - Path: Assets/Nomad/Terrain/Wfc/TerrainIntegration.unity' with importer (DefaultImporter)
+Imported 'GUID: 58824af38eb107d44b81dc49d2736c4b' -> (Import Result ID: 'ffb979479e846d45c0c131442a6f91e6') in 0.011 seconds [static dependencies only]. Details - ImportResultOutputID=fe02f8952dd751dc886ae1fc7a1daa6f DependenciesID=29fa444ffe38446f1cd254a85fe58df6 StaticDependenciesID=6f4abab3b0ff6cca1a2521e7210996ba 
+Refreshing native plugins compatible for Editor in 2.36 ms, found 3 plugins.
+Loaded 1 ExamplePackConfig assets
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+SyntyPackageHelper:LoadSyntyPackageHelperConfigs () (at Assets/ThirdParty/Synty_Prototype/SyntyPackageHelper/Editor/SyntyPackageHelper.cs:46)
+SyntyPackageHelper:OnProjectChanged () (at Assets/ThirdParty/Synty_Prototype/SyntyPackageHelper/Editor/SyntyPackageHelper.cs:55)
+UnityEditor.EditorApplication:Internal_CallProjectHasChanged ()
+
+(Filename: Assets/ThirdParty/Synty_Prototype/SyntyPackageHelper/Editor/SyntyPackageHelper.cs Line: 46)
+
+
+Asset Pipeline Refresh (id=67d4656b384ffa74f99bc5631b09d8fc): Total: 8.680 seconds - Initiated by InitialRefreshV2(ForceSynchronousImport)
+	(Values over 0.05ms)
+	Summary:
+		Imports: total=1 (actual=1, local cache=0, cache server=0)
+		Asset DB Process Time: managed=1 ms, native=1604 ms
+		Asset DB Callback time: managed=524 ms, native=34 ms
+		Scripting: domain reloads=1, domain reload time=1071 ms, compile time=5386 ms, other=57 ms
+		Project Asset Count: scripts=1209, non-scripts=4578
+		Asset File Changes: new=1, changed=8, moved=0, deleted=0
+		Scan Filter Count: 0
+	InvokePackagesCallback: 28.837ms
+	ApplyChangesToAssetFolders: 0.830ms
+	Scan: 222.463ms
+	Collect global state as custom dependencies: 23.638ms
+	OnSourceAssetsModified: 0.696ms
+	CategorizeScriptCompilationAssets: 26.970ms
+	ProcessAssetsWithTransientArtifactChanges: 73.976ms
+	CategorizeAssets: 129.628ms
+	CompileScripts: 5386.239ms
+	ImportOutOfDateAssets: 944.677ms (916.811ms without children)
+		ImportManagerImport: 13.737ms (1.327ms without children)
+		ReloadNativeAssets: 0.071ms
+		UnloadImportedAssets: 2.185ms
+		EnsureUptoDateAssetsAreRegisteredWithGuidPM: 1.518ms
+		ImportSchedulerStart: 10.338ms
+	PostProcessAllAssets: 504.120ms
+		VCAutoAddAssetPostprocess 0.842ms
+		XRBuildSystem.XRAssetImported 0.744ms
+		PostProcessCallbackCreateDeferredMaterials 0.103ms
+		VersionControlSettings.HiddenFilePostprocess 0.097ms
+		MonoPostProcessAllAssets: 501.069ms
+			SyncVS.PostprocessSyncProject 234.961ms
+			AssetPostprocessor.OnPostprocessAllAssets 195.510ms
+			UniversalRenderPipelineGlobalSettingsPostprocessor.OnPostprocessAllAssets 20.381ms
+			StyleCatalogPostProcessor.OnPostprocessAllAssets 12.994ms
+			BuilderAssetPostprocessor.OnPostprocessAllAssets 7.199ms
+			AssetChangedListener.OnPostprocessAllAssets 2.527ms
+			ShaderGraphAssetPostProcessor.OnPostprocessAllAssets 1.971ms
+			WindowAssetPostprocessingWatcher.OnPostprocessAllAssets 1.823ms
+			RetainedModeAssetPostprocessor.OnPostprocessAllAssets 1.761ms
+			SpeedTree9Postprocessor.OnPostprocessAllAssets 1.719ms
+			MaterialPostprocessor.OnPostprocessAllAssets 1.031ms
+			RenderPipelineGlobalSettingsPostprocessor.OnPostprocessAllAssets 0.981ms
+			EditModeScopePostprocessor.OnPostprocessAllAssets 0.973ms
+			UVCSAssetPostprocessor.OnPostprocessAllAssets 0.760ms
+			ArtifactBrowserPostProcessor.OnPostprocessAllAssets 0.534ms
+			ShaderReflectionAssetPostProcessor.OnPostprocessAllAssets 0.511ms
+			PostProcessor.OnPostprocessAllAssets 0.445ms
+			TextAssetPostProcessor.OnPostprocessAllAssets 0.363ms
+			ScenarioDriftAssetsTracker.OnPostprocessAllAssets 0.358ms
+			InputActionAssetPostprocessor.OnPostprocessAllAssets 0.331ms
+			AudioMixerPostprocessor.OnPostprocessAllAssets 0.291ms
+			ReferencedClipsPostProcessor.OnPostprocessAllAssets 0.285ms
+			InputActionJsonNameModifierAssetProcessor.OnPostprocessAllAssets 0.260ms
+			TMPro_TexturePostProcessor.OnPostprocessAllAssets 0.245ms
+			ConfigAssetsTracker.OnPostprocessAllAssets 0.237ms
+			AssetEvents.OnPostprocessAllAssets 0.221ms
+			AssetReloadNotifier.OnPostprocessAllAssets 0.194ms
+			TerrainToolbarOverlayPostProcessor.OnPostprocessAllAssets 0.191ms
+			AssetDatabaseCallbacks.OnPostprocessAllAssets 0.175ms
+			ProjectSettingsPostprocessor.OnPostprocessAllAssets 0.173ms
+			SpeedTreePostProcessor.OnPostprocessAllAssets 0.147ms
+			ThemePostprocessor.OnPostprocessAllAssets 0.117ms
+			AudioContainerPostProcessor.OnPostprocessAllAssets 0.068ms
+	PostAssetChangesProfiler: 92.919ms
+	GatherAllCurrentPrimaryImportResultRevisions: 0.409ms
+	UnloadStreamsBegin: 1.509ms
+	PersistCurrentRevisions: 0.556ms
+	GenerateScriptTypeHashes: 1.350ms
+	GenerateScriptTypeSerializationHashes: 2.375ms
+	Untracked: 1263.981ms
+
+Application.AssetDatabase Initial Refresh End
+Launched and connected shader compiler UnityShaderCompiler.exe after 0.03 seconds
+Scanning for USB devices : 2.671ms
+Initializing Unity extensions:
+[MODES] ModeService[none].Initialize
+[MODES] ModeService[none].LoadModes
+[MODES] Loading mode Default (0) for mode-current-id-UnityProject
+Unloading 69 Unused Serialized files (Serialized files now loaded: 0)
+Unloading 4852 unused Assets / (12.9 MB). Loaded Objects now: 5787.
+Memory consumption went from 390.9 MB to 378.0 MB.
+Total: 10.233300 ms (FindLiveObjects: 0.550400 ms CreateObjectMapping: 0.259300 ms MarkObjects: 5.742000 ms  DeleteObjects: 3.484400 ms)
+
+Asset Pipeline Refresh (id=6731659f690463e48ac4de31c5bea41a): Total: 0.030 seconds - Initiated by RefreshV2(NoUpdateAssetOptions)
+Importing 'GUID: c00df75a70b310b49b2853d046394ea4 - Path: Assets/ThirdParty/Standout7/Golems/Iron_Golem.fbx' with importer (FBXImporter)
+Imported 'GUID: c00df75a70b310b49b2853d046394ea4' -> (Import Result ID: 'dd36910b6116085e10fb5e6dc8376dff') in 0.085 seconds [static and dynamic dependencies]. Details - ImportResultOutputID=b48f915140e67c916936bfe1a99ae4d2 DependenciesID=4c387b22b5aa442850732b474f8dc42c StaticDependenciesID=90d5534c36f950cefe089589c4704378 
+Asset Pipeline Refresh (id=9d3367a5847c5b747a8c7de6f2f94981): Total: 0.134 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Importing 'GUID: b0f7cf32d091e8f4d98f0a9f654a6bee - Path: Assets/ThirdParty/OpenGameArt/Dragon/dragon.dae' with importer (FBXImporter)
+Imported 'GUID: b0f7cf32d091e8f4d98f0a9f654a6bee' -> (Import Result ID: '70b22829e26c82fe6701f3a30391c259') in 0.022 seconds [static and dynamic dependencies]. Details - ImportResultOutputID=dd22d663c7aa3cfecf0a730062af9dcc DependenciesID=db5bcfdb96b0705ea1eb27c077845bec StaticDependenciesID=10a4ad9a628ca5efff08ac26603b8550 
+Asset Pipeline Refresh (id=b3f7ae3694a621f4cb7a4ddfd4668f04): Total: 0.048 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Importing 'GUID: 7f05035129e2d3d458cf417977811045 - Path: Assets/ThirdParty/OpenGameArt/Dragon/dragon_idle.dae' with importer (FBXImporter)
+Keyframe reduction: Ratio: 2.353157%;
+Imported 'GUID: 7f05035129e2d3d458cf417977811045' -> (Import Result ID: 'a3288bcad09c7e5d6cdd7861984e0658') in 0.039 seconds [static dependencies only]. Details - ImportResultOutputID=6d10a4ad821ef63b5d0c724c9b0c3774 DependenciesID=52ecd5833e21fac6c2096fa26f3e7e61 StaticDependenciesID=d9ae191c156c15b6c9a19eee68e41c81 
+Asset Pipeline Refresh (id=64b1679a1533c904dbe0a25bb83be854): Total: 0.065 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Importing 'GUID: 7f05035129e2d3d458cf417977811045 - Path: Assets/ThirdParty/OpenGameArt/Dragon/dragon_idle.dae' with importer (FBXImporter)
+Keyframe reduction: Ratio: 2.353157%;
+Imported 'GUID: 7f05035129e2d3d458cf417977811045' -> (Import Result ID: 'a3288bcad09c7e5d6cdd7861984e0658') in 0.037 seconds [static dependencies only]. Details - ImportResultOutputID=6d10a4ad821ef63b5d0c724c9b0c3774 DependenciesID=52ecd5833e21fac6c2096fa26f3e7e61 StaticDependenciesID=d9ae191c156c15b6c9a19eee68e41c81 
+Asset Pipeline Refresh (id=b66e1781e8c970242ab0b36fc0b94612): Total: 0.063 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+DRAGON_CLIP idle duration=4.216667 bindings=280
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Nomad.Gameplay.Editor.RankedMonsterSetup:Apply () (at Assets/Nomad/Gameplay/Editor/RankedMonsterSetup.cs:56)
+
+(Filename: Assets/Nomad/Gameplay/Editor/RankedMonsterSetup.cs Line: 56)
+
+Importing 'GUID: 9eccc2f1e89d84e44a7d84ee33154a17 - Path: Assets/ThirdParty/OpenGameArt/Dragon/dragon_walk.dae' with importer (FBXImporter)
+Keyframe reduction: Ratio: 8.785714%;
+Imported 'GUID: 9eccc2f1e89d84e44a7d84ee33154a17' -> (Import Result ID: '9036ebf626a94f1740ff2dc8aa846cc2') in 0.024 seconds [static dependencies only]. Details - ImportResultOutputID=62ad3f33fa7e72bdf0c6b1eb7917bfe9 DependenciesID=f65ed249a5f274de031e96fc15378327 StaticDependenciesID=a789dab78ff2f3060464945b3b01c514 
+Asset Pipeline Refresh (id=7dabfb824a3263c43b2f2d3abb3abfcc): Total: 0.048 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Importing 'GUID: 9eccc2f1e89d84e44a7d84ee33154a17 - Path: Assets/ThirdParty/OpenGameArt/Dragon/dragon_walk.dae' with importer (FBXImporter)
+Keyframe reduction: Ratio: 8.785714%;
+Imported 'GUID: 9eccc2f1e89d84e44a7d84ee33154a17' -> (Import Result ID: '9036ebf626a94f1740ff2dc8aa846cc2') in 0.023 seconds [static dependencies only]. Details - ImportResultOutputID=62ad3f33fa7e72bdf0c6b1eb7917bfe9 DependenciesID=f65ed249a5f274de031e96fc15378327 StaticDependenciesID=a789dab78ff2f3060464945b3b01c514 
+Asset Pipeline Refresh (id=a45a22b4cdfdd7b4c8d6fa90624c430c): Total: 0.043 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+DRAGON_CLIP walk duration=1.633334 bindings=310
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Nomad.Gameplay.Editor.RankedMonsterSetup:Apply () (at Assets/Nomad/Gameplay/Editor/RankedMonsterSetup.cs:56)
+
+(Filename: Assets/Nomad/Gameplay/Editor/RankedMonsterSetup.cs Line: 56)
+
+Importing 'GUID: 71362608fb0d40e42af724757271ce81 - Path: Assets/ThirdParty/OpenGameArt/Dragon/dragon_attack.dae' with importer (FBXImporter)
+Keyframe reduction: Ratio: 11.246339%;
+Imported 'GUID: 71362608fb0d40e42af724757271ce81' -> (Import Result ID: 'ce93e2f4d23633b3bebafd0e74e33341') in 0.023 seconds [static dependencies only]. Details - ImportResultOutputID=a3390ff9b16d9dfaad3b16a17de9913b DependenciesID=896338cee4064198764dbd31c9186595 StaticDependenciesID=f76a47aeb772b498b46a9300126eba4d 
+Asset Pipeline Refresh (id=c5afe04c2e249ba4faa48066e44caf04): Total: 0.042 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Importing 'GUID: 71362608fb0d40e42af724757271ce81 - Path: Assets/ThirdParty/OpenGameArt/Dragon/dragon_attack.dae' with importer (FBXImporter)
+Keyframe reduction: Ratio: 11.246339%;
+Imported 'GUID: 71362608fb0d40e42af724757271ce81' -> (Import Result ID: 'ce93e2f4d23633b3bebafd0e74e33341') in 0.025 seconds [static dependencies only]. Details - ImportResultOutputID=a3390ff9b16d9dfaad3b16a17de9913b DependenciesID=896338cee4064198764dbd31c9186595 StaticDependenciesID=f76a47aeb772b498b46a9300126eba4d 
+Asset Pipeline Refresh (id=57a77ffe6aa869a46898a9229d99ee5c): Total: 0.043 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+DRAGON_CLIP attack duration=1.666667 bindings=320
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Nomad.Gameplay.Editor.RankedMonsterSetup:Apply () (at Assets/Nomad/Gameplay/Editor/RankedMonsterSetup.cs:56)
+
+(Filename: Assets/Nomad/Gameplay/Editor/RankedMonsterSetup.cs Line: 56)
+
+Importing 'GUID: c7d15d753e9ef8f45a444c6b22cc4df0 - Path: Assets/ThirdParty/OpenGameArt/Dragon/dragon_die.dae' with importer (FBXImporter)
+Keyframe reduction: Ratio: 9.579110%;
+Imported 'GUID: c7d15d753e9ef8f45a444c6b22cc4df0' -> (Import Result ID: '01096f32965fbb8b47ef66abcc245138') in 0.023 seconds [static dependencies only]. Details - ImportResultOutputID=46a8f1b14586b3769aa6322f44a91c3d DependenciesID=ede39b733a86898da4da352e635de046 StaticDependenciesID=8175bc666e5d80a99fea4be78d0cae05 
+Asset Pipeline Refresh (id=0648707470cf8f14aba6d6ded0ad6a27): Total: 0.042 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Importing 'GUID: c7d15d753e9ef8f45a444c6b22cc4df0 - Path: Assets/ThirdParty/OpenGameArt/Dragon/dragon_die.dae' with importer (FBXImporter)
+Keyframe reduction: Ratio: 9.579110%;
+Imported 'GUID: c7d15d753e9ef8f45a444c6b22cc4df0' -> (Import Result ID: '01096f32965fbb8b47ef66abcc245138') in 0.027 seconds [static dependencies only]. Details - ImportResultOutputID=46a8f1b14586b3769aa6322f44a91c3d DependenciesID=ede39b733a86898da4da352e635de046 StaticDependenciesID=8175bc666e5d80a99fea4be78d0cae05 
+Asset Pipeline Refresh (id=5a1019d2f296d96449c20da5a17fb9f4): Total: 0.049 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+DRAGON_CLIP die duration=2.466667 bindings=310
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Nomad.Gameplay.Editor.RankedMonsterSetup:Apply () (at Assets/Nomad/Gameplay/Editor/RankedMonsterSetup.cs:56)
+
+(Filename: Assets/Nomad/Gameplay/Editor/RankedMonsterSetup.cs Line: 56)
+
+Asset Pipeline Refresh (id=c8fee590a2d2a524fbd3efa26a2be70f): Total: 0.012 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Importing 'GUID: 7fbe8c94812a7624298d3aedde8fef28 - Path: Assets/ThirdParty/Nomad/Monsters/Candidates/DragonPalette.png' with importer (TextureImporter)
+Imported 'GUID: 7fbe8c94812a7624298d3aedde8fef28' -> (Import Result ID: '876cfc662d9bed31999532bc62b36c3a') in 0.036 seconds [static and dynamic dependencies]. Details - ImportResultOutputID=8f8c445bcc01a4ea7946cc1e06625335 DependenciesID=cc713c34a362a9279dfdf33ccdb1d12c StaticDependenciesID=a6f15dfafe1533630012330416f33cdb 
+Asset Pipeline Refresh (id=7fe8965de48b29e4687920aa606472f0): Total: 0.089 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Importing 'GUID: 7fbe8c94812a7624298d3aedde8fef28 - Path: Assets/ThirdParty/Nomad/Monsters/Candidates/DragonPalette.png' with importer (TextureImporter)
+Imported 'GUID: 7fbe8c94812a7624298d3aedde8fef28' -> (Import Result ID: '5a7a78f5bdcf541da2f385c5f30dd7c6') in 0.003 seconds [static and dynamic dependencies]. Details - ImportResultOutputID=fb649b666762f9427c6bedc6a6eda88c DependenciesID=08e3b2e6fc60d2cde4b0c4bae164ced0 StaticDependenciesID=1f1461b922ada38cf4a5da40235d58d4 
+Asset Pipeline Refresh (id=da27c621946d9d243a80d511ea578408): Total: 0.067 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+DRAGON_LOW_POLY triangles=1262->804 bones=32
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Nomad.Gameplay.Editor.DragonLowPolyMesh:Create (UnityEngine.Mesh,string) (at Assets/Nomad/Gameplay/Editor/DragonLowPolyMesh.cs:120)
+Nomad.Gameplay.Editor.RankedMonsterSetup:Prefab (string,string,string,single,UnityEditor.Animations.AnimatorController) (at Assets/Nomad/Gameplay/Editor/RankedMonsterSetup.cs:135)
+Nomad.Gameplay.Editor.RankedMonsterSetup:Apply () (at Assets/Nomad/Gameplay/Editor/RankedMonsterSetup.cs:60)
+
+(Filename: Assets/Nomad/Gameplay/Editor/DragonLowPolyMesh.cs Line: 120)
+
+Asset Pipeline Refresh (id=089a1b451aef23e488c015a50c482456): Total: 0.009 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Importing 'GUID: e697c9edaa17be34598615f922392442 - Path: Assets/ThirdParty/KayKit/Skeletons/Weapons/Skeleton_Staff.fbx' with importer (FBXImporter)
+Imported 'GUID: e697c9edaa17be34598615f922392442' -> (Import Result ID: '47a8dcef0da7aa2ab0df143b21e11b77') in 0.018 seconds [static and dynamic dependencies]. Details - ImportResultOutputID=0e22587bdbcf9e2e10d0ae6d03985f34 DependenciesID=8c3f3c30f3430604caa3c1fe99d6e9f9 StaticDependenciesID=d0b259456bf7347079ee44de45efb644 
+Asset Pipeline Refresh (id=60d3ed7035c784b41ac986bc9b849e7e): Total: 0.039 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Importing 'GUID: 215f91fbdac800e4b9109a5dfc4427ea - Path: Assets/ThirdParty/KayKit/Skeletons/Weapons/Skeleton_Crossbow.fbx' with importer (FBXImporter)
+Imported 'GUID: 215f91fbdac800e4b9109a5dfc4427ea' -> (Import Result ID: '516bc841af6525c92bf8e2444abab655') in 0.017 seconds [static and dynamic dependencies]. Details - ImportResultOutputID=62eeff4b33bdceb24da770f21967034d DependenciesID=cd68df38c9e40b8a55c6e7519e4e1f7f StaticDependenciesID=182a0cd823e5967429c56e129369a9c9 
+Asset Pipeline Refresh (id=62e23a5ef9d03bd4fa9f126cb78a85f3): Total: 0.037 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Importing 'GUID: 540299ae75099384c8f11921526a5ad4 - Path: Assets/ThirdParty/KayKit/Skeletons/Weapons/Skeleton_Arrow.fbx' with importer (FBXImporter)
+Imported 'GUID: 540299ae75099384c8f11921526a5ad4' -> (Import Result ID: '90de19e188cfda4bcf545a0b596b252a') in 0.014 seconds [static and dynamic dependencies]. Details - ImportResultOutputID=04ff4311de145185ed2ad3fbd38b6ea5 DependenciesID=70bdb1dc125e8ed224b8a97afcf934fa StaticDependenciesID=004481c27da0d7404ec35124aee32fc6 
+Refreshing native plugins compatible for Editor in 2.11 ms, found 3 plugins.
+Asset Pipeline Refresh (id=9d54e710c558a254d9484f2c3ab98c56): Total: 0.036 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Importing 'GUID: 004c496f159a6b641a9bce8fa59cfbbc - Path: Assets/ThirdParty/KayKit/Skeletons/Weapons/Skeleton_Blade.fbx' with importer (FBXImporter)
+Imported 'GUID: 004c496f159a6b641a9bce8fa59cfbbc' -> (Import Result ID: 'ec0772947f37a571d05a48cc1ff5bf44') in 0.016 seconds [static and dynamic dependencies]. Details - ImportResultOutputID=42a469e613fb8323bb11a1ecd7be89ac DependenciesID=03e099bb09001a8cc4c98081b1464de1 StaticDependenciesID=a3ec8c617cb4e91c2fc508ded3b311d1 
+Asset Pipeline Refresh (id=2e1912e57c7ae944eac716540a481b64): Total: 0.035 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Loaded scene 'Library/Unused/c7460cb0504367247b173c4383a8130b'
+	Deserialize:            1.046 ms
+	Integration:            4.045 ms
+	Integration of assets:  0.002 ms
+	Thread Wait Time:       21.664 ms
+	Total Operation Time:   26.757 ms
+Importing 'GUID: 855c6375a154a5a46955d9804f357355 - Path: Assets/ThirdParty/Nomad/Monsters/Skeletons/Skeleton_Warrior.prefab' with importer (PrefabImporter)
+Imported 'GUID: 855c6375a154a5a46955d9804f357355' -> (Import Result ID: 'd77e5aadf4eceab0ec7b852df1dbdce7') in 0.005 seconds [static dependencies only]. Details - ImportResultOutputID=a134b6e8072938eb32ee6007dd4fcc72 DependenciesID=3c13380f1b9bb82a565ab2ae0956e778 StaticDependenciesID=48ce5a99f08cdd7fb369ee2f1840de03 
+Asset Pipeline Refresh (id=a01aa00584b2ea04d8ead03141c12d4d): Total: 0.051 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Loaded scene 'Library/Unused/e9d8560a8b4ea9a48b2118b4ef47e40e'
+	Deserialize:            0.882 ms
+	Integration:            0.430 ms
+	Integration of assets:  0.002 ms
+	Thread Wait Time:       0.015 ms
+	Total Operation Time:   1.330 ms
+Worker ready: AssetImportWorkerHW0 0
+Importing 'GUID: 8e21f3669dacdab429a08a7bb21a2741 - Path: Assets/ThirdParty/Nomad/Monsters/Skeletons/Skeleton_Rogue.prefab' with importer (PrefabImporter)
+Imported 'GUID: 8e21f3669dacdab429a08a7bb21a2741' -> (Import Result ID: 'e6195092a528940fbb5435da2b81a78f') in 0.003 seconds [static dependencies only]. Details - ImportResultOutputID=77e6af3513c7edbaff2bcb0bdbcf1304 DependenciesID=a1f37f0f6f5148ab1d0474515f88a4ba StaticDependenciesID=50db9eb74c51f0a69af98f329637f3c2 
+Asset Pipeline Refresh (id=5c60d0d2fd229ab44874621b5606cd4b): Total: 0.058 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Loaded scene 'Library/Unused/23c8360053de0814a909917feec6f592'
+	Deserialize:            1.210 ms
+	Integration:            0.575 ms
+	Integration of assets:  0.002 ms
+	Thread Wait Time:       0.019 ms
+	Total Operation Time:   1.806 ms
+Importing 'GUID: 632075505e287644c9cb793679e6052d - Path: Assets/ThirdParty/Nomad/Monsters/Skeletons/Skeleton_Mage.prefab' with importer (PrefabImporter)
+Imported 'GUID: 632075505e287644c9cb793679e6052d' -> (Import Result ID: '4b71524f6af1b1772a1cd26eda393ad9') in 0.003 seconds [static dependencies only]. Details - ImportResultOutputID=fde15a341206aeb28aa56c300581ea13 DependenciesID=5f4837858dccf4d015e1622dcdca93a8 StaticDependenciesID=275d9e8caf4c16163bad5649cf7c357e 
+Refreshing native plugins compatible for Editor in 2.04 ms, found 3 plugins.
+Asset Pipeline Refresh (id=b52a0864a60f98d4d9637b1b2c52d578): Total: 0.046 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Asset Pipeline Refresh (id=675af219e41de96479a0ec891f1466af): Total: 0.009 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Asset Pipeline Refresh (id=b92539f3cc29ebc48aae2e6d8599c5ab): Total: 0.008 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Asset Pipeline Refresh (id=18578fd64f88c414d80510660798ce27): Total: 0.009 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Asset Pipeline Refresh (id=e024297b78ef3294a80d4f76c96396cf): Total: 0.008 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Importing 'GUID: 700610cfde4dce24db7ff0b0ae2214e3 - Path: Assets/ThirdParty/Nomad/Monsters/Candidates/Dragon_walk.anim' with importer (NativeFormatImporter)
+Imported 'GUID: 700610cfde4dce24db7ff0b0ae2214e3' -> (Import Result ID: 'b5ec3100dbca0694364cb176cf0e0b92') in 0.003 seconds [static dependencies only]. Details - ImportResultOutputID=a6238931692dc58b3c1fa7ad96e81ece DependenciesID=b05cc3568b2721228924b55f4e9ff9f1 StaticDependenciesID=ae23881f1f56f2e5175698601b7aabcc 
+Importing 'GUID: a32e80a3a1f4ed943b06a68cf7bed880 - Path: Assets/ThirdParty/Nomad/Monsters/Candidates/Dragon.mat' with importer (NativeFormatImporter)
+Imported 'GUID: a32e80a3a1f4ed943b06a68cf7bed880' -> (Import Result ID: 'c2e144616409a0e637359c8c06c4b9ad') in 0.001 seconds [static dependencies only]. Details - ImportResultOutputID=e635966807883d5973adae8d24d4ffd3 DependenciesID=351e2f29d2512ced37f49e050e7a67fb StaticDependenciesID=5ba539065664111e69c4e88e1539b808 
+Importing 'GUID: 04ca231dd2124334cad4983c78c684e9 - Path: Assets/ThirdParty/Nomad/Monsters/Candidates/Iron Golem.mat' with importer (NativeFormatImporter)
+Imported 'GUID: 04ca231dd2124334cad4983c78c684e9' -> (Import Result ID: 'c9c3c51964d763a5750fb6cacd5bc0fd') in 0.001 seconds [static dependencies only]. Details - ImportResultOutputID=d0502dd598a79fe94c2da668e116e2d3 DependenciesID=e47436103297515d13548bc21ebd2d46 StaticDependenciesID=af34d6dad071a5907c406afab75c5298 
+Importing 'GUID: 3450da971c9aeb241b99bf1c94b01e84 - Path: Assets/ThirdParty/Nomad/Monsters/Candidates/Rock bolt.mat' with importer (NativeFormatImporter)
+Imported 'GUID: 3450da971c9aeb241b99bf1c94b01e84' -> (Import Result ID: 'de9565b40185b45e8998811931137f71') in 0.001 seconds [static dependencies only]. Details - ImportResultOutputID=fe60701f0180409d8271b12854265dbb DependenciesID=47da83bd2fdbfa2d5537b2f6a4569f31 StaticDependenciesID=f3b0baddf66b95fbbf0869b8dc0bfab5 
+Importing 'GUID: 44ffbb5310a8f3e47ae43684cdee99d0 - Path: Assets/ThirdParty/Nomad/Monsters/Candidates/Fire bolt.mat' with importer (NativeFormatImporter)
+Imported 'GUID: 44ffbb5310a8f3e47ae43684cdee99d0' -> (Import Result ID: '0dcfeb904940080ac1beeb6f366f566e') in 0.001 seconds [static dependencies only]. Details - ImportResultOutputID=867500ae55571bd569f1f00e85cb2aae DependenciesID=8dbe9e5d551eebf847a05c1c0f8cda2e StaticDependenciesID=e781323af74161e2e73d57e70d6fce59 
+Importing 'GUID: 65c2bab9af9cb964394e4c35db2079c3 - Path: Assets/ThirdParty/Nomad/Monsters/Candidates/Magic bolt.mat' with importer (NativeFormatImporter)
+Imported 'GUID: 65c2bab9af9cb964394e4c35db2079c3' -> (Import Result ID: '73fa7184010dba692a70e8952f65a645') in 0.001 seconds [static dependencies only]. Details - ImportResultOutputID=865043ce3cbb6655814ac5b527b1ca5e DependenciesID=3f68e76833b851586c2f0d01ad6f6fd0 StaticDependenciesID=fff1ecdb44771eae22c11951988520fa 
+Importing 'GUID: 69691396ad554d343b137e8d0e581644 - Path: Assets/ThirdParty/Nomad/Monsters/Candidates/Dragon_idle.anim' with importer (NativeFormatImporter)
+Imported 'GUID: 69691396ad554d343b137e8d0e581644' -> (Import Result ID: '06f615a524e7dd43456c2291bbbc41a3') in 0.002 seconds [static dependencies only]. Details - ImportResultOutputID=ee1d03025eee978a23dc8a0fb209cf07 DependenciesID=49d0a1fe9bcc91e44b9b6c844eca3177 StaticDependenciesID=167ffae5752766fcfb9c280c330c0c29 
+Importing 'GUID: d922c0d1fc096f94c9252c51a7f6618b - Path: Assets/ThirdParty/Nomad/Monsters/Candidates/Dragon_die.anim' with importer (NativeFormatImporter)
+Imported 'GUID: d922c0d1fc096f94c9252c51a7f6618b' -> (Import Result ID: '4aa80b403ed60a5d0d2ac97c2b4a1a7c') in 0.004 seconds [static dependencies only]. Details - ImportResultOutputID=4d784196a51c0dfd7d1854774bb75d27 DependenciesID=681927e59b621af80be69c54f633eb0b StaticDependenciesID=537403e6a99f9f2d4b693a0304d0e6f9 
+Importing 'GUID: 9be70c67a27f34241aecaec082ba6023 - Path: Assets/ThirdParty/Nomad/Monsters/Candidates/Dragon_attack.anim' with importer (NativeFormatImporter)
+Imported 'GUID: 9be70c67a27f34241aecaec082ba6023' -> (Import Result ID: '76c9dd62ca64663b72d9f223c611d028') in 0.003 seconds [static dependencies only]. Details - ImportResultOutputID=f23ec8354110a42cc795b4f43a0039bf DependenciesID=aa5609ae5c24af3985f20912300277ef StaticDependenciesID=004305177573110edd88e7fee7926428 
+Importing 'GUID: 17208e670f62a704c8cb35bbd742e3a6 - Path: Assets/ThirdParty/Nomad/Monsters/Candidates/Dragon.controller' with importer (NativeFormatImporter)
+Imported 'GUID: 17208e670f62a704c8cb35bbd742e3a6' -> (Import Result ID: 'b4ee36a3f4c42c18079d3dbea5ad84c8') in 0.001 seconds [static dependencies only]. Details - ImportResultOutputID=de42fd8db68b934283edaf8e8c3ce61f DependenciesID=2d7e46fef77dfb409db9c028483a59cd StaticDependenciesID=379b49f2aeeb44e372cfa64f50a4f7ea 
+Importing 'GUID: b3188f7ebaa2f6046a3dde7c430845a0 - Path: Assets/ThirdParty/Nomad/Monsters/Skeletons/SkeletonAppearances.asset' with importer (NativeFormatImporter)
+Imported 'GUID: b3188f7ebaa2f6046a3dde7c430845a0' -> (Import Result ID: '4beab51f4959228f35fa9b8813854de3') in 0.001 seconds [static dependencies only]. Details - ImportResultOutputID=c3c5965400fa45e8eac4dc245e71da83 DependenciesID=4161298306b001e250c44e140f5de7f4 StaticDependenciesID=14482695968744bf5fad217a844db3b9 
+Importing 'GUID: a59a9a01ae59cd642a2a86994577ba24 - Path: Assets/ThirdParty/Nomad/Monsters/Candidates/DragonLowPoly.asset' with importer (NativeFormatImporter)
+Main Object Name 'dragon LowPoly' does not match filename 'DragonLowPoly'
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+Nomad.Gameplay.Editor.RankedMonsterSetup:Apply () (at Assets/Nomad/Gameplay/Editor/RankedMonsterSetup.cs:64)
+
+[Assets/Nomad/Gameplay/Editor/RankedMonsterSetup.cs line 64]
+
+Imported 'GUID: a59a9a01ae59cd642a2a86994577ba24' -> (Import Result ID: '422b001032077fc6af9a93e8f024758c') in 0.002 seconds [static dependencies only]. Details - ImportResultOutputID=e14ba9849ac1568469ca23310b503904 DependenciesID=e8dbb177adbe8cd3f5b0461a9250a499 StaticDependenciesID=ec68af71602312fe95b24f19d43c359f 
+Asset Pipeline Refresh (id=053cf01a3a776dc44811c36d7eb9a475): Total: 0.067 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Opening scene 'Assets/Nomad/Terrain/Wfc/TerrainIntegration.unity'
+Unloading 45 Unused Serialized files (Serialized files now loaded: 0)
+Loaded scene 'Assets/Nomad/Terrain/Wfc/TerrainIntegration.unity'
+	Deserialize:            16.528 ms
+	Integration:            22.494 ms
+	Integration of assets:  7.743 ms
+	Thread Wait Time:       0.121 ms
+	Total Operation Time:   46.886 ms
+Unloading 520 unused Assets / (1.9 MB). Loaded Objects now: 8806.
+Memory consumption went from 400.8 MB to 398.8 MB.
+Total: 8.005900 ms (FindLiveObjects: 0.588600 ms CreateObjectMapping: 0.354700 ms MarkObjects: 6.220000 ms  DeleteObjects: 0.621900 ms)
+
+Importing 'GUID: 58824af38eb107d44b81dc49d2736c4b - Path: Assets/Nomad/Terrain/Wfc/TerrainIntegration.unity' with importer (DefaultImporter)
+Imported 'GUID: 58824af38eb107d44b81dc49d2736c4b' -> (Import Result ID: 'db51adc67d0f18134c5b2d7452b86ea2') in 0.002 seconds [static dependencies only]. Details - ImportResultOutputID=fe02f8952dd751dc886ae1fc7a1daa6f DependenciesID=c31eb6a1be3898ba83eccfd3f31d0a74 StaticDependenciesID=3d06cada90d20b5e0b0218a81fe13043 
+Asset Pipeline Refresh (id=f393dc593bebb6c43b14193ba3033db4): Total: 0.039 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+GAMEPLAY_INTEGRATION_SETUP_PASS
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Nomad.Gameplay.Editor.GameplayIntegrationSetup:Apply () (at Assets/Nomad/Gameplay/Editor/GameplayIntegrationSetup.cs:28)
+Nomad.Gameplay.Editor.RankedMonsterSetup:Apply () (at Assets/Nomad/Gameplay/Editor/RankedMonsterSetup.cs:65)
+
+(Filename: Assets/Nomad/Gameplay/Editor/GameplayIntegrationSetup.cs Line: 28)
+
+Opening scene 'Assets/Nomad/Monsters/MonsterElite.unity'
+Unloading 24 Unused Serialized files (Serialized files now loaded: 0)
+Loaded scene 'Assets/Nomad/Monsters/MonsterElite.unity'
+	Deserialize:            1.691 ms
+	Integration:            5.561 ms
+	Integration of assets:  0.002 ms
+	Thread Wait Time:       0.012 ms
+	Total Operation Time:   7.265 ms
+Unloading 2548 unused Assets / (7.3 MB). Loaded Objects now: 6418.
+Memory consumption went from 412.8 MB to 405.5 MB.
+Total: 6.436000 ms (FindLiveObjects: 0.464200 ms CreateObjectMapping: 0.160200 ms MarkObjects: 4.802700 ms  DeleteObjects: 0.810700 ms)
+
+Importing 'GUID: 1fd52b46f8948254983785c32a4ca620 - Path: Assets/Nomad/Monsters/MonsterDebug.unity' with importer (DefaultImporter)
+Imported 'GUID: 1fd52b46f8948254983785c32a4ca620' -> (Import Result ID: 'dc69198c4dcc0ca3ff9730deb866098d') in 0.003 seconds [static dependencies only]. Details - ImportResultOutputID=740d07761aa060e94f772495a173248b DependenciesID=6863def9649df102c498d94d7a3cd8ed StaticDependenciesID=d85dea7e52c57ee796b9c61bbbeacdef 
+Asset Pipeline Refresh (id=14b003ef5b9242d47b3aea781ba4d1b6): Total: 0.023 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+MONSTER_DEBUG_SETUP_PASS
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Nomad.Gameplay.Editor.MonsterDebugSetup:Apply () (at Assets/Nomad/Gameplay/Editor/MonsterDebugSetup.cs:32)
+Nomad.Gameplay.Editor.RankedMonsterSetup:Apply () (at Assets/Nomad/Gameplay/Editor/RankedMonsterSetup.cs:66)
+
+(Filename: Assets/Nomad/Gameplay/Editor/MonsterDebugSetup.cs Line: 32)
+
+RANKED_MONSTER_SETUP_PASS
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Nomad.Gameplay.Editor.RankedMonsterSetup:Apply () (at Assets/Nomad/Gameplay/Editor/RankedMonsterSetup.cs:68)
+
+(Filename: Assets/Nomad/Gameplay/Editor/RankedMonsterSetup.cs Line: 68)
+
+Batchmode quit successfully invoked - shutting down!
+Importing 'GUID: 00000000000000009000000000000000 - Path: ProjectSettings/QualitySettings.asset' with importer (LibraryAssetImporter)
+Imported 'GUID: 00000000000000009000000000000000' -> (Import Result ID: '4c4863529adc9ac14970731e8a5da60e') in 0.004 seconds [static dependencies only]. Details - ImportResultOutputID=2a108b3da874f726c62fbe5f12be4a8a DependenciesID=e27b047e3559935d81d11e8d5dd7411e StaticDependenciesID=a4661aca7a2be7b6d5e28438e344ffeb 
+Asset Pipeline Refresh (id=22f46cba256ff69438077eb456111d5e): Total: 0.020 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+[Physics::Module] Cleanup current backend.
+[Physics::Module] Id: 0xf2b8ea05
+Input System module state changed to: ShutdownInProgress.
+Input Polling Thread exited.
+Input System module state changed to: Shutdown.
+[Licensing::IpcConnector] LicenseClient-JUNGLE-1.19.0-notifications channel disconnected successfully.
+[Licensing::IpcConnector] LicenseClient-JUNGLE-1.19.0 channel disconnected successfully.
+Lingering sessions upon destruction of worker manager
+Unity Data Store service was successfully shut down
+UDS shutting down local client system
+AcceleratorClientConnectionCallback - disconnected - :0
+Cleanup mono
+CodeReloadManager destroyed
+Exiting batchmode successfully now!
+[ExitDontLaunchBugReporter] Exiting without the bug reporter. Application will exit with return code 0

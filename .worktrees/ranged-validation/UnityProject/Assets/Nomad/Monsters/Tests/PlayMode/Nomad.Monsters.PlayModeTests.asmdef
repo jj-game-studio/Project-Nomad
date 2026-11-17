@@ -1,0 +1,10 @@
+{
+    "name": "Nomad.Monsters.PlayModeTests",
+    "references": [
+        "Nomad.Monsters",
+        "Nomad.Combat"
+    ],
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ]
+}
