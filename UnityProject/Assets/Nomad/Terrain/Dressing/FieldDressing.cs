@@ -17,7 +17,7 @@ namespace Nomad.Terrain
         [SerializeField] private PropScatter obstacleOwner;
         [Tooltip("비어 있으면 Resources의 비공개 꾸밈 목록을 사용합니다. 둘 다 없으면 꾸밈 없이 동작합니다.")]
         [SerializeField] private FieldDressingSet set;
-        [SerializeField, Range(0, 32)] private int repairLimit = 24;
+        [SerializeField, Range(0, 64)] private int repairLimit = 40;
         [Tooltip("켜면 타일 블록 대신 Unity Terrain을 지면·충돌·경로로 사용합니다(계단 칸은 경사로).")]
         [SerializeField] private bool terrainSurface = true;
 
@@ -30,6 +30,8 @@ namespace Nomad.Terrain
         public int Placed { get; private set; }
         public int Blockers => blockers.Count;
         public int RemovedBlockers { get; private set; }
+        public int RidgeSegments { get; private set; }
+        public int RidgeCandidates { get; private set; }
         public Transform Root => root != null ? root.transform : null;
 
         // 편집 모드 검증처럼 OnEnable이 호출되지 않는 경우에도 생성 이벤트를 연결합니다.
@@ -103,6 +105,7 @@ namespace Nomad.Terrain
 
                 // Terrain 언덕에는 수직 절벽이 없으므로 절벽 바위는 타일 지면에서만 둡니다.
                 if (ground == null) PlaceCliffRocks(source, center, tops, random);
+                else PlaceBoulder(source, center, tops, random);
 
                 // 식생 노이즈가 낮은 빈터는 상자·전투 공간으로 비워 두고, 군락에만 식생과 장애물을 둡니다.
                 float density = Density(center);
@@ -112,6 +115,8 @@ namespace Nomad.Terrain
                 PlaceBlockers(source, center, tops, random);
                 PlaceFence(source, center, tops, random);
             }
+
+            if (ground != null) PlaceRidges(source, result.Pieces);
 
             Physics.SyncTransforms();
             RepairPaths(result);
@@ -301,14 +306,142 @@ namespace Nomad.Terrain
         {
             if (!TryLocalBounds(prefab, out Bounds bounds)) return;
 
+            float depth = bounds.size.x >= bounds.size.z ? bounds.size.z : bounds.size.x;
+            Vector3 position = center + outward * (MicroTerrainTile.Size * 0.5f + depth * outside);
+            PlaceSegment(prefab, position, outward, removable);
+        }
+
+        // 언덕 단 경계의 위쪽 등고선(0.85m, 1.85m)을 따라 돌담·울타리 줄을 세웁니다.
+        // 이웃한 칸 중심 사이에서 등고선이 지나는 지점마다 한 칸씩 놓아 능선을 따라 이어지게 하고,
+        // 노이즈로 군데군데 틈(통로)과 종류(돌담/울타리) 구간을 나눕니다. 경로를 막으면 복구 단계에서 제거됩니다.
+        private void PlaceRidges(FieldDressingSet source, IReadOnlyList<TerrainPiece> pieces)
+        {
+            var cells = new HashSet<Vector2Int>();
+            foreach (TerrainPiece piece in pieces) cells.Add(Cell(piece.transform.position));
+
+            float size = MicroTerrainTile.Size;
+            foreach (Vector2Int cell in cells)
+            foreach (Vector2Int step in new[] { new Vector2Int(1, 0), new Vector2Int(0, 1) })
+            {
+                if (!cells.Contains(cell + step)) continue;
+
+                var from = new Vector3(cell.x * size, 0f, cell.y * size);
+                Vector3 to = from + new Vector3(step.x, 0f, step.y) * size;
+                float a = GroundY(from, 0f) - ground.transform.position.y;
+                float b = GroundY(to, 0f) - ground.transform.position.y;
+
+                foreach (float contour in new[] { 0.85f, 1.85f })
+                {
+                    if ((a - contour) * (b - contour) >= 0f) continue;
+                    RidgeCandidates++;
+
+                    Vector3 point = Vector3.Lerp(from, to, (contour - a) / (b - a));
+                    float gap = Mathf.PerlinNoise(noiseOffset.x + point.x * 0.12f, noiseOffset.y + point.z * 0.12f);
+                    // 노이즈로 긴 빈 구간을, 칸 좌표로 세 칸 중 한 칸꼴의 짧은 통로를 만들어 단 사이를 오갈 수 있게 합니다.
+                    if (gap < 0.38f || Mathf.Abs(cell.x + cell.y * 2) % 3 == 0) continue;
+
+                    // 바깥(경사 아래) 방향은 지면 법선의 수평 성분입니다. 담은 그에 수직으로 등고선을 따라 놓입니다.
+                    Vector3 normal = ground.terrainData.GetInterpolatedNormal(
+                        (point.x - ground.transform.position.x) / ground.terrainData.size.x,
+                        (point.z - ground.transform.position.z) / ground.terrainData.size.z);
+                    Vector3 outward = new Vector3(normal.x, 0f, normal.z);
+                    if (outward.sqrMagnitude < 0.0001f) continue;
+
+                    bool stone = Mathf.PerlinNoise(noiseOffset.y + point.x * 0.05f, noiseOffset.x + point.z * 0.05f) > 0.5f;
+                    GameObject[] options = stone ? source.borderWalls : source.fences;
+                    if (options == null || options.Length == 0) continue;
+
+                    GameObject prefab = options[Mathf.Abs(cell.x * 31 + cell.y * 17) % options.Length];
+
+                    // 경로 표본 지점을 막는 칸은 틈으로 남깁니다.
+                    if (!TryLocalBounds(prefab, out Bounds shape)) continue;
+                    float depth = Mathf.Min(shape.size.x, shape.size.z);
+                    // 표본·연결점을 막으면 경사 방향으로 조금씩(최대 0.75m) 옮겨 빈자리를 찾고, 없으면 틈으로 남깁니다.
+                    Vector3 placed = point;
+                    bool found = false;
+                    foreach (float shift in new[] { 0f, 0.25f, -0.25f, 0.5f, -0.5f, 0.75f, -0.75f })
+                    {
+                        placed = point + outward.normalized * shift;
+                        if (!CrossesSample(cells, placed, outward.normalized, depth)) { found = true; break; }
+                    }
+                    if (!found) continue;
+                    PlaceSegment(prefab, placed, outward.normalized, removable: true);
+                    RidgeSegments++;
+                }
+            }
+        }
+
+        // 기존 경로 검사는 칸마다 중심 ±1.1m 격자 표본이 0.4m 안에서 보행 면을 찾아야 합니다.
+        // NavMesh는 담 두께의 절반에 캐릭터 반지름(0.35m)을 더한 폭만큼 깎이므로, 표본이 그 안으로 0.38m보다
+        // 깊이 들어가면 막힙니다. 얇은 울타리는 거의 항상 놓이고, 두꺼운 돌담은 표본 근처에서 틈이 됩니다.
+        private static bool CrossesSample(HashSet<Vector2Int> cells, Vector3 point, Vector3 outward, float depth)
+        {
+            Vector3 along = Vector3.Cross(Vector3.up, outward);
+            Vector2Int near = Cell(point);
+            for (int dx = -1; dx <= 1; dx++)
+            for (int dz = -1; dz <= 1; dz++)
+            {
+                Vector2Int cell = near + new Vector2Int(dx, dz);
+                if (!cells.Contains(cell)) continue;
+
+                foreach (float x in new[] { -1.1f, 0.03f, 1.1f })
+                foreach (float z in new[] { -1.1f, 0.07f, 1.1f })
+                {
+                    Vector3 offset = new Vector3(cell.x * MicroTerrainTile.Size + x, 0f, cell.y * MicroTerrainTile.Size + z) - point;
+                    offset.y = 0f;
+                    if (Mathf.Abs(Vector3.Dot(offset, along)) <= MicroTerrainTile.Size * 0.5f + 0.3f
+                        && Mathf.Abs(Vector3.Dot(offset, outward)) < depth * 0.5f + 0.35f - 0.38f) return true;
+                }
+
+                // 칸 연결점(변 중앙 안쪽 1.05m)은 위에서 내려 쏘는 바닥 확인 광선이 지나므로 담이 덮지 않게 합니다.
+                foreach (Vector3 port in new[] { new Vector3(1.05f, 0f, 0f), new Vector3(-1.05f, 0f, 0f), new Vector3(0f, 0f, 1.05f), new Vector3(0f, 0f, -1.05f) })
+                {
+                    Vector3 offset = new Vector3(cell.x * MicroTerrainTile.Size, 0f, cell.y * MicroTerrainTile.Size) + port - point;
+                    offset.y = 0f;
+                    if (Mathf.Abs(Vector3.Dot(offset, along)) <= MicroTerrainTile.Size * 0.5f + 0.1f
+                        && Mathf.Abs(Vector3.Dot(offset, outward)) < depth * 0.5f + 0.1f) return true;
+                }
+            }
+            return false;
+        }
+
+        // 경사가 걸친 칸 일부에 큰 바위를 반쯤 묻어 둡니다. 축소한 작은 바위는 디테일이 뭉개져 보여 쓰지 않습니다.
+        private void PlaceBoulder(FieldDressingSet source, Vector3 center, Dictionary<Vector2Int, float> tops,
+            System.Random random)
+        {
+            if (random.NextDouble() >= 0.12) return;
+            if (tops.TryGetValue(Cell(center), out float top) && !float.IsNaN(top)) return;
+
+            GameObject prefab = Pick(source.cliffRocks, random);
+            if (prefab == null || !TryLocalBounds(prefab, out Bounds bounds)) return;
+
+            float scale = Range(random, 2.4f, 3.2f) / Mathf.Max(bounds.size.x, bounds.size.z);
+            // 칸 모서리(네 칸이 만나는 점)는 경로 표본에서 가장 먼 자리입니다.
+            var corner = new Vector3(random.Next(2) == 0 ? -1.5f : 1.5f, 0f, random.Next(2) == 0 ? -1.5f : 1.5f);
+            GameObject rock = Spawn(prefab, center + corner, Range(random, 0f, 360f), 1f);
+            rock.transform.localScale = Vector3.one * scale;
+
+            // 지면 위로 약 1.2m만 드러나게 묻습니다.
+            float visible = Mathf.Min(1.2f, bounds.size.y * scale);
+            rock.transform.position += Vector3.up * (visible - bounds.max.y * scale);
+            AddBlocker(rock, trunkOnly: false, removable: true, limitFootprint: false);
+
+            // 충돌은 바위 중심부(약 0.8m)만 잡아 모서리 주변 표본과 통로를 남깁니다.
+            BoxCollider core = rock.GetComponent<BoxCollider>();
+            if (core != null) core.size = new Vector3(0.8f / scale, core.size.y, 0.8f / scale);
+        }
+
+        // position을 중심으로, outward에 수직인 방향으로 3m 길이의 벽·울타리 한 칸을 세웁니다.
+        private void PlaceSegment(GameObject prefab, Vector3 position, Vector3 outward, bool removable)
+        {
+            if (!TryLocalBounds(prefab, out Bounds bounds)) return;
+
             bool alongX = bounds.size.x >= bounds.size.z;
             float length = alongX ? bounds.size.x : bounds.size.z;
-            float depth = alongX ? bounds.size.z : bounds.size.x;
             float stretch = MicroTerrainTile.Size / Mathf.Max(0.01f, length);
 
             Vector3 along = Vector3.Cross(Vector3.up, outward);
             Quaternion facing = Quaternion.LookRotation(alongX ? outward : along);
-            Vector3 position = center + outward * (MicroTerrainTile.Size * 0.5f + depth * outside);
             position.y = GroundY(position, position.y);
 
             GameObject segment = Spawn(prefab, position, 0f, 1f);
@@ -441,9 +574,7 @@ namespace Nomad.Terrain
             for (int attempt = 0; attempt < repairLimit && blockers.Count > 0; attempt++)
             {
                 if (MicroTerrainWalkability.Validate(terrainRoot, result.Pieces, out _, out _, root)) return;
-                if (RemoveBlockersNear(MicroTerrainWalkability.BlockedPoint, 2.5f) > 0) continue;
-
-                // 주변에 없으면 막힌 지점에서 가장 가까운 하나만 지웁니다. 덤불 울타리처럼 멀리서 둘러싼 경우입니다.
+                // 막힌 지점에서 가장 가까운 장애물 하나만 지웁니다. 한꺼번에 지우면 길을 막지 않은 담까지 사라집니다.
                 float nearest = float.PositiveInfinity;
                 foreach (GameObject blocker in blockers)
                     nearest = Mathf.Min(nearest, FlatDistance(blocker.transform.position, MicroTerrainWalkability.BlockedPoint));
@@ -476,6 +607,8 @@ namespace Nomad.Terrain
             blockers.Clear();
             Placed = 0;
             RemovedBlockers = 0;
+            RidgeSegments = 0;
+            RidgeCandidates = 0;
             surface.Release();
             ground = null;
             if (root == null) return;

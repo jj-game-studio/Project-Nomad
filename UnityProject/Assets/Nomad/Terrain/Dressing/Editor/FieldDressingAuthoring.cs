@@ -345,6 +345,15 @@ namespace Nomad.Terrain.Editor
                     if (rock != null) TerrainIntegrationValidation.Capture(controls, 0, "terrain-test-cliff", rock.position);
                     TerrainPiece ramp = result.Pieces.FirstOrDefault(piece => piece.GetComponent<MicroTerrainTile>().IsStair);
                     if (ramp != null) TerrainIntegrationValidation.Capture(controls, 0, "terrain-test-ramp", ramp.transform.position);
+
+                    // 맵 안쪽 능선의 돌담·울타리를 가까이에서 확인합니다(외곽 돌벽 제외).
+                    Bounds area = fieldRoot.GetComponentInChildren<UnityEngine.Terrain>().terrainData.bounds;
+                    area.center += fieldRoot.GetComponentInChildren<UnityEngine.Terrain>().transform.position;
+                    area.Expand(new Vector3(-6f, 100f, -6f));
+                    Transform[] ridges = dressing.Root.Cast<Transform>()
+                        .Where(child => (child.name.Contains("StoneWall") || child.name.Contains("Fence")) && area.Contains(child.position)).ToArray();
+                    Debug.Log($"FIELD_DRESSING_RIDGES seed={result.Seed} crossings={dressing.RidgeCandidates} placed={dressing.RidgeSegments} kept={ridges.Length}");
+                    if (ridges.Length > 0) TerrainIntegrationValidation.Capture(controls, 0, "terrain-test-ridge", ridges[ridges.Length / 2].position);
                 }
             }
             if (totalBlockers == 0)
