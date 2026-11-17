@@ -240,6 +240,19 @@ namespace Nomad.Loot.Editor
             inventory.Changed -= fail;
             Require(threw && inventory.GetSlot(1).Item == null && chest.GetStack(3).Count == 1 &&
                 chest.TryStoreStack(inventory, 2) == 1, "보관 알림 예외 뒤에도 중복 방지와 잠금 해제");
+
+            inventory.Add("scrap", 96);
+            inventory.Changed += fail;
+            threw = false;
+            try { chest.TryLootStackToSlot(inventory, 2, 0); }
+            catch (InvalidOperationException exception) when (exception.Message == "Expected subscriber failure") { threw = true; }
+            inventory.Changed -= fail;
+            Require(threw && inventory.GetSlot(0).Count == 99 && chest.GetStack(2).Count == 93,
+                "지정 슬롯 부분 획득과 알림 예외의 수량 보존");
+            Require(chest.TryLootStackToSlot(inventory, 2, 3) == 0 && chest.TryLootStackToSlot(inventory, 2, -1) == 0 &&
+                chest.GetStack(2).Count == 93, "다른 아이템과 잘못된 대상 슬롯 차단");
+            Require(chest.TryLootStackToSlot(inventory, 2, 2) == 93 && inventory.GetSlot(2).Count == 93 &&
+                inventory.GetSlot(1).Item == null && chest.GetStack(2).Count == 0, "드롭한 빈 슬롯으로 스택 이전");
             Object.Destroy(chest.gameObject);
             Object.Destroy(inventory.gameObject);
         }

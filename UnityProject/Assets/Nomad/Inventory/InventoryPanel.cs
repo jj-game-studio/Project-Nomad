@@ -26,6 +26,8 @@ namespace Nomad.Inventory
         private Vector2 pressPosition;
         private int hoveredIndex = -1;
         private int dragSource = -1;
+        private int lootDragSource = -1;
+        private ItemDefinition lootDragItem;
         private ChestLootPanel chestPanel;
         private GameObject lootEventSystem;
         private Vector2 backpackPosition;
@@ -132,7 +134,7 @@ namespace Nomad.Inventory
                     Refresh();
             }
 
-            if (panel.activeSelf)
+            if (panel.activeSelf && lootDragSource < 0)
                 ProcessPointer();
         }
 
@@ -232,22 +234,12 @@ namespace Nomad.Inventory
             GameObject preview = dragPreview.Rect.gameObject;
             if (!preview.activeSelf && (position - pressPosition).sqrMagnitude >= DragThreshold * DragThreshold)
             {
-                dragPreview.Bind(inventory.GetSlot(dragSource), false);
-                dragPreview.Rect.sizeDelta = slots[dragSource].Rect.rect.size;
                 slots[dragSource].Group.alpha = 0.45f;
-                if (HasOpenChest)
-                {
-                    preview.transform.SetParent(panel.transform.parent, false);
-                    preview.transform.SetAsLastSibling();
-                }
-                preview.SetActive(true);
+                ShowDragPreview(inventory.GetSlot(dragSource));
             }
 
-            if (preview.activeSelf && RectTransformUtility.ScreenPointToWorldPointInRectangle(
-                (RectTransform)panel.transform, position, EventCamera, out Vector3 worldPoint))
-            {
-                dragPreview.Rect.position = worldPoint;
-            }
+            if (preview.activeSelf)
+                PositionDragPreview(position);
 
             bool overChest = preview.activeSelf && HasOpenChest && chestPanel.ContainsDropPoint(position, EventCamera);
             chestPanel?.HighlightDrop(overChest);
@@ -266,17 +258,80 @@ namespace Nomad.Inventory
                 inventory.MoveStack(source, pointerSlot);
         }
 
-        private void CancelDrag()
+        internal void BeginLootDrag(int source, PlayerInventory.ItemStack stack, Vector2 position)
         {
-            if (dragSource < 0)
+            if (!HasOpenChest)
                 return;
 
-            slots[dragSource].Group.alpha = 1f;
+            CancelDrag();
+            lootDragSource = source;
+            lootDragItem = stack.Item;
+            ShowDragPreview(stack);
+            MoveLootDrag(position);
+        }
+
+        internal void MoveLootDrag(Vector2 position)
+        {
+            if (lootDragSource < 0)
+                return;
+
+            PositionDragPreview(position);
+            int target = FindPointerSlot(position);
+            UpdateHover(target >= 0 && inventory.SpaceInSlot(target, lootDragItem) > 0 ? target : -1);
+        }
+
+        internal void EndLootDrag(Vector2 position)
+        {
+            if (lootDragSource < 0)
+                return;
+
+            int source = lootDragSource;
+            int target = FindPointerSlot(position);
+            CancelDrag();
+            if (target >= 0 && HasOpenChest)
+                chestPanel.TakeToSlot(source, target);
+            UpdateHover(target);
+        }
+
+        internal void CancelLootDrag()
+        {
+            if (lootDragSource >= 0)
+                CancelDrag();
+        }
+
+        private void ShowDragPreview(PlayerInventory.ItemStack stack)
+        {
+            dragPreview.Bind(stack, false);
+            dragPreview.Rect.sizeDelta = slots[0].Rect.rect.size;
+            if (HasOpenChest)
+            {
+                dragPreview.Rect.SetParent(panel.transform.parent, false);
+                dragPreview.Rect.SetAsLastSibling();
+            }
+            dragPreview.Rect.gameObject.SetActive(true);
+        }
+
+        private void PositionDragPreview(Vector2 position)
+        {
+            if (RectTransformUtility.ScreenPointToWorldPointInRectangle(
+                (RectTransform)panel.transform, position, EventCamera, out Vector3 worldPoint))
+                dragPreview.Rect.position = worldPoint;
+        }
+
+        private void CancelDrag()
+        {
+            if (dragSource < 0 && lootDragSource < 0)
+                return;
+
+            if (dragSource >= 0)
+                slots[dragSource].Group.alpha = 1f;
             dragPreview.Rect.gameObject.SetActive(false);
             if (dragPreview.Rect.parent != panel.transform)
                 dragPreview.Rect.SetParent(panel.transform, false);
             chestPanel?.HighlightDrop(false);
             dragSource = -1;
+            lootDragSource = -1;
+            lootDragItem = null;
             dragMouse = null;
         }
 
@@ -302,10 +357,11 @@ namespace Nomad.Inventory
 
         private int FindPointerSlot(Mouse mouse)
         {
-            if (mouse == null)
-                return -1;
+            return mouse == null ? -1 : FindPointerSlot(mouse.position.ReadValue());
+        }
 
-            Vector2 position = mouse.position.ReadValue();
+        private int FindPointerSlot(Vector2 position)
+        {
             Camera eventCamera = EventCamera;
             for (int index = 0; index < slots.Length; index++)
             {

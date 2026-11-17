@@ -23,6 +23,8 @@ namespace Nomad.Loot
     [DisallowMultipleComponent]
     public sealed class LootChest : MonoBehaviour, IInteractable
     {
+        private const string RemainingMessage = "Items remain - inventory full or unknown item";
+
         [SerializeField] private string chestId;
         [SerializeField] private Transform interactionPoint;
         [SerializeField] private LootStack[] contents = Array.Empty<LootStack>();
@@ -111,6 +113,33 @@ namespace Nomad.Loot
             return Transfer(inventory, index, index + 1);
         }
 
+        public int TryLootStackToSlot(PlayerInventory inventory, int index, int slotIndex)
+        {
+            if (!CanTransfer(inventory) || (uint)index >= (uint)contents.Length ||
+                (uint)slotIndex >= PlayerInventory.Capacity)
+                return 0;
+
+            LootStack stack = contents[index];
+            if (stack.Count <= 0 || !inventory.TryGetItem(stack.ItemId, out ItemDefinition item))
+                return 0;
+
+            busy = true;
+            try
+            {
+                int moved = inventory.AddToSlotForTransfer(slotIndex, item, stack.Count);
+                if (moved == 0)
+                    return 0;
+
+                contents[index].Count -= moved;
+                PublishTransfer(RemainingMessage, inventory);
+                return moved;
+            }
+            finally
+            {
+                busy = false;
+            }
+        }
+
         public int TryStoreStack(PlayerInventory inventory, int slotIndex)
         {
             if (!CanTransfer(inventory) || (uint)slotIndex >= PlayerInventory.Capacity)
@@ -127,17 +156,7 @@ namespace Nomad.Loot
                 // 재진입하는 구독자에게도 가방과 상자 양쪽이 반영된 상태를 보여 줍니다.
                 inventory.RemoveSlotForTransfer(slotIndex);
                 contents = updated;
-                Status = LootStatus.Remaining;
-                Message = "Items stored";
-                try
-                {
-                    inventory.NotifyChanged();
-                }
-                finally
-                {
-                    RefreshVisuals();
-                    Changed?.Invoke();
-                }
+                PublishTransfer("Items stored", inventory);
                 return stack.Count;
             }
             finally
@@ -231,12 +250,18 @@ namespace Nomad.Loot
             }
             finally
             {
-                Status = HasLoot() ? LootStatus.Remaining : LootStatus.Empty;
-                Message = Status == LootStatus.Empty ? "Empty" : "Items remain - inventory full or unknown item";
-                RefreshVisuals();
-                try { Changed?.Invoke(); }
+                try { PublishTransfer(RemainingMessage); }
                 finally { busy = false; }
             }
+        }
+
+        private void PublishTransfer(string remainingMessage, PlayerInventory inventory = null)
+        {
+            Status = HasLoot() ? LootStatus.Remaining : LootStatus.Empty;
+            Message = Status == LootStatus.Empty ? "Empty" : remainingMessage;
+            RefreshVisuals();
+            try { inventory?.NotifyChanged(); }
+            finally { Changed?.Invoke(); }
         }
 
         private static int Count(PlayerInventory inventory, string id)

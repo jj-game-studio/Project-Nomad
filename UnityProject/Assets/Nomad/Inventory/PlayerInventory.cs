@@ -45,7 +45,26 @@ namespace Nomad.Inventory
             return slots[index];
         }
 
-        // 양쪽에 먼저 반영한 뒤 알림을 보내는 상자 전송에서만 사용합니다.
+        internal int SpaceInSlot(int index, ItemDefinition item)
+        {
+            ItemStack slot = slots[index];
+            return slot.Item == null || slot.Item == item ? item.MaxStack - slot.Count : 0;
+        }
+
+        // 전송은 양쪽 수량을 먼저 반영한 뒤 알림을 보냅니다.
+        internal int AddToSlotForTransfer(int index, ItemDefinition item, int requestedCount)
+        {
+            int added = Mathf.Min(requestedCount, SpaceInSlot(index, item));
+            if (added <= 0)
+                return 0;
+
+            ItemStack slot = slots[index];
+            if (slot.Item == null)
+                stackOrder.Add(index);
+            slots[index] = new ItemStack(item, slot.Count + added);
+            return added;
+        }
+
         internal void RemoveSlotForTransfer(int index)
         {
             slots[index] = default;

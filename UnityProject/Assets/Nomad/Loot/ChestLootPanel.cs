@@ -101,7 +101,7 @@ namespace Nomad.Loot
             Chest = chest;
             interaction = owner;
             Chest.Changed += Refresh;
-            feedback.text = "Drag from backpack to store";
+            feedback.text = "Drag items between panels";
             backdrop.gameObject.SetActive(true);
             root.gameObject.SetActive(true);
             Refresh();
@@ -125,6 +125,7 @@ namespace Nomad.Loot
             if (Chest == null)
                 return;
 
+            inventory.Panel?.CancelLootDrag();
             int count = Chest.StackCount;
             while (rows.Count < count)
                 rows.Add(CreateRow(rows.Count));
@@ -147,7 +148,7 @@ namespace Nomad.Loot
                 row.Count.text = $"×{stack.Count}";
             }
 
-            summary.text = remainingStacks == 0 ? "Empty chest  ·  Drag here to store" : $"{remainingStacks} remaining  ·  Double-click to take";
+            summary.text = remainingStacks == 0 ? "Empty chest  ·  Drag here to store" : $"{remainingStacks} stacks  ·  Drag or double-click";
             takeAll.interactable = remainingStacks > 0;
         }
 
@@ -174,6 +175,40 @@ namespace Nomad.Loot
             int stored = chest.TryStoreStack(inventory, fromSlot);
             if (stored > 0 && Chest == chest)
                 feedback.text = $"Stored {stored}";
+        }
+
+        private void BeginTakeDrag(int index, Vector2 position)
+        {
+            LootChest chest = Chest;
+            if (interaction == null || !interaction.CanAccessChest(chest) || (uint)index >= (uint)chest.StackCount)
+                return;
+
+            LootStack stack = chest.GetStack(index);
+            if (stack.Count <= 0)
+                return;
+
+            if (inventory.TryGetItem(stack.ItemId, out ItemDefinition item))
+                inventory.Panel?.BeginLootDrag(index, new PlayerInventory.ItemStack(item, stack.Count), position);
+            else
+                feedback.text = "Unknown item";
+        }
+
+        public void TakeToSlot(int index, int slotIndex)
+        {
+            LootChest chest = Chest;
+            if (interaction == null || !interaction.CanAccessChest(chest) || (uint)index >= (uint)chest.StackCount)
+                return;
+
+            int moved = chest.TryLootStackToSlot(inventory, index, slotIndex);
+            if (chest == null || Chest != chest)
+                return;
+
+            if (moved == 0)
+                feedback.text = "Slot is full or has another item";
+            else if (chest.GetStack(index).Count > 0)
+                feedback.text = $"Took {moved}  ·  Not enough space";
+            else
+                feedback.text = $"Took {moved}";
         }
 
         private void Transfer(int index)
@@ -226,6 +261,9 @@ namespace Nomad.Loot
             colors.selectedColor = colors.normalColor;
             button.colors = colors;
             button.onClick.AddListener(() => Transfer(index));
+            button.BeginDrag = position => BeginTakeDrag(index, position);
+            button.MoveDrag = position => inventory.Panel?.MoveLootDrag(position);
+            button.EndDrag = position => inventory.Panel?.EndLootDrag(position);
 
             RectTransform iconRect = CreateRect("Icon", row);
             Dock(iconRect, 8, Width - 92, 4, -4);

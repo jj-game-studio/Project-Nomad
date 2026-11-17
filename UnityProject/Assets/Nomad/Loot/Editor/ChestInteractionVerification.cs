@@ -234,22 +234,56 @@ namespace Nomad.Loot.Editor
                         chest.Status == LootStatus.Remaining && Feedback() == "Stored 7", "drop stores the exact backpack stack");
                     if (SystemInfo.graphicsDeviceType != UnityEngine.Rendering.GraphicsDeviceType.Null)
                         Capture("chest-store-preview");
-                    Click("Take All", true);
+                    inventory.Add("scrap", 96);
+                    Click("Viewport/Loot Stacks/Loot Stack 0", true);
                     break;
                 case 18:
-                    Click("Take All", false);
+                    ClickBackpackSlot(0, true);
                     break;
                 case 19:
-                    Require(Scrap() == 7 && chest.GetStack(0).Count == 0 && calls == 6 &&
-                        chest.Status == LootStatus.Empty, "stored stack can be taken back without duplication");
+                    Require(Panel().parent.Find("DragPreview").gameObject.activeSelf &&
+                        inventory.GetSlot(0).Count == 96 && chest.GetStack(0).Count == 7,
+                        "loot drag previews the stack without transferring before release");
+                    ClickBackpackSlot(0, false);
+                    break;
+                case 20:
+                    Require(inventory.GetSlot(0).Count == 99 && chest.GetStack(0).Count == 4 && calls == 6 &&
+                        Feedback().Contains("Took 3"), "drop on same item fills only the chosen stack");
+                    Click("Viewport/Loot Stacks/Loot Stack 0", true);
+                    break;
+                case 21:
+                    ClickBackpackSlot(1, true);
+                    break;
+                case 22:
+                    ClickBackpackSlot(1, false);
+                    break;
+                case 23:
+                    Require(inventory.GetSlot(1).Item.ItemId == "field-knife" && chest.GetStack(0).Count == 4 &&
+                        calls == 6 && Feedback().Contains("another item"), "drop on another item preserves both stacks");
+                    inventory.Remove("scrap", int.MaxValue);
+                    inventory.Remove("field-knife", 1);
+                    Click("Viewport/Loot Stacks/Loot Stack 0", true);
+                    break;
+                case 24:
+                    ClickBackpackSlot(18, true);
+                    break;
+                case 25:
+                    ClickBackpackSlot(18, false);
+                    break;
+                case 26:
+                    Require(inventory.GetSlot(0).Item == null && inventory.GetSlot(18).Count == 4 &&
+                        chest.GetStack(0).Count == 0 && calls == 7 && chest.Status == LootStatus.Empty,
+                        "loot drop goes to the selected empty slot and closes the round trip");
+                    if (SystemInfo.graphicsDeviceType != UnityEngine.Rendering.GraphicsDeviceType.Null)
+                        Capture("chest-to-backpack-preview");
                     chest.gameObject.SetActive(false);
                     chest = CreateChest("b-gate-check", player.transform.position + Vector3.forward * 3);
                     Queue();
                     break;
-                case 20:
+                case 27:
                     Queue(Key.E);
                     break;
-                case 21:
+                case 28:
                     Require(Panel() == null && chest.Status == LootStatus.Closed, "outside reach excluded");
                     chest.transform.position = player.transform.position + new Vector3(-0.9f, 0, 0);
                     wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -258,46 +292,46 @@ namespace Nomad.Loot.Editor
                     Physics.SyncTransforms();
                     Queue();
                     break;
-                case 22:
+                case 29:
                     Queue(Key.E);
                     break;
-                case 23:
+                case 30:
                     Require(Panel() == null && chest.Status == LootStatus.Closed, "wall blocks real chest");
                     wall.SetActive(false);
                     Physics.SyncTransforms();
                     Queue();
                     break;
-                case 24:
+                case 31:
                     rollStart = Time.time;
                     Queue(Key.LeftShift, Key.E);
                     break;
-                case 25:
+                case 32:
                     Require(player.IsRolling && chest.Status == LootStatus.Closed && Panel() == null, "roll start blocks E");
                     Queue();
                     break;
-                case 26:
+                case 33:
                     if (Time.time - rollStart < 0.4f) { stage--; return; }
                     Require(!player.IsRolling && chest.Status == LootStatus.Closed, "roll input is not reserved");
                     chest.transform.position = player.transform.position + new Vector3(-0.9f, 0, 0);
                     Physics.SyncTransforms();
                     Queue(Key.E);
                     break;
-                case 27:
+                case 34:
                     Require(chest.Status == LootStatus.Remaining && Panel() != null, "fresh E opens after roll");
                     ClickBackpackScrap();
                     break;
-                case 28:
+                case 35:
                     Click("Viewport", true);
                     break;
-                case 29:
+                case 36:
                     chest.transform.position += Vector3.forward * 3;
                     Physics.SyncTransforms();
                     Click("Viewport", false);
                     break;
-                case 30:
-                    Require(Panel() == null && Scrap() == 7 && chest.GetStack(0).Count == 10,
+                case 37:
+                    Require(Panel() == null && Scrap() == 4 && chest.GetStack(0).Count == 10,
                         "moving the chest out of reach closes the panel and preserves its contents");
-                    Debug.Log($"B_CHEST_INTERACTION_PASS frame={Time.frameCount}: E open, double-click, Take all, hold, partial, full, empty, deposit, round trip, stale drop, collider, reach, wall, roll");
+                    Debug.Log($"B_CHEST_INTERACTION_PASS frame={Time.frameCount}: E open, double-click, Take all, hold, partial, full, empty, bidirectional drag, exact slot, merge, incompatible slot, stale drop, collider, reach, wall, roll");
                     Finish(0);
                     break;
             }
@@ -321,10 +355,15 @@ namespace Nomad.Loot.Editor
                 slot++;
 
             Require(slot < PlayerInventory.Capacity, "backpack has scrap to drag");
+            ClickBackpackSlot(slot, true);
+        }
+
+        private static void ClickBackpackSlot(int slot, bool pressed)
+        {
             Canvas.ForceUpdateCanvases();
             var grid = Panel().parent.Find("InventoryPanel/Slots");
             Vector2 point = RectTransformUtility.WorldToScreenPoint(null, grid.GetChild(slot).position);
-            QueueMouse(point, true);
+            QueueMouse(point, pressed);
         }
 
         private static void QueueMouse(Vector2 position, bool pressed)
