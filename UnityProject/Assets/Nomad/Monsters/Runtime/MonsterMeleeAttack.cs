@@ -41,6 +41,8 @@ namespace Nomad.Monsters
         public MeleePhase Phase { get; private set; }
         public bool IsHeavyAttack { get; private set; }
         public bool IsRangedAttack { get; private set; }
+        public bool IsSkillAttack => IsHeavyAttack || (IsRangedAttack &&
+            (GetComponent<MonsterIdentity>()?.Rank ?? MonsterRank.Normal) != MonsterRank.Normal);
         public float HeavyAttackRange => heavyRange;
         public float HeavyAttackAngle => heavyAngle;
         public Vector3 AttackDirection => strikeForward;

@@ -145,6 +145,7 @@ namespace Nomad.Gameplay
             int normals = 0;
             int elites = 0;
             int bosses = 0;
+            var styles = new int[3];
             foreach (FieldSpawnPoint point in candidates)
             {
                 if (normals >= normalCount && elites >= eliteCount && bosses >= bossCount) break;
@@ -163,9 +164,13 @@ namespace Nomad.Gameplay
                 enemies.Add(enemy);
                 if (rank == MonsterRank.Boss) bosses++;
                 else if (rank == MonsterRank.Elite) elites++;
-                else normals++;
+                else
+                {
+                    normals++;
+                    styles[(int)enemy.GetComponent<MonsterIdentity>().Weapon]++;
+                }
             }
-            message = $"Normal {normals} / Elite {elites} / Boss {bosses} (test)\nDeath drops: visual only, no pickup.";
+            message = $"Sword {styles[0]} / Crossbow {styles[1]} / Mage {styles[2]}\nElite {elites} / Boss {bosses} | Drops: no pickup";
         }
 
         private void ClearGeneration()

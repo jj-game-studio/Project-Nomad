@@ -22,15 +22,22 @@ namespace Nomad.Monsters.Demo
         public void ResetLineup()
         {
             panel.ClearMonsters();
+            // 플레이어가 소환 자리에 서 있으면 한 종류만 충돌 검사에서 빠질 수 있어 시작 위치도 복원합니다.
+            CharacterController controller = player.GetComponent<CharacterController>();
+            bool wasEnabled = controller.enabled;
+            controller.enabled = false;
+            player.position = new Vector3(0f, 0.05f, -5f);
+            controller.enabled = wasEnabled;
+            Physics.SyncTransforms();
             panel.SetInvincible(true);
             panel.ShowDetection(true);
-            panel.SpawnNormalStyle(0, new Vector3(-8f, 0f, 3f));
-            panel.SpawnNormalStyle(1, new Vector3(-4f, 0f, 7f));
-            panel.SpawnNormalStyle(2, new Vector3(0f, 0f, 11f));
+            panel.SpawnNormalStyle(0, new Vector3(-7f, 0f, 4f));
+            panel.SpawnNormalStyle(1, new Vector3(0f, 0f, 4f));
+            panel.SpawnNormalStyle(2, new Vector3(7f, 0f, 4f));
             panel.SetKind(1);
-            panel.SpawnAt(new Vector3(6f, 0f, 13f));
+            panel.SpawnAt(new Vector3(-7f, 0f, 16f));
             panel.SetKind(2);
-            panel.SpawnAt(new Vector3(10f, 0f, 22f));
+            panel.SpawnAt(new Vector3(7f, 0f, 21f));
             panel.SetKind(0);
         }
 

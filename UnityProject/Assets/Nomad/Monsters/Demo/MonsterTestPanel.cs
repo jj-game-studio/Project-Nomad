@@ -305,7 +305,7 @@ if (monsters.Count >= 12)
             GUILayout.Label($"MONSTERS ({monsters.Count}/12) - select to inspect");
             foreach (Entry entry in monsters)
             {
-                string caption = (entry == selected ? "> " : "") + entry.health.name +
+                string caption = (entry == selected ? "> " : "") + (entry.health.GetComponent<MonsterIdentity>()?.DisplayName ?? entry.health.name) +
                     $"  {entry.health.CurrentHealth}/{entry.health.MaxHealth}";
                 if (GUILayout.Button(caption))
                 {

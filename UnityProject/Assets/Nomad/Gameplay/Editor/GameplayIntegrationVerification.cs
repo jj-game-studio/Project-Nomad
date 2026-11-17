@@ -112,6 +112,9 @@ namespace Nomad.Gameplay.Editor
                     gameplay.Enemies.Count(enemy => enemy.GetComponent<MonsterIdentity>().Rank == MonsterRank.Elite) == 1 &&
                     gameplay.Enemies.Count(enemy => enemy.GetComponent<MonsterIdentity>().Rank == MonsterRank.Boss) == 1,
                     "all three ranks placed");
+                foreach (MonsterWeaponStyle style in System.Enum.GetValues(typeof(MonsterWeaponStyle)))
+                    Require(gameplay.Enemies.Count(enemy => enemy.GetComponent<MonsterIdentity>().Rank == MonsterRank.Normal &&
+                        enemy.GetComponent<MonsterIdentity>().Weapon == style) == 2, "two of each normal style: " + style);
                 foreach (Health actor in gameplay.Enemies)
                     Require(actor.GetComponentInChildren<SkinnedMeshRenderer>() != null, "real model for every rank");
                 Require(gameplay.GenerationId != previousId, "new generation identity");

@@ -20,6 +20,7 @@ namespace Nomad.Monsters
         private float phase;
         private float death;
         private float gait;
+        private Transform[] hands;
 
         private void Awake()
         {
@@ -29,12 +30,14 @@ namespace Nomad.Monsters
             string[] names = { "upper_arm.L", "upper_arm.R", "forearm.L", "forearm.R", "thigh.L", "thigh.R", "shin.L", "shin.R" };
             Transform[] all = model.GetComponentsInChildren<Transform>();
             bones = Array.ConvertAll(names, name => Array.Find(all, bone => bone.name == name));
+            hands = new[] { Array.Find(all, bone => bone.name == "hand.L"), Array.Find(all, bone => bone.name == "hand.R") };
             rest = Array.ConvertAll(bones, bone => bone != null ? bone.localRotation : Quaternion.identity);
             agent = GetComponent<NavMeshAgent>();
             attack = GetComponent<MonsterMeleeAttack>();
             health = GetComponent<Health>();
             Animator animator = model.GetComponentInChildren<Animator>();
             if (animator != null) animator.enabled = false;
+            PoseArms(0f, 1f);
         }
 
         private void LateUpdate()
@@ -47,7 +50,7 @@ namespace Nomad.Monsters
             float lift = attack.Phase == MeleePhase.Windup ? Mathf.Sin(attack.WindupProgress * Mathf.PI * 0.5f) : 0f;
             for (int i = 0; i < bones.Length; i++)
             {
-                if (bones[i] == null) continue;
+                if (bones[i] == null || i < 4) continue;
                 float side = i % 2 == 0 ? 1f : -1f;
                 Vector3 angle = i < 2 ? new Vector3(swing * side - lift * 110f, 0f, side * 65f) :
                     i < 4 ? new Vector3(-15f - lift * 45f, 0f, 0f) : i < 6 ? new Vector3(-swing * side, 0f, 0f) :
@@ -55,8 +58,25 @@ namespace Nomad.Monsters
                 bones[i].localRotation = Quaternion.Slerp(bones[i].localRotation,
                     rest[i] * Quaternion.Euler(angle), 1f - Mathf.Exp(-Time.deltaTime * 12f));
             }
+            if (!health.IsDead) PoseArms(lift, 1f - Mathf.Exp(-Time.deltaTime * 14f));
             model.localPosition = basePosition + Vector3.up * (Mathf.Sin(phase * 2f) * 0.035f * (1f - death) - death * 0.4f);
             model.localRotation = baseRotation * Quaternion.Euler(death * 80f, 0f, Mathf.Sin(phase) * 1.5f * (1f - death));
+        }
+
+        private void PoseArms(float lift, float blend)
+        {
+            // FBX 본의 로컬 축 대신 캐릭터 앞쪽의 손 목표점을 사용해 뒷짐 자세를 방지합니다.
+            for (int side = 0; side < 2; side++)
+            {
+                if (bones[side] == null) continue;
+                Vector3 shoulder = bones[side].position;
+                float sign = Mathf.Sign(Vector3.Dot(shoulder - transform.position, transform.right));
+                Vector3 neutral = shoulder - Vector3.up * 0.75f + transform.forward * 0.38f;
+                Vector3 raised = shoulder + Vector3.up * 0.35f + transform.forward * 0.6f;
+                Vector3 goal = Vector3.Lerp(neutral, raised, lift) + transform.forward * (Mathf.Sin(phase) * gait * sign * 0.12f);
+                MonsterWeaponMotion.SolveArm(bones[side], bones[side + 2], hands[side], goal,
+                    transform.right * sign - Vector3.up * 0.3f, blend);
+            }
         }
     }
 }

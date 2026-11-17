@@ -171,7 +171,7 @@ namespace Nomad.Monsters.Tests
         [UnityTest]
         public IEnumerator FillReachesFullBeforeDamageAndMatchesAttackProgress()
         {
-            yield return Until(() => attack.Phase == MeleePhase.Windup, 4f, "기본 공격 준비");
+            yield return EnterHeavyWindup();
             player.IsCombatImmune = false;
             bool fullSeen = false;
             float previous = 0f;
@@ -188,7 +188,7 @@ namespace Nomad.Monsters.Tests
                 yield return null;
             }
             Assert.That(fullSeen, Is.True, "100% 채움 프레임 표시");
-            Assert.That(player.CurrentHealth, Is.EqualTo(80), "채움 완료 후 한 번 타격");
+            Assert.That(player.CurrentHealth, Is.EqualTo(60), "스킬 채움 완료 후 한 번 타격");
             Assert.That(fillRenderer.enabled, Is.False);
         }
 
@@ -227,12 +227,12 @@ namespace Nomad.Monsters.Tests
         }
 
         [UnityTest]
-        public IEnumerator BasicUsesCircleAndHeavyUsesSectorFill()
+        public IEnumerator BasicHidesFloorRangeAndHeavyUsesSectorFill()
         {
             yield return Until(() => attack.Phase == MeleePhase.Windup && attack.WindupProgress > 0.1f,
-                4f, "원형 기본 경고");
-            Assert.That(warning.positionCount, Is.EqualTo(17));
-            Assert.That(fill.sharedMesh.bounds.min.z, Is.LessThan(-0.9f));
+                4f, "기본 공격 준비");
+            Assert.That(warning.enabled, Is.False);
+            Assert.That(fillRenderer.enabled, Is.False);
             yield return EnterHeavyWindup();
             Assert.That(warning.positionCount, Is.EqualTo(19));
             Assert.That(fill.sharedMesh.bounds.min.z, Is.GreaterThanOrEqualTo(0f));

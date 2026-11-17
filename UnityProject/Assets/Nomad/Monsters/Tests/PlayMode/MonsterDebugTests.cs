@@ -63,7 +63,64 @@ namespace Nomad.Monsters.Tests
                 disc.GetComponent<Renderer>().GetPropertyBlock(block);
                 Assert.That(block.GetColor("_BaseColor").a, Is.LessThan(0.05f));
             }
+            player.transform.position = new Vector3(0f, 0.05f, 4f);
+            Component arena = panel.GetComponent(Type.GetType("Nomad.Monsters.Demo.MonsterDebugArena, Assembly-CSharp"));
+            arena.GetType().GetMethod("ResetLineup").Invoke(arena, null);
             yield return null;
+            Assert.That(scene.GetRootGameObjects().Count(root => root.GetComponent<MonsterIdentity>() != null), Is.EqualTo(5),
+                "reset must not lose a type when player occupied its spawn point");
+        }
+
+        [UnityTest]
+        public IEnumerator BasicAttacksHaveNoFloorWarningButEliteAndBossRangedSkillsDo()
+        {
+            foreach (MonsterIdentity actor in actors) actor.gameObject.SetActive(false);
+            foreach (MonsterIdentity actor in actors)
+            {
+                actor.gameObject.SetActive(true);
+                actor.GetComponent<NavMeshAgent>().Warp(new Vector3(3f, 0f, -2f));
+                actor.GetComponent<NavMeshAgent>().speed = 0f;
+                actor.GetComponent<MonsterTracker>().Configure(20f, 30f, 0f);
+                bool sword = actor.Rank == MonsterRank.Normal && actor.Weapon == MonsterWeaponStyle.Sword;
+                player.transform.position = new Vector3(3f, 0f, sword ? -0.6f : 4f);
+                Physics.SyncTransforms();
+                var attack = actor.GetComponent<MonsterMeleeAttack>();
+                float deadline = Time.time + 4f;
+                while ((attack.Phase != MeleePhase.Windup || attack.WindupProgress < 0.3f) && Time.time < deadline) yield return null;
+                Assert.That(attack.Phase, Is.EqualTo(MeleePhase.Windup));
+                yield return null;
+                bool skill = actor.Rank != MonsterRank.Normal;
+                Assert.That(attack.IsSkillAttack, Is.EqualTo(skill));
+                Assert.That(actor.GetComponentsInChildren<LineRenderer>().Single(line => line.name == "Attack Outline").enabled,
+                    Is.EqualTo(skill), actor.DisplayName);
+                actor.gameObject.SetActive(false);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator GolemHandsStayInFrontDuringIdleAndThrowWindup()
+        {
+            MonsterIdentity golem = actors.Single(actor => actor.Rank == MonsterRank.Elite);
+            foreach (MonsterIdentity actor in actors) if (actor != golem) actor.gameObject.SetActive(false);
+            Transform[] bones = golem.GetComponentsInChildren<Transform>();
+            Transform[] hands = { bones.Single(t => t.name == "hand.L"), bones.Single(t => t.name == "hand.R") };
+            Transform[] shoulders = { bones.Single(t => t.name == "upper_arm.L"), bones.Single(t => t.name == "upper_arm.R") };
+            for (int i = 0; i < 2; i++)
+                Assert.That(Vector3.Dot(hands[i].position - shoulders[i].position, golem.transform.forward), Is.GreaterThan(0.1f));
+            player.transform.position = golem.transform.position + golem.transform.forward * 6f;
+            golem.GetComponent<NavMeshAgent>().speed = 0f;
+            golem.GetComponent<MonsterTracker>().Configure(20f, 30f, 0f);
+            Physics.SyncTransforms();
+            var attack = golem.GetComponent<MonsterMeleeAttack>();
+            float deadline = Time.time + 4f;
+            while (attack.Phase != MeleePhase.Windup && Time.time < deadline) yield return null;
+            Assert.That(attack.Phase, Is.EqualTo(MeleePhase.Windup));
+            for (int frame = 0; frame < 90; frame++)
+            {
+                yield return null;
+                for (int i = 0; i < 2; i++)
+                    Assert.That(Vector3.Dot(hands[i].position - shoulders[i].position, golem.transform.forward), Is.GreaterThan(0.05f));
+            }
         }
 
         [UnityTest]
@@ -134,18 +191,31 @@ namespace Nomad.Monsters.Tests
         }
 
         [Test]
-        public void DragonUsesReducedFlatShadedSkinnedMeshWithOriginalRig()
+        public void DragonPreservesEveryOriginalTriangleUvAndSkinWeightWithFlatNormals()
         {
             var source = AssetDatabase.LoadAllAssetsAtPath("Assets/ThirdParty/OpenGameArt/Dragon/dragon.dae")
                 .OfType<Mesh>().OrderByDescending(mesh => mesh.vertexCount).First();
             var derived = AssetDatabase.LoadAssetAtPath<Mesh>("Assets/ThirdParty/Nomad/Monsters/Candidates/DragonLowPoly.asset");
             Assert.That(source.triangles.Length, Is.GreaterThan(0), "readable original mesh required for comparison");
-            Assert.That(derived.triangles.Length, Is.LessThan(source.triangles.Length * 0.7f));
+            Assert.That(derived.triangles.Length, Is.EqualTo(source.triangles.Length));
             Assert.That(derived.bindposes.Length, Is.EqualTo(source.bindposes.Length));
             Assert.That(derived.boneWeights.Length, Is.EqualTo(derived.vertexCount));
             Assert.That(derived.uv.Length, Is.EqualTo(derived.vertexCount));
             int[] triangles = derived.triangles;
             Vector3[] normals = derived.normals;
+            Vector3[] originalVertices = source.vertices;
+            Vector3[] actualVertices = derived.vertices;
+            Vector2[] originalUv = source.uv;
+            Vector2[] actualUv = derived.uv;
+            BoneWeight[] originalWeights = source.boneWeights;
+            BoneWeight[] actualWeights = derived.boneWeights;
+            int[] originalIndices = source.triangles;
+            for (int i = 0; i < triangles.Length; i++)
+            {
+                Assert.That(actualVertices[triangles[i]], Is.EqualTo(originalVertices[originalIndices[i]]));
+                Assert.That(actualUv[triangles[i]], Is.EqualTo(originalUv[originalIndices[i]]));
+                Assert.That(actualWeights[triangles[i]], Is.EqualTo(originalWeights[originalIndices[i]]));
+            }
             for (int i = 0; i < triangles.Length; i += 3)
                 Assert.That(Vector3.Angle(normals[triangles[i]], normals[triangles[i + 1]]), Is.LessThan(0.1f));
         }

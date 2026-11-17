@@ -74,7 +74,7 @@ namespace Nomad.Monsters.Demo
             if (heavyWarning == null)
                 return;
 
-            heavyWarning.enabled = !monster.IsDead && attack.Phase == MeleePhase.Windup;
+            heavyWarning.enabled = !monster.IsDead && attack.Phase == MeleePhase.Windup && attack.IsSkillAttack;
             if (fillRenderer != null)
                 fillRenderer.enabled = heavyWarning.enabled;
             if (!heavyWarning.enabled)

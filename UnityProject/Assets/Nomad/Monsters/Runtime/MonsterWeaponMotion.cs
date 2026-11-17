@@ -77,6 +77,9 @@ namespace Nomad.Monsters
         }
 
         private void Reach(Transform upper, Transform lower, Transform hand, Vector3 goal, Vector3 pole)
+            => SolveArm(upper, lower, hand, goal, pole, PoseWeight);
+
+        public static void SolveArm(Transform upper, Transform lower, Transform hand, Vector3 goal, Vector3 pole, float blend)
         {
             if (upper == null || lower == null || hand == null) return;
             float a = Vector3.Distance(upper.position, lower.position);
@@ -90,10 +93,10 @@ namespace Nomad.Monsters
             Vector3 elbow = upper.position + direction * (a * cosine) + bend * (a * Mathf.Sqrt(1f - cosine * cosine));
             Quaternion start = upper.rotation;
             Quaternion desired = Quaternion.FromToRotation(lower.position - upper.position, elbow - upper.position) * start;
-            upper.rotation = Quaternion.Slerp(start, desired, PoseWeight);
+            upper.rotation = Quaternion.Slerp(start, desired, blend);
             start = lower.rotation;
             desired = Quaternion.FromToRotation(hand.position - lower.position, goal - lower.position) * start;
-            lower.rotation = Quaternion.Slerp(start, desired, PoseWeight);
+            lower.rotation = Quaternion.Slerp(start, desired, blend);
         }
     }
 }

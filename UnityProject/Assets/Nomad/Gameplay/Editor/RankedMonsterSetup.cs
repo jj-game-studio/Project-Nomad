@@ -117,7 +117,7 @@ namespace Nomad.Gameplay.Editor
                 AssetDatabase.CreateAsset(material, materialPath);
             }
             Texture2D albedo = AssetDatabase.LoadAssetAtPath<Texture2D>(texture);
-            material.SetTexture("_BaseMap", label == "Dragon" ? DragonLowPolyMesh.Palette(albedo, Output + "/DragonPalette.png") : albedo);
+            material.SetTexture("_BaseMap", albedo);
             material.SetColor("_BaseColor", Color.white);
             var wrapper = new GameObject(label);
             var model = Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(path), wrapper.transform);

@@ -74,7 +74,8 @@ namespace Nomad.Monsters
             float y = Screen.height - screen.y - (Compact ? 16f : 32f);
             GUI.Box(new Rect(x - 4f, y, width + 8f, Compact ? 16f : 32f), GUIContent.none);
             if (!Compact)
-                GUI.Label(new Rect(x, y, width, 19f), $"{health.CurrentHealth} / {health.MaxHealth}", title);
+                GUI.Label(new Rect(x, y, width, 19f),
+                    $"{GetComponent<MonsterIdentity>()?.DisplayName} {health.CurrentHealth}/{health.MaxHealth}", title);
 
             const float gap = 2f;
             float cellWidth = (width - gap * (segments - 1)) / segments;
