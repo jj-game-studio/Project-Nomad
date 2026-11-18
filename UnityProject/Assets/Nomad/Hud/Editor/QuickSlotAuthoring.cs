@@ -173,6 +173,11 @@ namespace Nomad.Hud.Editor
                     "registered icon displayed");
             }
             Check(inventoryChanges == 0 && inventory.GetSlot(0).Count == 96, "registration does not move or consume");
+            IEnumerator unregister = VerifyUnregister(view);
+            while (unregister.MoveNext())
+                yield return unregister.Current;
+            Check(inventoryChanges == 0, "unregister never raises inventory change");
+
 
             Pointer(Bag(1), true);
             yield return null;
@@ -254,6 +259,21 @@ namespace Nomad.Hud.Editor
             Check(quick.GetItem(1) == null && quick.GetItem(2) == null && quick.GetItem(3) == null,
                 "depletion clears all duplicates");
 
+            inventory.Add("field-knife", PlayerInventory.Capacity);
+            inventory.Add("scrap", int.MaxValue);
+            Check(inventory.UsedSlots == PlayerInventory.Capacity, "full backpack prepared");
+            quick.Register(0, 1);
+            var fullBag = SnapshotInventory();
+            Pointer(Slot(1), true);
+            yield return null;
+            Pointer(Bag(0), true);
+            yield return null;
+            Pointer(Bag(0), false);
+            yield return null;
+            Check(quick.GetItem(1) == null && SameInventory(fullBag), "full backpack unassigns without moving items");
+            inventory.Remove("scrap", int.MaxValue);
+            inventory.Remove("field-knife", int.MaxValue);
+
             // 최종 렌더는 등록된 아이템과 열린 가방을 함께 보여줍니다.
             inventory.Add("scrap", 106);
             inventory.Add("field-knife", 1);
@@ -268,6 +288,138 @@ namespace Nomad.Hud.Editor
             while (capture.MoveNext())
                 yield return capture.Current;
             Debug.Log($"QUICK_SLOTS_PLAYMODE_PASS checks={checks} frame={Time.frameCount}");
+        }
+
+        private static IEnumerator VerifyUnregister(InventoryPanel view)
+        {
+            PlayerQuickSlots quick = hud.QuickSlots;
+            var before = SnapshotInventory();
+            Check(!quick.Unregister(-1) && !quick.Unregister(PlayerQuickSlots.Capacity), "invalid unassign rejected");
+            Pointer(Slot(1), true);
+            yield return null;
+            Pointer(Slot(1), false);
+            yield return null;
+            Check(quick.GetItem(1) != null, "click without drag retains registration");
+
+            Vector2 padding = RectTransformUtility.WorldToScreenPoint(null,
+                panel.TransformPoint(new Vector3(panel.rect.xMin + 5, panel.rect.yMin + 5)));
+            Vector2[] targets = { Bag(0), Bag(19),
+                RectTransformUtility.WorldToScreenPoint(null, panel.Find("Capacity").position), padding };
+            for (int index = 0; index < PlayerQuickSlots.Capacity; index++)
+            {
+                Pointer(Slot(index), true);
+                yield return null;
+                Pointer(targets[index], true);
+                yield return null;
+                Check(panel.Find("DragPreview").gameObject.activeSelf &&
+                    SlotRect(index).GetComponent<CanvasGroup>().alpha < 1f, "reverse drag preview and dimming");
+                Check(quick.GetItem(index) != null, "reverse drag does not unassign until release");
+                Pointer(targets[index], false);
+                yield return null;
+                Check(quick.GetItem(index) == null && SameInventory(before), "drop on backpack unassigns only shortcut " + index);
+                Check(!panel.Find("DragPreview").gameObject.activeSelf &&
+                    SlotRect(index).GetComponent<CanvasGroup>().alpha == 1f, "reverse drag visuals restored");
+                for (int other = 0; other < PlayerQuickSlots.Capacity; other++)
+                    Check(other == index || quick.GetItem(other) != null, "other duplicate registrations preserved");
+                Check(!quick.Unregister(index), "empty shortcut cannot unassign again");
+                quick.Register(0, index);
+            }
+
+            Vector2[] invalidTargets = { new Vector2(5, Screen.height - 5), Slot(3) };
+            foreach (Vector2 target in invalidTargets)
+            {
+                Pointer(Slot(1), true);
+                yield return null;
+                Pointer(target, true);
+                yield return null;
+                Pointer(target, false);
+                yield return null;
+                Check(quick.GetItem(1) != null && SameInventory(before), "outside and quickslot drop preserve registration");
+            }
+
+            Pointer(Slot(1), true);
+            yield return null;
+            Pointer(Bag(0), true);
+            yield return null;
+            QueueKey(Key.Escape);
+            yield return null;
+            Pointer(Bag(0), false);
+            QueueKey();
+            yield return null;
+            Check(quick.GetItem(1) != null && SameInventory(before), "reverse drag Escape cancellation");
+
+            Pointer(Slot(1), true);
+            yield return null;
+            Pointer(Bag(0), true);
+            yield return null;
+            QueueKey(Key.Tab);
+            yield return null;
+            Pointer(Bag(0), false);
+            QueueKey();
+            yield return null;
+            Check(!panel.gameObject.activeSelf && quick.GetItem(1) != null, "reverse drag closing cancellation");
+            Pointer(Slot(1), true);
+            yield return null;
+            Pointer(Bag(0), true);
+            yield return null;
+            Pointer(Bag(0), false);
+            yield return null;
+            Check(quick.GetItem(1) != null, "closed backpack cannot begin reverse drag");
+            QueueKey(Key.Tab);
+            yield return null;
+            QueueKey();
+            yield return null;
+
+            Pointer(Slot(1), true);
+            yield return null;
+            Pointer(Bag(0), true);
+            yield return null;
+            view.SendMessage("OnApplicationFocus", false);
+            Pointer(Bag(0), false);
+            yield return null;
+            Check(quick.GetItem(1) != null && SlotRect(1).GetComponent<CanvasGroup>().alpha == 1f,
+                "reverse drag focus cancellation restores source");
+
+            Pointer(Slot(1), true);
+            yield return null;
+            Pointer(Bag(0), true);
+            yield return null;
+            hud.enabled = false;
+            yield return null;
+            Pointer(Bag(0), false);
+            yield return null;
+            hud.enabled = true;
+            Check(quick.GetItem(1) != null && SameInventory(before), "hidden HUD cancels reverse drag");
+
+            Pointer(Slot(1), true);
+            yield return null;
+            Pointer(Bag(0), true);
+            yield return null;
+            quick.Register(1, 1);
+            Pointer(Bag(0), false);
+            yield return null;
+            Check(quick.GetItem(1) == inventory.GetSlot(1).Item, "replacement during drag is not unassigned");
+            quick.Register(0, 1);
+            Debug.Log("QUICK_SLOTS_UNREGISTER_PASS: all slots, occupied/empty/header/padding/full bag, cancellations, no inventory mutation");
+        }
+
+        private static PlayerInventory.ItemStack[] SnapshotInventory()
+        {
+            var snapshot = new PlayerInventory.ItemStack[PlayerInventory.Capacity];
+            for (int index = 0; index < snapshot.Length; index++)
+                snapshot[index] = inventory.GetSlot(index);
+            return snapshot;
+        }
+
+        private static bool SameInventory(PlayerInventory.ItemStack[] snapshot)
+        {
+            for (int index = 0; index < snapshot.Length; index++)
+            {
+                PlayerInventory.ItemStack current = inventory.GetSlot(index);
+                if (current.Item != snapshot[index].Item || current.Count != snapshot[index].Count)
+                    return false;
+            }
+            return true;
         }
 
         private static RectTransform SlotRect(int index) =>

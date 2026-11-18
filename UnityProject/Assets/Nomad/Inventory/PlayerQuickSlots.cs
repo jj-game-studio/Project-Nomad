@@ -68,6 +68,16 @@ namespace Nomad.Inventory
             return true;
         }
 
+        public bool Unregister(int index)
+        {
+            if ((uint)index >= Capacity || items[index] == null)
+                return false;
+
+            items[index] = null;
+            Changed?.Invoke();
+            return true;
+        }
+
         private void Refresh()
         {
             for (int index = 0; index < Capacity; index++)

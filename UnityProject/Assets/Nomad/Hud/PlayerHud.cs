@@ -34,6 +34,8 @@ namespace Nomad.Hud
         private readonly HudArtwork[] dropHighlights = new HudArtwork[PlayerQuickSlots.Capacity];
         private readonly GameObject[] emptyContents = new GameObject[PlayerQuickSlots.Capacity];
 
+        private readonly CanvasGroup[] quickGroups = new CanvasGroup[PlayerQuickSlots.Capacity];
+
         public PlayerQuickSlots QuickSlots { get; private set; }
 
         public HudStyle Style => style;
@@ -125,6 +127,11 @@ namespace Nomad.Hud
             }
 
             return -1;
+        }
+
+        public void SetQuickSlotDragging(int index, bool dragging)
+        {
+            quickGroups[index].alpha = dragging ? .45f : 1f;
         }
 
         public void HighlightQuickSlot(int index)
@@ -223,6 +230,7 @@ namespace Nomad.Hud
                     selection = Art("Selection", slot, new Vector2(100, 100), Vector2.zero, HudArtwork.Shape.Panel, Amber);
                 Surface("Background", slot, new Vector2(92, 92));
                 quickRects[index] = slot;
+                quickGroups[index] = slot.gameObject.AddComponent<CanvasGroup>();
                 dropHighlights[index] = Art("Drop Highlight", slot, new Vector2(96, 96), Vector2.zero,
                     HudArtwork.Shape.Fittings, Amber);
                 dropHighlights[index].gameObject.SetActive(false);
