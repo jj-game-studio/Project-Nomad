@@ -154,6 +154,7 @@ namespace Nomad.Hud.Editor
 
             int inventoryChanges = 0;
             inventory.Changed += () => inventoryChanges++;
+            VerifyUniqueRegistration();
             Check(!quick.Register(-1, 0) && !quick.Register(20, 0) && !quick.Register(0, 4) &&
                 !quick.Register(19, 0), "invalid and empty source rejected");
             for (int index = 0; index < PlayerQuickSlots.Capacity; index++)
@@ -171,6 +172,11 @@ namespace Nomad.Hud.Editor
                     !panel.Find("DragPreview").gameObject.activeSelf, "release clears drag visuals");
                 Check(SlotRect(index).Find("Item Icon").GetComponent<UnityEngine.UI.Image>().sprite == inventory.GetSlot(0).Item.Icon,
                     "registered icon displayed");
+                Check(HasUniqueItems(quick), "pointer registration never duplicates item");
+                if (index > 0)
+                    Check(quick.GetItem(index - 1) == null &&
+                        SlotRect(index - 1).Find("Empty Content").gameObject.activeSelf,
+                        "pointer drop clears previous shortcut and display");
             }
             Check(inventoryChanges == 0 && inventory.GetSlot(0).Count == 96, "registration does not move or consume");
             IEnumerator unregister = VerifyUnregister(view);
@@ -260,7 +266,7 @@ namespace Nomad.Hud.Editor
             Check(quick.GetItem(0) == null, "last item removal clears registration");
             inventory.Remove("scrap", int.MaxValue);
             Check(quick.GetItem(1) == null && quick.GetItem(2) == null && quick.GetItem(3) == null,
-                "depletion clears all duplicates");
+                "depletion clears remaining registration");
 
             inventory.Add("field-knife", PlayerInventory.Capacity);
             inventory.Add("scrap", int.MaxValue);
@@ -302,6 +308,92 @@ namespace Nomad.Hud.Editor
             Debug.Log($"QUICK_SLOTS_PLAYMODE_PASS checks={checks} frame={Time.frameCount}");
         }
 
+        private static bool HasUniqueItems(PlayerQuickSlots quick)
+        {
+            for (int left = 0; left < PlayerQuickSlots.Capacity; left++)
+            {
+                ItemDefinition item = quick.GetItem(left);
+                for (int right = left + 1; item != null && right < PlayerQuickSlots.Capacity; right++)
+                {
+                    if (quick.GetItem(right) == item)
+                        return false;
+                }
+            }
+            return true;
+        }
+
+        private static void VerifyUniqueRegistration()
+        {
+            var potion = ScriptableObject.CreateInstance<ItemDefinition>();
+            var data = new SerializedObject(potion);
+            data.FindProperty("itemId").stringValue = "test-potion";
+            data.FindProperty("displayName").stringValue = "Test Potion";
+            data.FindProperty("maxStack").intValue = 10;
+            data.ApplyModifiedPropertiesWithoutUndo();
+            var fixture = new GameObject("Unique Quick Slot Verification");
+            fixture.SetActive(false);
+            try
+            {
+                var bag = fixture.AddComponent<PlayerInventory>();
+                ItemDefinition[] catalog = { inventory.GetSlot(0).Item, potion,
+                    inventory.GetSlot(1).Item, inventory.GetSlot(2).Item };
+                var settings = new SerializedObject(bag);
+                var definitions = settings.FindProperty("items");
+                definitions.arraySize = catalog.Length;
+                for (int index = 0; index < catalog.Length; index++)
+                    definitions.GetArrayElementAtIndex(index).objectReferenceValue = catalog[index];
+                settings.ApplyModifiedPropertiesWithoutUndo();
+                fixture.SetActive(true);
+                var quick = fixture.AddComponent<PlayerQuickSlots>();
+                foreach (ItemDefinition item in catalog)
+                    bag.Add(item.ItemId, item.MaxStack + 1);
+                var snapshot = new PlayerInventory.ItemStack[PlayerInventory.Capacity];
+                for (int index = 0; index < snapshot.Length; index++)
+                    snapshot[index] = bag.GetSlot(index);
+                int bagChanges = 0;
+                bag.Changed += () => bagChanges++;
+
+                for (int kind = 0; kind < catalog.Length; kind++)
+                {
+                    for (int index = 0; index < PlayerQuickSlots.Capacity; index++)
+                        quick.Unregister(index);
+                    int source = kind * 2;
+                    int other = ((kind + 1) % catalog.Length) * 2;
+                    int preserved = ((kind + 2) % catalog.Length) * 2;
+                    quick.Register(source, 0);
+                    quick.Register(other, 2);
+                    quick.Register(preserved, 3);
+                    int notifications = 0;
+                    Action observed = () =>
+                    {
+                        notifications++;
+                        Check(quick.GetItem(0) == null && quick.GetItem(2) == catalog[kind] && HasUniqueItems(quick),
+                            "observers see only the completed unique registration move");
+                    };
+                    quick.Changed += observed;
+                    Check(quick.Register(source + 1, 2) && notifications == 1,
+                        "second stack or equipment copy moves registration and notifies once");
+                    Check(quick.GetItem(3) == bag.GetSlot(preserved).Item && quick.GetCount(2) == catalog[kind].MaxStack + 1,
+                        "occupied target replaced, unrelated item and aggregate count preserved");
+                    Check(quick.Register(source, 2) && notifications == 1, "same-slot re-registration sends no notification");
+                    Check(!quick.Register(19, 1) && !quick.Register(-1, 1) && !quick.Register(source, 4) &&
+                        notifications == 1 && quick.GetItem(2) == catalog[kind], "invalid registration preserves previous location");
+                    quick.Changed -= observed;
+                }
+
+                for (int index = 0; index < snapshot.Length; index++)
+                    Check(bag.GetSlot(index).Item == snapshot[index].Item && bag.GetSlot(index).Count == snapshot[index].Count,
+                        "registration moves preserve every backpack slot");
+                Check(bagChanges == 0, "registration moves never raise backpack notifications");
+                Debug.Log("QUICK_SLOTS_UNIQUE_PASS: material/potion/weapon/armor, second stack, occupied target, atomic notification, no inventory mutation");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(fixture);
+                UnityEngine.Object.DestroyImmediate(potion);
+            }
+        }
+
         private static IEnumerator VerifyEquipmentDisplay()
         {
             PlayerQuickSlots quick = hud.QuickSlots;
@@ -337,7 +429,7 @@ namespace Nomad.Hud.Editor
             inventory.Remove("field-knife", 3);
             inventory.Remove("field-vest", 2);
             Check(EquipmentIconOnly(0) && EquipmentIconOnly(3), "equipment remains icon only after partial removal");
-            quick.Register(0, 3);
+            quick.Unregister(3);
             Debug.Log("QUICK_SLOTS_EQUIPMENT_DISPLAY_PASS: one and multiple weapons/armor; icon only; backpack and material counts preserved");
         }
 
@@ -355,6 +447,7 @@ namespace Nomad.Hud.Editor
         {
             PlayerQuickSlots quick = hud.QuickSlots;
             var before = SnapshotInventory();
+            quick.Register(0, 1);
             Check(!quick.Unregister(-1) && !quick.Unregister(PlayerQuickSlots.Capacity), "invalid unassign rejected");
             Pointer(Slot(1), true);
             yield return null;
@@ -368,6 +461,9 @@ namespace Nomad.Hud.Editor
                 RectTransformUtility.WorldToScreenPoint(null, panel.Find("Capacity").position), padding };
             for (int index = 0; index < PlayerQuickSlots.Capacity; index++)
             {
+                quick.Register(0, index);
+                int other = (index + 1) % PlayerQuickSlots.Capacity;
+                quick.Register(2, other);
                 Pointer(Slot(index), true);
                 yield return null;
                 Pointer(targets[index], true);
@@ -380,12 +476,12 @@ namespace Nomad.Hud.Editor
                 Check(quick.GetItem(index) == null && SameInventory(before), "drop on backpack unassigns only shortcut " + index);
                 Check(!panel.Find("DragPreview").gameObject.activeSelf &&
                     SlotRect(index).GetComponent<CanvasGroup>().alpha == 1f, "reverse drag visuals restored");
-                for (int other = 0; other < PlayerQuickSlots.Capacity; other++)
-                    Check(other == index || quick.GetItem(other) != null, "other duplicate registrations preserved");
+                Check(quick.GetItem(other) == inventory.GetSlot(2).Item, "unrelated registration preserved");
                 Check(!quick.Unregister(index), "empty shortcut cannot unassign again");
                 quick.Register(0, index);
             }
 
+            quick.Register(0, 1);
             Vector2[] invalidTargets = { new Vector2(5, Screen.height - 5), Slot(3) };
             foreach (Vector2 target in invalidTargets)
             {
