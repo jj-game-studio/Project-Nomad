@@ -63,6 +63,16 @@ namespace Nomad.Terrain.Editor
                 Require(enemyTotal > 0 && chestTotal > 0, "nonempty spawn candidates across fields");
                 Require(notifications == 10 && starts == 10, "one start/completion per generation");
 
+                // 출구 없는 면이 드문지 추가 seed로 확인합니다. Verify가 seed마다 출구 3개를 요구합니다.
+                foreach (int seed in Enumerable.Range(100, 10))
+                {
+                    var serialized = new SerializedObject(controls);
+                    serialized.FindProperty("seed").intValue = seed;
+                    serialized.ApplyModifiedPropertiesWithoutUndo();
+                    Verify(controls, controls.Regenerate(false));
+                    Debug.Log($"FIELD_EXIT_SEED {seed}: " + string.Join("/", navigation.LastResult.ExitPoints.Select(point => point.Id)));
+                }
+
                 WfcTerrainCatalog catalog = AssetDatabase.LoadAssetAtPath<WfcTerrainCatalog>(MicroTerrainAuthoring.CatalogPath);
                 controls.Player.SetActive(false);
                 controls.Generator.ConfigureWfc(catalog, 12, 12, 18, new Bounds(Vector3.zero, Vector3.one));
@@ -94,7 +104,7 @@ namespace Nomad.Terrain.Editor
 
                 TerrainIntegrationValidation.Capture(controls, 1, "field-navigation-overview");
                 TerrainIntegrationValidation.Capture(controls, 0, "field-navigation-player");
-                string report = $"FIELD_NAVIGATION_PASS: 5 seeds x2, {enemyTotal} enemy/{chestTotal} chest candidates, 3 edge exits per field; replay, single events, all tile/link paths, disjoint slots, reserved chests, failure/blocked start, cleanup/recovery";
+                string report = $"FIELD_NAVIGATION_PASS: 5 seeds x2, {enemyTotal} enemy/{chestTotal} chest candidates, 3 spaced edge exits per field (+10 exit seeds); replay, single events, all tile/link paths, disjoint slots, reserved chests, failure/blocked start, cleanup/recovery";
                 Directory.CreateDirectory("Artifacts");
                 File.WriteAllText("Artifacts/field-navigation-results.txt", report);
                 Debug.Log(report);
@@ -152,8 +162,11 @@ namespace Nomad.Terrain.Editor
                 Vector3 local = frame.InverseTransformPoint(exit.Position);
                 Vector3 outward = frame.InverseTransformDirection(exit.Rotation * Vector3.forward);
                 float edge = Vector3.Dot(local, outward);
-                Require(centers.All(center => Vector3.Dot(center, outward) <= edge + MicroTerrainTile.Size * 0.5f),
-                    "exit on outer edge tile: " + exit.Id);
+                // 가장자리 줄 또는 대체 후보인 한 줄 안쪽까지 허용합니다.
+                Require(centers.All(center => Vector3.Dot(center, outward) <= edge + MicroTerrainTile.Size * 1.5f),
+                    "exit near outer edge: " + exit.Id);
+                Require(result.ExitPoints.All(other => other == exit || Vector3.Distance(other.Position, exit.Position) >= 12f),
+                    "exit spacing: " + exit.Id);
 
                 // 표식 트리거가 실제로 만들어졌는지 확인합니다.
                 Require(Object.FindObjectsByType<FieldExit>(FindObjectsSortMode.None).Count(value => value.Point == exit) == 1,

@@ -188,9 +188,12 @@ namespace Nomad.Terrain
 
         private const float ExitRadius = 0.75f;
         private const float ExitStartDistance = 9f;
+        // 이웃한 면의 출구가 같은 모서리에 몰리지 않도록 출구끼리 4타일 이상 띄웁니다.
+        private const float ExitSpacing = 12f;
+        private const int ExitDepth = 2;
         private static readonly string[] ExitSides = { "west", "east", "south", "north" };
 
-        // 시작점에 가장 가까운 면을 입구로 보고, 나머지 3면의 가장자리 타일에 출구를 하나씩 랜덤 배치합니다.
+        // 시작점에 가장 가까운 면을 입구로 보고, 나머지 3면의 가장자리 근처 타일에 출구를 하나씩 랜덤 배치합니다.
         private void SelectExits(TerrainGenerationResult terrain, Vector3 start, List<FieldSpawnPoint> exits,
             List<FieldSpawnPoint> reserved)
         {
@@ -210,16 +213,22 @@ namespace Nomad.Terrain
             for (int side = 0; side < 4; side++)
             {
                 if (side == entrance) continue;
-                bool alongX = side < 2;
-                List<int> candidates = Enumerable.Range(0, centers.Length)
-                    .Where(index => Mathf.Abs((alongX ? centers[index].x : centers[index].z) - edges[side]) < 0.1f
-                        && terrain.Pieces[index].Kind != TerrainPieceKind.Stairs)
-                    .OrderBy(_ => random.Next()).ToList();
-
                 Vector3 outward = side switch { 0 => Vector3.left, 1 => Vector3.right, 2 => Vector3.back, _ => Vector3.forward };
                 Quaternion rotation = Quaternion.LookRotation(frame.TransformDirection(outward));
-                foreach (int index in candidates)
-                    if (TryExit(terrain.Pieces[index], start, rotation, ExitSides[side], exits, reserved)) break;
+
+                // 가장자리 줄에 유효한 자리가 없으면 한 줄 안쪽까지 대체 후보로 써서 출구 없는 면을 줄입니다.
+                bool found = false;
+                for (int depth = 0; depth < ExitDepth && !found; depth++)
+                {
+                    float line = edges[side] + (side % 2 == 0 ? depth : -depth) * MicroTerrainTile.Size;
+                    List<int> candidates = Enumerable.Range(0, centers.Length)
+                        .Where(index => Mathf.Abs((side < 2 ? centers[index].x : centers[index].z) - line) < 0.1f
+                            && terrain.Pieces[index].Kind != TerrainPieceKind.Stairs)
+                        .OrderBy(_ => random.Next()).ToList();
+
+                    // Any는 첫 성공에서 멈추므로 섞인 순서의 첫 유효 타일이 출구가 됩니다.
+                    found = candidates.Any(index => TryExit(terrain.Pieces[index], start, rotation, ExitSides[side], exits, reserved));
+                }
             }
         }
 
@@ -230,7 +239,8 @@ namespace Nomad.Terrain
             {
                 if (!TryFloor(piece, candidate, ExitRadius, out Vector3 floor)
                     || Vector3.Distance(floor, start) < ExitStartDistance
-                    || Overlaps(floor, ExitRadius, reserved) || Overlaps(floor, ExitRadius, exits)
+                    || Overlaps(floor, ExitRadius, reserved)
+                    || exits.Any(other => Vector3.Distance(floor, other.Position) < ExitSpacing)
                     || !Sample(floor, out Vector3 approach) || !Reachable(start, approach)) continue;
 
                 exits.Add(new FieldSpawnPoint("exit-" + side, floor, rotation, ExitRadius, approach));
