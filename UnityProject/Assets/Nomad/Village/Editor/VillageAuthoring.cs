@@ -21,6 +21,8 @@ namespace Nomad.Village.Editor
         {
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             Transform root = new GameObject("Village").transform;
+            Random.InitState(80);
+            stairRamps = 0;
 
             CreateGround(root);
             CreatePlaza(root);
@@ -38,6 +40,7 @@ namespace Nomad.Village.Editor
             sun.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
 
             EditorSceneManager.SaveScene(scene, ScenePath);
+            Debug.Log($"[Village] 계단 경사로 {stairRamps}개 생성");
         }
 
         private static void CreateGround(Transform root)
@@ -50,17 +53,60 @@ namespace Nomad.Village.Editor
             floor.transform.localScale = new Vector3(Half * 2f + 40f, 1f, Half * 2f + 40f);
             Object.DestroyImmediate(floor.GetComponent<MeshRenderer>());
 
-            // 잔디 바닥 조각을 크기에 맞춰 타일링합니다(조각 사이 흙길 무늬는 의도).
-            Transform tiles = Group(root, "Ground");
-            GameObject tile = Load("SM_Env_Ground_Flat_01");
-            Vector3 size = MeasureSize(tile);
+            // Kingdom 데모처럼 흙 바닥을 먼저 깔고, 그 위에 잔디 조각을 무작위 회전·스케일로 겹칩니다.
+            // 조각마다 높이를 조금씩 달리해 겹친 면이 깜빡이지 않게 합니다.
+            Transform ground = Group(root, "Ground");
             float extent = Half + 20f;
 
-            for (float x = -extent; x <= extent; x += size.x)
+            GameObject dirt = Load("SM_Env_Ground_Flat_Dirt_01");
+            Vector3 dirtSize = MeasureSize(dirt);
+            for (float x = -extent; x <= extent; x += dirtSize.x * 0.85f)
             {
-                for (float z = -extent; z <= extent; z += size.z)
-                    Place(tile, tiles, new Vector3(x, 0f, z), 0f, false, false);
+                for (float z = -extent; z <= extent; z += dirtSize.z * 0.85f)
+                    Place(dirt, ground, new Vector3(x, -0.05f, z), Random.Range(0, 4) * 90f, false, false);
             }
+
+            GameObject[] grass = { Load("SM_Env_Ground_Flat_01"), Load("SM_Env_Ground_Flat_02") };
+            float spacing = MeasureSize(grass[0]).x * 0.5f;
+            for (float x = -extent; x <= extent; x += spacing)
+            {
+                for (float z = -extent; z <= extent; z += spacing)
+                {
+                    Vector3 position = new Vector3(x + Random.Range(-0.3f, 0.3f) * spacing, Random.Range(0f, 0.03f), z + Random.Range(-0.3f, 0.3f) * spacing);
+
+                    // 흙길·광장 자리는 비워 흙 바닥이 드러나게 합니다.
+                    if (IsDirtArea(position, spacing * 0.6f))
+                        continue;
+
+                    GameObject piece = Place(grass[Random.Range(0, grass.Length)], ground, position, Random.Range(0f, 360f), false, false);
+                    piece.transform.localScale = new Vector3(Random.Range(1f, 1.4f), 1f, Random.Range(1f, 1.4f));
+                }
+            }
+
+            // 울타리 밖은 솟은 잔디 언덕을 섞어 굴곡을 줍니다(장식, 충돌 없음).
+            GameObject[] mounds = { Load("SM_Env_Ground_Raised_01"), Load("SM_Env_Ground_Raised_02") };
+            for (int i = 0; i < 40; i++)
+            {
+                Vector3 dir = Polar(Random.Range(0f, 360f), 1f);
+                float edge = Half / Mathf.Max(Mathf.Abs(dir.x), Mathf.Abs(dir.z));
+                Vector3 position = dir * (edge + Random.Range(3f, 16f));
+                if (IsDirtArea(position))
+                    continue;
+
+                GameObject mound = Place(mounds[i % 2], ground, position, Random.Range(0f, 360f), false, false);
+                mound.transform.localScale = new Vector3(Random.Range(0.6f, 1.6f), Random.Range(0.4f, 1f), Random.Range(0.6f, 1.6f));
+            }
+        }
+
+        // 남쪽 입구로 이어지는 구불구불한 흙길과 광장 포장 주변
+        // margin은 잔디 조각 반경만큼 비워 실제 흙이 드러나게 하는 여유입니다.
+        private static bool IsDirtArea(Vector3 position, float margin = 0f)
+        {
+            if (position.magnitude < 6.5f + margin)
+                return true;
+
+            float roadCenter = Mathf.Sin(position.z * 0.2f) * 1.2f;
+            return position.z < -4f && position.z > -Half - 25f && Mathf.Abs(position.x - roadCenter) < 1.6f + margin;
         }
 
         private static void CreatePlaza(Transform root)
@@ -82,17 +128,15 @@ namespace Nomad.Village.Editor
                 Place(Load("SM_Prop_Market_Stall_0" + (i + 1)), market, position, FaceCenter(position), true, true);
             }
 
-            // 광장에서 남쪽 입구까지 돌길
-            Transform path = Group(plaza, "Path To Gate");
+            // 흙길 가장자리에 돌 조각을 드문드문 놓아 길을 강조합니다.
+            Transform path = Group(plaza, "Path Stones");
             GameObject brick = Load("SM_Env_Path_Brick_Group_01");
-            Vector3 brickSize = MeasureSize(brick);
-            float step = Mathf.Max(0.5f, brickSize.z * 0.9f);
 
-            for (float z = -6f; z > -Half - 2f; z -= step)
+            for (float z = -8f; z > -Half; z -= Random.Range(3f, 5f))
             {
-                // 폭을 넓히려 세 줄로 깝니다.
-                for (int column = -1; column <= 1; column++)
-                    Place(brick, path, new Vector3(column * brickSize.x * 0.9f, 0.01f, z), 0f, false, false);
+                float side = Random.value < 0.5f ? -1f : 1f;
+                float x = Mathf.Sin(z * 0.2f) * 1.2f + side * Random.Range(1.6f, 2.4f);
+                Place(brick, path, new Vector3(x, 0.02f, z), Random.Range(0f, 360f), false, false);
             }
 
             // 소품: 상자·통 더미
@@ -122,6 +166,7 @@ namespace Nomad.Village.Editor
             Vector3 position = Polar(angle, radius);
             GameObject building = Place(Load(prefab), parent, position, FaceCenter(position), true, true);
             building.name = label;
+            AddStairRamps(building);
         }
 
         private static void CreateFence(Transform root)
@@ -203,6 +248,7 @@ namespace Nomad.Village.Editor
             controller.radius = 0.35f;
             controller.center = Vector3.up * 0.9f;
             controller.stepOffset = 0.4f;
+            controller.slopeLimit = 50f; // 계단 경사로를 오를 수 있게 기본 45도보다 넉넉히
             controller.minMoveDistance = 0f;
 
             GameObject body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
@@ -248,6 +294,163 @@ namespace Nomad.Village.Editor
 
                 filter.gameObject.AddComponent<MeshCollider>().sharedMesh = filter.sharedMesh;
             }
+        }
+
+        private static int stairRamps;
+        private const float Cell = 0.1f;
+
+        // 프리셋 건물은 계단이 건물 메시에 합쳐져 있고 단 높이(0.45~0.65m)가 stepOffset보다 높습니다.
+        // 건물 주변 높이맵에서 계단을 찾아 평면을 맞추고, 그 위에 보이지 않는 경사로를 깝니다.
+        private static void AddStairRamps(GameObject building)
+        {
+            Physics.SyncTransforms();
+            TryGetBounds(building, out Bounds bounds);
+            Vector3 min = bounds.min - new Vector3(2f, 0f, 2f);
+            int width = Mathf.CeilToInt((bounds.size.x + 4f) / Cell);
+            int depth = Mathf.CeilToInt((bounds.size.z + 4f) / Cell);
+            float[,] height = new float[width, depth];
+
+            for (int x = 0; x < width; x++)
+            {
+                for (int z = 0; z < depth; z++)
+                {
+                    // 처마에 막히지 않도록 낮은 곳에서 아래로 쏩니다.
+                    Vector3 origin = new Vector3(min.x + x * Cell, 2f, min.z + z * Cell);
+                    height[x, z] = Physics.Raycast(origin, Vector3.down, out RaycastHit hit, 3f) ? hit.point.y : -1f;
+                }
+            }
+
+            // 0.15~0.7m 단차가 있는 칸 주변 0.3m까지를 계단 후보로 표시합니다.
+            bool[,] step = new bool[width, depth];
+            for (int x = 0; x < width - 1; x++)
+            {
+                for (int z = 0; z < depth - 1; z++)
+                {
+                    float rise = Mathf.Max(Mathf.Abs(height[x + 1, z] - height[x, z]), Mathf.Abs(height[x, z + 1] - height[x, z]));
+                    if (height[x, z] < 0f || rise < 0.15f || rise > 0.7f)
+                        continue;
+
+                    for (int dx = -3; dx <= 3; dx++)
+                        for (int dz = -3; dz <= 3; dz++)
+                            if (x + dx >= 0 && x + dx < width && z + dz >= 0 && z + dz < depth && height[x + dx, z + dz] >= 0f && height[x + dx, z + dz] < 1.9f)
+                                step[x + dx, z + dz] = true;
+                }
+            }
+
+            bool[,] visited = new bool[width, depth];
+            var region = new System.Collections.Generic.List<Vector3>();
+            var queue = new System.Collections.Generic.Queue<Vector2Int>();
+            Vector2Int[] directions = { Vector2Int.right, Vector2Int.left, Vector2Int.up, Vector2Int.down };
+
+            for (int x = 0; x < width; x++)
+            {
+                for (int z = 0; z < depth; z++)
+                {
+                    if (!step[x, z] || visited[x, z])
+                        continue;
+
+                    // 높이차 0.7m 미만으로 이어진 칸을 하나의 계단으로 묶습니다.
+                    region.Clear();
+                    queue.Enqueue(new Vector2Int(x, z));
+                    visited[x, z] = true;
+
+                    while (queue.Count > 0)
+                    {
+                        Vector2Int c = queue.Dequeue();
+                        region.Add(new Vector3(min.x + c.x * Cell, height[c.x, c.y], min.z + c.y * Cell));
+                        foreach (Vector2Int d in directions)
+                        {
+                            Vector2Int n = c + d;
+                            if (n.x < 0 || n.x >= width || n.y < 0 || n.y >= depth || visited[n.x, n.y] || !step[n.x, n.y])
+                                continue;
+                            if (Mathf.Abs(height[n.x, n.y] - height[c.x, c.y]) >= 0.7f)
+                                continue;
+
+                            visited[n.x, n.y] = true;
+                            queue.Enqueue(n);
+                        }
+                    }
+
+                    TryAddRamp(building.transform, region);
+                }
+            }
+        }
+
+        // 계단 칸들에 평면 h = c + gx*x + gz*z 를 맞춰 경사 방향을 구하고,
+        // 계단 맨 위(착지점)를 기준으로 최대 35도 경사로를 바닥까지 늘려 만듭니다.
+        private static void TryAddRamp(Transform parent, System.Collections.Generic.List<Vector3> cells)
+        {
+            if (cells.Count < 40 || cells.Count > 4000)
+                return;
+
+            float lowest = float.MaxValue, highest = float.MinValue;
+            Vector3 mean = Vector3.zero;
+            foreach (Vector3 c in cells)
+            {
+                mean += c;
+                lowest = Mathf.Min(lowest, c.y);
+                highest = Mathf.Max(highest, c.y);
+            }
+            mean /= cells.Count;
+
+            // 바닥에서 시작하지 않는 영역(건물 안 바닥·가구)은 계단으로 보지 않습니다.
+            float rise = highest - lowest;
+            if (lowest > 0.45f || rise < 0.6f)
+                return;
+
+            // 최소제곱 기울기
+            float sxx = 0f, sxz = 0f, szz = 0f, sxh = 0f, szh = 0f;
+            foreach (Vector3 c in cells)
+            {
+                float dx = c.x - mean.x, dz = c.z - mean.z, dh = c.y - mean.y;
+                sxx += dx * dx; sxz += dx * dz; szz += dz * dz; sxh += dx * dh; szh += dz * dh;
+            }
+
+            float det = sxx * szz - sxz * sxz;
+            if (Mathf.Abs(det) < 1e-5f)
+                return;
+
+            Vector2 gradient = new Vector2((sxh * szz - szh * sxz) / det, (szh * sxx - sxh * sxz) / det);
+            float slope = gradient.magnitude;
+            if (slope < 0.3f || slope > 1.6f)
+                return;
+
+            Vector3 forward = new Vector3(gradient.x, 0f, gradient.y) / slope;
+            Vector3 side = Vector3.Cross(Vector3.up, forward);
+            float sMax = float.MinValue, tMin = float.MaxValue, tMax = float.MinValue;
+            foreach (Vector3 c in cells)
+            {
+                Vector3 offset = c - mean;
+                offset.y = 0f;
+                sMax = Mathf.Max(sMax, Vector3.Dot(offset, forward));
+                tMin = Mathf.Min(tMin, Vector3.Dot(offset, side));
+                tMax = Mathf.Max(tMax, Vector3.Dot(offset, side));
+            }
+
+            // 폭이 넓은 영역은 계단이 아니라 기단 턱입니다.
+            if (tMax - tMin > 4f)
+                return;
+
+            float gentle = Mathf.Min(slope, 0.7f);
+            float run = rise / gentle;
+            sMax += 0.3f;
+            const float thickness = 0.2f;
+            Vector3 center = mean + forward * (sMax - run * 0.5f) + side * ((tMin + tMax) * 0.5f);
+            center.y = lowest + rise * 0.5f;
+
+            // 같은 계단이 여러 영역으로 잡히면 첫 경사로만 남깁니다.
+            foreach (Transform child in parent)
+            {
+                if (child.name == "Stair Ramp" && Vector3.Distance(child.position, center) < 1.5f)
+                    return;
+            }
+
+            Quaternion rotation = Quaternion.LookRotation(forward) * Quaternion.Euler(-Mathf.Atan(gentle) * Mathf.Rad2Deg, 0f, 0f);
+            BoxCollider ramp = new GameObject("Stair Ramp").AddComponent<BoxCollider>();
+            ramp.transform.SetParent(parent, true);
+            ramp.transform.SetPositionAndRotation(center - rotation * Vector3.up * (thickness * 0.5f), rotation);
+            ramp.size = new Vector3(tMax - tMin + 0.2f, thickness, run * Mathf.Sqrt(1f + gentle * gentle));
+            stairRamps++;
         }
 
         private static Vector3 MeasureSize(GameObject prefab)
