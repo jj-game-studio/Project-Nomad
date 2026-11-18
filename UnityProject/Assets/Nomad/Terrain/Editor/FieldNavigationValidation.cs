@@ -57,7 +57,8 @@ namespace Nomad.Terrain.Editor
                     Require(controls.Regenerate(false).GenerationId != first.GenerationId, "new generation id");
                     Verify(controls, controls.Generator.LastResult);
                     Require(notifications == before + 1 && Signature(navigation.LastResult) == signature, "single event and replay slots");
-                    Debug.Log($"FIELD_NAV_SEED {seed}: enemies={navigation.LastResult.EnemyPoints.Count}, chests={navigation.LastResult.ChestPoints.Count}");
+                    Debug.Log($"FIELD_NAV_SEED {seed}: enemies={navigation.LastResult.EnemyPoints.Count}, chests={navigation.LastResult.ChestPoints.Count}, "
+                        + "exits=" + string.Join("/", navigation.LastResult.ExitPoints.Select(point => point.Id)));
                 }
                 Require(enemyTotal > 0 && chestTotal > 0, "nonempty spawn candidates across fields");
                 Require(notifications == 10 && starts == 10, "one start/completion per generation");
@@ -68,7 +69,8 @@ namespace Nomad.Terrain.Editor
                 TerrainGenerationResult failed = controls.Generator.Generate();
                 FieldGenerationResult failure = navigation.Prepare(failed, scatter.gameObject);
                 Require(!failure.Success && navigation.State == FieldGenerationState.Failed && !navigation.HasNavigation
-                    && failure.EnemyPoints.Count == 0 && failure.ChestPoints.Count == 0, "failed field never ready");
+                    && failure.EnemyPoints.Count == 0 && failure.ChestPoints.Count == 0 && failure.ExitPoints.Count == 0,
+                    "failed field never ready");
 
                 controls.Generator.ConfigureWfc(catalog, 12, 12, 18, new Bounds(Vector3.zero, Vector3.one * 400f));
                 TerrainGenerationResult blocked = controls.Generator.Generate();
@@ -92,7 +94,7 @@ namespace Nomad.Terrain.Editor
 
                 TerrainIntegrationValidation.Capture(controls, 1, "field-navigation-overview");
                 TerrainIntegrationValidation.Capture(controls, 0, "field-navigation-player");
-                string report = $"FIELD_NAVIGATION_PASS: 5 seeds x2, {enemyTotal} enemy/{chestTotal} chest candidates; replay, single events, all tile/link paths, disjoint slots, reserved chests, failure/blocked start, cleanup/recovery";
+                string report = $"FIELD_NAVIGATION_PASS: 5 seeds x2, {enemyTotal} enemy/{chestTotal} chest candidates, 3 edge exits per field; replay, single events, all tile/link paths, disjoint slots, reserved chests, failure/blocked start, cleanup/recovery";
                 Directory.CreateDirectory("Artifacts");
                 File.WriteAllText("Artifacts/field-navigation-results.txt", report);
                 Debug.Log(report);
@@ -113,15 +115,17 @@ namespace Nomad.Terrain.Editor
                 && navigation.HasNavigation && navigation.State == FieldGenerationState.Ready,
                 "Ready/playable: " + result?.FailureReason);
             Require(result.GenerationId == terrain.GenerationId && result.Seed == terrain.Seed, "same generation");
+            VerifyExits(controls, result);
             var ids = new HashSet<string>();
-            var all = result.EnemyPoints.Concat(result.ChestPoints).ToArray();
+            var all = result.EnemyPoints.Concat(result.ChestPoints).Concat(result.ExitPoints).ToArray();
             var path = new NavMeshPath();
             foreach (FieldSpawnPoint slot in all)
             {
                 Require(ids.Add(slot.Id), "unique id");
                 Require(NavMesh.CalculatePath(result.PlayerPosition, slot.ApproachPosition, NavMesh.AllAreas, path)
                     && path.status == NavMeshPathStatus.PathComplete, "spawn/approach reachable");
-                if (slot.Radius == 0.5f) Require(Vector3.Distance(slot.Position, result.PlayerPosition) >= 5f, "enemy start exclusion");
+                if (slot.Id.StartsWith("exit-")) Require(Vector3.Distance(slot.Position, result.PlayerPosition) >= 9f, "exit start exclusion");
+                else if (slot.Radius == 0.5f) Require(Vector3.Distance(slot.Position, result.PlayerPosition) >= 5f, "enemy start exclusion");
                 else Require(Vector3.Distance(slot.Position, slot.ApproachPosition) <= 2f, "chest approach range");
                 foreach (FieldSpawnPoint other in all)
                 {
@@ -133,9 +137,33 @@ namespace Nomad.Terrain.Editor
             }
         }
 
+        // 3m 지형은 입구 면을 제외한 서로 다른 3면의 가장자리 타일에 출구가 하나씩 있어야 합니다.
+        private static void VerifyExits(TerrainIntegrationControls controls, FieldGenerationResult result)
+        {
+            if (controls.Legacy) return;
+            Require(result.ExitPoints.Count == 3, $"three exits: {result.ExitPoints.Count}");
+            Require(result.ExitPoints.Select(point => point.Id).Distinct().Count() == 3, "exits on distinct sides");
+
+            Transform frame = controls.Generator.transform;
+            Vector3[] centers = controls.Generator.LastResult.Pieces
+                .Select(piece => frame.InverseTransformPoint(piece.WorldOccupancy.center)).ToArray();
+            foreach (FieldSpawnPoint exit in result.ExitPoints)
+            {
+                Vector3 local = frame.InverseTransformPoint(exit.Position);
+                Vector3 outward = frame.InverseTransformDirection(exit.Rotation * Vector3.forward);
+                float edge = Vector3.Dot(local, outward);
+                Require(centers.All(center => Vector3.Dot(center, outward) <= edge + MicroTerrainTile.Size * 0.5f),
+                    "exit on outer edge tile: " + exit.Id);
+
+                // 표식 트리거가 실제로 만들어졌는지 확인합니다.
+                Require(Object.FindObjectsByType<FieldExit>(FindObjectsSortMode.None).Count(value => value.Point == exit) == 1,
+                    "exit trigger created: " + exit.Id);
+            }
+        }
+
         private static string Signature(FieldGenerationResult result)
         {
-            return string.Join(";", result.EnemyPoints.Concat(result.ChestPoints)
+            return string.Join(";", result.EnemyPoints.Concat(result.ChestPoints).Concat(result.ExitPoints)
                 .Select(point => point.Id + ":" + point.Position.ToString("F3") + ":" + point.ApproachPosition.ToString("F3")));
         }
 

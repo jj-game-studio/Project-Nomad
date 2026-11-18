@@ -35,9 +35,11 @@ namespace Nomad.Terrain
         public Quaternion PlayerRotation { get; }
         public IReadOnlyList<FieldSpawnPoint> EnemyPoints { get; }
         public IReadOnlyList<FieldSpawnPoint> ChestPoints { get; }
+        // 필드 가장자리의 출구입니다. Rotation의 forward가 필드 바깥을 향합니다.
+        public IReadOnlyList<FieldSpawnPoint> ExitPoints { get; }
 
         internal FieldGenerationResult(TerrainGenerationResult terrain, bool success, string reason,
-            Vector3 start, List<FieldSpawnPoint> enemies, List<FieldSpawnPoint> chests)
+            Vector3 start, List<FieldSpawnPoint> enemies, List<FieldSpawnPoint> chests, List<FieldSpawnPoint> exits)
         {
             GenerationId = terrain.GenerationId;
             Seed = terrain.Seed;
@@ -47,6 +49,7 @@ namespace Nomad.Terrain
             PlayerRotation = Quaternion.identity;
             EnemyPoints = Array.AsReadOnly(enemies.ToArray());
             ChestPoints = Array.AsReadOnly(chests.ToArray());
+            ExitPoints = Array.AsReadOnly(exits.ToArray());
         }
     }
 }

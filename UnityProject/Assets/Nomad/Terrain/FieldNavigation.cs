@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -71,6 +72,7 @@ namespace Nomad.Terrain
             ReleaseMesh();
             var enemies = new List<FieldSpawnPoint>();
             var chests = new List<FieldSpawnPoint>();
+            var exits = new List<FieldSpawnPoint>();
             Vector3 start = default;
             string reason = terrain.FailureReason;
             bool success = terrain.Success && terrain.Pieces.Count > 0;
@@ -99,15 +101,21 @@ namespace Nomad.Terrain
                 }
                 if (chests.Count == 0) Bake(terrain, obstacles, chests);
                 success = HasNavigation && ValidateRoutes(terrain, start, obstacles, chests, out reason);
-                if (success) SelectPoints(terrain, start, enemies, false, chests);
+                if (success)
+                {
+                    // 출구를 먼저 정하고 적 지점이 출구·상자 자리를 피하도록 합니다.
+                    SelectExits(terrain, start, exits, chests);
+                    SelectPoints(terrain, start, enemies, false, new List<FieldSpawnPoint>(chests.Concat(exits)));
+                }
             }
             if (!success)
             {
                 ReleaseMesh();
                 enemies.Clear();
                 chests.Clear();
+                exits.Clear();
             }
-            LastResult = new FieldGenerationResult(terrain, success, reason, start, enemies, chests);
+            LastResult = new FieldGenerationResult(terrain, success, reason, start, enemies, chests, exits);
             completedId = terrain.GenerationId;
             State = success ? FieldGenerationState.Ready : FieldGenerationState.Failed;
             GenerationCompleted?.Invoke(LastResult);
@@ -176,6 +184,59 @@ namespace Nomad.Terrain
                 // 후보·수량을 제한하여 큰 필드에서도 유한한 작업량을 유지합니다.
                 if (target.Count >= (chest ? 8 : 64)) break;
             }
+        }
+
+        private const float ExitRadius = 0.75f;
+        private const float ExitStartDistance = 9f;
+        private static readonly string[] ExitSides = { "west", "east", "south", "north" };
+
+        // 시작점에 가장 가까운 면을 입구로 보고, 나머지 3면의 가장자리 타일에 출구를 하나씩 랜덤 배치합니다.
+        private void SelectExits(TerrainGenerationResult terrain, Vector3 start, List<FieldSpawnPoint> exits,
+            List<FieldSpawnPoint> reserved)
+        {
+            Transform frame = terrain.Pieces[0].transform.parent;
+            Vector3[] centers = terrain.Pieces.Select(piece => frame.InverseTransformPoint(piece.WorldOccupancy.center)).ToArray();
+            float[] edges = { centers.Min(c => c.x), centers.Max(c => c.x), centers.Min(c => c.z), centers.Max(c => c.z) };
+
+            Vector3 local = frame.InverseTransformPoint(start);
+            float[] gaps = { local.x - edges[0], edges[1] - local.x, local.z - edges[2], edges[3] - local.z };
+
+            // 같은 seed·설정에서 같은 출구가 나오도록 지형 seed로 고릅니다.
+            // 모서리 시작점처럼 가까운 면이 여럿이면 그중 하나를 랜덤으로 입구 면으로 둡니다.
+            var random = new System.Random(terrain.Seed);
+            int[] nearest = Enumerable.Range(0, 4).Where(side => gaps[side] <= gaps.Min() + MicroTerrainTile.Size * 0.5f).ToArray();
+            int entrance = nearest[random.Next(nearest.Length)];
+
+            for (int side = 0; side < 4; side++)
+            {
+                if (side == entrance) continue;
+                bool alongX = side < 2;
+                List<int> candidates = Enumerable.Range(0, centers.Length)
+                    .Where(index => Mathf.Abs((alongX ? centers[index].x : centers[index].z) - edges[side]) < 0.1f
+                        && terrain.Pieces[index].Kind != TerrainPieceKind.Stairs)
+                    .OrderBy(_ => random.Next()).ToList();
+
+                Vector3 outward = side switch { 0 => Vector3.left, 1 => Vector3.right, 2 => Vector3.back, _ => Vector3.forward };
+                Quaternion rotation = Quaternion.LookRotation(frame.TransformDirection(outward));
+                foreach (int index in candidates)
+                    if (TryExit(terrain.Pieces[index], start, rotation, ExitSides[side], exits, reserved)) break;
+            }
+        }
+
+        private bool TryExit(TerrainPiece piece, Vector3 start, Quaternion rotation, string side,
+            List<FieldSpawnPoint> exits, List<FieldSpawnPoint> reserved)
+        {
+            foreach (Vector3 candidate in Candidates(piece))
+            {
+                if (!TryFloor(piece, candidate, ExitRadius, out Vector3 floor)
+                    || Vector3.Distance(floor, start) < ExitStartDistance
+                    || Overlaps(floor, ExitRadius, reserved) || Overlaps(floor, ExitRadius, exits)
+                    || !Sample(floor, out Vector3 approach) || !Reachable(start, approach)) continue;
+
+                exits.Add(new FieldSpawnPoint("exit-" + side, floor, rotation, ExitRadius, approach));
+                return true;
+            }
+            return false;
         }
 
         private static IEnumerable<Vector3> Candidates(TerrainPiece piece)
