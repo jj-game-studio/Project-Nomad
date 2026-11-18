@@ -186,6 +186,9 @@ namespace Nomad.Hud.Editor
             Pointer(Slot(0), false);
             yield return null;
             Check(quick.GetItem(0).ItemId == "field-knife" && inventoryChanges == 0, "replace existing registration");
+            IEnumerator equipment = VerifyEquipmentDisplay();
+            while (equipment.MoveNext())
+                yield return equipment.Current;
             Check(inventory.MoveStack(1, 19) && quick.GetItem(0).ItemId == "field-knife", "registration follows moved item");
             inventory.Add("scrap", 10);
             Check(quick.GetCount(1) == 106 && SlotRect(1).Find("Item Count").GetComponent<TMP_Text>().text == "×106",
@@ -284,10 +287,68 @@ namespace Nomad.Hud.Editor
                     quick.Register(index, 0);
             }
             yield return null;
+            inventory.Add("field-knife", 2);
+            inventory.Add("field-vest", 1);
+            for (int index = 0; index < PlayerInventory.Capacity; index++)
+            {
+                if (inventory.GetSlot(index).Item?.ItemId == "field-vest")
+                    quick.Register(index, 3);
+            }
+            yield return null;
+            Check(EquipmentIconOnly(0) && EquipmentIconOnly(3), "final multiple-equipment display has no quantity labels");
             IEnumerator capture = Capture();
             while (capture.MoveNext())
                 yield return capture.Current;
             Debug.Log($"QUICK_SLOTS_PLAYMODE_PASS checks={checks} frame={Time.frameCount}");
+        }
+
+        private static IEnumerator VerifyEquipmentDisplay()
+        {
+            PlayerQuickSlots quick = hud.QuickSlots;
+            Check(EquipmentIconOnly(0), "single weapon has no x1 label");
+            quick.Register(2, 3);
+            Check(EquipmentIconOnly(3), "single armor has no x1 label");
+            inventory.Add("field-knife", 3);
+            inventory.Add("field-vest", 2);
+            Check(quick.GetCount(0) == 4 && EquipmentIconOnly(0), "multiple weapons show one icon without total count");
+            Check(quick.GetCount(3) == 3 && EquipmentIconOnly(3), "multiple armor show one icon without total count");
+            Check(inventory.UsedSlots == 8, "equipment still occupies separate backpack slots");
+            for (int index = 0; index < PlayerInventory.Capacity; index++)
+            {
+                PlayerInventory.ItemStack stack = inventory.GetSlot(index);
+                Check(stack.Item == null || stack.Item.MaxStack > 1 || stack.Count == 1, "backpack equipment never stacks");
+            }
+
+            var snapshot = SnapshotInventory();
+            foreach (int index in new[] { 0, 3 })
+            {
+                Pointer(Slot(index), true);
+                yield return null;
+                Pointer(Bag(0), true);
+                yield return null;
+                Check(panel.Find("DragPreview/Count").GetComponent<UnityEngine.UI.Text>().text == string.Empty,
+                    "equipment drag preview omits aggregate count");
+                Pointer(new Vector2(5, Screen.height - 5), false);
+                yield return null;
+                Check(EquipmentIconOnly(index) && SameInventory(snapshot), "equipment preview cancellation preserves all copies");
+            }
+            Check(SlotRect(1).Find("Item Count").GetComponent<TMP_Text>().text == "×96",
+                "material count remains visible alongside equipment");
+            inventory.Remove("field-knife", 3);
+            inventory.Remove("field-vest", 2);
+            Check(EquipmentIconOnly(0) && EquipmentIconOnly(3), "equipment remains icon only after partial removal");
+            quick.Register(0, 3);
+            Debug.Log("QUICK_SLOTS_EQUIPMENT_DISPLAY_PASS: one and multiple weapons/armor; icon only; backpack and material counts preserved");
+        }
+
+        private static bool EquipmentIconOnly(int index)
+        {
+            Transform slot = SlotRect(index);
+            var count = slot.Find("Item Count").GetComponent<TMP_Text>();
+            var icon = slot.Find("Item Icon").GetComponent<UnityEngine.UI.Image>();
+            return !count.gameObject.activeSelf && count.text == string.Empty && icon.enabled &&
+                icon.sprite == hud.QuickSlots.GetItem(index).Icon &&
+                slot.GetComponentsInChildren<UnityEngine.UI.Image>().Length == 1;
         }
 
         private static IEnumerator VerifyUnregister(InventoryPanel view)

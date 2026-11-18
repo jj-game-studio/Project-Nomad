@@ -156,8 +156,10 @@ namespace Nomad.Hud
                 quickIcons[index].enabled = item != null && item.Icon != null;
                 quickNames[index].text = item != null && item.Icon == null ? item.DisplayName : string.Empty;
                 quickNames[index].gameObject.SetActive(item != null && item.Icon == null);
-                quickCounts[index].text = item == null ? string.Empty : $"×{QuickSlots.GetCount(index)}";
-                quickCounts[index].gameObject.SetActive(item != null);
+                // 공용 규격상 무기·방어구는 최대 중첩 1이며, 바로가기에는 보유 수량을 표시하지 않습니다.
+                bool showCount = item != null && item.MaxStack > 1;
+                quickCounts[index].text = showCount ? $"×{QuickSlots.GetCount(index)}" : string.Empty;
+                quickCounts[index].gameObject.SetActive(showCount);
             }
         }
 

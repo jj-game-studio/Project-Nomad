@@ -534,7 +534,7 @@ namespace Nomad.Inventory
                 icon.sprite = sprite;
                 icon.enabled = sprite != null;
                 fallbackName.text = occupied && sprite == null ? stack.Item.DisplayName : string.Empty;
-                count.text = occupied && stack.Count > 1 ? $"×{stack.Count}" : string.Empty;
+                count.text = occupied && stack.Item.MaxStack > 1 && stack.Count > 1 ? $"×{stack.Count}" : string.Empty;
             }
 
             public void SetHighlighted(bool highlighted)
