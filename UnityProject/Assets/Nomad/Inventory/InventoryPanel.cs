@@ -1,4 +1,5 @@
 using Nomad.Interaction;
+using Nomad.Hud;
 using Nomad.Loot;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -31,12 +32,15 @@ namespace Nomad.Inventory
         private Mouse previousStoreClickMouse;
         private int hoveredIndex = -1;
         private int dragSource = -1;
+        private int quickDragSource = -1;
+        private ItemDefinition quickDragItem;
         private int lootDragSource = -1;
         private ItemDefinition lootDragItem;
         private ChestLootPanel chestPanel;
         private GameObject lootEventSystem;
         private Vector2 backpackPosition;
         private bool runtimeInstance;
+        private PlayerHud dragHud;
 
         internal bool HasOpenChest => chestPanel != null && chestPanel.IsOpen;
         internal LootChest OpenChest => chestPanel?.Chest;
@@ -213,8 +217,16 @@ namespace Nomad.Inventory
         {
             Mouse mouse = Mouse.current;
             int pointerSlot = FindPointerSlot(mouse);
-            if (dragSource >= 0 && (mouse != dragMouse || Keyboard.current?.escapeKey.wasPressedThisFrame == true))
+            if ((dragSource >= 0 || quickDragSource >= 0) &&
+                (mouse != dragMouse || Keyboard.current?.escapeKey.wasPressedThisFrame == true))
                 CancelDrag();
+
+            if (quickDragSource >= 0 && (dragHud == null || !dragHud.isActiveAndEnabled ||
+                !dragHud.QuickSlots.isActiveAndEnabled || dragHud.QuickSlots.GetItem(quickDragSource) != quickDragItem))
+                CancelDrag();
+
+            if (dragHud == null)
+                dragHud = inventory.GetComponentInChildren<PlayerHud>();
 
             if (mouse != null)
             {
@@ -232,13 +244,54 @@ namespace Nomad.Inventory
                         Keyboard keyboard = Keyboard.current;
                         shiftAtPress = keyboard != null && (keyboard.leftShiftKey.isPressed || keyboard.rightShiftKey.isPressed);
                     }
+                    else if (!ContainsBackpack(position) && dragHud != null)
+                    {
+                        int source = dragHud.FindQuickSlot(position);
+                        if (source >= 0 && dragHud.QuickSlots.GetItem(source) != null)
+                        {
+                            quickDragSource = source;
+                            quickDragItem = dragHud.QuickSlots.GetItem(source);
+                            dragMouse = mouse;
+                            pressPosition = position;
+                        }
+                    }
                 }
 
-                if (dragSource >= 0)
+                if (quickDragSource >= 0)
+                    UpdateQuickSlotDrag(mouse, position);
+                else if (dragSource >= 0)
                     UpdateDrag(mouse, position, pointerSlot);
             }
 
             UpdateHover(pointerSlot);
+        }
+
+        private bool ContainsBackpack(Vector2 position)
+        {
+            return panel.activeInHierarchy && RectTransformUtility.RectangleContainsScreenPoint(
+                (RectTransform)panel.transform, position, EventCamera);
+        }
+
+        private void UpdateQuickSlotDrag(Mouse mouse, Vector2 position)
+        {
+            GameObject preview = dragPreview.Rect.gameObject;
+            if (!preview.activeSelf && (position - pressPosition).sqrMagnitude >= DragThreshold * DragThreshold)
+            {
+                dragHud.SetQuickSlotDragging(quickDragSource, true);
+                ShowDragPreview(new PlayerInventory.ItemStack(quickDragItem, dragHud.QuickSlots.GetCount(quickDragSource)));
+            }
+
+            if (preview.activeSelf)
+                PositionDragPreview(position);
+            if (mouse.leftButton.isPressed)
+                return;
+
+            // 바로가기만 해제하므로 가방의 빈 공간이나 대상 칸의 아이템과 관계없습니다.
+            int source = quickDragSource;
+            bool unregister = mouse.leftButton.wasReleasedThisFrame && preview.activeSelf && ContainsBackpack(position);
+            CancelDrag();
+            if (unregister)
+                dragHud.QuickSlots.Unregister(source);
         }
 
         private void UpdateDrag(Mouse mouse, Vector2 position, int pointerSlot)
@@ -255,6 +308,10 @@ namespace Nomad.Inventory
 
             bool overChest = preview.activeSelf && HasOpenChest && chestPanel.ContainsDropPoint(position, EventCamera);
             chestPanel?.HighlightDrop(overChest);
+            if (dragHud == null)
+                dragHud = inventory.GetComponentInChildren<PlayerHud>();
+            int quickSlot = preview.activeSelf && dragHud != null ? dragHud.FindQuickSlot(position) : -1;
+            dragHud?.HighlightQuickSlot(quickSlot);
             if (mouse.leftButton.isPressed)
                 return;
 
@@ -273,6 +330,8 @@ namespace Nomad.Inventory
                 chestPanel.Deposit(source);
             else if (dragged && pointerSlot >= 0)
                 inventory.MoveStack(source, pointerSlot);
+            else if (dragged && quickSlot >= 0)
+                dragHud.QuickSlots.Register(source, quickSlot);
         }
 
         private void StoreFromClick(int slot, Mouse mouse, bool shift)
@@ -356,16 +415,21 @@ namespace Nomad.Inventory
         {
             if (resetClick)
                 previousStoreClickSlot = -1;
-            if (dragSource < 0 && lootDragSource < 0)
+            if (dragSource < 0 && lootDragSource < 0 && quickDragSource < 0)
                 return;
 
             if (dragSource >= 0)
                 slots[dragSource].Group.alpha = 1f;
+            if (quickDragSource >= 0 && dragHud != null)
+                dragHud.SetQuickSlotDragging(quickDragSource, false);
             dragPreview.Rect.gameObject.SetActive(false);
             if (dragPreview.Rect.parent != panel.transform)
                 dragPreview.Rect.SetParent(panel.transform, false);
             chestPanel?.HighlightDrop(false);
+            dragHud?.HighlightQuickSlot(-1);
             dragSource = -1;
+            quickDragSource = -1;
+            quickDragItem = null;
             lootDragSource = -1;
             lootDragItem = null;
             dragMouse = null;
@@ -470,7 +534,7 @@ namespace Nomad.Inventory
                 icon.sprite = sprite;
                 icon.enabled = sprite != null;
                 fallbackName.text = occupied && sprite == null ? stack.Item.DisplayName : string.Empty;
-                count.text = occupied && stack.Count > 1 ? $"×{stack.Count}" : string.Empty;
+                count.text = occupied && stack.Item.MaxStack > 1 && stack.Count > 1 ? $"×{stack.Count}" : string.Empty;
             }
 
             public void SetHighlighted(bool highlighted)
