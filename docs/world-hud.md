@@ -10,9 +10,10 @@ R은 최대치, F는 부족 알림입니다. 실제 구르기 소모·회복 규
 후자는 기존 `PlayerInteraction`, `PlayerMovement`, `PlayerInventory`,
 `CharacterController`를 사용합니다. 기존 머리 위 HP바와 별개이며 HP 코드를 수정하지 않습니다.
 메인 카메라를 자동 사용하거나 Inspector에서 카메라를 지정합니다.
-스태미나의 기본 Screen Offset은 `(20, -40)`으로, HP바와 간격을 벌리기 위해
-기존 위치에서 화면 기준 아래로 40 UI 단위 내렸습니다. 기존 수동 배치 컴포넌트는
-Inspector의 Screen Offset Y를 -40으로 맞추면 됩니다.
+스태미나의 기본 Screen Offset은 `(60, -40)`입니다. HP바와 간격을 벌리도록 아래로
+40 UI 단위 내리고, 참고 이미지처럼 몸과 곡선 사이 여백을 위해 기존 X20에서
+오른쪽으로 40 UI 단위 더 띄웠습니다. 기존 수동 배치 컴포넌트는 Inspector의
+Screen Offset을 X=60, Y=-40으로 맞추면 됩니다.
 
 게임의 자원 시스템에서 `CharacterStaminaHud.SetStamina(current, maximum)`을 호출하고,
 스태미나 부족으로 행동을 거절했을 때 `NotifyInsufficient()`를 호출합니다.
