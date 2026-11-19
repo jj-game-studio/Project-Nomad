@@ -85,7 +85,7 @@ namespace Nomad.Inventory.Editor
                         !Enum.IsDefined(typeof(WeaponAttackMode), mode) || mode.ToString() != cells[7] ||
                         !float.TryParse(cells[8], NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out range) ||
                         !float.TryParse(cells[9], NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out interval) ||
-                        float.IsInfinity(range) || float.IsInfinity(interval) ||
+                        float.IsNaN(range) || float.IsNaN(interval) || float.IsInfinity(range) || float.IsInfinity(interval) ||
                         (type == EquipmentType.Weapon ? mode == WeaponAttackMode.None || range <= 0 || interval <= 0 :
                             mode != WeaponAttackMode.None || range != 0 || interval != 0))
                         throw new FormatException($"레코드 {index + 1}: 공격 방식/사거리/간격이 잘못되었습니다.");

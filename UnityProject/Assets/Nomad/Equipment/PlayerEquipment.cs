@@ -1,4 +1,5 @@
 using System;
+using Nomad.Combat;
 using Nomad.Inventory;
 using UnityEngine;
 
@@ -11,7 +12,7 @@ namespace Nomad.Equipment
 
     [DisallowMultipleComponent]
     [RequireComponent(typeof(PlayerInventory))]
-    public sealed class PlayerEquipment : MonoBehaviour
+    public sealed class PlayerEquipment : MonoBehaviour, ICombatDamageModifier
     {
         public const int Capacity = 10;
 
@@ -36,6 +37,14 @@ namespace Nomad.Equipment
         }
 
         private void Awake() => inventory = GetComponent<PlayerInventory>();
+
+        public int ModifyCombatDamage(int amount)
+        {
+            if (!isActiveAndEnabled)
+                return amount;
+
+            return Math.Max(1, amount - TotalDefense);
+        }
 
         public ItemDefinition GetItem(EquipmentSlot slot)
         {
