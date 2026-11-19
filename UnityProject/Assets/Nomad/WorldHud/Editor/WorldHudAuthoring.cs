@@ -159,7 +159,7 @@ namespace Nomad.WorldHud.Editor
                 else if (stage == 1)
                 {
                     hints.Refresh();
-                    Require(hints.VisibleCount == 2, "two nearby markers; distant excluded");
+                    Require(hints.VisibleCount == 3, "5m preview includes distant marker");
                     Require(hints.Selected.InteractionId == "A - Chest", "ID tie chooses A");
                     Require(stamina.Visible && Mathf.Approximately(stamina.Fraction, .6f), "partial stamina visible");
                     Directory.CreateDirectory("Artifacts/world-hud");
@@ -172,12 +172,20 @@ namespace Nomad.WorldHud.Editor
                     InputSystem.QueueStateEvent(keyboard, new KeyboardState());
                     Require(GameObject.Find("A - Chest").GetComponent<WorldHudPreviewTarget>().Interactions == 1, "real E uses highlighted A once");
                     hints.Refresh();
-                    Require(hints.VisibleCount == 1 && hints.Selected.InteractionId == "B - Supplies", "used target hidden");
+                    Require(hints.VisibleCount == 2 && hints.Selected.InteractionId == "B - Supplies", "used target hidden; distant remains");
+                    GameObject.Find("B - Supplies").GetComponent<WorldHudPreviewTarget>().enabled = false;
+                    hints.Refresh();
+                    Require(hints.VisibleCount == 1 && hints.Selected == null, "distant marker has no E highlight");
+                    InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.E));
                     stamina.SetStamina(float.NaN, 100);
                     next = EditorApplication.timeSinceStartup + .2;
                 }
                 else if (stage == 3)
                 {
+                    Require(GameObject.Find("C - Distant").GetComponent<WorldHudPreviewTarget>().Interactions == 0,
+                        "real E cannot use displayed target beyond 2m");
+                    InputSystem.QueueStateEvent(keyboard, new KeyboardState());
+                    GameObject.Find("B - Supplies").GetComponent<WorldHudPreviewTarget>().enabled = true;
                     Require(!stamina.Visible, "invalid stamina hidden");
                     stamina.SetStamina(100, 100);
                     next = EditorApplication.timeSinceStartup + 1;
@@ -201,7 +209,7 @@ namespace Nomad.WorldHud.Editor
                 else if (stage == 6)
                 {
                     hints.Refresh();
-                    Require(hints.VisibleCount == 0, "wall hides marker");
+                    Require(hints.VisibleCount == 1 && hints.Selected == null, "wall hides near marker; distant remains");
                     UnityEngine.Object.Destroy(GameObject.Find("TestWall"));
                     stamina.SetStamina(40, 100);
                     hints.GetComponent<PlayerInteraction>().enabled = false;
@@ -228,7 +236,7 @@ namespace Nomad.WorldHud.Editor
                     hints.enabled = false;
                     hints.enabled = true;
                     hints.Refresh();
-                    Require(hints.VisibleCount == 1, "reenable restores markers");
+                    Require(hints.VisibleCount == 2, "reenable restores near and distant markers");
                     next = EditorApplication.timeSinceStartup + .5;
                 }
                 else if (stage == 9)

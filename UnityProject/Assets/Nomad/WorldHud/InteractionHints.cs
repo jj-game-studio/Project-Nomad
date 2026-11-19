@@ -17,6 +17,7 @@ namespace Nomad.WorldHud
         [SerializeField] private LayerMask obstacleLayers = Physics.DefaultRaycastLayers;
         [SerializeField] private Camera viewCamera;
         [SerializeField] private Vector2 markerOffset = new Vector2(0, 28);
+        [SerializeField, Min(2f)] private float displayRadius = 5f;
         private readonly List<Marker> markers = new();
         private readonly HashSet<MonoBehaviour> seen = new();
         private readonly List<IInteractable> candidates = new();
@@ -92,17 +93,19 @@ namespace Nomad.WorldHud
             Vector3 feet = transform.TransformPoint(controller.center - Vector3.up * (controller.height * .5f));
             var context = new InteractionContext(transform, inventory);
             float nearest = 4f;
-            foreach (Collider collider in Physics.OverlapSphere(feet, 2f, targetLayers, QueryTriggerInteraction.Collide))
+            float radius = Mathf.Max(2f, displayRadius);
+            foreach (Collider collider in Physics.OverlapSphere(feet, radius, targetLayers, QueryTriggerInteraction.Collide))
             {
                 IInteractable candidate = collider.GetComponentInParent<IInteractable>();
                 if (candidate is not MonoBehaviour owner || !owner.isActiveAndEnabled ||
                     owner.transform.IsChildOf(transform) || !seen.Add(owner)) continue;
 
                 float distance = (candidate.InteractionPoint - feet).sqrMagnitude;
-                if (string.IsNullOrWhiteSpace(candidate.InteractionId) || !(distance <= 4f) ||
+                if (string.IsNullOrWhiteSpace(candidate.InteractionId) || !(distance <= radius * radius) ||
                     !candidate.CanInteract(context) || Obstructed(body, candidate.InteractionPoint, owner.transform)) continue;
 
                 candidates.Add(candidate);
+                // 멀리서는 원만 보여주고 실제 E 대상은 기존 2m 범위에서만 선택합니다.
                 if (distance < nearest || (distance == nearest && (Selected == null ||
                     string.CompareOrdinal(candidate.InteractionId, Selected.InteractionId) < 0)))
                 {
