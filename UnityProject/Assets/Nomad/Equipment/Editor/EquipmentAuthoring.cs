@@ -42,6 +42,8 @@ namespace Nomad.Equipment.Editor
             foreach (string field in new[] { "viewCamera", "muzzle", "projectile" })
                 Set(combat, field, source.FindProperty(field).objectReferenceValue);
             Set(combat, "unarmedDefinition", definitions.Single(item => item.ItemId == "demo-unarmed"));
+            old.gameObject.AddComponent<EquipmentCombatVisuals>();
+            old.gameObject.AddComponent<EquipmentPanel>();
 
             var demo = new SerializedObject(old.gameObject.AddComponent<EquipmentDemo>());
             var demoItems = demo.FindProperty("items");

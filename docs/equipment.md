@@ -7,11 +7,21 @@ CSV를 수정해 다시 반영하려면 Play를 멈추고 `Nomad > Equipment > C
 전용 EquipmentDemo 씬과 Items를 갱신하며 원본 A_PlayerCombat/기존 인벤토리·마을·통합 씬은 저장하지 않습니다.
 CSV는 `Assets/Nomad/Equipment/equipment.csv`입니다. 모든 샘플 수치는 검토용 임시 값입니다.
 
-LMB로 선택 무기를 사용합니다. 전용 씬에서 1=검, 2=활, F5=갑옷 장착/해제, F6=선택 무기 해제,
+Tab을 누르면 기존 가방20칸 위에 별도 장비10칸(5×2)이 함께 표시됩니다.
+가방 아이템을 장비칸에 드래그하거나 가방 아이템 선택 후 장비칸을 클릭하면 장착합니다.
+장비를 가방의 빈칸으로 드래그하면 그 칸에 해제하고, 호환 장비가 있는 가방칸이면 교체합니다.
+장비 우클릭은 첫 빈 가방칸으로 해제합니다. 무기칸만 클릭하면 사용할 무기를 선택합니다.
+장비창이 열려 있는 동안 공격하지 않습니다. 가방20칸과 장비10칸은 별도 공간입니다.
+
+LMB로 선택 무기를 사용합니다. F2 또는 왼쪽 위 화면 토글로 공격 범위를 켜고 끕니다.
+근접은 실제120도·CSV사거리의 경계를 표시하며 벽에 가린 구간은 잘립니다.
+원거리는 발사구에서 실제 첫 충돌까지의 경로를 표시합니다. 범위 표시를 꺼도 공격 이펙트는 유지합니다.
+근접 궤적·원거리 발사 섬광·실제 근접 명중/발사체 충돌 섬광은 짧게 사라지며 동시효과24개로 제한합니다.
+
+전용 씬에서 1=검, 2=활, F5=갑옷 장착/해제, F6=선택 무기 해제,
 F7=검 재장착, F8=활 재장착입니다. 정식 게임의 무기 전환 키 배치는 확정하지 않았습니다.
 선택 무기칸이 비면 CSV의 맨손 설정을 사용합니다. 맨손 정의는 가방에 지급하지 않습니다.
-장비 UI는 이번 범위가 아닙니다. 전용 씬은 상태를 PlayerEquipment의 API/디버거와 실행 로그로 확인하며,
-정식 인벤토리 위 10칸 UI는 별도로 연결해야 합니다.
+장비 상태는 장비10칸 UI와 Console/API로 확인합니다. 기존 저장된 EquipmentDemo 씬도 Play 시작 시 필요한 UI/표시 컴포넌트를 보완합니다.
 
 ## 장착과 소유
 
@@ -34,7 +44,7 @@ PlayerEquipmentCombat이 활성화되면 같은 오브젝트의 기존 PlayerCom
 
 근접은 마우스 조준 방향의 전방120도와 CSV 사거리 안에 있는 각 Health에 한 번씩 즉시 피해를 줍니다.
 여러 콜라이더를 가진 대상도 한 번만 맞으며 다른 적이 뒤의 적을 가리지 않습니다. 벽/지형은 차폐합니다.
-자기 자신·사망한 대상·트리거는 제외합니다. 공격 애니메이션/무기 모델/타격 이펙트는 제공하지 않습니다.
+자기 자신·사망한 대상·트리거는 제외합니다. 간단한 궤적/명중 이펙트는 제공하며 캐릭터 공격 애니메이션/무기 모델은 별도입니다.
 일시정지·사망·구르기·UI 위 클릭·InputBlocked 상태에서는 공격하지 않습니다.
 상점 등 후속 UI의 전체 입력 차단은 PlayerEquipmentCombat.InputBlocked에 연결해야 합니다.
 
@@ -50,6 +60,7 @@ PlayerEquipment는 장비 방어력 합계를 일반 피해에서 고정 차감�
 PlayerInventory.Items를 지정하세요. 장비 데이터가 있는 아이템만 장착 가능하며 기존 field-knife/vest는 자동 변환하지 않습니다.
 
 전용 검증: `Nomad.Equipment.Editor.EquipmentVerification.Run`.
-Unity CLI: `unity run ./UnityProject -- -executeMethod Nomad.Equipment.Editor.EquipmentVerification.Run`.
+UI/입력/표시/3해상도 검증: `Nomad.Equipment.Editor.EquipmentUiVerification.Run`.
+비동기 PlayMode 검사에는 자동 -quit이 붙지 않는 Unity 배치 실행을 사용합니다.
 기존 회귀: ItemCsvVerification.Run, InventoryVerification.Run, PlayerCombatVerification.Run.
 검증 결과와 미실행 항목은 PR #100에 기록합니다.

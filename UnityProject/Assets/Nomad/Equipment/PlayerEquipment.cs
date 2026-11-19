@@ -83,13 +83,18 @@ namespace Nomad.Equipment
             return true;
         }
 
-        public bool TryUnequip(EquipmentSlot slot)
+        public bool TryUnequip(EquipmentSlot slot, int inventorySlot = -1)
         {
             if (!isActiveAndEnabled || changing || (uint)slot >= Capacity || items[(int)slot] == null)
                 return false;
 
+            if (inventorySlot < -1 || inventorySlot >= PlayerInventory.Capacity)
+                return false;
+
             for (int index = 0; index < PlayerInventory.Capacity; index++)
             {
+                if (inventorySlot >= 0 && index != inventorySlot)
+                    continue;
                 if (inventory.GetSlot(index).Item != null)
                     continue;
 

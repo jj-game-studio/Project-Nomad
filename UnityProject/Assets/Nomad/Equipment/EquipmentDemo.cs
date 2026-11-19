@@ -13,6 +13,8 @@ namespace Nomad.Equipment
 
         private void Start()
         {
+            if (!TryGetComponent<EquipmentCombatVisuals>(out _)) gameObject.AddComponent<EquipmentCombatVisuals>();
+            if (!TryGetComponent<EquipmentPanel>(out _)) gameObject.AddComponent<EquipmentPanel>();
             inventory = GetComponent<PlayerInventory>();
             equipment = GetComponent<PlayerEquipment>();
             equipment.Changed += LogEquipment;
@@ -22,7 +24,7 @@ namespace Nomad.Equipment
             Equip("demo-sword", EquipmentSlot.Weapon1);
             Equip("demo-bow", EquipmentSlot.Weapon2);
             InventoryPanel.GetOrCreate(inventory);
-            Debug.Log("EQUIPMENT_DEMO_READY: LMB 공격, 1 검/2 활, F5 몸통 장착/해제, F6 선택 무기 해제, F7 검 재장착, F8 활 재장착. 장비 수치·상태는 Console/API로 확인. Tab은 가방.");
+            Debug.Log("EQUIPMENT_DEMO_READY: Tab 장비10+가방20, 가방→장비 드래그/클릭 장착, 장비 우클릭 해제. F2 공격범위, LMB 공격, 1 검/2 활. F5갑옷/F6무기해제/F7검/F8활은 검토용 보조키.");
         }
 
         private void OnDestroy()
