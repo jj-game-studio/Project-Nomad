@@ -6,6 +6,7 @@ namespace Nomad.WorldHud
     {
         public static Canvas Create(string name, Transform owner)
         {
+            TMPro.TMP_Settings.LoadDefaultSettings();
             var root = new GameObject(name, typeof(RectTransform), typeof(Canvas), typeof(UnityEngine.UI.CanvasScaler));
             root.transform.SetParent(owner, false);
             Canvas canvas = root.GetComponent<Canvas>();
