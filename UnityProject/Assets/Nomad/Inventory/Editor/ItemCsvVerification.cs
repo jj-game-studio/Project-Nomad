@@ -12,10 +12,14 @@ namespace Nomad.Inventory.Editor
 
         public static void Run()
         {
+            bool ownsFixture = false;
             try
             {
                 if (AssetDatabase.IsValidFolder(Root))
                     throw new InvalidOperationException("이전 임시 검사 폴더를 확인하세요.");
+
+                AssetDatabase.CreateFolder("Assets/Nomad/Inventory/Editor", "CsvVerificationTemporary");
+                ownsFixture = true;
 
                 var rows = ItemCsv.Parse("\uFEFF" + Header + "test,검," + "\"쉼표, 큰따옴표 \"\"검\"\"\n둘째 줄\",1\r\n");
                 Check(rows[0].Description == "쉼표, 큰따옴표 \"검\"\n둘째 줄", "한글/BOM/쉼표/인용/개행");
@@ -33,6 +37,8 @@ namespace Nomad.Inventory.Editor
                 string guid = AssetDatabase.AssetPathToGUID(path);
                 Texture2D texture = new Texture2D(2, 2);
                 Sprite icon = Sprite.Create(texture, new Rect(0, 0, 2, 2), Vector2.zero);
+                AssetDatabase.CreateAsset(texture, Root + "/icon.asset");
+                AssetDatabase.AddObjectToAsset(icon, texture);
                 var serialized = new SerializedObject(item);
                 serialized.FindProperty("icon").objectReferenceValue = icon;
                 serialized.ApplyModifiedPropertiesWithoutUndo();
@@ -55,15 +61,14 @@ namespace Nomad.Inventory.Editor
                 Check(item.DisplayName == "둘째 이름", "중복 에셋 오류 무변경");
 
                 AssetDatabase.DeleteAsset(Root);
-                UnityEngine.Object.DestroyImmediate(icon);
-                UnityEngine.Object.DestroyImmediate(texture);
                 Debug.Log($"ITEM_CSV_PASS: {checks} checks");
                 EditorApplication.Exit(0);
             }
             catch (Exception error)
             {
                 Debug.LogException(error);
-                AssetDatabase.DeleteAsset(Root);
+                if (ownsFixture)
+                    AssetDatabase.DeleteAsset(Root);
                 EditorApplication.Exit(1);
             }
         }
