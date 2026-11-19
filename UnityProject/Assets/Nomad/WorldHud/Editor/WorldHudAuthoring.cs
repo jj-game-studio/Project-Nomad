@@ -310,7 +310,7 @@ namespace Nomad.WorldHud.Editor
                 Canvas.ForceUpdateCanvases();
 
                 Vector2 expected = camera.WorldToScreenPoint(stamina.transform.position + Vector3.up);
-                expected += new Vector2(60, -40) * canvas.scaleFactor;
+                expected += new Vector2(100, -40) * canvas.scaleFactor;
                 Vector2 actual = RectTransformUtility.WorldToScreenPoint(null, arc.position);
                 worst = Mathf.Max(worst, Vector2.Distance(expected, actual));
             }
