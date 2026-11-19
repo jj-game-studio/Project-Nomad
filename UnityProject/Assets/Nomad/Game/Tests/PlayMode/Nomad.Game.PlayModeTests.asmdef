@@ -1,0 +1,9 @@
+{
+    "name": "Nomad.Game.PlayModeTests",
+    "references": [
+        "Nomad.Game"
+    ],
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ]
+}

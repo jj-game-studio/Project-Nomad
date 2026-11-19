@@ -1,0 +1,129 @@
+using System;
+using System.Collections;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+
+namespace Nomad.Game
+{
+    // 메인 게임의 유일한 씬 오브젝트입니다. 모듈을 한 번 생성해 유지하고, 지역 씬을 additive로 전환합니다.
+    [DisallowMultipleComponent]
+    public sealed class GameManager : MonoBehaviour
+    {
+        public static GameManager Instance { get; private set; }
+
+        public GameConfig Config { get; private set; }
+        public Scene CurrentRegion { get; private set; }
+        public bool IsLoading { get; private set; }
+
+        // 지역 씬이 로드되어 활성 씬이 된 뒤 호출됩니다. 모듈은 직렬화 참조 대신 이 이벤트로 연결합니다.
+        public event Action<Scene> RegionLoaded;
+
+        // 도메인 리로드를 끈 Play 진입에서도 이전 Play의 인스턴스가 남지 않게 합니다.
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics() => Instance = null;
+
+        // 지역 씬을 단독 Play하면 GameManager를 만들고 그 씬을 현재 지역으로 삼습니다.
+        // 지역 목록에 없는 테스트·검증 씬에서는 아무것도 하지 않습니다.
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        private static void BootstrapOnPlay() => BootstrapRegion();
+
+        internal static GameManager BootstrapRegion()
+        {
+            if (Instance != null)
+                return null;
+
+            GameConfig config = GameConfig.Load();
+            Scene active = SceneManager.GetActiveScene();
+            if (config == null || !config.IsRegion(active.name))
+                return null;
+
+            var manager = new GameObject("GameManager").AddComponent<GameManager>();
+            manager.CurrentRegion = active;
+            return manager;
+        }
+
+        private void Awake()
+        {
+            if (Instance != null && Instance != this)
+            {
+                Destroy(gameObject);
+                return;
+            }
+
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
+
+            Config = GameConfig.Load();
+            if (Config == null)
+            {
+                Debug.LogError($"Resources/{GameConfig.ResourcePath} 구성을 찾지 못했습니다.", this);
+                return;
+            }
+
+            // 모듈은 GameManager 자식으로 두어 지역 전환 후에도 함께 유지됩니다.
+            foreach (GameObject module in Config.Modules)
+            {
+                if (module != null)
+                    Instantiate(module, transform).name = module.name;
+            }
+        }
+
+        private void Start()
+        {
+            if (Instance != this || Config == null)
+                return;
+
+            // 지역 씬 단독 Play는 이미 열린 씬을 그대로 쓰고, Game 씬에서는 시작 지역을 불러옵니다.
+            if (CurrentRegion.IsValid())
+                RegionLoaded?.Invoke(CurrentRegion);
+            else
+                LoadRegion(Config.StartRegion);
+        }
+
+        private void OnDestroy()
+        {
+            if (Instance == this)
+                Instance = null;
+        }
+
+        // 지역 씬을 전환합니다. 전환 중이면 false를 반환하고 무시합니다.
+        public bool LoadRegion(string sceneName)
+        {
+            if (IsLoading || string.IsNullOrEmpty(sceneName))
+                return false;
+
+            StartCoroutine(LoadRegionRoutine(sceneName));
+            return true;
+        }
+
+        private IEnumerator LoadRegionRoutine(string sceneName)
+        {
+            IsLoading = true;
+            Scene previous = CurrentRegion;
+
+            // 씬이 하나만 남으면 언로드할 수 없으므로 새 지역을 먼저 불러온 뒤 이전 지역을 내립니다.
+            AsyncOperation load = SceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Additive);
+            if (load == null)
+            {
+                Debug.LogError($"지역 씬 {sceneName}을 불러오지 못했습니다. Build Settings 등록을 확인해 주세요.", this);
+                IsLoading = false;
+                yield break;
+            }
+
+            yield return load;
+
+            // 같은 이름의 지역을 다시 불러와도 구분되도록 가장 마지막에 로드된 씬을 사용합니다.
+            Scene next = SceneManager.GetSceneAt(SceneManager.sceneCount - 1);
+
+            // 조명·환경 설정은 활성 씬을 따르므로 지역 씬을 활성화합니다.
+            SceneManager.SetActiveScene(next);
+
+            if (previous.IsValid() && previous.isLoaded)
+                yield return SceneManager.UnloadSceneAsync(previous);
+
+            CurrentRegion = next;
+            IsLoading = false;
+            RegionLoaded?.Invoke(next);
+        }
+    }
+}
