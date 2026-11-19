@@ -12,6 +12,7 @@ namespace Nomad.Equipment
         private readonly UnityEngine.UI.Text[] names = new UnityEngine.UI.Text[10];
         private readonly UnityEngine.UI.Image[] icons = new UnityEngine.UI.Image[10];
         private readonly UnityEngine.UI.Outline[] borders = new UnityEngine.UI.Outline[10];
+        private readonly UnityEngine.UI.Image[] backgrounds = new UnityEngine.UI.Image[10];
         private PlayerEquipment equipment;
         private PlayerInventory inventory;
         private PlayerEquipmentCombat combat;
@@ -20,6 +21,7 @@ namespace Nomad.Equipment
         private RectTransform bag;
         private RectTransform equipmentGrid;
         private RectTransform toolbar;
+        private RectTransform inventoryDragPreview;
         private UnityEngine.UI.Text capacity;
         private UnityEngine.UI.Text notice;
         private UnityEngine.UI.Text rangeLabel;
@@ -35,6 +37,9 @@ namespace Nomad.Equipment
         public RectTransform BagGrid => bag;
         public RectTransform Toolbar => toolbar;
         public string Notice => notice != null ? notice.text : string.Empty;
+        public int PreviewSlot { get; private set; } = -1;
+        public bool CanDrop { get; private set; }
+        public RectTransform DragPreview => inventoryDragPreview;
 
         private void Start()
         {
@@ -45,6 +50,7 @@ namespace Nomad.Equipment
             var view = InventoryPanel.GetOrCreate(inventory);
             panel = (RectTransform)view.transform.Find("InventoryPanel");
             bag = (RectTransform)panel.Find("Slots");
+            inventoryDragPreview = (RectTransform)panel.Find("DragPreview");
             capacity = panel.Find("Capacity").GetComponent<UnityEngine.UI.Text>();
             font = Font.CreateDynamicFontFromOSFont(new[] { "Malgun Gothic", "Arial" }, 16);
 
@@ -109,6 +115,10 @@ namespace Nomad.Equipment
                 CancelSelection();
             if (mouse != null) ProcessPointer(mouse);
             Refresh();
+            UpdateDropPreview(mouse);
+            // 장비 UI가 나중에 생성되어도 가방의 기존 드래그 아이템을 가리지 않습니다.
+            if (inventoryDragPreview != null && inventoryDragPreview.gameObject.activeInHierarchy)
+                inventoryDragPreview.SetAsLastSibling();
         }
 
         public void FitToCanvas()
@@ -172,6 +182,8 @@ namespace Nomad.Equipment
 
         private void Refresh()
         {
+            PreviewSlot = -1;
+            CanDrop = false;
             capacity.text = $"가방 ({inventory.UsedSlots} / {PlayerInventory.Capacity})";
             for (int index = 0; index < 10; index++)
             {
@@ -179,15 +191,42 @@ namespace Nomad.Equipment
                 names[index].text = item != null ? item.DisplayName : "—";
                 icons[index].sprite = item?.Icon;
                 icons[index].enabled = item?.Icon != null;
+                icons[index].color = Color.white;
+                names[index].color = new Color32(238, 235, 222, 255);
+                backgrounds[index].color = new Color32(37, 55, 74, 255);
                 borders[index].effectColor = (int)equipment.ActiveWeaponSlot == index
                     ? new Color32(238, 186, 88, 255) : new Color32(108, 128, 148, 255);
             }
+        }
+
+        private void UpdateDropPreview(Mouse mouse)
+        {
+            if (mouse == null || !mouse.leftButton.isPressed || selected < 0 || selectedItem == null ||
+                inventoryDragPreview == null || !inventoryDragPreview.gameObject.activeInHierarchy)
+                return;
+
+            int target = Find(equipmentGrid, mouse.position.ReadValue());
+            if (target < 0) return;
+
+            PreviewSlot = target;
+            CanDrop = inventory.GetSlot(selected).Count == 1 && selectedItem.MaxStack == 1 &&
+                PlayerEquipment.Fits(selectedItem.EquipmentType, (EquipmentSlot)target);
+            borders[target].effectColor = CanDrop ? new Color32(100, 235, 180, 255) : new Color32(237, 106, 103, 255);
+            backgrounds[target].color = CanDrop ? new Color32(42, 79, 76, 255) : new Color32(91, 45, 52, 255);
+            if (!CanDrop) return;
+
+            names[target].text = selectedItem.DisplayName;
+            names[target].color = new Color32(163, 242, 210, 210);
+            icons[target].sprite = selectedItem.Icon;
+            icons[target].enabled = selectedItem.Icon != null;
+            icons[target].color = new Color(1, 1, 1, 0.6f);
         }
 
         private void CreateSlot(int index)
         {
             RectTransform slot = Rect("EquipmentSlot" + index, equipmentGrid, new Vector2(80, 88), Vector2.zero);
             var image = slot.gameObject.AddComponent<UnityEngine.UI.Image>();
+            backgrounds[index] = image;
             image.color = new Color32(37, 55, 74, 255);
             borders[index] = slot.gameObject.AddComponent<UnityEngine.UI.Outline>();
             borders[index].effectDistance = new Vector2(1, -1);
@@ -240,9 +279,13 @@ namespace Nomad.Equipment
 
         private void CancelSelection()
         {
+            bool restore = PreviewSlot >= 0;
             selected = -1;
             selectedItem = null;
             dragEquipment = -1;
+            PreviewSlot = -1;
+            CanDrop = false;
+            if (restore && equipmentGrid != null) Refresh();
         }
 
         private void OnDisable()

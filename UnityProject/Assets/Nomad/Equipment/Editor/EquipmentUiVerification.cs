@@ -28,12 +28,21 @@ namespace Nomad.Equipment.Editor
 
         public static void Run()
         {
+            SessionState.SetBool(SessionKey + ".CaptureDrag", false);
             EquipmentAuthoring.Create();
             Begin();
         }
 
         public static void RunExisting()
         {
+            SessionState.SetBool(SessionKey + ".CaptureDrag", false);
+            UnityEditor.SceneManagement.EditorSceneManager.OpenScene(EquipmentAuthoring.ScenePath);
+            Begin();
+        }
+
+        public static void RunDragCapture()
+        {
+            SessionState.SetBool(SessionKey + ".CaptureDrag", true);
             UnityEditor.SceneManagement.EditorSceneManager.OpenScene(EquipmentAuthoring.ScenePath);
             Begin();
         }
@@ -94,7 +103,54 @@ namespace Nomad.Equipment.Editor
                         Pointer(Bag(source));
                         break;
                     case 6: Pointer(Bag(source), true); break;
-                    case 7: Pointer(Gear(EquipmentSlot.Body), true); break;
+                    case 7:
+                        Pointer(Gear(EquipmentSlot.Head), true);
+                        stage = 70;
+                        break;
+                    case 70:
+                        Check(panel.PreviewSlot == (int)EquipmentSlot.Head && !panel.CanDrop, "잘못된 도착 부위 불가 표시");
+                        Check(equipment.GetItem(EquipmentSlot.Head) == null && inventory.GetSlot(source).Item?.ItemId == "demo-armor",
+                            "불가 미리보기 소유 무변경");
+                        Pointer(Gear(EquipmentSlot.Body), true);
+                        stage = 71;
+                        break;
+                    case 71:
+                        Check(panel.PreviewSlot == (int)EquipmentSlot.Body && panel.CanDrop, "도착 장비칸 유효 표시");
+                        Check(panel.EquipmentGrid.GetChild((int)EquipmentSlot.Body).Find("ItemName").GetComponent<UnityEngine.UI.Text>().text == "갑옷",
+                            "도착 칸 아이템 미리보기");
+                        Check(panel.DragPreview.gameObject.activeInHierarchy &&
+                            panel.DragPreview.GetSiblingIndex() == panel.DragPreview.parent.childCount - 1, "드래그 아이템 UI 최상단");
+                        Check(equipment.GetItem(EquipmentSlot.Body) == null && inventory.GetSlot(source).Item?.ItemId == "demo-armor",
+                            "유효 미리보기 소유 무변경");
+                        if (SessionState.GetBool(SessionKey + ".CaptureDrag", false))
+                        {
+                            CaptureDragSnapshot();
+                            Debug.Log("EQUIPMENT_DRAG_RENDER_PASS: held pointer, frontmost preview, valid target, 3 renders");
+                            Finish(0);
+                            return;
+                        }
+                        Pointer(Bag(source), true);
+                        break;
+                    case 72:
+                        Check(panel.PreviewSlot == -1 && panel.EquipmentGrid.GetChild((int)EquipmentSlot.Body).Find("ItemName")
+                            .GetComponent<UnityEngine.UI.Text>().text == "—", "포인터 이탈 시 원래 표시 복원");
+                        Pointer(Gear(EquipmentSlot.Body), true);
+                        break;
+                    case 73:
+                        Check(panel.CanDrop, $"재진입 미리보기: preview={panel.PreviewSlot}, ghost={panel.DragPreview.gameObject.activeSelf}, mouse={Mouse.current?.deviceId}/{mouse.deviceId}, held={mouse.leftButton.isPressed}, point={mouse.position.ReadValue()}, target={Gear(EquipmentSlot.Body)}, notice={panel.Notice}");
+                        Keys(UnityEngine.InputSystem.Key.Escape);
+                        break;
+                    case 74:
+                        Check(panel.PreviewSlot == -1 && !panel.DragPreview.gameObject.activeSelf &&
+                            equipment.GetItem(EquipmentSlot.Body) == null, "Escape 취소와 미리보기 복원");
+                        Keys();
+                        Pointer(Bag(source));
+                        break;
+                    case 75: Pointer(Bag(source), true); break;
+                    case 76:
+                        Pointer(Gear(EquipmentSlot.Body), true);
+                        stage = 8;
+                        break;
                     case 8: Pointer(Gear(EquipmentSlot.Body)); break;
                     case 9:
                         Check(equipment.GetItem(EquipmentSlot.Body)?.ItemId == "demo-armor", "가방→장비 드래그");
@@ -241,6 +297,72 @@ namespace Nomad.Equipment.Editor
                 RenderTexture.active = previous;
                 UnityEngine.Object.DestroyImmediate(texture);
                 UnityEngine.Object.DestroyImmediate(pixels);
+            }
+        }
+
+        private static void CaptureDragSnapshot()
+        {
+            // RenderTexture 전환이 GameView 입력을 리셋하므로, 검사된 실제 UI의 그리기 상태만 복제합니다.
+            // 복제본에는 InventoryPanel 스크립트가 없어 렌더 중 드래그 취소가 발생하지 않습니다.
+            var sourceCanvas = panel.EquipmentGrid.GetComponentInParent<Canvas>();
+            var root = (RectTransform)panel.EquipmentGrid.parent;
+            var snapshot = new GameObject("Drag Snapshot", typeof(RectTransform), typeof(Canvas), typeof(UnityEngine.UI.CanvasScaler));
+            var canvas = snapshot.GetComponent<Canvas>();
+            var scaler = snapshot.GetComponent<UnityEngine.UI.CanvasScaler>();
+            var sourceScaler = sourceCanvas.GetComponent<UnityEngine.UI.CanvasScaler>();
+            scaler.uiScaleMode = sourceScaler.uiScaleMode;
+            scaler.referenceResolution = sourceScaler.referenceResolution;
+            scaler.screenMatchMode = sourceScaler.screenMatchMode;
+            scaler.matchWidthOrHeight = sourceScaler.matchWidthOrHeight;
+            var clone = UnityEngine.Object.Instantiate(root, snapshot.transform, false);
+            var preview = clone.Find("DragPreview");
+            Check(preview.gameObject.activeSelf && preview.GetSiblingIndex() == clone.childCount - 1,
+                "실제 드래그 그리기 순서 스냅샷 유지");
+
+            Camera camera = Camera.main;
+            var previousTarget = camera.targetTexture;
+            var previousActive = RenderTexture.active;
+            bool wasEnabled = sourceCanvas.enabled;
+            try
+            {
+                sourceCanvas.enabled = false;
+                canvas.renderMode = RenderMode.ScreenSpaceCamera;
+                canvas.worldCamera = camera;
+                canvas.planeDistance = 1;
+                foreach (Vector2Int size in new[] { new Vector2Int(1920, 1080), new Vector2Int(1280, 720), new Vector2Int(2560, 1080) })
+                {
+                    var texture = new RenderTexture(size.x, size.y, 24);
+                    var pixels = new Texture2D(size.x, size.y, TextureFormat.RGB24, false);
+                    try
+                    {
+                        camera.targetTexture = texture;
+                        Canvas.ForceUpdateCanvases();
+                        scaler.SendMessage("Update");
+                        Canvas.ForceUpdateCanvases();
+                        clone.localScale = Vector3.one * Mathf.Min(1f, (size.y / canvas.scaleFactor - 48) / 752f);
+                        Canvas.ForceUpdateCanvases();
+                        Check(preview.gameObject.activeInHierarchy && preview.GetSiblingIndex() == clone.childCount - 1,
+                            "렌더 드래그 최상단 " + size.x);
+                        camera.Render();
+                        RenderTexture.active = texture;
+                        pixels.ReadPixels(new Rect(0, 0, size.x, size.y), 0, 0);
+                        pixels.Apply();
+                        File.WriteAllBytes($"Artifacts/equipment/equipment-drag-{size.x}.png", pixels.EncodeToPNG());
+                    }
+                    finally
+                    {
+                        camera.targetTexture = previousTarget;
+                        RenderTexture.active = previousActive;
+                        UnityEngine.Object.DestroyImmediate(texture);
+                        UnityEngine.Object.DestroyImmediate(pixels);
+                    }
+                }
+            }
+            finally
+            {
+                sourceCanvas.enabled = wasEnabled;
+                UnityEngine.Object.DestroyImmediate(snapshot);
+                Canvas.ForceUpdateCanvases();
             }
         }
 
