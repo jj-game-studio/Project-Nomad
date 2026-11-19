@@ -18,6 +18,7 @@ namespace Nomad.WorldHud
         private float fullSince = float.NegativeInfinity;
         private float insufficientUntil;
         private bool available;
+        private float opacity;
 
         public float Fraction { get; private set; }
         public bool Visible => canvas != null && canvas.isActiveAndEnabled && group != null && group.alpha > 0;
@@ -53,14 +54,33 @@ namespace Nomad.WorldHud
             bool alert = Time.unscaledTime < insufficientUntil;
             bool show = available && (health == null || !health.IsDead) &&
                 (Fraction < 1 || Time.unscaledTime - fullSince < fullHoldSeconds || alert);
-            bool onscreen = WorldHudCanvas.Place(canvas, anchor, viewCamera != null ? viewCamera : Camera.main,
-                transform.position + worldOffset, screenOffset);
-            group.alpha = show && onscreen ? Mathf.MoveTowards(group.alpha, 1, Time.unscaledDeltaTime * 8) : 0;
+            opacity = show ? Mathf.MoveTowards(opacity, 1, Time.unscaledDeltaTime * 8) : 0;
+            UpdatePosition();
             fill.color = alert && Mathf.Sin(Time.unscaledTime * 35) > 0
                 ? new Color32(255, 95, 75, 255) : new Color32(255, 193, 104, 255);
         }
 
-        private void OnEnable() { if (canvas != null) canvas.gameObject.SetActive(true); }
-        private void OnDisable() { if (canvas != null) canvas.gameObject.SetActive(false); }
+        private void UpdatePosition()
+        {
+            if (canvas == null) return;
+            bool onscreen = WorldHudCanvas.Place(canvas, anchor, viewCamera != null ? viewCamera : Camera.main,
+                transform.position + worldOffset, screenOffset);
+            group.alpha = onscreen ? opacity : 0;
+        }
+
+        private void OnEnable()
+        {
+            if (canvas != null) canvas.gameObject.SetActive(true);
+            // 추적 카메라의 LateUpdate가 끝난 뒤, 실제 렌더에 쓸 위치로 다시 투영합니다.
+            Canvas.willRenderCanvases += UpdatePosition;
+        }
+
+        private void OnDisable()
+        {
+            Canvas.willRenderCanvases -= UpdatePosition;
+            if (canvas != null) canvas.gameObject.SetActive(false);
+        }
+
+        private void OnDestroy() { if (canvas != null) Destroy(canvas.gameObject); }
     }
 }

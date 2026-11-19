@@ -131,6 +131,13 @@ namespace Nomad.WorldHud.Editor
             if (!EditorApplication.isPlaying || EditorApplication.timeSinceStartup < next) return;
             try
             {
+                if (stage == 12)
+                {
+                    Require(UnityEngine.Object.FindObjectsByType<Canvas>(FindObjectsInactive.Include, FindObjectsSortMode.None).Length == 0,
+                        "destroying player removes all detached HUD canvases");
+                    Finish(null);
+                    return;
+                }
                 var hints = UnityEngine.Object.FindFirstObjectByType<InteractionHints>();
                 var stamina = UnityEngine.Object.FindFirstObjectByType<CharacterStaminaHud>();
                 if (hints == null || stamina == null) return;
@@ -250,6 +257,13 @@ namespace Nomad.WorldHud.Editor
                     stamina.enabled = true;
                     next = EditorApplication.timeSinceStartup + .1;
                 }
+                else if (stage == 11)
+                {
+                    VerifyTracking(stamina, hints);
+                    Camera.main.GetComponent<TopDownCamera>().enabled = false;
+                    UnityEngine.Object.Destroy(stamina.gameObject);
+                    next = EditorApplication.timeSinceStartup + .2;
+                }
                 else { Finish(null); return; }
                 stage++;
             }
@@ -272,6 +286,37 @@ namespace Nomad.WorldHud.Editor
             else Debug.LogError("WORLD_HUD_FAIL: " + failure);
             if (Application.isBatchMode) EditorApplication.Exit(failure == null ? 0 : 1);
             else EditorApplication.ExitPlaymode();
+        }
+
+        private static void VerifyTracking(CharacterStaminaHud stamina, InteractionHints hints)
+        {
+            Camera camera = Camera.main;
+            var follow = camera.GetComponent<TopDownCamera>();
+            var controller = stamina.GetComponent<CharacterController>();
+            controller.enabled = false;
+            stamina.SetStamina(50, 100);
+            RectTransform arc = GameObject.Find("Character Stamina HUD").transform.Find("Stamina Arc") as RectTransform;
+            Canvas canvas = arc.GetComponentInParent<Canvas>();
+            float worst = 0;
+            // 대상 경계를 왕복하고 방향을 바꾸면서 두 LateUpdate 실행 순서를 모두 검사합니다.
+            for (int i = 0; i < 24; i++)
+            {
+                stamina.transform.SetPositionAndRotation(new Vector3((i % 3 - 1) * .3f, 1, i % 2 == 0 ? .1f : -.2f),
+                    Quaternion.Euler(0, i * 45, 0));
+                if (i % 2 == 0) follow.SendMessage("LateUpdate");
+                stamina.SendMessage("LateUpdate");
+                hints.Refresh();
+                if (i % 2 != 0) follow.SendMessage("LateUpdate");
+                Canvas.ForceUpdateCanvases();
+
+                Vector2 expected = camera.WorldToScreenPoint(stamina.transform.position + Vector3.up);
+                expected += new Vector2(20, 0) * canvas.scaleFactor;
+                Vector2 actual = RectTransformUtility.WorldToScreenPoint(null, arc.position);
+                worst = Mathf.Max(worst, Vector2.Distance(expected, actual));
+            }
+            Debug.Log($"WORLD_HUD_TRACKING_ERROR pixels={worst:F3}");
+            Require(worst < 1, "stamina stays anchored after movement/rotation/target boundary and either camera order");
+            controller.enabled = true;
         }
 
         private static void Capture(string name, int width, int height)

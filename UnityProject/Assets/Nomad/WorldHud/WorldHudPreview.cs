@@ -10,12 +10,14 @@ namespace Nomad.WorldHud
     {
         private CharacterStaminaHud stamina;
         private float value = 60;
+        private Canvas controls;
 
         private void Start()
         {
             stamina = GetComponent<CharacterStaminaHud>();
             stamina.SetStamina(value, 100);
             Canvas canvas = WorldHudCanvas.Create("World HUD Preview Controls", transform);
+            controls = canvas;
             var label = new GameObject("Instructions", typeof(RectTransform)).AddComponent<TextMeshProUGUI>();
             label.transform.SetParent(canvas.transform, false);
             label.font = Resources.Load<TMP_FontAsset>("NomadHudFont");
@@ -38,5 +40,7 @@ namespace Nomad.WorldHud
             if (keyboard.fKey.wasPressedThisFrame) stamina.NotifyInsufficient();
             stamina.SetStamina(value, 100);
         }
+
+        private void OnDestroy() { if (controls != null) Destroy(controls.gameObject); }
     }
 }

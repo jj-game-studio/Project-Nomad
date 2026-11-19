@@ -60,9 +60,16 @@ namespace Nomad.WorldHud
 
             if (enabled) Collect();
 
+            UpdatePositions();
+        }
+
+        private void UpdatePositions()
+        {
+            VisibleCount = 0;
             Camera camera = viewCamera != null ? viewCamera : Camera.main;
             foreach (IInteractable candidate in candidates)
             {
+                if (candidate is not MonoBehaviour owner || owner == null || !owner.isActiveAndEnabled) continue;
                 if (VisibleCount == markers.Count) markers.Add(CreateMarker());
                 Marker marker = markers[VisibleCount];
                 if (!WorldHudCanvas.Place(canvas, marker.Root, camera, candidate.InteractionPoint, markerOffset))
@@ -137,12 +144,19 @@ namespace Nomad.WorldHud
         }
 
         private void LateUpdate() => Refresh();
-        private void OnEnable() { if (canvas != null) canvas.gameObject.SetActive(true); }
+        private void OnEnable()
+        {
+            if (canvas != null) canvas.gameObject.SetActive(true);
+            Canvas.willRenderCanvases += UpdatePositions;
+        }
         private void OnDisable()
         {
+            Canvas.willRenderCanvases -= UpdatePositions;
             if (canvas != null) canvas.gameObject.SetActive(false);
             Selected = null;
             VisibleCount = 0;
         }
+
+        private void OnDestroy() { if (canvas != null) Destroy(canvas.gameObject); }
     }
 }

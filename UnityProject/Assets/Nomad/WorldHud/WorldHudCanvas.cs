@@ -8,7 +8,9 @@ namespace Nomad.WorldHud
         {
             TMPro.TMP_Settings.LoadDefaultSettings();
             var root = new GameObject(name, typeof(RectTransform), typeof(Canvas), typeof(UnityEngine.UI.CanvasScaler));
-            root.transform.SetParent(owner, false);
+            // 화면 좌표 Canvas를 회전·이동하는 플레이어 아래에 두면 Canvas 재빌드 때
+            // 부모 변환이 UI 좌표에 섞입니다. 같은 씬의 독립 루트로 유지합니다.
+            UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(root, owner.gameObject.scene);
             Canvas canvas = root.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = 3;
