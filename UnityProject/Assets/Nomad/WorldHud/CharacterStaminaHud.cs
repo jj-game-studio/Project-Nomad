@@ -8,7 +8,7 @@ namespace Nomad.WorldHud
     {
         [SerializeField] private Camera viewCamera;
         [SerializeField] private Vector3 worldOffset = Vector3.up;
-        [SerializeField] private Vector2 screenOffset = new Vector2(20, 0);
+        [SerializeField] private Vector2 screenOffset = new Vector2(20, -40);
         [SerializeField, Min(0)] private float fullHoldSeconds = .7f;
         private Canvas canvas;
         private CanvasGroup group;
