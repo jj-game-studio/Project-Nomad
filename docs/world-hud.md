@@ -10,10 +10,10 @@ R은 최대치, F는 부족 알림입니다. 실제 구르기 소모·회복 규
 후자는 기존 `PlayerInteraction`, `PlayerMovement`, `PlayerInventory`,
 `CharacterController`를 사용합니다. 기존 머리 위 HP바와 별개이며 HP 코드를 수정하지 않습니다.
 메인 카메라를 자동 사용하거나 Inspector에서 카메라를 지정합니다.
-스태미나의 기본 Screen Offset은 `(100, -40)`입니다. HP바와 간격을 벌리도록 아래로
-40 UI 단위 내리고, 실제 열린 Unity Play 화면에서 X60도 간격이 작은 것을 확인하여
+스태미나의 기본 Screen Offset은 `(100, -60)`입니다. HP바와 간격을 벌리도록 아래로
+60 UI 단위 내리고, 실제 열린 Unity Play 화면에서 X60도 간격이 작은 것을 확인하여
 X100으로 추가 조정했습니다. 기존 수동 배치 컴포넌트는 Inspector의
-Screen Offset을 X=100, Y=-40으로 맞추면 됩니다. 열린 씬은 디스크 변경 후에도
+Screen Offset을 X=100, Y=-60으로 맞추면 됩니다. 열린 씬은 디스크 변경 후에도
 이전 직렬화 값이 남을 수 있으므로 실제 Inspector 값과 Play 화면을 함께 확인합니다.
 
 게임의 자원 시스템에서 `CharacterStaminaHud.SetStamina(current, maximum)`을 호출하고,

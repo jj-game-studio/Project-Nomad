@@ -872,7 +872,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.WorldHud.CharacterStaminaHud
   viewCamera: {fileID: 0}
   worldOffset: {x: 0, y: 1, z: 0}
-  screenOffset: {x: 100, y: -40}
+  screenOffset: {x: 100, y: -60}
   fullHoldSeconds: 0.7
 --- !u!114 &2035417774
 MonoBehaviour:
