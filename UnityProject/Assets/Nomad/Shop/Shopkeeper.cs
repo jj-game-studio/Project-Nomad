@@ -105,6 +105,31 @@ namespace Nomad.Shop
         public bool TryBuy(PlayerInventory inventory, int offerIndex, int quantity, out string message) =>
             Trade(inventory, offerIndex, -1, quantity, true, out message);
 
+        public int BuyLimit(PlayerInventory inventory, int offerIndex)
+        {
+            if (!CanAccess(inventory) || (uint)offerIndex >= stock.Length)
+                return 0;
+
+            ShopCatalog.Offer offer = catalog.GetOffer(offerIndex);
+            if (!inventory.TryGetItem(offer.Item.ItemId, out ItemDefinition registered) || registered != offer.Item)
+                return 0;
+
+            long space = 0;
+            for (int index = 0; index < PlayerInventory.Capacity; index++)
+                space += inventory.SpaceInSlot(index, offer.Item);
+            return (int)Math.Min(space, Math.Min(stock[offerIndex], inventory.GetComponent<PlayerWallet>().Gold / offer.BuyPrice));
+        }
+
+        public bool CanBuy(PlayerInventory inventory, int offerIndex, int quantity, out string message) =>
+            ValidateTrade(inventory, offerIndex, -1, quantity, true, out message);
+
+        public bool CanSell(PlayerInventory inventory, int slotIndex, int quantity, out string message)
+        {
+            int offer = inventory != null && (uint)slotIndex < PlayerInventory.Capacity
+                ? FindOffer(inventory.GetSlot(slotIndex).Item) : -1;
+            return ValidateTrade(inventory, offer, slotIndex, quantity, false, out message);
+        }
+
         public bool TrySell(PlayerInventory inventory, int slotIndex, int quantity, out string message)
         {
             int offerIndex = inventory != null && (uint)slotIndex < PlayerInventory.Capacity
@@ -112,7 +137,7 @@ namespace Nomad.Shop
             return Trade(inventory, offerIndex, slotIndex, quantity, false, out message);
         }
 
-        private bool Trade(PlayerInventory inventory, int offerIndex, int slotIndex, int quantity,
+        private bool ValidateTrade(PlayerInventory inventory, int offerIndex, int slotIndex, int quantity,
             bool buying, out string message)
         {
             message = "Shop unavailable.";
@@ -134,7 +159,10 @@ namespace Nomad.Shop
             if (buying)
             {
                 if (!inventory.TryGetItem(offer.Item.ItemId, out ItemDefinition registered) || registered != offer.Item)
+                {
+                    message = "Item is not registered in your backpack.";
                     return false;
+                }
 
                 long space = 0;
                 for (int index = 0; index < PlayerInventory.Capacity; index++)
@@ -153,6 +181,20 @@ namespace Nomad.Shop
                 message = "Cannot sell this quantity or item.";
                 return false;
             }
+
+            message = "Ready to trade.";
+            return true;
+        }
+
+        private bool Trade(PlayerInventory inventory, int offerIndex, int slotIndex, int quantity,
+            bool buying, out string message)
+        {
+            if (!ValidateTrade(inventory, offerIndex, slotIndex, quantity, buying, out message))
+                return false;
+
+            PlayerWallet wallet = inventory.GetComponent<PlayerWallet>();
+            ShopCatalog.Offer offer = catalog.GetOffer(offerIndex);
+            long total = (long)(buying ? offer.BuyPrice : offer.SellPrice) * quantity;
 
             // 모두 검사한 뒤 돈·재고·가방을 함께 반영합니다. 알림 중 재진입 거래도 막습니다.
             wallet.BeginTrade();

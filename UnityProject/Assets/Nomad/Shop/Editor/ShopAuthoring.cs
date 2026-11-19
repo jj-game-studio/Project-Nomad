@@ -47,10 +47,17 @@ namespace Nomad.Shop.Editor
                 SerializedProperty offers = data.FindProperty("offers");
                 offers.arraySize = items.Length;
                 int[] buy = { 5, 120, 200 }, sell = { 2, 60, 100 }, stock = { 30, 5, 3 };
+                string[] descriptions = {
+                    "Salvaged metal. Compare its value before selling.",
+                    "A compact field knife for your expedition supplies.",
+                    "A field vest. Keep enough gold for your next trip."
+                };
                 for (int index = 0; index < items.Length; index++)
                 {
                     SerializedProperty entry = offers.GetArrayElementAtIndex(index);
                     entry.FindPropertyRelative("item").objectReferenceValue = items[index];
+                    entry.FindPropertyRelative("category").enumValueIndex = index == 0 ? 0 : 1;
+                    entry.FindPropertyRelative("description").stringValue = descriptions[index];
                     entry.FindPropertyRelative("buyPrice").intValue = buy[index];
                     entry.FindPropertyRelative("sellPrice").intValue = sell[index];
                     entry.FindPropertyRelative("initialStock").intValue = stock[index];

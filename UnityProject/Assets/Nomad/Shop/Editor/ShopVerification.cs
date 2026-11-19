@@ -111,6 +111,11 @@ namespace Nomad.Shop.Editor
                             Read("Stock/Content/Slot 0/Price") == "Buy 5 G", "양쪽 칸별 가격 표시");
                         Require(Node("Backpack/Content").childCount == 20 &&
                             Node("Stock/Content").childCount == 3, "가방 20칸·상점 목록 표시");
+                        Canvas.ForceUpdateCanvases();
+                        RectTransform lastSlot = (RectTransform)Node("Backpack/Content/Slot 19");
+                        ScrollRect backpack = Node("Backpack").GetComponent<ScrollRect>();
+                        Require(-lastSlot.anchoredPosition.y + lastSlot.rect.height + 8 <= backpack.viewport.rect.height,
+                            "스크롤 없이 가방 20칸 전체 표시");
                         Capture("shop-ui.png");
                         RequireVisible("Backpack/Content/Slot 0/Count");
                         RequireVisible("Stock/Content/Slot 0/Count");
@@ -317,10 +322,31 @@ namespace Nomad.Shop.Editor
                     case 60: Pointer("Stock/Content/Slot 0", false); break;
                     case 61:
                         Capture("shop-ui-after-trade.png");
+                        Node("Filter Equipment").GetComponent<Button>().onClick.Invoke();
+                        Require(!Node("Stock/Content/Slot 0").gameObject.activeSelf &&
+                            Node("Stock/Content/Slot 1").gameObject.activeSelf && Read("Description").Contains("Equipment"),
+                            "상품 분류 필터·설명 표시");
+                        Queue(Key.RightArrow);
+                        break;
+                    case 62:
+                        Require(Read("Selection").Contains("Field Vest"), "필터 안에서 키보드 선택 이동");
+                        Node("Filter Supplies").GetComponent<Button>().onClick.Invoke();
+                        Require(Read("Readiness") == "No goods in this category." &&
+                            !Node("Buy").GetComponent<Button>().interactable, "빈 분류 거래 차단·안내");
+                        Queue(Key.B);
+                        break;
+                    case 63:
+                        Require(wallet.Gold == 796, "빈 분류에서 B 거래 차단");
+                        Node("Filter All").GetComponent<Button>().onClick.Invoke();
+                        Node("Affordable").GetComponent<Button>().onClick.Invoke();
+                        Require(Quantity.text == shop.BuyLimit(inventory, 0).ToString() &&
+                            Node("Buy").GetComponent<Button>().interactable && wallet.Gold == 796,
+                            "구매 한도 선택은 거래 없이 유효 수량 설정");
+                        Capture("shop-ui-improved.png");
                         inventory.GetComponent<Health>().TryApplyDamage(1000);
                         Queue();
                         break;
-                    case 62:
+                    case 64:
                         Require(Object.FindAnyObjectByType<ShopPanel>() == null &&
                             !shop.TryBuy(inventory, 0, 1, out _), "사망 시 닫기·거래 금지");
                         Require(File.Exists(Path.Combine(Application.dataPath, "../Artifacts/shop-ui.png")), "화면 캡처 생성");
@@ -357,27 +383,42 @@ namespace Nomad.Shop.Editor
         {
             Canvas.ForceUpdateCanvases();
             RectTransform rect = (RectTransform)Node(path);
+            ScrollRect scroll = rect.GetComponentInParent<ScrollRect>();
+            if (scroll != null)
+            {
+                float top = -rect.anchoredPosition.y;
+                float offset = scroll.content.anchoredPosition.y;
+                if (top < offset || top + rect.rect.height > offset + scroll.viewport.rect.height)
+                    scroll.content.anchoredPosition = new Vector2(0, Mathf.Max(0,
+                        top < offset ? top : top + rect.rect.height - scroll.viewport.rect.height));
+                Canvas.ForceUpdateCanvases();
+            }
             Vector2 point = RectTransformUtility.WorldToScreenPoint(null, rect.TransformPoint(rect.rect.center));
             InputSystem.QueueStateEvent(mouse, new MouseState { position = point }.WithButton(MouseButton.Left, held));
         }
 
         private static void Queue(params Key[] keys) => InputSystem.QueueStateEvent(keyboard, new KeyboardState(keys));
 
-        private static void Capture(string filename)
+        private static void Capture(string filename) => CaptureView(filename, panel);
+
+        internal static void CaptureView(string filename, ShopPanel view = null)
         {
             string directory = Path.GetFullPath(Path.Combine(Application.dataPath, "../Artifacts"));
             Directory.CreateDirectory(directory);
             Camera camera = Camera.main;
-            Canvas canvas = panel.GetComponent<Canvas>();
+            Canvas canvas = view != null ? view.GetComponent<Canvas>() : null;
             var target = new RenderTexture(1440, 900, 24);
             var pixels = new Texture2D(1440, 900, TextureFormat.RGB24, false);
             RenderTexture previous = RenderTexture.active;
             try
             {
                 // 배치 모드는 Game View를 그리지 않으므로 같은 카메라와 UI를 명시적으로 렌더합니다.
-                canvas.renderMode = RenderMode.ScreenSpaceCamera;
-                canvas.worldCamera = camera;
-                canvas.planeDistance = 1;
+                if (canvas != null)
+                {
+                    canvas.renderMode = RenderMode.ScreenSpaceCamera;
+                    canvas.worldCamera = camera;
+                    canvas.planeDistance = 1;
+                }
                 camera.targetTexture = target;
                 Canvas.ForceUpdateCanvases();
                 camera.Render();
@@ -389,8 +430,11 @@ namespace Nomad.Shop.Editor
             finally
             {
                 camera.targetTexture = null;
-                canvas.worldCamera = null;
-                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                if (canvas != null)
+                {
+                    canvas.worldCamera = null;
+                    canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                }
                 RenderTexture.active = previous;
                 Object.DestroyImmediate(pixels);
                 Object.DestroyImmediate(target);

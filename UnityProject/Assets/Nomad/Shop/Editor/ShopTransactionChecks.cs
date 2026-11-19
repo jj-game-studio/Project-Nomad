@@ -60,6 +60,24 @@ namespace Nomad.Shop.Editor
         internal static int Run()
         {
             int checks = 0;
+            using (var f = new Fixture(gold: 12))
+            {
+                Require(f.Shop.BuyLimit(f.Inventory, 0) == 2 &&
+                    !f.Shop.CanBuy(f.Inventory, 0, 3, out string reason) && reason == "Not enough gold." &&
+                    f.Wallet.Gold == 12 && f.Shop.StockAt(0) == 30 && f.Inventory.UsedSlots == 0,
+                    "구매 한도·실패 사유 미리보기는 돈/재고/가방을 변경하지 않음");
+                checks++;
+            }
+            using (var f = new Fixture(gold: int.MaxValue, stock: int.MaxValue))
+            {
+                f.Inventory.Add("scrap", PlayerInventory.Capacity * 99 - 1);
+                Require(f.Shop.BuyLimit(f.Inventory, 0) == 1 &&
+                    !f.Shop.CanBuy(f.Inventory, 0, 2, out string reason) && reason == "Backpack is full.",
+                    "보유 재화가 충분해도 가방의 남은 중첩 공간으로 한도 제한");
+                Require(f.Shop.TryBuy(f.Inventory, 0, 1, out _) && f.Shop.BuyLimit(f.Inventory, 0) == 0,
+                    "마지막 공간 구매 후 구매 한도 0");
+                checks++;
+            }
             using (var f = new Fixture())
             {
                 int inventoryEvents = 0, walletEvents = 0, stockEvents = 0;
@@ -147,6 +165,14 @@ namespace Nomad.Shop.Editor
                 f.Inventory.Add("scrap", 1);
                 Require(!f.Shop.TrySell(f.Inventory, 0, 1, out _) && f.Wallet.Gold == 1000 &&
                     f.Inventory.GetSlot(0).Count == 1, "매입 불가 상품 판매 차단");
+                checks++;
+            }
+            using (var f = new Fixture(stock: 0))
+            {
+                Require(f.Shop.BuyLimit(f.Inventory, 0) == 0 && !f.Shop.CanBuy(f.Inventory, 0, 1, out _), "품절 한도 0");
+                f.Inventory.Add("scrap", 2);
+                Require(f.Shop.CanSell(f.Inventory, 0, 2, out _) && f.Shop.TrySell(f.Inventory, 0, 2, out _) &&
+                    f.Shop.BuyLimit(f.Inventory, 0) == 2, "판매한 재고를 즉시 다시 구매 가능");
                 checks++;
             }
 

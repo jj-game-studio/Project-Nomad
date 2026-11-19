@@ -15,6 +15,7 @@ namespace Nomad.Shop
         internal static readonly Color Forest = new Color(0.19f, 0.32f, 0.27f);
         internal static readonly Color Border = new Color(0.69f, 0.72f, 0.62f);
         internal const float CellSize = 96;
+        internal const float CellHeight = 76;
         private static Font bodyFont;
         private static Font titleFont;
 
@@ -122,12 +123,12 @@ namespace Nomad.Shop
 
         internal static RectTransform Grid(Transform parent, string name, float x)
         {
-            RectTransform viewport = Rect(parent, name, x, 166, 530, 430);
+            RectTransform viewport = Rect(parent, name, x, 206, 530, 350);
             Rounded(viewport, Slot, 16, 1, Border);
             viewport.gameObject.AddComponent<RectMask2D>();
-            RectTransform content = Rect(viewport, "Content", 8, 8, 514, 414);
+            RectTransform content = Rect(viewport, "Content", 8, 8, 514, 334);
             var layout = content.gameObject.AddComponent<GridLayoutGroup>();
-            layout.cellSize = Vector2.one * CellSize;
+            layout.cellSize = new Vector2(CellSize, CellHeight);
             layout.spacing = new Vector2(8, 8);
             layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
             layout.constraintCount = 5;

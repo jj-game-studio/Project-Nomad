@@ -12,6 +12,33 @@ StreamingAssets의 라이선스 파일은 플레이어 빌드에도 포함됩니
 
 ## 플레이
 
+### 마을 상점
+
+`Nomad > Shop > Open Village Shop`에서 `Village.unity`를 열고 Play합니다.
+남쪽 입구에서 광장으로 올라가면 남서쪽 시장 노점 앞에 `MARKET / [E] Trade` 표시가 있습니다.
+표시에서 2m 안으로 접근해 E로 거래합니다. 마을 Player에 실제 가방·지갑·상호작용이 연결되어 있으며
+시작 재화는 1,000 G, 가방은 비어 있습니다. 데모 아이템을 무료로 지급하지 않습니다.
+
+`Nomad > Shop > Place Shop In Village`는 기존 마을에 상점만 연결하며 반복해도 중복 생성하지 않습니다.
+`Nomad > Village > Create Village`로 마을 전체를 재생성할 때도 같은 상점 연결을 수행합니다.
+시장 노점 앞의 접근점·트리거만 추가하고 기존 마을 건물·길·계단은 유지합니다.
+
+### 거래 정보
+
+- 상점 상품은 All / Materials / Equipment / Supplies로 분류하며 빈 분류도 명확히 안내합니다.
+- 선택한 상품의 설명·단가·총액과 거래 가능 여부를 표시합니다. 품절 상품은 목록에 남겨 둡니다.
+- `Buy limit`는 소지금·재고·남은 가방 공간 중 가장 작은 수량을 선택합니다. 누르기만 해서는 구매하지 않습니다.
+- 기존 Max/Shift+클릭은 재고·보유 수량 전체 선택을 유지합니다. 돈·공간 부족 사유를 먼저 표시합니다.
+- 매입하지 않는 아이템은 `Not bought`로 표시하고 판매 버튼을 비활성화합니다.
+- 구매·판매 버튼의 상태와 실제 거래가 동일한 검사를 사용합니다.
+
+덕코프의 상인/자판기에서 상품을 확인하고 구매·판매하는 흐름을 참고했습니다.
+참고: [거래 화면 조작 사례](https://www.youtube.com/watch?v=sX1XS5NfSNA),
+[개발사 배포 페이지의 품절 상품 유지 변경 기록](https://apps.apple.com/vc/app/escape-from-duckov/id6743841750?mt=12).
+분류·구매 한도 선택은 이 프로젝트의 작은 상품 구성에 맞춘 구현이며 덕코프와 동일한 규칙을 뜻하지 않습니다.
+
+### 독립 테스트
+
 `Nomad > Shop > Open Shop Debug`에서 씬을 열고 Play를 누릅니다.
 씬 파일은 `Assets/Nomad/Shop/ShopDebug.unity`입니다. 시작 위치에서 상점과 거래할 수 있습니다.
 
@@ -50,7 +77,8 @@ StreamingAssets의 라이선스 파일은 플레이어 빌드에도 포함됩니
 - 탐지/가림 레이어는 기존 PlayerInteraction 설정과 Shopkeeper.obstacleLayers를 함께 맞춥니다.
 - 기본 아이템 정의와 인벤토리 API를 재사용합니다. 상점 가격은 아이템 공용 정의를 수정하지 않습니다.
 
-재화·재고는 현재 플레이 세션 동안 유지됩니다. 저장, 동적 시세, 마을 배치, 장비 착용은 포함하지 않습니다.
+재화·재고는 현재 플레이 세션 동안 유지됩니다. 저장, 동적 시세, 장비 착용은 포함하지 않습니다.
+현재 마을 씬을 다시 로드하면 지갑·재고는 초기화됩니다. #89의 영속 Player/지역 전환은 별도 작업입니다.
 가격·시작 재화는 테스트 값이며 최종 경제 규칙은 사람 검토 대상입니다.
 씬 재생성 메뉴는 `Nomad > Shop > Rebuild Shop Debug`이며 기존 카탈로그의 사용자 설정은 보존합니다.
 
@@ -66,3 +94,8 @@ Unity를 종료한 전용 checkout에서 아래 명령을 실행합니다. 검�
 재열기, 입력 차단, 거리 이탈·사망 시 닫기를 플레이 모드에서 확인합니다.
 로그의 `SHOP_PLAYMODE_PASS`가 통과 표식이고 `UnityProject/Artifacts/shop-ui.png`가 화면 캡처입니다.
 새 checkout에서 발생할 수 있는 Unity Search 시작 예외는 `SHOP_VERIFY_ENVIRONMENT`로 별도 보고하며 게임 검사와 구분합니다.
+
+마을 통합 검증은 위 명령의 진입점을 `Nomad.Shop.Editor.VillageShopVerification.Run`으로 바꿉니다.
+저장된 상점·재배치 멱등성, 입구에서 시장까지 충돌을 거친 도보 접근, E 열기·구매·판매·재열기,
+상점 비활성화 후 UI/입력 잠금 해제와 렌더를 확인합니다. 통과 표식은 `VILLAGE_SHOP_PLAYMODE_PASS`입니다.
+결과 이미지는 `village-shop-location.png`, `village-shop-ui.png`입니다.

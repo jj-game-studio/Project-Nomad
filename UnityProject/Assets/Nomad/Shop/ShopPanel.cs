@@ -29,12 +29,17 @@ namespace Nomad.Shop
         private SlotView[] merchantSlots;
         private Text gold;
         private Text detail;
+        private Text description;
+        private Text readiness;
         private Text status;
         private Text capacity;
         private InputField quantityInput;
         private Button less;
         private Button more;
         private Button maximum;
+        private Button affordable;
+        private Button[] filters;
+        private int categoryFilter = -1;
         private Button buy;
         private Button sell;
         private bool merchantSelected = true;
@@ -95,7 +100,7 @@ namespace Nomad.Shop
             ShopUi.Shadow(ShopUi.Rounded(panel, ShopUi.Cream, 26, 3, ShopUi.Forest), 8, 0.3f);
             ShopUi.Rounded(ShopUi.Rect(panel, "Header", 12, 12, 1136, 100), ShopUi.Forest, 20, 1, ShopUi.Border);
             ShopUi.Purse(panel, 32, 32);
-            ShopUi.Heading(panel, "Title", "TRADING POST", 106, 24, 570, 44, 36, ShopUi.Cream);
+            ShopUi.Heading(panel, "Title", shop.Catalog.MerchantName, 106, 24, 570, 44, 36, ShopUi.Cream);
             ShopUi.Label(panel, "Hint", "Good supplies. Better adventures.", 108, 72, 570, 22, 16, ShopUi.Cream);
             ShopUi.Rounded(ShopUi.Rect(panel, "Wallet badge", 812, 32, 190, 52), ShopUi.Cream, 18, 2, ShopUi.Gold);
             ShopUi.Heading(panel, "Wallet icon", "G", 826, 42, 30, 30, 24, ShopUi.GoldInk);
@@ -109,10 +114,22 @@ namespace Nomad.Shop
             Text stockHint = ShopUi.Label(panel, "Stock hint", "Price per item", 958, 128, 174, 24, 14, ShopUi.Muted);
             stockHint.alignment = TextAnchor.MiddleRight;
 
+            ShopUi.Label(panel, "Backpack hint", "Select an item to see its selling price.", 28, 166, 530, 30, 15, ShopUi.Muted);
+            string[] groups = { "All", "Materials", "Equipment", "Supplies" };
+            filters = new Button[groups.Length];
+            for (int index = 0; index < groups.Length; index++)
+            {
+                int captured = index - 1;
+                filters[index] = ShopUi.Button(panel, "Filter " + groups[index], groups[index],
+                    602 + index * 134, 166, 128, 30, () => Filter(captured));
+            }
+
             playerSlots = BuildSlots(ShopUi.Grid(panel, "Backpack", 28), PlayerInventory.Capacity, false);
             merchantSlots = BuildSlots(ShopUi.Grid(panel, "Stock", 602), shop.Catalog.Count, true);
-            ShopUi.Rounded(ShopUi.Rect(panel, "Trade tray", 20, 610, 1120, 148), new Color(0.92f, 0.90f, 0.82f), 18, 1, ShopUi.Border);
-            detail = ShopUi.Label(panel, "Selection", "", 48, 622, 1064, 32, 19, ShopUi.Ink);
+            ShopUi.Rounded(ShopUi.Rect(panel, "Trade tray", 20, 570, 1120, 188), new Color(0.92f, 0.90f, 0.82f), 18, 1, ShopUi.Border);
+            detail = ShopUi.Label(panel, "Selection", "", 48, 582, 1064, 32, 19, ShopUi.Ink);
+            description = ShopUi.Label(panel, "Description", "", 48, 616, 1064, 24, 15, ShopUi.Muted);
+            readiness = ShopUi.Label(panel, "Readiness", "", 48, 642, 1064, 22, 14, ShopUi.GoldInk);
             ShopUi.Label(panel, "Quantity Label", "Quantity", 48, 666, 80, 40, 16, ShopUi.Muted);
             less = ShopUi.Button(panel, "Less", "-", 145, 666, 40, 40, () => ChangeQuantity(-1));
             quantityInput = ShopUi.QuantityInput(panel, 193, 666);
@@ -120,6 +137,12 @@ namespace Nomad.Shop
             quantityInput.onEndEdit.AddListener(_ => CommitQuantity());
             more = ShopUi.Button(panel, "More", "+", 313, 666, 40, 40, () => ChangeQuantity(1));
             maximum = ShopUi.Button(panel, "Maximum", "Max", 365, 666, 80, 40, SelectAll);
+            affordable = ShopUi.Button(panel, "Affordable", "Buy limit", 457, 666, 172, 40, () =>
+            {
+                quantity = shop.BuyLimit(inventory, merchantIndex);
+                EventSystem.current?.SetSelectedGameObject(null);
+                Refresh();
+            });
             buy = ShopUi.Button(panel, "Buy", "Buy [B]", 654, 664, 210, 48, () => Trade(true));
             buy.targetGraphic.color = ShopUi.Forest;
             sell = ShopUi.Button(panel, "Sell", "Sell [V]", 886, 664, 226, 48, () => Trade(false));
@@ -135,11 +158,11 @@ namespace Nomad.Shop
             for (int index = 0; index < count; index++)
             {
                 int captured = index;
-                Button button = ShopUi.Button(parent, $"Slot {index}", "", 0, 0, ShopUi.CellSize, ShopUi.CellSize,
+                Button button = ShopUi.Button(parent, $"Slot {index}", "", 0, 0, ShopUi.CellSize, ShopUi.CellHeight,
                     () => Select(merchant, captured, Keyboard.current?.leftShiftKey.isPressed == true ||
                         Keyboard.current?.rightShiftKey.isPressed == true));
                 Destroy(button.transform.Find("Label").gameObject);
-                Image icon = ShopUi.Rect(button.transform, "Icon", 24, 7, 48, 44).gameObject.AddComponent<Image>();
+                Image icon = ShopUi.Rect(button.transform, "Icon", 30, 4, 36, 32).gameObject.AddComponent<Image>();
                 icon.preserveAspect = true;
                 icon.raycastTarget = false;
                 ShopRoundedRect badge = ShopUi.Rounded(ShopUi.Rect(button.transform, "Count badge", 54, 5, 36, 20),
@@ -148,9 +171,9 @@ namespace Nomad.Shop
                 result[index] = new SlotView
                 {
                     Button = button, Icon = icon,
-                    Name = ShopUi.Label(button.transform, "Name", "", 4, 52, 88, 20, 13),
+                    Name = ShopUi.Label(button.transform, "Name", "", 4, 38, 88, 18, 13),
                     Count = ShopUi.Label(button.transform, "Count", "", 54, 5, 36, 20, 11, ShopUi.Cream),
-                    Price = ShopUi.Label(button.transform, "Price", "", 4, 74, 88, 20, 13, ShopUi.GoldInk),
+                    Price = ShopUi.Label(button.transform, "Price", "", 4, 56, 88, 18, 13, ShopUi.GoldInk),
                     Frame = (ShopRoundedRect)button.targetGraphic,
                     CountBadge = badge
                 };
@@ -178,6 +201,9 @@ namespace Nomad.Shop
             less.interactable = quantity > 1;
             more.interactable = quantity < available;
             maximum.interactable = available > 0 && quantity != available;
+            affordable.interactable = merchantSelected && shop.BuyLimit(inventory, merchantIndex) > 0;
+            for (int index = 0; index < filters.Length; index++)
+                filters[index].interactable = categoryFilter != index - 1;
             gold.text = $"{wallet.Gold:N0} G";
             capacity.text = $"{inventory.UsedSlots} / {PlayerInventory.Capacity} slots";
             for (int index = 0; index < playerSlots.Length; index++)
@@ -191,6 +217,7 @@ namespace Nomad.Shop
             for (int index = 0; index < merchantSlots.Length; index++)
             {
                 ShopCatalog.Offer offer = shop.Catalog.GetOffer(index);
+                merchantSlots[index].Button.gameObject.SetActive(categoryFilter < 0 || (int)offer.Group == categoryFilter);
                 SetSlot(merchantSlots[index], offer.Item, shop.StockAt(index), offer.BuyPrice, true,
                     merchantSelected && merchantIndex == index);
             }
@@ -200,8 +227,11 @@ namespace Nomad.Shop
             int sellOffer = shop.FindOffer(owned.Item);
             int sellPrice = sellOffer >= 0 ? shop.Catalog.GetOffer(sellOffer).SellPrice : 0;
             long buyTotal = (long)selected.BuyPrice * quantity;
-            buy.interactable = merchantSelected && quantity > 0 && shop.StockAt(merchantIndex) >= quantity && wallet.Gold >= buyTotal;
-            sell.interactable = !merchantSelected && quantity > 0 && owned.Item != null && owned.Count >= quantity && sellPrice > 0;
+            bool visible = categoryFilter < 0 || (int)selected.Group == categoryFilter;
+            bool canBuy = shop.CanBuy(inventory, merchantIndex, quantity, out string buyReason);
+            bool canSell = shop.CanSell(inventory, playerIndex, quantity, out string sellReason);
+            buy.interactable = merchantSelected && visible && canBuy;
+            sell.interactable = !merchantSelected && canSell;
             buy.GetComponentInChildren<Text>().color = buy.interactable ? ShopUi.Cream : ShopUi.Muted;
             sell.GetComponentInChildren<Text>().color = sell.interactable ? ShopUi.Ink : ShopUi.Muted;
             detail.text = merchantSelected
@@ -209,6 +239,16 @@ namespace Nomad.Shop
                 : owned.Item == null ? "Select an item from your backpack."
                 : sellPrice == 0 ? $"{owned.Item.DisplayName}  /  This shop does not buy this item."
                 : $"SELL  {owned.Item.DisplayName}  /  {sellPrice:N0} G each  /  Total {(long)sellPrice * quantity:N0} G";
+            ShopCatalog.Offer shown = merchantSelected ? selected : sellOffer >= 0 ? shop.Catalog.GetOffer(sellOffer) : null;
+            description.text = shown == null ? "" : $"{shown.Group}  /  {shown.Description}";
+            readiness.text = merchantSelected
+                ? !visible ? "No goods in this category."
+                : shop.StockAt(merchantIndex) == 0 ? "Sold out."
+                : quantity == 0 ? "Enter a quantity to buy."
+                : $"{buyReason}  Buy limit: {shop.BuyLimit(inventory, merchantIndex):N0} (gold / space / stock)"
+                : owned.Item == null ? "Select an item to sell." : sellPrice == 0 ? "This merchant does not buy this item." : sellReason;
+            if (merchantSelected && !visible)
+                detail.text = description.text = "";
         }
 
         private static void SetSlot(SlotView view, ItemDefinition item, int count, int price, bool buying, bool selected)
@@ -219,12 +259,28 @@ namespace Nomad.Shop
             view.Name.color = item != null ? ShopUi.Ink : ShopUi.Muted;
             view.Count.text = item != null ? $"x{count}" : "";
             view.CountBadge.gameObject.SetActive(item != null);
-            view.Price.text = item == null ? "" : price > 0 ? $"{(buying ? "Buy" : "Sell")} {price:N0} G" : "Not bought";
+            view.Price.text = item == null ? "" : buying && count == 0 ? "Sold out" : price > 0 ? $"{(buying ? "Buy" : "Sell")} {price:N0} G" : "Not bought";
+            view.Icon.color = buying && count == 0 ? new Color(1, 1, 1, 0.35f) : Color.white;
             view.Frame.color = selected ? new Color(0.91f, 0.94f, 0.82f) : item != null ? ShopUi.Surface : new Color(0.92f, 0.90f, 0.83f);
             view.Frame.Style(12, selected ? 2.5f : 1.25f, selected ? ShopUi.Gold : ShopUi.Border);
         }
 
-        private int AvailableQuantity => merchantSelected ? shop.StockAt(merchantIndex) : inventory.GetSlot(playerIndex).Count;
+        private int AvailableQuantity => merchantSelected
+            ? categoryFilter < 0 || (int)shop.Catalog.GetOffer(merchantIndex).Group == categoryFilter ? shop.StockAt(merchantIndex) : 0
+            : inventory.GetSlot(playerIndex).Count;
+
+        private void Filter(int category)
+        {
+            categoryFilter = category;
+            int first = 0;
+            for (int index = 0; index < shop.Catalog.Count; index++)
+                if (category < 0 || (int)shop.Catalog.GetOffer(index).Group == category)
+                {
+                    first = index;
+                    break;
+                }
+            Select(true, first);
+        }
 
         private void Select(bool merchant, int index, bool all = false)
         {
@@ -289,6 +345,7 @@ namespace Nomad.Shop
         private void Trade(bool buying)
         {
             if (closed || shop == null || inventory == null || quantity <= 0 ||
+                (buying && categoryFilter >= 0 && (int)shop.Catalog.GetOffer(merchantIndex).Group != categoryFilter) ||
                 lastTradeFrame == Time.frameCount || merchantSelected != buying)
                 return;
 
@@ -341,8 +398,19 @@ namespace Nomad.Shop
             int delta = (keys.rightArrowKey.wasPressedThisFrame ? 1 : 0) - (keys.leftArrowKey.wasPressedThisFrame ? 1 : 0)
                 + (keys.downArrowKey.wasPressedThisFrame ? 5 : 0) - (keys.upArrowKey.wasPressedThisFrame ? 5 : 0);
             if (delta != 0)
-                Select(merchantSelected, Mathf.Clamp((merchantSelected ? merchantIndex : playerIndex) + delta,
-                    0, (merchantSelected ? merchantSlots.Length : playerSlots.Length) - 1));
+            {
+                if (merchantSelected)
+                {
+                    var visible = new System.Collections.Generic.List<int>();
+                    for (int index = 0; index < merchantSlots.Length; index++)
+                        if (merchantSlots[index].Button.gameObject.activeSelf)
+                            visible.Add(index);
+                    if (visible.Count > 0)
+                        Select(true, visible[Mathf.Clamp(visible.IndexOf(merchantIndex) + delta, 0, visible.Count - 1)]);
+                }
+                else
+                    Select(false, Mathf.Clamp(playerIndex + delta, 0, playerSlots.Length - 1));
+            }
             if (keys.equalsKey.wasPressedThisFrame || keys.numpadPlusKey.wasPressedThisFrame)
                 ChangeQuantity(1);
             if (keys.minusKey.wasPressedThisFrame || keys.numpadMinusKey.wasPressedThisFrame)
