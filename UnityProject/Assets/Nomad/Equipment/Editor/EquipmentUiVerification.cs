@@ -113,7 +113,14 @@ namespace Nomad.Equipment.Editor
                         source = Find("demo-armor");
                         Pointer(Bag(source));
                         break;
-                    case 6: Pointer(Bag(source), true); break;
+                    case 6:
+                        var tooltip = UnityEngine.Object.FindAnyObjectByType<InventoryPanel>().GetComponent<Canvas>()
+                            .transform.Find("InventoryTooltip");
+                        Check(tooltip != null && tooltip.gameObject.activeInHierarchy, "장비창과 가방 호버 툴팁 동시 표시");
+                        string body = tooltip.Find("Description").GetComponent<UnityEngine.UI.Text>().text;
+                        Check(body.Contains("방어력 20") && !body.Contains("공격력"), "실제 갑옷 CSV 방어력 표시");
+                        Pointer(Bag(source), true);
+                        break;
                     case 7:
                         Pointer(Gear(EquipmentSlot.Head), true);
                         stage = 70;

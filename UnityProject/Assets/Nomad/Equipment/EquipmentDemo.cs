@@ -21,6 +21,11 @@ namespace Nomad.Equipment
             foreach (ItemDefinition item in items)
                 if (item.ItemId != "demo-unarmed")
                     inventory.Add(item.ItemId, 1);
+
+            // 한 개를 장착한 뒤 남은 장비로 호버 비교를 바로 확인합니다.
+            inventory.Add("demo-armor", 1);
+            inventory.Add("demo-helmet", 1);
+
             Equip("demo-sword", EquipmentSlot.Weapon1);
             Equip("demo-bow", EquipmentSlot.Weapon2);
             InventoryPanel.GetOrCreate(inventory);

@@ -41,6 +41,12 @@ namespace Nomad.Equipment
         private bool equipmentDragging;
         private Mouse dragMouse;
         private bool wasOpen;
+        private bool pointerFocused = true;
+        private InventoryPanel inventoryView;
+        private RectTransform bagTooltip;
+        private RectTransform tooltipCanvas;
+        private InventoryTooltip hoverTooltip;
+        private readonly ItemDefinition[] comparisonItems = new ItemDefinition[2];
 
         public bool IsOpen => panel != null && panel.gameObject.activeInHierarchy;
         public RectTransform EquipmentGrid => equipmentGrid;
@@ -62,11 +68,16 @@ namespace Nomad.Equipment
             combat = GetComponent<PlayerEquipmentCombat>();
             visuals = GetComponent<EquipmentCombatVisuals>();
             var view = InventoryPanel.GetOrCreate(inventory);
+            inventoryView = view;
+            tooltipCanvas = (RectTransform)view.GetComponent<Canvas>().transform;
+            bagTooltip = (RectTransform)tooltipCanvas.Find("InventoryTooltip");
             panel = (RectTransform)view.transform.Find("InventoryPanel");
             bag = (RectTransform)panel.Find("Slots");
             inventoryDragPreview = (RectTransform)panel.Find("DragPreview");
             capacity = panel.Find("Capacity").GetComponent<UnityEngine.UI.Text>();
             font = Font.CreateDynamicFontFromOSFont(new[] { "Malgun Gothic", "Arial" }, 16);
+
+            hoverTooltip = new InventoryTooltip(tooltipCanvas, font, "EquipmentTooltip");
 
             panel.sizeDelta = new Vector2(484, 752);
             panel.anchoredPosition = Vector2.zero;
@@ -107,6 +118,7 @@ namespace Nomad.Equipment
 
         private void LateUpdate()
         {
+            HideTooltips();
             if (panel == null)
                 return;
 
@@ -139,7 +151,50 @@ namespace Nomad.Equipment
             // 장비 UI가 나중에 생성되어도 가방의 기존 드래그 아이템을 가리지 않습니다.
             if (inventoryDragPreview != null && inventoryDragPreview.gameObject.activeInHierarchy)
                 inventoryDragPreview.SetAsLastSibling();
+            UpdateTooltips();
         }
+
+        private void UpdateTooltips()
+        {
+            Mouse mouse = Mouse.current;
+            if (!IsOpen || !pointerFocused || inventoryView == null || !inventoryView.isActiveAndEnabled || mouse == null ||
+                mouse.leftButton.isPressed || mouse.rightButton.isPressed ||
+                inventoryDragPreview.gameObject.activeInHierarchy || equipmentDragging)
+                return;
+
+            Vector2 point = mouse.position.ReadValue();
+            int gearSlot = Find(equipmentGrid, point);
+            Canvas canvas = tooltipCanvas.GetComponent<Canvas>();
+            Camera camera = canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
+            if (gearSlot >= 0)
+            {
+                ItemDefinition item = equipment.GetItem((EquipmentSlot)gearSlot);
+                hoverTooltip.ShowCard(item, 1, point, camera, 320f, "장착 중 · " + Labels[gearSlot]);
+                return;
+            }
+
+            int index = Find(bag, point);
+            ItemDefinition candidate = index >= 0 ? inventory.GetSlot(index).Item : null;
+            // 기본 가방 표시 상태를 따라 드래그·포커스·상자 입력 차단을 유지합니다.
+            if (candidate == null || candidate.EquipmentType == EquipmentType.None || candidate.EquipmentType == EquipmentType.Weapon ||
+                bagTooltip == null || !bagTooltip.gameObject.activeInHierarchy)
+                return;
+
+            int count = 0;
+            for (int slot = 2; slot < PlayerEquipment.Capacity && count < comparisonItems.Length; slot++)
+            {
+                ItemDefinition equipped = equipment.GetItem((EquipmentSlot)slot);
+                if (equipped != null && equipped.EquipmentType == candidate.EquipmentType)
+                    comparisonItems[count++] = equipped;
+            }
+            if (count == 0) return;
+
+            // 별도 장착품 창 대신 한 툴팁의 능력치 옆에 증감만 표시합니다.
+            bagTooltip.gameObject.SetActive(false);
+            hoverTooltip.ShowCompared(candidate, point, camera, comparisonItems, count);
+        }
+
+        private void HideTooltips() => hoverTooltip?.Hide();
 
         public void FitToCanvas()
         {
@@ -397,17 +452,24 @@ namespace Nomad.Equipment
 
         private void OnDisable()
         {
+            HideTooltips();
             if (combat != null) combat.EquipmentUiOpen = false;
             CancelSelection();
         }
 
         private void OnApplicationFocus(bool focused)
         {
-            if (!focused) CancelSelection();
+            pointerFocused = focused;
+            if (!focused)
+            {
+                CancelSelection();
+                HideTooltips();
+            }
         }
 
         private void OnDestroy()
         {
+            hoverTooltip?.Dispose();
             if (toolbar != null) Destroy(toolbar.gameObject);
             if (font != null) Destroy(font);
         }
