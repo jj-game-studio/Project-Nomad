@@ -145,20 +145,24 @@ namespace Nomad.Inventory
                 height = Mathf.Max(height, cards[index].root.sizeDelta.y);
             }
 
-            // 비교 대상은 항상 오른쪽 순서를 유지하고, 묶음 전체를 화면 안으로 옮깁니다.
+            // 가방 아이템을 커서 가까이 두고 장착 비교창은 표시 방향의 바깥쪽으로 펼칩니다.
             Rect bounds = canvas.rect;
             float x = pointer.x + CursorGap;
-            if (x + width > bounds.xMax - Margin) x = pointer.x - CursorGap - width;
+            bool opensLeft = x + width > bounds.xMax - Margin;
+            if (opensLeft) x = pointer.x - CursorGap - width;
             x = Mathf.Clamp(x, bounds.xMin + Margin, bounds.xMax - Margin - width);
             float y = pointer.y - CursorGap;
             if (y - height < bounds.yMin + Margin) y = pointer.y + CursorGap + height;
             y = Mathf.Clamp(y, bounds.yMin + Margin + height, bounds.yMax - Margin);
 
+            float next = opensLeft ? x + width : x;
             for (int index = 0; index < count; index++)
             {
-                cards[index].root.localPosition = new Vector3(x, y, 0);
+                float cardWidth = cards[index].root.sizeDelta.x;
+                if (opensLeft) next -= cardWidth;
+                cards[index].root.localPosition = new Vector3(next, y, 0);
                 cards[index].root.SetAsLastSibling();
-                x += cards[index].root.sizeDelta.x + Margin;
+                next += opensLeft ? -Margin : cardWidth + Margin;
             }
         }
 

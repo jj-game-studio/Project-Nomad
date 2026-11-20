@@ -104,9 +104,11 @@ namespace Nomad.Equipment.Editor
                         Check(Card(0).gameObject.activeInHierarchy && Card(1).gameObject.activeInHierarchy,
                             "candidate and equipped comparison visible");
                         Check(Title(0).Contains("갑옷 A") && Title(1).Contains("장착 중 · 신체") && Title(1).Contains("갑옷 B"),
-                            "candidate left and equipped heading right");
+                            "candidate and equipped heading");
                         Check(Body(0).Contains("방어력 30") && Body(1).Contains("방어력 20"), "separate actual stats");
-                        Check(Card(1).position.x > Card(0).position.x, "equipped card is right of candidate");
+                        bool opensLeft = OpensLeft(2);
+                        Check((Card(1).position.x - Card(0).position.x) * (opensLeft ? -1 : 1) > 0,
+                            "equipped card extends away from cursor");
                         Check(!canvas.Find("InventoryTooltip").gameObject.activeSelf, "single bag tooltip replaced without overlap");
                         Set(equipped, "defense", 21);
                         break;
@@ -177,8 +179,10 @@ namespace Nomad.Equipment.Editor
                     case 15:
                         Check(Card(0).gameObject.activeSelf && Card(1).gameObject.activeSelf && Card(2).gameObject.activeSelf,
                             "two totems compare both equipped slots");
-                        Check(Title(1).Contains("토템 1") && Title(2).Contains("토템 2") && Card(2).position.x > Card(1).position.x,
-                            "totem slot order and rightward placement");
+                        Check(Title(1).Contains("토템 1") && Title(2).Contains("토템 2"), "totem slot order");
+                        bool totemsLeft = OpensLeft(3);
+                        Check((Card(2).position.x - Card(1).position.x) * (totemsLeft ? -1 : 1) > 0,
+                            "totems extend outward in display direction");
                         RenderGroups();
                         Keys(Key.Tab);
                         break;
@@ -267,6 +271,13 @@ namespace Nomad.Equipment.Editor
         private static void Pointer(Vector2 point, bool held = false) => InputSystem.QueueStateEvent(mouse,
             new MouseState { position = point }.WithButton(MouseButton.Left, held));
 
+        private static bool OpensLeft(int count)
+        {
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(canvas, Bag(19), null, out Vector2 pointer);
+            float width = Enumerable.Range(0, count).Sum(index => Card(index).sizeDelta.x) + 8 * (count - 1);
+            return pointer.x + 18 + width > canvas.rect.xMax - 8;
+        }
+
         private static void RenderGroups()
         {
             // 실제 호버에서 검사한 카드들을 표시 전용 복제본으로 렌더합니다.
@@ -301,6 +312,10 @@ namespace Nomad.Equipment.Editor
                 foreach (Vector2 point in new[] { Vector2.one * 2, new Vector2(size.x - 2, size.y - 2), new Vector2(size.x - 2, 2) })
                 {
                     type.GetMethod("ArrangeGroup").Invoke(null, new object[] { cards, count, point, camera });
+                    float direction = point.x > size.x / 2 ? -1 : 1;
+                    for (int index = 1; index < count; index++)
+                        Check((root.transform.GetChild(index).localPosition.x - root.transform.GetChild(index - 1).localPosition.x) * direction > 0,
+                            "comparison follows cursor side " + size + " at " + point);
                     foreach (Transform child in root.transform)
                     {
                         var corners = new Vector3[4];
