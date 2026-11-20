@@ -163,6 +163,7 @@ namespace Nomad.Inventory.Editor
                         break;
                     case 15:
                         Check(!Visible, "removed item hidden without pointer move");
+                        VerifyStats();
                         VerifyBounds();
                         RenderPreview();
                         Debug.Log($"INVENTORY_TOOLTIP_PASS checks={checks} frames={frame}");
@@ -186,6 +187,57 @@ namespace Nomad.Inventory.Editor
         private static bool Visible => tooltip.gameObject.activeInHierarchy;
         private static string Title => tooltip.Find("Title").GetComponent<UnityEngine.UI.Text>().text;
         private static string Body => tooltip.Find("Description").GetComponent<UnityEngine.UI.Text>().text;
+
+        private static void VerifyStats()
+        {
+            object presenter = typeof(InventoryPanel).GetField("tooltip", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(view);
+            Action show = () => presenter.GetType().GetMethod("Show").Invoke(presenter,
+                new object[] { item, 1, Slot(0), null });
+            var data = new SerializedObject(item);
+            data.FindProperty("equipmentType").enumValueIndex = (int)EquipmentType.Weapon;
+            data.FindProperty("attackPower").intValue = 25;
+            data.FindProperty("defense").intValue = 5;
+            data.ApplyModifiedPropertiesWithoutUndo();
+            show();
+            Check(Body.Contains("공격력 25") && Body.Contains("방어력 5") && Body.Contains(item.Description),
+                "weapon stats and description");
+
+            data.FindProperty("attackPower").intValue = 35;
+            data.FindProperty("defense").intValue = 10;
+            data.ApplyModifiedPropertiesWithoutUndo();
+            show();
+            Check(Body.Contains("공격력 35") && Body.Contains("방어력 10") && !Body.Contains("공격력 25"),
+                "stationary stat refresh on same item");
+
+            data.FindProperty("equipmentType").enumValueIndex = (int)EquipmentType.Body;
+            data.FindProperty("description").stringValue = string.Empty;
+            data.ApplyModifiedPropertiesWithoutUndo();
+            show();
+            Check(Body == "방어력 10", "armor defense without attack or blank description gap");
+
+            data.FindProperty("defense").intValue = 0;
+            data.ApplyModifiedPropertiesWithoutUndo();
+            show();
+            Check(Body == string.Empty && !tooltip.Find("Description").gameObject.activeSelf,
+                "zero stats hidden");
+
+            data.FindProperty("equipmentType").enumValueIndex = (int)EquipmentType.None;
+            data.FindProperty("attackPower").intValue = 99;
+            data.FindProperty("defense").intValue = 99;
+            data.FindProperty("description").stringValue = "Material description";
+            data.ApplyModifiedPropertiesWithoutUndo();
+            show();
+            Check(Body == "Material description", "non equipment hides unused stats");
+
+            // 원본 에셋 대신 복제본으로 능력치가 있는 긴 툴팁의 경계·렌더를 확인합니다.
+            data.FindProperty("equipmentType").enumValueIndex = (int)EquipmentType.Weapon;
+            data.FindProperty("attackPower").intValue = 25;
+            data.FindProperty("defense").intValue = 5;
+            data.FindProperty("displayName").stringValue = "검";
+            data.FindProperty("description").stringValue = "전방의 여러 대상을 타격하는 검";
+            data.ApplyModifiedPropertiesWithoutUndo();
+            show();
+        }
 
         private static void VerifyBounds()
         {

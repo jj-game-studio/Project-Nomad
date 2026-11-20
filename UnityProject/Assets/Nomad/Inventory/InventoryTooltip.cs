@@ -18,6 +18,9 @@ namespace Nomad.Inventory
         private float textScale;
         private string shownName;
         private string shownDescription;
+        private EquipmentType shownEquipmentType;
+        private int shownAttackPower;
+        private int shownDefense;
 
         public InventoryTooltip(RectTransform canvas, Font font)
         {
@@ -50,12 +53,17 @@ namespace Nomad.Inventory
 
             if (shownItem != item || shownCount != count || canvasSize != canvas.rect.size ||
                 shownName != item.DisplayName || shownDescription != item.Description ||
+                shownEquipmentType != item.EquipmentType || shownAttackPower != item.AttackPower ||
+                shownDefense != item.Defense ||
                 !Mathf.Approximately(textScale, title.pixelsPerUnit))
             {
                 shownItem = item;
                 shownCount = count;
                 shownName = item.DisplayName;
                 shownDescription = item.Description;
+                shownEquipmentType = item.EquipmentType;
+                shownAttackPower = item.AttackPower;
+                shownDefense = item.Defense;
                 canvasSize = canvas.rect.size;
                 textScale = title.pixelsPerUnit;
                 Layout(item, count);
@@ -83,7 +91,7 @@ namespace Nomad.Inventory
             float width = Mathf.Min(320f, Mathf.Max(1f, canvasSize.x - Margin * 2));
             float textWidth = Mathf.Max(1f, width - Padding * 2);
             title.text = count > 1 ? $"{item.DisplayName}  ×{count}" : item.DisplayName;
-            description.text = item.Description ?? string.Empty;
+            description.text = BuildDescription(item);
             title.rectTransform.sizeDelta = new Vector2(textWidth, 0);
             description.rectTransform.sizeDelta = new Vector2(textWidth, 0);
 
@@ -101,6 +109,25 @@ namespace Nomad.Inventory
             description.rectTransform.sizeDelta = new Vector2(textWidth,
                 Mathf.Max(0, height - Padding * 2 - titleHeight - gap));
             description.gameObject.SetActive(gap > 0);
+        }
+
+        private static string BuildDescription(ItemDefinition item)
+        {
+            string body = item.Description ?? string.Empty;
+            if (item.EquipmentType == EquipmentType.None)
+                return body;
+
+            string stats = string.Empty;
+            if (item.EquipmentType == EquipmentType.Weapon && item.AttackPower > 0)
+                stats = $"공격력 {item.AttackPower}";
+
+            if (item.Defense > 0)
+                stats += (stats.Length > 0 ? "\n" : string.Empty) + $"방어력 {item.Defense}";
+
+            if (stats.Length == 0)
+                return body;
+
+            return string.IsNullOrWhiteSpace(body) ? stats : body + "\n\n" + stats;
         }
 
         private UnityEngine.UI.Text CreateText(string name, Font font, int size, Color color)
