@@ -15,6 +15,7 @@ namespace Nomad.Inventory
         private ItemDefinition shownItem;
         private int shownCount;
         private Vector2 canvasSize;
+        private float textScale;
         private string shownName;
         private string shownDescription;
 
@@ -48,13 +49,15 @@ namespace Nomad.Inventory
             }
 
             if (shownItem != item || shownCount != count || canvasSize != canvas.rect.size ||
-                shownName != item.DisplayName || shownDescription != item.Description)
+                shownName != item.DisplayName || shownDescription != item.Description ||
+                !Mathf.Approximately(textScale, title.pixelsPerUnit))
             {
                 shownItem = item;
                 shownCount = count;
                 shownName = item.DisplayName;
                 shownDescription = item.Description;
                 canvasSize = canvas.rect.size;
+                textScale = title.pixelsPerUnit;
                 Layout(item, count);
             }
 
@@ -84,9 +87,10 @@ namespace Nomad.Inventory
             title.rectTransform.sizeDelta = new Vector2(textWidth, 0);
             description.rectTransform.sizeDelta = new Vector2(textWidth, 0);
 
-            float titleHeight = title.preferredHeight;
+            // Canvas 배율에서 소수점 반올림으로 마지막 줄이 잘리지 않게 여유를 둡니다.
+            float titleHeight = Mathf.Ceil(title.preferredHeight) + 2f;
             float gap = string.IsNullOrWhiteSpace(description.text) ? 0 : 8f;
-            float bodyHeight = gap > 0 ? description.preferredHeight : 0;
+            float bodyHeight = gap > 0 ? Mathf.Ceil(description.preferredHeight) + 2f : 0;
             float height = Mathf.Min(Padding * 2 + titleHeight + gap + bodyHeight,
                 Mathf.Max(1f, canvasSize.y - Margin * 2));
 
