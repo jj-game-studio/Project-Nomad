@@ -117,7 +117,7 @@ namespace Nomad.Equipment.Editor
                         Set(equipped, "defense", 30);
                         break;
                     case 3:
-                        Check(Stats.Contains("(0)") && !Stats.Contains("▲") && !Stats.Contains("▼"), "equal stat has zero and no arrow");
+                        Check(Stats.Contains("(-)") && !Stats.Contains("▲") && !Stats.Contains("▼"), "equal stat has dash and no arrow");
                         Set(candidate, "defense", 0);
                         break;
                     case 4:
@@ -146,7 +146,7 @@ namespace Nomad.Equipment.Editor
                         Pointer(Bag(19));
                         break;
                     case 9:
-                        Check(Card(0).gameObject.activeSelf && Stats.Contains("(0)"), "comparison restored");
+                        Check(Card(0).gameObject.activeSelf && Stats.Contains("(-)"), "comparison restored");
                         Pointer(Bag(19), true);
                         break;
                     case 10:
@@ -221,6 +221,9 @@ namespace Nomad.Equipment.Editor
             inventory = panel.GetComponent<PlayerInventory>();
             Check(Enumerable.Range(0, PlayerInventory.Capacity).Count(index => inventory.GetSlot(index).Item?.ItemId == "demo-armor") == 2, "demo starts with two armors for comparison");
             Check(Enumerable.Range(0, PlayerInventory.Capacity).Count(index => inventory.GetSlot(index).Item?.ItemId == "demo-helmet") == 2, "demo starts with two helmets for comparison");
+            foreach (var sample in new[] { ("demo-armor-light", 10), ("demo-armor-heavy", 30),
+                         ("demo-helmet-light", 5), ("demo-helmet-heavy", 15) })
+                Check(inventory.GetSlot(Find(sample.Item1)).Item.Defense == sample.Item2, "different defense sample " + sample.Item1);
             bagView = UnityEngine.Object.FindAnyObjectByType<InventoryPanel>();
             canvas = (RectTransform)bagView.GetComponent<Canvas>().transform;
             equipped = UnityEngine.Object.Instantiate(inventory.GetSlot(Find("demo-armor")).Item);

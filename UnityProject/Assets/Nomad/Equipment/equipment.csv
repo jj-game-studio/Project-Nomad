@@ -9,3 +9,7 @@ demo-charm,장신구,검증용 장신구,1,Accessory,0,5,None,0,0
 demo-ring,반지,검증용 반지,1,Ring,0,5,None,0,0
 demo-bag,가방,용량 확장 효과는 없는 검증용 장비,1,Bag,0,5,None,0,0
 demo-totem,토템,검증용 토템,1,Totem,0,5,None,0,0
+demo-armor-light,낡은 갑옷,감소 표시 비교용 방어력10 갑옷,1,Body,0,10,None,0,0
+demo-armor-heavy,튼튼한 갑옷,증가 표시 비교용 방어력30 갑옷,1,Body,0,30,None,0,0
+demo-helmet-light,낡은 투구,감소 표시 비교용 방어력5 투구,1,Head,0,5,None,0,0
+demo-helmet-heavy,튼튼한 투구,증가 표시 비교용 방어력15 투구,1,Head,0,15,None,0,0

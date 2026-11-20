@@ -86,7 +86,7 @@ namespace Nomad.Inventory
             long difference = (long)value - current;
             if (difference > 0) return $"<color=#80D99A>▲{difference}</color>";
             if (difference < 0) return $"<color=#F08383>▼{-difference}</color>";
-            return "0";
+            return "-";
         }
 
         private void Present(ItemDefinition item, int count, Vector2 screenPosition, Camera eventCamera,
