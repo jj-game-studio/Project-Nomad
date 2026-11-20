@@ -22,6 +22,13 @@ namespace Nomad.Equipment
         private RectTransform equipmentGrid;
         private RectTransform toolbar;
         private RectTransform inventoryDragPreview;
+        private RectTransform equipmentDragPreview;
+        private RectTransform bagDropPreview;
+        private UnityEngine.UI.Text equipmentDragName;
+        private UnityEngine.UI.Text bagDropName;
+        private UnityEngine.UI.Image equipmentDragIcon;
+        private UnityEngine.UI.Image bagDropIcon;
+        private UnityEngine.UI.Image bagDropBackground;
         private UnityEngine.UI.Text capacity;
         private UnityEngine.UI.Text notice;
         private UnityEngine.UI.Text rangeLabel;
@@ -29,6 +36,9 @@ namespace Nomad.Equipment
         private int selected = -1;
         private ItemDefinition selectedItem;
         private int dragEquipment = -1;
+        private ItemDefinition draggedEquipmentItem;
+        private Vector2 equipmentPressPosition;
+        private bool equipmentDragging;
         private Mouse dragMouse;
         private bool wasOpen;
 
@@ -40,6 +50,10 @@ namespace Nomad.Equipment
         public int PreviewSlot { get; private set; } = -1;
         public bool CanDrop { get; private set; }
         public RectTransform DragPreview => inventoryDragPreview;
+        public RectTransform EquipmentDragPreview => equipmentDragPreview;
+        public RectTransform BagDropPreview => bagDropPreview;
+        public int BagPreviewSlot { get; private set; } = -1;
+        public bool CanDropToBag { get; private set; }
 
         private void Start()
         {
@@ -84,6 +98,9 @@ namespace Nomad.Equipment
             background.color = new Color32(16, 29, 43, 240);
             rangeLabel = Text("RangeToggle", toolbar, "", new Vector2(310, 32), new Vector2(165, -21), 16);
             rangeLabel.rectTransform.anchorMin = rangeLabel.rectTransform.anchorMax = new Vector2(0, 1);
+            equipmentDragPreview = CreatePreview("EquipmentDragPreview", out equipmentDragName, out equipmentDragIcon);
+            bagDropPreview = CreatePreview("BagDropPreview", out bagDropName, out bagDropIcon);
+            bagDropBackground = bagDropPreview.GetComponent<UnityEngine.UI.Image>();
             Refresh();
             FitToCanvas();
         }
@@ -113,9 +130,12 @@ namespace Nomad.Equipment
 
             if (selected >= 0 && inventory.GetSlot(selected).Item != selectedItem)
                 CancelSelection();
+            if (dragEquipment >= 0 && equipment.GetItem((EquipmentSlot)dragEquipment) != draggedEquipmentItem)
+                CancelSelection();
             if (mouse != null) ProcessPointer(mouse);
             Refresh();
             UpdateDropPreview(mouse);
+            UpdateEquipmentDrag(mouse);
             // 장비 UI가 나중에 생성되어도 가방의 기존 드래그 아이템을 가리지 않습니다.
             if (inventoryDragPreview != null && inventoryDragPreview.gameObject.activeInHierarchy)
                 inventoryDragPreview.SetAsLastSibling();
@@ -153,7 +173,23 @@ namespace Nomad.Equipment
                     if (selectedItem != null) notice.text = $"선택: {selectedItem.DisplayName}\n장비칸에 드래그하거나 장비칸을 클릭하세요.";
                 }
                 else if (gearSlot >= 0)
+                {
+                    // 클릭 장착 선택은 유지하되, 실제 이동이 시작되면 장비 해제 드래그로 전환합니다.
+                    dragMouse = mouse;
                     dragEquipment = gearSlot;
+                    draggedEquipmentItem = equipment.GetItem((EquipmentSlot)gearSlot);
+                    equipmentPressPosition = point;
+                    equipmentDragging = false;
+                }
+            }
+
+            if (dragEquipment >= 0 && draggedEquipmentItem != null &&
+                (point - equipmentPressPosition).sqrMagnitude >= 25f)
+            {
+                if (!equipmentDragging) notice.text = $"해제: {draggedEquipmentItem.DisplayName}\n가방으로 드래그하세요. 호환 장비 칸은 교체합니다.";
+                equipmentDragging = true;
+                selected = -1;
+                selectedItem = null;
             }
 
             if (!mouse.leftButton.wasReleasedThisFrame)
@@ -163,7 +199,7 @@ namespace Nomad.Equipment
                 notice.text = equipment.TryEquip(selected, (EquipmentSlot)gearSlot) ? "장착했습니다." : "이 칸에 장착할 수 없는 아이템입니다.";
                 CancelSelection();
             }
-            else if (bagSlot >= 0 && dragEquipment >= 0)
+            else if (bagSlot >= 0 && dragEquipment >= 0 && equipmentDragging)
             {
                 bool changed = inventory.GetSlot(bagSlot).Item == null
                     ? equipment.TryUnequip((EquipmentSlot)dragEquipment, bagSlot)
@@ -173,11 +209,76 @@ namespace Nomad.Equipment
             }
             else if (gearSlot >= 0 && dragEquipment == gearSlot)
             {
-                if (gearSlot <= 1) equipment.SelectWeapon((EquipmentSlot)gearSlot);
-                dragEquipment = -1;
-            }
-            else if (bagSlot < 0 && gearSlot < 0)
+                if (!equipmentDragging && gearSlot <= 1) equipment.SelectWeapon((EquipmentSlot)gearSlot);
                 CancelSelection();
+            }
+            else if (dragEquipment >= 0 || (bagSlot < 0 && gearSlot < 0))
+                CancelSelection();
+        }
+
+        private void UpdateEquipmentDrag(Mouse mouse)
+        {
+            BagPreviewSlot = -1;
+            CanDropToBag = false;
+            bagDropPreview.gameObject.SetActive(false);
+            if (mouse == null || !mouse.leftButton.isPressed || dragEquipment < 0 || draggedEquipmentItem == null)
+                return;
+
+            Vector2 point = mouse.position.ReadValue();
+            if (!equipmentDragging) return;
+
+            equipmentDragPreview.gameObject.SetActive(true);
+            BindPreview(equipmentDragName, equipmentDragIcon, draggedEquipmentItem);
+            PositionPreview(equipmentDragPreview, point);
+            names[dragEquipment].color = new Color(1, 1, 1, 0.4f);
+            icons[dragEquipment].color = new Color(1, 1, 1, 0.4f);
+
+            int target = Find(bag, point);
+            if (target >= 0)
+            {
+                BagPreviewSlot = target;
+                PlayerInventory.ItemStack destination = inventory.GetSlot(target);
+                CanDropToBag = equipment.isActiveAndEnabled && (destination.Item == null ||
+                    (destination.Count == 1 && destination.Item.MaxStack == 1 &&
+                     PlayerEquipment.Fits(destination.Item.EquipmentType, (EquipmentSlot)dragEquipment)));
+                var targetRect = (RectTransform)bag.GetChild(target);
+                bagDropPreview.sizeDelta = targetRect.rect.size - Vector2.one * 4;
+                bagDropPreview.position = targetRect.TransformPoint(targetRect.rect.center);
+                bagDropBackground.color = CanDropToBag ? new Color(0.18f, 0.49f, 0.38f, 0.82f) : new Color(0.59f, 0.2f, 0.23f, 0.82f);
+                BindPreview(bagDropName, bagDropIcon, CanDropToBag ? draggedEquipmentItem : null);
+                bagDropPreview.gameObject.SetActive(true);
+                bagDropPreview.SetAsLastSibling();
+            }
+            equipmentDragPreview.SetAsLastSibling();
+        }
+
+        private RectTransform CreatePreview(string name, out UnityEngine.UI.Text label, out UnityEngine.UI.Image icon)
+        {
+            RectTransform rect = Rect(name, panel, new Vector2(80, 80), Vector2.zero);
+            rect.gameObject.AddComponent<UnityEngine.UI.Image>().color = new Color32(56, 65, 71, 230);
+            var group = rect.gameObject.AddComponent<CanvasGroup>();
+            group.alpha = 0.8f;
+            group.blocksRaycasts = false;
+            var iconRect = Rect("Icon", rect, new Vector2(54, 54), new Vector2(0, -40));
+            icon = iconRect.gameObject.AddComponent<UnityEngine.UI.Image>();
+            icon.preserveAspect = true;
+            icon.raycastTarget = false;
+            label = Text("ItemName", rect, "", new Vector2(76, 44), new Vector2(0, -40), 13);
+            rect.gameObject.SetActive(false);
+            return rect;
+        }
+
+        private static void BindPreview(UnityEngine.UI.Text label, UnityEngine.UI.Image icon, ItemDefinition item)
+        {
+            icon.sprite = item?.Icon;
+            icon.enabled = item?.Icon != null;
+            label.text = item != null && item.Icon == null ? item.DisplayName : string.Empty;
+        }
+
+        private void PositionPreview(RectTransform preview, Vector2 point)
+        {
+            if (RectTransformUtility.ScreenPointToWorldPointInRectangle(panel, point, null, out Vector3 world))
+                preview.position = world;
         }
 
         private void Refresh()
@@ -279,10 +380,16 @@ namespace Nomad.Equipment
 
         private void CancelSelection()
         {
-            bool restore = PreviewSlot >= 0;
+            bool restore = PreviewSlot >= 0 || dragEquipment >= 0;
             selected = -1;
             selectedItem = null;
             dragEquipment = -1;
+            draggedEquipmentItem = null;
+            equipmentDragging = false;
+            BagPreviewSlot = -1;
+            CanDropToBag = false;
+            if (equipmentDragPreview != null) equipmentDragPreview.gameObject.SetActive(false);
+            if (bagDropPreview != null) bagDropPreview.gameObject.SetActive(false);
             PreviewSlot = -1;
             CanDrop = false;
             if (restore && equipmentGrid != null) Refresh();

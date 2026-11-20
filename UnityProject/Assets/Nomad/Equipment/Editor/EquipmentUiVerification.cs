@@ -28,6 +28,7 @@ namespace Nomad.Equipment.Editor
 
         public static void Run()
         {
+            SessionState.SetBool(SessionKey + ".CaptureUnequip", false);
             SessionState.SetBool(SessionKey + ".CaptureDrag", false);
             EquipmentAuthoring.Create();
             Begin();
@@ -35,6 +36,7 @@ namespace Nomad.Equipment.Editor
 
         public static void RunExisting()
         {
+            SessionState.SetBool(SessionKey + ".CaptureUnequip", false);
             SessionState.SetBool(SessionKey + ".CaptureDrag", false);
             UnityEditor.SceneManagement.EditorSceneManager.OpenScene(EquipmentAuthoring.ScenePath);
             Begin();
@@ -42,7 +44,16 @@ namespace Nomad.Equipment.Editor
 
         public static void RunDragCapture()
         {
+            SessionState.SetBool(SessionKey + ".CaptureUnequip", false);
             SessionState.SetBool(SessionKey + ".CaptureDrag", true);
+            UnityEditor.SceneManagement.EditorSceneManager.OpenScene(EquipmentAuthoring.ScenePath);
+            Begin();
+        }
+
+        public static void RunUnequipCapture()
+        {
+            SessionState.SetBool(SessionKey + ".CaptureUnequip", true);
+            SessionState.SetBool(SessionKey + ".CaptureDrag", false);
             UnityEditor.SceneManagement.EditorSceneManager.OpenScene(EquipmentAuthoring.ScenePath);
             Begin();
         }
@@ -154,15 +165,83 @@ namespace Nomad.Equipment.Editor
                     case 8: Pointer(Gear(EquipmentSlot.Body)); break;
                     case 9:
                         Check(equipment.GetItem(EquipmentSlot.Body)?.ItemId == "demo-armor", "가방→장비 드래그");
+                        Pointer(Bag(Find("demo-helmet")), true);
+                        stage = 88;
+                        break;
+                    case 88:
+                        Pointer(Bag(Find("demo-helmet")));
+                        stage = 89;
+                        break;
+                    case 89:
                         Pointer(Gear(EquipmentSlot.Body), true);
+                        stage = 10;
                         break;
                     case 10: Pointer(Bag(source), true); break;
-                    case 11: Pointer(Bag(source)); break;
+                    case 11:
+                        Check(panel.EquipmentDragPreview.gameObject.activeInHierarchy && panel.EquipmentDragPreview.GetSiblingIndex() ==
+                            panel.EquipmentDragPreview.parent.childCount - 1, "해제 드래그 아이템 최상단");
+                        Check(panel.BagPreviewSlot == source && panel.CanDropToBag && panel.BagDropPreview.gameObject.activeInHierarchy &&
+                            panel.BagDropPreview.Find("ItemName").GetComponent<UnityEngine.UI.Text>().text == "갑옷", "빈 가방 도착 칸 반투명 미리보기");
+                        Check(equipment.GetItem(EquipmentSlot.Body)?.ItemId == "demo-armor" && inventory.GetSlot(source).Item == null,
+                            "해제 미리보기 소유 무변경/이전 가방 선택과 분리");
+                        if (SessionState.GetBool(SessionKey + ".CaptureUnequip", false))
+                        {
+                            CaptureDragSnapshot(true);
+                            Debug.Log("EQUIPMENT_UNEQUIP_RENDER_PASS: frontmost gear drag, bag destination preview, 3 renders");
+                            Finish(0);
+                            return;
+                        }
+                        Pointer(Bag(Find("demo-helmet")), true);
+                        stage = 80;
+                        break;
+                    case 80:
+                        Check(panel.BagPreviewSlot == Find("demo-helmet") && !panel.CanDropToBag, "불가 가방 교체 빨간 표시");
+                        Pointer(Bag(Find("demo-helmet")));
+                        break;
+                    case 81:
+                        Check(equipment.GetItem(EquipmentSlot.Body)?.ItemId == "demo-armor" && Find("demo-helmet") >= 0 &&
+                            !panel.EquipmentDragPreview.gameObject.activeSelf, "불가 드롭 무변경/드래그 정리");
+                        Pointer(Gear(EquipmentSlot.Body), true);
+                        break;
+                    case 82: Pointer(Bag(source), true); break;
+                    case 83:
+                        Check(panel.CanDropToBag, "해제 드래그 재시도");
+                        Keys(UnityEngine.InputSystem.Key.Escape);
+                        break;
+                    case 84:
+                        Check(!panel.EquipmentDragPreview.gameObject.activeSelf && !panel.BagDropPreview.gameObject.activeSelf &&
+                            equipment.GetItem(EquipmentSlot.Body)?.ItemId == "demo-armor" && inventory.GetSlot(source).Item == null,
+                            "해제 Escape 취소/양쪽 소유 유지");
+                        Keys();
+                        Pointer(Gear(EquipmentSlot.Body));
+                        break;
+                    case 85: Pointer(Gear(EquipmentSlot.Body), true); break;
+                    case 86:
+                        Pointer(Bag(source));
+                        stage = 12;
+                        break;
                     case 12:
                         Check(equipment.GetItem(EquipmentSlot.Body) == null && inventory.GetSlot(source).Item?.ItemId == "demo-armor",
-                            "장비→지정 가방칸 드래그");
+                            "장비→지정 가방칸 빠른 드래그 드롭 실제 해제");
+                        Check(!panel.EquipmentDragPreview.gameObject.activeSelf && panel.BagPreviewSlot == -1, "해제 성공 표시 정리");
+                        inventory.Add("demo-sword", 1);
+                        source = Find("demo-sword");
+                        Pointer(Gear(EquipmentSlot.Weapon2), true);
+                        stage = 90;
+                        break;
+                    case 90: Pointer(Bag(source), true); break;
+                    case 91:
+                        Check(panel.CanDropToBag && equipment.GetItem(EquipmentSlot.Weapon2)?.ItemId == "demo-bow" &&
+                            inventory.GetSlot(source).Item?.ItemId == "demo-sword", "호환 가방 교체 미리보기/소유 유지");
+                        Pointer(Bag(source));
+                        break;
+                    case 92:
+                        Check(equipment.GetItem(EquipmentSlot.Weapon2)?.ItemId == "demo-sword" && inventory.GetSlot(source).Item?.ItemId == "demo-bow",
+                            "장비→호환 가방 아이템 실제 교체");
+                        Check(equipment.TryEquip(source, EquipmentSlot.Weapon2) && inventory.Remove("demo-sword", 1) == 1, "교체 소유 보존/검사 상태 복원");
                         Keys(UnityEngine.InputSystem.Key.Tab);
                         Pointer(Point(new Vector3(0, 1, 1.5f)));
+                        stage = 13;
                         break;
                     case 13:
                         Check(!panel.IsOpen, "Tab 함께 닫힘");
@@ -300,7 +379,7 @@ namespace Nomad.Equipment.Editor
             }
         }
 
-        private static void CaptureDragSnapshot()
+        private static void CaptureDragSnapshot(bool unequip = false)
         {
             // RenderTexture 전환이 GameView 입력을 리셋하므로, 검사된 실제 UI의 그리기 상태만 복제합니다.
             // 복제본에는 InventoryPanel 스크립트가 없어 렌더 중 드래그 취소가 발생하지 않습니다.
@@ -315,7 +394,7 @@ namespace Nomad.Equipment.Editor
             scaler.screenMatchMode = sourceScaler.screenMatchMode;
             scaler.matchWidthOrHeight = sourceScaler.matchWidthOrHeight;
             var clone = UnityEngine.Object.Instantiate(root, snapshot.transform, false);
-            var preview = clone.Find("DragPreview");
+            var preview = clone.Find(unequip ? "EquipmentDragPreview" : "DragPreview");
             Check(preview.gameObject.activeSelf && preview.GetSiblingIndex() == clone.childCount - 1,
                 "실제 드래그 그리기 순서 스냅샷 유지");
 
@@ -347,7 +426,8 @@ namespace Nomad.Equipment.Editor
                         RenderTexture.active = texture;
                         pixels.ReadPixels(new Rect(0, 0, size.x, size.y), 0, 0);
                         pixels.Apply();
-                        File.WriteAllBytes($"Artifacts/equipment/equipment-drag-{size.x}.png", pixels.EncodeToPNG());
+                        string kind = unequip ? "unequip-drag" : "drag";
+                        File.WriteAllBytes($"Artifacts/equipment/equipment-{kind}-{size.x}.png", pixels.EncodeToPNG());
                     }
                     finally
                     {
