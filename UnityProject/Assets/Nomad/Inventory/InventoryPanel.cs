@@ -23,6 +23,8 @@ namespace Nomad.Inventory
 
         private readonly SlotView[] slots = new SlotView[PlayerInventory.Capacity];
         private Canvas canvas;
+        private InventoryTooltip tooltip;
+        private bool pointerFocused = true;
         private SlotView dragPreview;
         private Mouse dragMouse;
         private Vector2 pressPosition;
@@ -71,6 +73,7 @@ namespace Nomad.Inventory
         {
             canvas = grid.GetComponentInParent<Canvas>(true);
             backpackPosition = ((RectTransform)panel.transform).anchoredPosition;
+            tooltip = new InventoryTooltip((RectTransform)canvas.transform, capacity.font);
             for (int index = 0; index < slots.Length; index++)
             {
                 GameObject slot = Instantiate(slotTemplate, grid);
@@ -108,12 +111,16 @@ namespace Nomad.Inventory
                     inventory.Panel = null;
             }
 
+            tooltip?.Hide();
             CloseChest();
             CancelDrag();
         }
 
         private void OnApplicationFocus(bool hasFocus)
         {
+            pointerFocused = hasFocus;
+            if (!hasFocus)
+                tooltip?.Hide();
             if (!hasFocus)
                 CancelDrag();
         }
@@ -145,6 +152,21 @@ namespace Nomad.Inventory
 
             if (panel.activeSelf && lootDragSource < 0)
                 ProcessPointer();
+        }
+
+        private void LateUpdate()
+        {
+            Mouse mouse = Mouse.current;
+            if (inventory == null || !panel.activeInHierarchy || !pointerFocused || mouse == null ||
+                mouse.leftButton.isPressed || dragSource >= 0 || quickDragSource >= 0 || lootDragSource >= 0)
+            {
+                tooltip.Hide();
+                return;
+            }
+
+            int index = FindPointerSlot(mouse);
+            PlayerInventory.ItemStack stack = index >= 0 ? inventory.GetSlot(index) : default;
+            tooltip.Show(stack.Item, stack.Count, mouse.position.ReadValue(), EventCamera);
         }
 
         internal void ShowChest(LootChest chest, PlayerInteraction interaction)
