@@ -77,7 +77,10 @@ namespace Nomad.Player
                 Axis(keyboard.wKey.isPressed, keyboard.sKey.isPressed));
             Vector3 direction = CameraRelativeDirection(input);
 
-            if (controller.isGrounded && !IsRolling)
+            if (inventory != null && inventory.BlocksTradeInput)
+                direction = Vector3.zero;
+
+            if (controller.isGrounded && !IsRolling && inventory?.BlocksTradeInput != true)
             {
                 if (cooldownTime <= 0f && keyboard?.leftShiftKey.wasPressedThisFrame == true &&
                     inventory?.Panel?.HasOpenChest != true)

@@ -23,6 +23,7 @@ namespace Nomad.Player
         private readonly List<RaycastResult> uiHits = new List<RaycastResult>();
         private PlayerMovement movement;
         private Health health;
+        private Nomad.Inventory.PlayerInventory inventory;
 
         public Vector3? AimPoint { get; private set; }
 
@@ -30,6 +31,7 @@ namespace Nomad.Player
         {
             movement = GetComponent<PlayerMovement>();
             health = GetComponent<Health>();
+            TryGetComponent(out inventory);
         }
 
         private void LateUpdate()
@@ -43,6 +45,7 @@ namespace Nomad.Player
         {
             AimPoint = null;
             if (!isActiveAndEnabled || Time.timeScale <= 0f || health.IsDead || movement.BlocksAttack ||
+                inventory?.BlocksTradeInput == true ||
                 viewCamera == null || muzzle == null || !viewCamera.pixelRect.Contains(pointer) || IsOverUi(pointer))
                 return false;
 

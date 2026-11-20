@@ -30,6 +30,9 @@ namespace Nomad.Interaction
 
         private void LateUpdate()
         {
+            if (inventory != null && inventory.BlocksTradeInput)
+                return;
+
             if (inventory != null && inventory.Panel != null && inventory.Panel.HasOpenChest)
             {
                 if (Keyboard.current?.eKey.wasPressedThisFrame == true ||

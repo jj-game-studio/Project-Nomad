@@ -32,6 +32,7 @@ namespace Nomad.Village.Editor
             CreateNature(root);
 
             CreatePlayer(new Vector3(0f, 0.1f, -14f));
+            Nomad.Shop.Editor.VillageShopAuthoring.ApplyToScene(scene);
 
             Light sun = new GameObject("Sun").AddComponent<Light>();
             sun.type = LightType.Directional;
