@@ -213,6 +213,8 @@ namespace Nomad.Equipment.Editor
             panel = UnityEngine.Object.FindAnyObjectByType<EquipmentPanel>();
             equipment = panel.GetComponent<PlayerEquipment>();
             inventory = panel.GetComponent<PlayerInventory>();
+            Check(Enumerable.Range(0, PlayerInventory.Capacity).Count(index => inventory.GetSlot(index).Item?.ItemId == "demo-armor") == 2, "demo starts with two armors for comparison");
+            Check(Enumerable.Range(0, PlayerInventory.Capacity).Count(index => inventory.GetSlot(index).Item?.ItemId == "demo-helmet") == 2, "demo starts with two helmets for comparison");
             bagView = UnityEngine.Object.FindAnyObjectByType<InventoryPanel>();
             canvas = (RectTransform)bagView.GetComponent<Canvas>().transform;
             equipped = UnityEngine.Object.Instantiate(inventory.GetSlot(Find("demo-armor")).Item);
