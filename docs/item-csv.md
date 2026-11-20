@@ -20,8 +20,14 @@ UTF-8 BOM과 CRLF/LF를 지원합니다. 빈 레코드와 추가 열은 오류�
 기존 아이템 중첩 수를 줄이면 기존 테스트/보관 데이터와 호환되는지 먼저 확인하세요.
 
 아이콘·프리팹은 Unity 에셋 참조로 관리하고 CSV에는 넣지 않습니다.
-장비 10칸(무기2·머리·신체·얼굴·장신구·반지·가방·토템2)은 #96의 후속 작업입니다.
-분류·장착 부위·능력치 CSV 열, 장착·전투 연결, 장비 UI·툴팁은 이번 도구에 포함하지 않습니다.
+장비 데이터는 기본4열 뒤에 equipment_type,attack_power,defense,attack_mode,attack_range,attack_interval을 붙인 10열 형식으로 가져옵니다.
+equipment_type: None, Weapon, Head, Body, Face, Accessory, Ring, Bag, Totem.
+attack_mode: None, Ranged, Melee. 대소문자까지 일치해야 합니다.
+장비는 max_stack=1이며 무기는 공격력·사거리·공격 간격이 양수이고 방어력은0입니다.
+무기가 아닌 행은 공격력0/None/사거리0/간격0을 사용합니다. 일반 아이템(None)은 방어력도0입니다.
+방어력은 0 이상의 정수이며 각 장비 방어력 합계를 일반 피해에서 고정 수치로 차감합니다. 최소 피해는1입니다.
+기본4열 CSV로 갱신할 때 기존 장비 분류·수치는 보존합니다. 장비 중첩 수를1 이외로 바꾸면 거절합니다.
+샘플과 실제 장착·공격 연결은 [장비 안내](equipment.md)를 참고하세요. 장비 UI·툴팁은 별도 후속입니다.
 
 검증 진입점: Nomad.Inventory.Editor.ItemCsvVerification.Run (Unity batchmode).
 기존 회귀: Nomad.Inventory.Editor.InventoryVerification.Run.
