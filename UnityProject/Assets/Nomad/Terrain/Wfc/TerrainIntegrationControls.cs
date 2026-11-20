@@ -69,6 +69,7 @@ namespace Nomad.Terrain
         {
             player.SetActive(false);
             ClearExits();
+            GetComponent<TerrainLootIntegration>()?.Refresh(null);
             if (Navigation == null) gameObject.AddComponent<FieldNavigation>();
             Navigation.Configure(generator);
             bool micro = !legacy && catalog.microTiles;
@@ -119,7 +120,8 @@ namespace Nomad.Terrain
                 + "O Field overview/player | G 3m tile gallery/player\n"
                 + "WASD Move | Space Jump | Left Shift Roll | Fall: respawn\n"
                 + $"Levels 0/1/2m | Reachable samples {generator.ReachableSamples} | {NavigationFailure}{generator.WalkabilityFailure}";
-            GetComponent<TerrainLootIntegration>()?.Refresh(safe ? scatter : null);
+            // 상자는 Ready 결과의 상자 지점에만 배치합니다. 실패하면 상자를 만들지 않습니다.
+            GetComponent<TerrainLootIntegration>()?.Refresh(safe ? field : null);
             return result;
         }
 

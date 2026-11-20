@@ -321,6 +321,7 @@ MonoBehaviour:
   items:
   - {fileID: 11400000, guid: c5909ea4a83cd9b4d8f3f6480f5a4271, type: 2}
   - {fileID: 11400000, guid: 5abb4f098a436704e9d2514c8e985475, type: 2}
+  - {fileID: 11400000, guid: 448cc5b227491124d9fcf8b3af24c8c1, type: 2}
 --- !u!114 &451336760
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1015,6 +1016,7 @@ GameObject:
   - component: {fileID: 1930808192}
   - component: {fileID: 1930808194}
   - component: {fileID: 1930808195}
+  - component: {fileID: 1930808196}
   m_Layer: 0
   m_Name: Terrain Integration Controls
   m_TagString: Untagged
@@ -1115,6 +1117,32 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 99e5f6aaeb9e40e39930375cb5606e3a, type: 3}
   m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Terrain.FieldNavigation
+--- !u!114 &1930808196
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1930808191}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4092ea4cd7b81214daa41c3ecd5267df, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::Nomad.Loot.ChestSpawner
+  table:
+  - ItemId: scrap
+    Min: 4
+    Max: 12
+    Chance: 1
+  - ItemId: field-knife
+    Min: 1
+    Max: 1
+    Chance: 0.35
+  - ItemId: field-vest
+    Min: 1
+    Max: 1
+    Chance: 0.2
+  minimumFill: 0.5
 --- !u!1 &1951189840
 GameObject:
   m_ObjectHideFlags: 0

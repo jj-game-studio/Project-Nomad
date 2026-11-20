@@ -28,14 +28,17 @@ namespace Nomad.Loot.Editor
             if (inventory == null) inventory = player.AddComponent<PlayerInventory>();
             var data = new SerializedObject(inventory);
             SerializedProperty items = data.FindProperty("items");
-            items.arraySize = 2;
+            // 상자 임시 내용물(scrap·field-knife·field-vest)을 모두 받을 수 있게 등록합니다.
+            items.arraySize = 3;
             items.GetArrayElementAtIndex(0).objectReferenceValue = AssetDatabase.LoadAssetAtPath<ItemDefinition>("Assets/Nomad/Inventory/Demo/scrap.asset");
             items.GetArrayElementAtIndex(1).objectReferenceValue = AssetDatabase.LoadAssetAtPath<ItemDefinition>("Assets/Nomad/Inventory/Demo/field-knife.asset");
+            items.GetArrayElementAtIndex(2).objectReferenceValue = AssetDatabase.LoadAssetAtPath<ItemDefinition>("Assets/Nomad/Inventory/Demo/field-vest.asset");
             data.ApplyModifiedPropertiesWithoutUndo();
             if (player.GetComponent<PlayerInteraction>() == null) player.AddComponent<PlayerInteraction>();
 
             var loot = controls.GetComponent<TerrainLootIntegration>();
             if (loot == null) loot = controls.gameObject.AddComponent<TerrainLootIntegration>();
+            if (controls.GetComponent<ChestSpawner>() == null) controls.gameObject.AddComponent<ChestSpawner>();
             Transform canvas = Object.FindAnyObjectByType<Canvas>().transform;
             Transform panel = canvas.Find("Loot Panel");
             if (panel == null)
