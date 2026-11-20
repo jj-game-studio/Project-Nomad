@@ -28,8 +28,10 @@ namespace Nomad.Shop
         }
 
         [SerializeField] private string merchantName = "TRADING POST";
+        [SerializeField, Min(0)] private float restockSeconds = 300;
         [SerializeField] private Offer[] offers = Array.Empty<Offer>();
         public string MerchantName => merchantName;
+        public float RestockSeconds => restockSeconds;
         public int Count => offers.Length;
         public Offer GetOffer(int index) => offers[index];
     }

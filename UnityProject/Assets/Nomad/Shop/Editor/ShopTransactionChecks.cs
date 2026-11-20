@@ -8,7 +8,7 @@ namespace Nomad.Shop.Editor
 {
     internal static class ShopTransactionChecks
     {
-        private sealed class Fixture : IDisposable
+        internal sealed class Fixture : IDisposable
         {
             internal readonly GameObject Player;
             internal readonly PlayerInventory Inventory;
@@ -17,7 +17,7 @@ namespace Nomad.Shop.Editor
             internal readonly Shopkeeper Shop;
             private readonly ShopCatalog catalog;
 
-            internal Fixture(int gold = 1000, int stock = 30, int buy = 5, int sell = 2)
+            internal Fixture(int gold = 1000, int stock = 30, int buy = 5, int sell = 2, float restockSeconds = 0)
             {
                 ItemDefinition scrap = AssetDatabase.LoadAssetAtPath<ItemDefinition>("Assets/Nomad/Inventory/Demo/scrap.asset");
                 Player = new GameObject("Trade fixture");
@@ -33,6 +33,7 @@ namespace Nomad.Shop.Editor
 
                 catalog = ScriptableObject.CreateInstance<ShopCatalog>();
                 var data = new SerializedObject(catalog);
+                data.FindProperty("restockSeconds").floatValue = restockSeconds;
                 data.FindProperty("offers").arraySize = 1;
                 SerializedProperty entry = data.FindProperty("offers").GetArrayElementAtIndex(0);
                 entry.FindPropertyRelative("item").objectReferenceValue = scrap;
@@ -60,6 +61,24 @@ namespace Nomad.Shop.Editor
         internal static int Run()
         {
             int checks = 0;
+            using (var f = new Fixture())
+            {
+                f.Inventory.Add("scrap", 100);
+                ItemDefinition scrap = f.Inventory.GetSlot(0).Item;
+                Require(f.Wallet.SetSaleProtected(scrap, true) && !f.Wallet.SetSaleProtected(scrap, true) &&
+                    !f.Shop.CanSell(f.Inventory, 0, 99, out _) && !f.Shop.TrySell(f.Inventory, 1, 1, out _) &&
+                    f.Wallet.Gold == 1000 && f.Shop.StockAt(0) == 30 && f.Inventory.GetSlot(1).Count == 1,
+                    "판매 잠금은 모든 스택과 직접 거래 API를 보호하며 중복 설정은 무변경");
+                checks++;
+                Require(f.Inventory.MoveStack(1, 3) && f.Wallet.IsSaleProtected(f.Inventory.GetSlot(3).Item) &&
+                    !f.Shop.TrySell(f.Inventory, 3, 1, out _) && f.Shop.TryBuy(f.Inventory, 0, 1, out _),
+                    "슬롯 이동 후 판매 보호 유지·보호해도 구매 가능");
+                checks++;
+                Require(f.Wallet.SetSaleProtected(scrap, false) && f.Shop.TrySell(f.Inventory, 3, 2, out _) &&
+                    f.Wallet.Gold == 999 && f.Shop.StockAt(0) == 31 && f.Inventory.GetSlot(3).Count == 0,
+                    "잠금 해제 후 지정 스택 판매");
+                checks++;
+            }
             using (var f = new Fixture(gold: 12))
             {
                 Require(f.Shop.BuyLimit(f.Inventory, 0) == 2 &&

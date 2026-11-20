@@ -107,6 +107,8 @@ namespace Nomad.Shop.Editor
                     case 1:
                         panel = Object.FindAnyObjectByType<ShopPanel>();
                         Require(panel != null && Read("Gold").Contains("1,000"), "E로 열기·현재 재화 표시");
+                        Require(Read("Restock").StartsWith("Restock in ") && Read("Balance") == "After trade: 995 G",
+                            "재입고 타이머·구매 후 예상 잔액");
                         Require(Read("Backpack/Content/Slot 0/Price") == "Sell 2 G" &&
                             Read("Stock/Content/Slot 0/Price") == "Buy 5 G", "양쪽 칸별 가격 표시");
                         Require(Node("Backpack/Content").childCount == 20 &&
@@ -261,10 +263,11 @@ namespace Nomad.Shop.Editor
                         break;
                     case 41:
                         Require(Quantity.text == "3", "InputField 키 이벤트로 수량 지정");
-                        Queue(Key.B, Key.V, Key.E);
+                        Queue(Key.B, Key.V, Key.E, Key.L);
                         break;
                     case 42:
-                        Require(wallet.Gold == 803 && panel != null, "편집 중 거래·닫기 단축키 차단");
+                        Require(wallet.Gold == 803 && panel != null && !wallet.IsSaleProtected(inventory.GetSlot(0).Item),
+                            "편집 중 거래·닫기·판매 잠금 단축키 차단");
                         Queue(Key.Enter);
                         break;
                     case 43:
@@ -343,13 +346,53 @@ namespace Nomad.Shop.Editor
                             Node("Buy").GetComponent<Button>().interactable && wallet.Gold == 796,
                             "구매 한도 선택은 거래 없이 유효 수량 설정");
                         Capture("shop-ui-improved.png");
+                        Queue();
+                        Pointer("Backpack/Content/Slot 0", true);
+                        break;
+                    case 64: Pointer("Backpack/Content/Slot 0", false); break;
+                    case 65: Queue(Key.L); break;
+                    case 66:
+                        Require(wallet.IsSaleProtected(inventory.GetSlot(0).Item) &&
+                            Read("Backpack/Content/Slot 0/Keep") == "KEEP" &&
+                            !Node("Sell").GetComponent<Button>().interactable && Read("Readiness").Contains("Kept for later"),
+                            "L 판매 잠금·스택 표시·판매 버튼/사유 일치");
+                        Capture("shop-ui-kept.png");
+                        Queue(Key.V);
+                        break;
+                    case 67:
+                        Require(wallet.Gold == 796 && inventory.GetSlot(0).Count == 8 &&
+                            !shop.TrySell(inventory, 0, 1, out _), "보관 잠금 중 키·직접 판매 모두 무변경");
+                        panel.Close();
+                        Queue();
+                        break;
+                    case 68: Queue(Key.E); break;
+                    case 69:
+                        panel = Object.FindAnyObjectByType<ShopPanel>();
+                        Require(panel != null && Read("Backpack/Content/Slot 0/Keep") == "KEEP", "재열기 후 판매 잠금 유지");
+                        Queue();
+                        Pointer("Backpack/Content/Slot 0", true);
+                        break;
+                    case 70: Pointer("Backpack/Content/Slot 0", false); break;
+                    case 71:
+                        Node("Protection").GetComponent<Button>().onClick.Invoke();
+                        break;
+                    case 72:
+                        Require(!wallet.IsSaleProtected(inventory.GetSlot(0).Item) && Node("Sell").GetComponent<Button>().interactable &&
+                            Read("Balance") == "After trade: 798 G", "버튼 잠금 해제·판매 후 예상 잔액");
                         inventory.GetComponent<Health>().TryApplyDamage(1000);
                         Queue();
                         break;
-                    case 64:
+                    case 73:
                         Require(Object.FindAnyObjectByType<ShopPanel>() == null &&
                             !shop.TryBuy(inventory, 0, 1, out _), "사망 시 닫기·거래 금지");
                         Require(File.Exists(Path.Combine(Application.dataPath, "../Artifacts/shop-ui.png")), "화면 캡처 생성");
+                        break;
+                    case 74:
+                        if (!ShopRestockChecks.Step())
+                        {
+                            stage--;
+                            break;
+                        }
                         Debug.Log($"SHOP_PLAYMODE_PASS transaction_checks={transactionChecks} ui_stages={stage}");
                         Finish(0);
                         break;
@@ -446,6 +489,7 @@ namespace Nomad.Shop.Editor
 
         private static void Finish(int exitCode)
         {
+            ShopRestockChecks.Reset();
             SessionState.SetBool(SessionKey, false);
             EditorApplication.update -= Update;
             Application.logMessageReceived -= OnLog;

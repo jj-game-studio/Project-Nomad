@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: TemporaryShop
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Shop.ShopCatalog
   merchantName: TRADING POST
+  restockSeconds: 300
   offers:
   - item: {fileID: 11400000, guid: c5909ea4a83cd9b4d8f3f6480f5a4271, type: 2}
     category: 0

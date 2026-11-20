@@ -18,6 +18,7 @@ namespace Nomad.Shop
             internal Text Name;
             internal Text Count;
             internal Text Price;
+            internal Text Keep;
             internal ShopRoundedRect Frame;
             internal ShopRoundedRect CountBadge;
         }
@@ -33,6 +34,10 @@ namespace Nomad.Shop
         private Text readiness;
         private Text status;
         private Text capacity;
+        private Text restock;
+        private Text balance;
+        private Button protection;
+        private int shownRestockSeconds = -1;
         private InputField quantityInput;
         private Button less;
         private Button more;
@@ -113,8 +118,11 @@ namespace Nomad.Shop
             capacity.alignment = TextAnchor.MiddleRight;
             Text stockHint = ShopUi.Label(panel, "Stock hint", "Price per item", 958, 128, 174, 24, 14, ShopUi.Muted);
             stockHint.alignment = TextAnchor.MiddleRight;
+            restock = ShopUi.Label(panel, "Restock", "", 812, 86, 308, 20, 14, ShopUi.Cream);
+            restock.alignment = TextAnchor.MiddleRight;
 
-            ShopUi.Label(panel, "Backpack hint", "Select an item to see its selling price.", 28, 166, 530, 30, 15, ShopUi.Muted);
+            ShopUi.Label(panel, "Backpack hint", "Keep materials for your next trip.", 28, 166, 340, 30, 15, ShopUi.Muted);
+            protection = ShopUi.Button(panel, "Protection", "Keep item [L]", 378, 166, 180, 30, ToggleProtection);
             string[] groups = { "All", "Materials", "Equipment", "Supplies" };
             filters = new Button[groups.Length];
             for (int index = 0; index < groups.Length; index++)
@@ -147,7 +155,9 @@ namespace Nomad.Shop
             buy.targetGraphic.color = ShopUi.Forest;
             sell = ShopUi.Button(panel, "Sell", "Sell [V]", 886, 664, 226, 48, () => Trade(false));
             sell.targetGraphic.color = ShopUi.Gold;
-            status = ShopUi.Label(panel, "Status", "", 48, 723, 1064, 24, 14, ShopUi.GoldInk);
+            status = ShopUi.Label(panel, "Status", "", 48, 723, 680, 24, 14, ShopUi.GoldInk);
+            balance = ShopUi.Label(panel, "Balance", "", 760, 723, 352, 24, 14, ShopUi.Ink);
+            balance.alignment = TextAnchor.MiddleRight;
             ShopUi.Label(panel, "Keys", "Arrows: select   |   Shift+click: all   |   Tab: switch   |   +/-: quantity   |   Enter: trade   |   E / Esc: close",
                 28, 772, 1104, 20, 13, ShopUi.Muted);
         }
@@ -174,6 +184,7 @@ namespace Nomad.Shop
                     Name = ShopUi.Label(button.transform, "Name", "", 4, 38, 88, 18, 13),
                     Count = ShopUi.Label(button.transform, "Count", "", 54, 5, 36, 20, 11, ShopUi.Cream),
                     Price = ShopUi.Label(button.transform, "Price", "", 4, 56, 88, 18, 13, ShopUi.GoldInk),
+                    Keep = ShopUi.Label(button.transform, "Keep", "", 4, 5, 28, 20, 9, ShopUi.GoldInk),
                     Frame = (ShopRoundedRect)button.targetGraphic,
                     CountBadge = badge
                 };
@@ -211,7 +222,8 @@ namespace Nomad.Shop
                 PlayerInventory.ItemStack stack = inventory.GetSlot(index);
                 int offer = shop.FindOffer(stack.Item);
                 int price = offer >= 0 ? shop.Catalog.GetOffer(offer).SellPrice : 0;
-                SetSlot(playerSlots[index], stack.Item, stack.Count, price, false, !merchantSelected && playerIndex == index);
+                SetSlot(playerSlots[index], stack.Item, stack.Count, price, false, !merchantSelected && playerIndex == index,
+                    wallet.IsSaleProtected(stack.Item));
             }
 
             for (int index = 0; index < merchantSlots.Length; index++)
@@ -226,6 +238,9 @@ namespace Nomad.Shop
             PlayerInventory.ItemStack owned = inventory.GetSlot(playerIndex);
             int sellOffer = shop.FindOffer(owned.Item);
             int sellPrice = sellOffer >= 0 ? shop.Catalog.GetOffer(sellOffer).SellPrice : 0;
+            bool kept = wallet.IsSaleProtected(owned.Item);
+            protection.interactable = !merchantSelected && owned.Item != null;
+            protection.GetComponentInChildren<Text>().text = kept ? "Unlock sale [L]" : "Keep item [L]";
             long buyTotal = (long)selected.BuyPrice * quantity;
             bool visible = categoryFilter < 0 || (int)selected.Group == categoryFilter;
             bool canBuy = shop.CanBuy(inventory, merchantIndex, quantity, out string buyReason);
@@ -249,20 +264,44 @@ namespace Nomad.Shop
                 : owned.Item == null ? "Select an item to sell." : sellPrice == 0 ? "This merchant does not buy this item." : sellReason;
             if (merchantSelected && !visible)
                 detail.text = description.text = "";
+            balance.text = buy.interactable ? $"After trade: {wallet.Gold - buyTotal:N0} G"
+                : sell.interactable ? $"After trade: {wallet.Gold + (long)sellPrice * quantity:N0} G" : "After trade: --";
+            UpdateRestockLabel();
         }
 
-        private static void SetSlot(SlotView view, ItemDefinition item, int count, int price, bool buying, bool selected)
+        private static void SetSlot(SlotView view, ItemDefinition item, int count, int price, bool buying, bool selected,
+            bool kept = false)
         {
             view.Icon.sprite = item != null ? item.Icon : null;
             view.Icon.enabled = view.Icon.sprite != null;
             view.Name.text = item != null ? item.DisplayName : "";
             view.Name.color = item != null ? ShopUi.Ink : ShopUi.Muted;
             view.Count.text = item != null ? $"x{count}" : "";
+            view.Keep.text = kept ? "KEEP" : "";
             view.CountBadge.gameObject.SetActive(item != null);
             view.Price.text = item == null ? "" : buying && count == 0 ? "Sold out" : price > 0 ? $"{(buying ? "Buy" : "Sell")} {price:N0} G" : "Not bought";
             view.Icon.color = buying && count == 0 ? new Color(1, 1, 1, 0.35f) : Color.white;
             view.Frame.color = selected ? new Color(0.91f, 0.94f, 0.82f) : item != null ? ShopUi.Surface : new Color(0.92f, 0.90f, 0.83f);
-            view.Frame.Style(12, selected ? 2.5f : 1.25f, selected ? ShopUi.Gold : ShopUi.Border);
+            view.Frame.Style(12, selected ? 2.5f : 1.25f, selected || kept ? ShopUi.Gold : ShopUi.Border);
+        }
+
+        private void ToggleProtection()
+        {
+            if (closed || merchantSelected || inventory == null || wallet == null)
+                return;
+            ItemDefinition item = inventory.GetSlot(playerIndex).Item;
+            if (wallet.SetSaleProtected(item, !wallet.IsSaleProtected(item)))
+                status.text = wallet.IsSaleProtected(item) ? "Item kept. All stacks are protected from sale." : "Item unlocked for sale.";
+            EventSystem.current?.SetSelectedGameObject(null);
+        }
+
+        private void UpdateRestockLabel()
+        {
+            int seconds = (int)System.Math.Min(int.MaxValue, System.Math.Ceiling(shop.RestockRemaining));
+            if (seconds == shownRestockSeconds)
+                return;
+            shownRestockSeconds = seconds;
+            restock.text = shop.Catalog.RestockSeconds > 0 ? $"Restock in {seconds / 60:00}:{seconds % 60:00}" : "No automatic restock";
         }
 
         private int AvailableQuantity => merchantSelected
@@ -370,6 +409,7 @@ namespace Nomad.Shop
                 Close();
                 return;
             }
+            UpdateRestockLabel();
 
             Keyboard keys = Keyboard.current;
             if (keys == null || Time.frameCount == openedFrame)
@@ -421,6 +461,8 @@ namespace Nomad.Shop
                 Trade(true);
             if (keys.vKey.wasPressedThisFrame)
                 Trade(false);
+            if (keys.lKey.wasPressedThisFrame)
+                ToggleProtection();
         }
 
         public void Close()

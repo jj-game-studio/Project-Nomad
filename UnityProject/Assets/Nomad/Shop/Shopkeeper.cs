@@ -17,15 +17,24 @@ namespace Nomad.Shop
 
         private int[] stock = Array.Empty<int>();
         private bool valid;
+        private bool trading;
+        private double nextRestockAt;
         public string InteractionId => interactionId;
         public Vector3 InteractionPoint => transform.position + Vector3.up * 0.5f;
         public ShopCatalog Catalog => catalog;
+        public double RestockRemaining => catalog != null && catalog.RestockSeconds > 0
+            ? Math.Max(0, nextRestockAt - Time.timeAsDouble) : 0;
         public event Action Changed;
 
         private void Awake()
         {
             if (catalog == null || catalog.Count == 0)
                 return;
+            if (float.IsNaN(catalog.RestockSeconds) || float.IsInfinity(catalog.RestockSeconds) || catalog.RestockSeconds < 0)
+            {
+                Debug.LogError("상점 재입고 주기는 유한한 0 이상의 값이어야 합니다.", this);
+                return;
+            }
 
             stock = new int[catalog.Count];
             var ids = new HashSet<string>(StringComparer.Ordinal);
@@ -44,6 +53,23 @@ namespace Nomad.Shop
             }
 
             valid = true;
+            nextRestockAt = Time.timeAsDouble + catalog.RestockSeconds;
+        }
+
+        private void Update() => RefreshStock();
+
+        private void RefreshStock()
+        {
+            if (!valid || trading || catalog.RestockSeconds <= 0 || Time.timeScale <= 0 ||
+                Time.timeAsDouble < nextRestockAt)
+                return;
+
+            // 지난 주기는 한 번에 건너뛰고 부족분만 채웁니다. 플레이어가 판 초과 재고는 보존합니다.
+            double periods = Math.Floor((Time.timeAsDouble - nextRestockAt) / catalog.RestockSeconds) + 1;
+            nextRestockAt += periods * catalog.RestockSeconds;
+            for (int index = 0; index < stock.Length; index++)
+                stock[index] = Math.Max(stock[index], catalog.GetOffer(index).InitialStock);
+            Changed?.Invoke();
         }
 
         public int StockAt(int index) => stock[index];
@@ -76,6 +102,8 @@ namespace Nomad.Shop
                 (inventory.TryGetComponent(out Health health) && health.IsDead) ||
                 (inventory.TryGetComponent(out PlayerMovement movement) && (!movement.isActiveAndEnabled || movement.IsRolling)))
                 return false;
+
+            RefreshStock();
 
             Vector3 feet = inventory.transform.position;
             Vector3 body = feet + Vector3.up;
@@ -145,10 +173,15 @@ namespace Nomad.Shop
                 return false;
 
             PlayerWallet wallet = inventory.GetComponent<PlayerWallet>();
-            if (wallet.Trading)
+            if (wallet.Trading || trading)
                 return false;
 
             ShopCatalog.Offer offer = catalog.GetOffer(offerIndex);
+            if (!buying && wallet.IsSaleProtected(offer.Item))
+            {
+                message = "Kept for later. Unlock this item before selling.";
+                return false;
+            }
             long total = (long)(buying ? offer.BuyPrice : offer.SellPrice) * quantity;
             if (buying && (stock[offerIndex] < quantity || total > wallet.Gold))
             {
@@ -198,6 +231,7 @@ namespace Nomad.Shop
 
             // 모두 검사한 뒤 돈·재고·가방을 함께 반영합니다. 알림 중 재진입 거래도 막습니다.
             wallet.BeginTrade();
+            trading = true;
             try
             {
                 wallet.SetGold((int)(wallet.Gold + (buying ? -total : total)));
@@ -221,6 +255,7 @@ namespace Nomad.Shop
             finally
             {
                 wallet.EndTrade();
+                trading = false;
             }
 
             message = $"{(buying ? "Bought" : "Sold")} {offer.Item.DisplayName} x{quantity} / {total:N0} G";
