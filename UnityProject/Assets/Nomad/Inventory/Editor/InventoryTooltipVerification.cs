@@ -101,7 +101,7 @@ namespace Nomad.Inventory.Editor
                         Check(Body.Contains("Recovered material") && Body.Contains("\n"), "multiline description");
                         Check(!tooltip.GetComponent<CanvasGroup>().blocksRaycasts, "does not intercept input");
                         foreach (var graphic in tooltip.GetComponentsInChildren<UnityEngine.UI.Text>())
-                            Check(!graphic.raycastTarget && !graphic.supportRichText, "safe noninteractive text");
+                            Check(!graphic.raycastTarget && (!graphic.supportRichText || graphic.name == "ComparisonStats"), "safe noninteractive text");
                         previousPosition = tooltip.position;
                         Pointer(Slot(0) + Vector2.right * 8);
                         break;

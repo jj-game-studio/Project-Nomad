@@ -101,102 +101,104 @@ namespace Nomad.Equipment.Editor
                         Pointer(Bag(19));
                         break;
                     case 1:
-                        Check(Card(0).gameObject.activeInHierarchy && Card(1).gameObject.activeInHierarchy,
-                            "candidate and equipped comparison visible");
-                        Check(Title(0).Contains("갑옷 A") && Title(1).Contains("장착 중 · 신체") && Title(1).Contains("갑옷 B"),
-                            "candidate and equipped heading");
-                        Check(Body(0).Contains("방어력 30") && Body(1).Contains("방어력 20"), "separate actual stats");
-                        bool opensLeft = OpensLeft(2);
-                        Check((Card(1).position.x - Card(0).position.x) * (opensLeft ? -1 : 1) > 0,
-                            "equipped card extends away from cursor");
-                        Check(!canvas.Find("InventoryTooltip").gameObject.activeSelf, "single bag tooltip replaced without overlap");
-                        Set(equipped, "defense", 21);
+                        Check(Card(0).gameObject.activeInHierarchy && Title(0).Contains("갑옷 A"), "single candidate tooltip");
+                        Check(canvas.Find("EquippedComparison1") == null && canvas.Find("EquippedComparison2") == null,
+                            "no separate equipped tooltip objects");
+                        Check(Stats.Contains("방어력 30") && Stats.Contains("▲10") && !Stats.Contains("장착") && !Stats.Contains("20"),
+                            "only candidate stat and positive difference");
+                        Check(Stats.Contains("#80D99A") && !Stats.Contains("갑옷 B"), "positive color without equipped name");
+                        Check(!canvas.Find("InventoryTooltip").gameObject.activeSelf, "no duplicate bag tooltip");
+                        RenderComparison();
+                        Set(equipped, "defense", 35);
                         break;
                     case 2:
-                        Check(Body(1).Contains("방어력 21"), "same pointer updates equipped stats");
-                        RenderGroups();
-                        Pointer(Gear(EquipmentSlot.Body));
+                        Check(Stats.Contains("▼5") && Stats.Contains("#F08383") && !Stats.Contains("▲10"), "stationary downgrade updates");
+                        RenderComparison("decrease");
+                        Set(equipped, "defense", 30);
                         break;
                     case 3:
-                        Check(Card(0).gameObject.activeInHierarchy && Title(0).Contains("갑옷 B") && !Card(1).gameObject.activeSelf,
-                            "equipped slot hover shows single tooltip");
-                        Pointer(Gear(EquipmentSlot.Head));
+                        Check(Stats.Contains("(0)") && !Stats.Contains("▲") && !Stats.Contains("▼"), "equal stat has zero and no arrow");
+                        Set(candidate, "defense", 0);
                         break;
                     case 4:
-                        Check(!Card(0).gameObject.activeSelf && !Card(1).gameObject.activeSelf, "empty equipment slot hides");
-                        Pointer(Gear(EquipmentSlot.Weapon1));
+                        Check(Stats.Contains("방어력 0") && Stats.Contains("▼30"), "zero candidate stat still shows loss");
+                        Set(candidate, "defense", 30);
+                        Pointer(Gear(EquipmentSlot.Body));
                         break;
                     case 5:
-                        Check(Title(0).Contains("검") && Body(0).Contains("공격력 25") && !Card(1).gameObject.activeSelf,
-                            "equipped weapon hover supported without comparison");
-                        Check(equipment.TryUnequip(EquipmentSlot.Weapon1), "weapon to bag fixture");
-                        Pointer(Bag(Find("demo-sword")));
+                        Check(Title(0).Contains("갑옷 B") && Body(0).Contains("방어력 30") &&
+                            !Card(0).Find("ComparisonStats").gameObject.activeSelf, "equipped slot keeps standalone hover");
+                        Pointer(Gear(EquipmentSlot.Head));
                         break;
                     case 6:
-                        Check(!Card(0).gameObject.activeSelf && canvas.Find("InventoryTooltip").gameObject.activeSelf,
-                            "bag weapon uses single tooltip without comparison");
-                        Pointer(Bag(19));
+                        Check(!Card(0).gameObject.activeSelf, "empty equipment slot hides");
+                        Pointer(Gear(EquipmentSlot.Weapon1));
                         break;
                     case 7:
-                        Check(Card(1).gameObject.activeSelf, "comparison restored");
-                        Pointer(Bag(19), true);
+                        Check(Title(0).Contains("검") && Body(0).Contains("공격력 25") &&
+                            !Card(0).Find("ComparisonStats").gameObject.activeSelf, "equipped weapon without comparison");
+                        Check(equipment.TryUnequip(EquipmentSlot.Weapon1), "weapon fixture");
+                        Pointer(Bag(Find("demo-sword")));
                         break;
                     case 8:
-                        Check(!Card(0).gameObject.activeSelf && !Card(1).gameObject.activeSelf, "press hides all comparisons");
+                        Check(!Card(0).gameObject.activeSelf && canvas.Find("InventoryTooltip").gameObject.activeSelf,
+                            "bag weapon comparison stays deferred");
+                        Pointer(Bag(19));
+                        break;
+                    case 9:
+                        Check(Card(0).gameObject.activeSelf && Stats.Contains("(0)"), "comparison restored");
+                        Pointer(Bag(19), true);
+                        break;
+                    case 10:
+                        Check(!Card(0).gameObject.activeSelf, "press hides comparison");
                         Keys(Key.Escape);
                         Pointer(Vector2.zero);
                         break;
-                    case 9:
+                    case 11:
                         Keys();
                         Pointer(Bag(19));
                         break;
-                    case 10:
-                        Check(Card(1).gameObject.activeSelf, "hover after cancel");
+                    case 12:
+                        Check(Card(0).gameObject.activeSelf, "hover after cancel");
                         panel.SendMessage("OnApplicationFocus", false);
                         bagView.SendMessage("OnApplicationFocus", false);
-                        Check(!Card(0).gameObject.activeSelf && !Card(1).gameObject.activeSelf, "focus loss immediately hides");
+                        Check(!Card(0).gameObject.activeSelf, "focus loss hides immediately");
                         break;
-                    case 11:
-                        Check(!Card(0).gameObject.activeSelf, "focus remains hidden");
+                    case 13:
+                        Check(!Card(0).gameObject.activeSelf, "stays hidden without focus");
                         panel.SendMessage("OnApplicationFocus", true);
                         bagView.SendMessage("OnApplicationFocus", true);
                         break;
-                    case 12:
-                        Check(Card(1).gameObject.activeSelf, "focus return restores");
-                        Check(equipment.TryUnequip(EquipmentSlot.Body), "armor unequip fixture");
-                        break;
-                    case 13:
-                        Check(!Card(1).gameObject.activeSelf && canvas.Find("InventoryTooltip").gameObject.activeSelf,
-                            "no equipped match uses only candidate");
-                        Check(equipment.TryEquip(19, EquipmentSlot.Body), "equip candidate with pointer stationary");
-                        break;
                     case 14:
+                        Check(Card(0).gameObject.activeSelf, "focus return restores");
+                        Check(equipment.TryUnequip(EquipmentSlot.Body), "unequip baseline fixture");
+                        break;
+                    case 15:
+                        Check(!Card(0).gameObject.activeSelf && canvas.Find("InventoryTooltip").gameObject.activeSelf,
+                            "no equipped match has no comparison");
+                        Check(equipment.TryEquip(19, EquipmentSlot.Body), "equip candidate fixture");
+                        break;
+                    case 16:
                         Check(!Card(0).gameObject.activeSelf && !canvas.Find("InventoryTooltip").gameObject.activeSelf,
-                            "removed candidate hides without pointer movement");
+                            "removed candidate hides without moving pointer");
                         SetupTotems();
                         Pointer(Bag(19));
                         break;
-                    case 15:
-                        Check(Card(0).gameObject.activeSelf && Card(1).gameObject.activeSelf && Card(2).gameObject.activeSelf,
-                            "two totems compare both equipped slots");
-                        Check(Title(1).Contains("토템 1") && Title(2).Contains("토템 2"), "totem slot order");
-                        bool totemsLeft = OpensLeft(3);
-                        Check((Card(2).position.x - Card(1).position.x) * (totemsLeft ? -1 : 1) > 0,
-                            "totems extend outward in display direction");
-                        RenderGroups();
+                    case 17:
+                        Check(Card(0).gameObject.activeSelf && Stats.Contains("토템 1") && Stats.Contains("토템 2"),
+                            "two totem comparisons inside one tooltip");
                         Keys(Key.Tab);
                         break;
-                    case 16:
-                        Check(!Card(0).gameObject.activeInHierarchy && !Card(1).gameObject.activeInHierarchy &&
-                            !Card(2).gameObject.activeInHierarchy, "closing hides whole group");
+                    case 18:
+                        Check(!Card(0).gameObject.activeInHierarchy, "closing hides tooltip");
                         int used = inventory.UsedSlots;
                         AddReviewSamples();
-                        Check(inventory.UsedSlots == used + 2, "review sample menu preserves old gear and adds two samples");
+                        Check(inventory.UsedSlots == used + 2, "review sample menu preserves old gear");
                         Check(equipment.GetItem(EquipmentSlot.Body).DisplayName == "갑옷 B" &&
-                            equipment.GetItem(EquipmentSlot.Body).Defense == 20, "review menu equips armor B");
+                            equipment.GetItem(EquipmentSlot.Body).Defense == 20, "review sample B equipped");
                         Check(Enumerable.Range(0, PlayerInventory.Capacity).Any(index => inventory.GetSlot(index).Item?.DisplayName == "갑옷 A" &&
-                            inventory.GetSlot(index).Item.Defense == 30), "review menu provides armor A in bag");
-                        Debug.Log($"EQUIPMENT_TOOLTIP_PASS: {checks} checks, real hover, comparison, lifecycle, 3 resolutions");
+                            inventory.GetSlot(index).Item.Defense == 30), "review sample A in bag");
+                        Debug.Log($"EQUIPMENT_TOOLTIP_PASS: {checks} checks, single tooltip, delta/color, weapon deferred, lifecycle, 3 resolutions");
                         Finish(0);
                         return;
                 }
@@ -271,61 +273,42 @@ namespace Nomad.Equipment.Editor
         private static void Pointer(Vector2 point, bool held = false) => InputSystem.QueueStateEvent(mouse,
             new MouseState { position = point }.WithButton(MouseButton.Left, held));
 
-        private static bool OpensLeft(int count)
-        {
-            RectTransformUtility.ScreenPointToLocalPointInRectangle(canvas, Bag(19), null, out Vector2 pointer);
-            float width = Enumerable.Range(0, count).Sum(index => Card(index).sizeDelta.x) + 8 * (count - 1);
-            return pointer.x + 18 + width > canvas.rect.xMax - 8;
-        }
+        private static string Stats => Card(0).Find("ComparisonStats").GetComponent<UnityEngine.UI.Text>().text;
 
-        private static void RenderGroups()
+        private static void RenderComparison(string suffix = "increase")
         {
-            // 실제 호버에서 검사한 카드들을 표시 전용 복제본으로 렌더합니다.
+            // 실제 호버 검증과 별개로 같은 항목을 표시 전용 사본에서 렌더합니다.
             Type type = typeof(InventoryPanel).Assembly.GetType("Nomad.Inventory.InventoryTooltip");
-            int count = Card(2).gameObject.activeSelf ? 3 : 2;
             foreach (Vector2Int size in new[] { new Vector2Int(1280, 720), new Vector2Int(1920, 1080), new Vector2Int(2560, 1080) })
             {
-                var root = new GameObject("Comparison Render", typeof(RectTransform), typeof(Canvas));
-                var renderCanvas = root.GetComponent<Canvas>();
-                var cameraRoot = new GameObject("Comparison Camera", typeof(Camera));
+                var root = new GameObject("Delta Render", typeof(RectTransform), typeof(Canvas));
+                var cameraRoot = new GameObject("Delta Camera", typeof(Camera));
                 Camera camera = cameraRoot.GetComponent<Camera>();
                 camera.clearFlags = CameraClearFlags.SolidColor;
                 camera.backgroundColor = new Color32(31, 36, 39, 255);
                 camera.cullingMask = 1 << 5;
                 var target = new RenderTexture(size.x, size.y, 24);
                 camera.targetTexture = target;
+                var renderCanvas = root.GetComponent<Canvas>();
                 renderCanvas.renderMode = RenderMode.ScreenSpaceCamera;
                 renderCanvas.worldCamera = camera;
                 renderCanvas.planeDistance = 1;
                 Canvas.ForceUpdateCanvases();
-                Array cards = Array.CreateInstance(type, count);
-                float width = Mathf.Min(320, (size.x - 16 - 8 * (count - 1)) / count);
-                for (int index = 0; index < count; index++)
-                {
-                    object card = Activator.CreateInstance(type, root.GetComponent<RectTransform>(),
-                        Card(0).Find("Title").GetComponent<UnityEngine.UI.Text>().font, "Card" + index);
-                    cards.SetValue(card, index);
-                    ItemDefinition item = index == 0 || count == 3 ? candidate : equipped;
-                    string heading = index == 0 ? null : count == 3 ? "장착 중 · 토템 " + index : "장착 중 · 신체";
-                    type.GetMethod("ShowCard").Invoke(card, new object[] { item, 1, Vector2.one, camera, width, heading });
-                }
+                object card = Activator.CreateInstance(type, root.GetComponent<RectTransform>(),
+                    Card(0).Find("Title").GetComponent<UnityEngine.UI.Text>().font);
                 foreach (Vector2 point in new[] { Vector2.one * 2, new Vector2(size.x - 2, size.y - 2), new Vector2(size.x - 2, 2) })
                 {
-                    type.GetMethod("ArrangeGroup").Invoke(null, new object[] { cards, count, point, camera });
-                    float direction = point.x > size.x / 2 ? -1 : 1;
-                    for (int index = 1; index < count; index++)
-                        Check((root.transform.GetChild(index).localPosition.x - root.transform.GetChild(index - 1).localPosition.x) * direction > 0,
-                            "comparison follows cursor side " + size + " at " + point);
-                    foreach (Transform child in root.transform)
+                    type.GetMethod("ShowCompared").Invoke(card, new object[] { candidate, point, camera, new[] { equipped }, 1 });
+                    var rect = (RectTransform)root.transform.GetChild(0);
+                    var corners = new Vector3[4];
+                    rect.GetWorldCorners(corners);
+                    foreach (Vector3 corner in corners)
                     {
-                        var corners = new Vector3[4];
-                        ((RectTransform)child).GetWorldCorners(corners);
-                        foreach (Vector3 corner in corners)
-                        {
-                            Vector2 screen = RectTransformUtility.WorldToScreenPoint(camera, corner);
-                            Check(screen.x >= 0 && screen.x <= size.x && screen.y >= 0 && screen.y <= size.y, "group bounds " + size);
-                        }
+                        Vector2 screen = RectTransformUtility.WorldToScreenPoint(camera, corner);
+                        Check(screen.x >= 0 && screen.x <= size.x && screen.y >= 0 && screen.y <= size.y, "delta bounds " + size);
                     }
+                    var stats = rect.Find("ComparisonStats").GetComponent<UnityEngine.UI.Text>();
+                    Check(stats.preferredHeight <= stats.rectTransform.rect.height + 1, "delta text fits " + size);
                 }
                 foreach (Transform child in root.GetComponentsInChildren<Transform>()) child.gameObject.layer = 5;
                 Canvas.ForceUpdateCanvases();
@@ -335,7 +318,7 @@ namespace Nomad.Equipment.Editor
                 pixels.ReadPixels(new Rect(0, 0, size.x, size.y), 0, 0);
                 pixels.Apply();
                 Directory.CreateDirectory("Artifacts/tooltip-stats");
-                File.WriteAllBytes($"Artifacts/tooltip-stats/comparison-{count}-{size.x}.png", pixels.EncodeToPNG());
+                File.WriteAllBytes($"Artifacts/tooltip-stats/delta-{suffix}-{size.x}.png", pixels.EncodeToPNG());
                 RenderTexture.active = null;
                 UnityEngine.Object.DestroyImmediate(root);
                 UnityEngine.Object.DestroyImmediate(cameraRoot);
