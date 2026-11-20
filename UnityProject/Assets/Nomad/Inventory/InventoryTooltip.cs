@@ -21,11 +21,17 @@ namespace Nomad.Inventory
         private EquipmentType shownEquipmentType;
         private int shownAttackPower;
         private int shownDefense;
+        private string shownHeading;
+        private float cardWidth = 320f;
 
-        public InventoryTooltip(RectTransform canvas, Font font)
+        public RectTransform Rect => root;
+
+        public InventoryTooltip(RectTransform canvas, Font font) : this(canvas, font, "InventoryTooltip") { }
+
+        public InventoryTooltip(RectTransform canvas, Font font, string name)
         {
             this.canvas = canvas;
-            root = CreateRect("InventoryTooltip", canvas);
+            root = CreateRect(name, canvas);
             root.gameObject.AddComponent<UnityEngine.UI.Image>().color = new Color32(19, 20, 22, 248);
             var group = root.gameObject.AddComponent<CanvasGroup>();
             group.blocksRaycasts = false;
@@ -39,10 +45,21 @@ namespace Nomad.Inventory
 
         public void Hide()
         {
-            root.gameObject.SetActive(false);
+            if (root != null) root.gameObject.SetActive(false);
+        }
+
+        public void Dispose()
+        {
+            if (root != null) Object.Destroy(root.gameObject);
         }
 
         public void Show(ItemDefinition item, int count, Vector2 screenPosition, Camera eventCamera)
+        {
+            ShowCard(item, count, screenPosition, eventCamera, 320f, null);
+        }
+
+        public void ShowCard(ItemDefinition item, int count, Vector2 screenPosition, Camera eventCamera,
+            float width, string heading)
         {
             if (item == null || !RectTransformUtility.ScreenPointToLocalPointInRectangle(
                 canvas, screenPosition, eventCamera, out Vector2 pointer))
@@ -54,7 +71,7 @@ namespace Nomad.Inventory
             if (shownItem != item || shownCount != count || canvasSize != canvas.rect.size ||
                 shownName != item.DisplayName || shownDescription != item.Description ||
                 shownEquipmentType != item.EquipmentType || shownAttackPower != item.AttackPower ||
-                shownDefense != item.Defense ||
+                shownDefense != item.Defense || shownHeading != heading || !Mathf.Approximately(cardWidth, width) ||
                 !Mathf.Approximately(textScale, title.pixelsPerUnit))
             {
                 shownItem = item;
@@ -64,6 +81,8 @@ namespace Nomad.Inventory
                 shownEquipmentType = item.EquipmentType;
                 shownAttackPower = item.AttackPower;
                 shownDefense = item.Defense;
+                shownHeading = heading;
+                cardWidth = width;
                 canvasSize = canvas.rect.size;
                 textScale = title.pixelsPerUnit;
                 Layout(item, count);
@@ -88,9 +107,10 @@ namespace Nomad.Inventory
 
         private void Layout(ItemDefinition item, int count)
         {
-            float width = Mathf.Min(320f, Mathf.Max(1f, canvasSize.x - Margin * 2));
+            float width = Mathf.Min(cardWidth, Mathf.Max(1f, canvasSize.x - Margin * 2));
             float textWidth = Mathf.Max(1f, width - Padding * 2);
             title.text = count > 1 ? $"{item.DisplayName}  ×{count}" : item.DisplayName;
+            if (!string.IsNullOrEmpty(shownHeading)) title.text = shownHeading + "\n" + title.text;
             description.text = BuildDescription(item);
             title.rectTransform.sizeDelta = new Vector2(textWidth, 0);
             description.rectTransform.sizeDelta = new Vector2(textWidth, 0);
@@ -109,6 +129,37 @@ namespace Nomad.Inventory
             description.rectTransform.sizeDelta = new Vector2(textWidth,
                 Mathf.Max(0, height - Padding * 2 - titleHeight - gap));
             description.gameObject.SetActive(gap > 0);
+        }
+
+        public static void ArrangeGroup(InventoryTooltip[] cards, int count, Vector2 screenPosition, Camera camera)
+        {
+            RectTransform canvas = cards[0].canvas;
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(canvas, screenPosition, camera, out Vector2 pointer))
+                return;
+
+            float width = Margin * (count - 1);
+            float height = 0;
+            for (int index = 0; index < count; index++)
+            {
+                width += cards[index].root.sizeDelta.x;
+                height = Mathf.Max(height, cards[index].root.sizeDelta.y);
+            }
+
+            // 비교 대상은 항상 오른쪽 순서를 유지하고, 묶음 전체를 화면 안으로 옮깁니다.
+            Rect bounds = canvas.rect;
+            float x = pointer.x + CursorGap;
+            if (x + width > bounds.xMax - Margin) x = pointer.x - CursorGap - width;
+            x = Mathf.Clamp(x, bounds.xMin + Margin, bounds.xMax - Margin - width);
+            float y = pointer.y - CursorGap;
+            if (y - height < bounds.yMin + Margin) y = pointer.y + CursorGap + height;
+            y = Mathf.Clamp(y, bounds.yMin + Margin + height, bounds.yMax - Margin);
+
+            for (int index = 0; index < count; index++)
+            {
+                cards[index].root.localPosition = new Vector3(x, y, 0);
+                cards[index].root.SetAsLastSibling();
+                x += cards[index].root.sizeDelta.x + Margin;
+            }
         }
 
         private static string BuildDescription(ItemDefinition item)

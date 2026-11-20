@@ -41,6 +41,13 @@ namespace Nomad.Equipment
         private bool equipmentDragging;
         private Mouse dragMouse;
         private bool wasOpen;
+        private bool pointerFocused = true;
+        private InventoryPanel inventoryView;
+        private RectTransform bagTooltip;
+        private RectTransform tooltipCanvas;
+        private readonly InventoryTooltip[] hoverCards = new InventoryTooltip[3];
+        private readonly ItemDefinition[] hoverItems = new ItemDefinition[3];
+        private readonly string[] hoverHeadings = new string[3];
 
         public bool IsOpen => panel != null && panel.gameObject.activeInHierarchy;
         public RectTransform EquipmentGrid => equipmentGrid;
@@ -62,11 +69,18 @@ namespace Nomad.Equipment
             combat = GetComponent<PlayerEquipmentCombat>();
             visuals = GetComponent<EquipmentCombatVisuals>();
             var view = InventoryPanel.GetOrCreate(inventory);
+            inventoryView = view;
+            tooltipCanvas = (RectTransform)view.GetComponent<Canvas>().transform;
+            bagTooltip = (RectTransform)tooltipCanvas.Find("InventoryTooltip");
             panel = (RectTransform)view.transform.Find("InventoryPanel");
             bag = (RectTransform)panel.Find("Slots");
             inventoryDragPreview = (RectTransform)panel.Find("DragPreview");
             capacity = panel.Find("Capacity").GetComponent<UnityEngine.UI.Text>();
             font = Font.CreateDynamicFontFromOSFont(new[] { "Malgun Gothic", "Arial" }, 16);
+
+            hoverCards[0] = new InventoryTooltip(tooltipCanvas, font, "EquipmentTooltip");
+            hoverCards[1] = new InventoryTooltip(tooltipCanvas, font, "EquippedComparison1");
+            hoverCards[2] = new InventoryTooltip(tooltipCanvas, font, "EquippedComparison2");
 
             panel.sizeDelta = new Vector2(484, 752);
             panel.anchoredPosition = Vector2.zero;
@@ -107,6 +121,7 @@ namespace Nomad.Equipment
 
         private void LateUpdate()
         {
+            HideTooltips();
             if (panel == null)
                 return;
 
@@ -139,6 +154,63 @@ namespace Nomad.Equipment
             // 장비 UI가 나중에 생성되어도 가방의 기존 드래그 아이템을 가리지 않습니다.
             if (inventoryDragPreview != null && inventoryDragPreview.gameObject.activeInHierarchy)
                 inventoryDragPreview.SetAsLastSibling();
+            UpdateTooltips();
+        }
+
+        private void UpdateTooltips()
+        {
+            Mouse mouse = Mouse.current;
+            if (!IsOpen || !pointerFocused || inventoryView == null || !inventoryView.isActiveAndEnabled || mouse == null ||
+                mouse.leftButton.isPressed || mouse.rightButton.isPressed ||
+                inventoryDragPreview.gameObject.activeInHierarchy || equipmentDragging)
+                return;
+
+            Vector2 point = mouse.position.ReadValue();
+            int gearSlot = Find(equipmentGrid, point);
+            int count = 0;
+            if (gearSlot >= 0)
+            {
+                hoverItems[0] = equipment.GetItem((EquipmentSlot)gearSlot);
+                if (hoverItems[0] == null) return;
+                hoverHeadings[0] = "장착 중 · " + Labels[gearSlot];
+                count = 1;
+            }
+            else
+            {
+                int index = Find(bag, point);
+                ItemDefinition item = index >= 0 ? inventory.GetSlot(index).Item : null;
+                // 기본 가방 툴팁의 표시 상태를 따라 드래그·포커스·상자 입력 차단을 유지합니다.
+                if (item == null || item.EquipmentType == EquipmentType.None || item.EquipmentType == EquipmentType.Weapon ||
+                    bagTooltip == null || !bagTooltip.gameObject.activeInHierarchy)
+                    return;
+
+                hoverItems[0] = item;
+                hoverHeadings[0] = null;
+                count = 1;
+                for (int slot = 2; slot < PlayerEquipment.Capacity && count < hoverCards.Length; slot++)
+                {
+                    ItemDefinition equipped = equipment.GetItem((EquipmentSlot)slot);
+                    if (equipped == null || equipped.EquipmentType != item.EquipmentType) continue;
+                    hoverItems[count] = equipped;
+                    hoverHeadings[count++] = "장착 중 · " + Labels[slot];
+                }
+                if (count == 1) return;
+
+                // 비교할 때만 가방의 단일 표시를 대체하며 기존 가방 코드는 수정하지 않습니다.
+                bagTooltip.gameObject.SetActive(false);
+            }
+
+            Canvas canvas = tooltipCanvas.GetComponent<Canvas>();
+            Camera camera = canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
+            float width = Mathf.Min(320f, Mathf.Max(1f, (tooltipCanvas.rect.width - 16f - 8f * (count - 1)) / count));
+            for (int index = 0; index < count; index++)
+                hoverCards[index].ShowCard(hoverItems[index], 1, point, camera, width, hoverHeadings[index]);
+            InventoryTooltip.ArrangeGroup(hoverCards, count, point, camera);
+        }
+
+        private void HideTooltips()
+        {
+            foreach (var card in hoverCards) card?.Hide();
         }
 
         public void FitToCanvas()
@@ -397,17 +469,24 @@ namespace Nomad.Equipment
 
         private void OnDisable()
         {
+            HideTooltips();
             if (combat != null) combat.EquipmentUiOpen = false;
             CancelSelection();
         }
 
         private void OnApplicationFocus(bool focused)
         {
-            if (!focused) CancelSelection();
+            pointerFocused = focused;
+            if (!focused)
+            {
+                CancelSelection();
+                HideTooltips();
+            }
         }
 
         private void OnDestroy()
         {
+            foreach (var card in hoverCards) card?.Dispose();
             if (toolbar != null) Destroy(toolbar.gameObject);
             if (font != null) Destroy(font);
         }
