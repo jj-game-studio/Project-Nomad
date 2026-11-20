@@ -46,7 +46,7 @@ namespace Nomad.Shop.Editor
                 market ??= root.transform.Find("Plaza/Market");
                 player ??= root.GetComponentInChildren<PlayerMovement>(true);
             }
-            var catalog = AssetDatabase.LoadAssetAtPath<ShopCatalog>(ShopAuthoring.Folder + "/Demo/TemporaryShop.asset");
+            var catalog = AssetDatabase.LoadAssetAtPath<ShopCatalog>(ShopAuthoring.CatalogPath);
             if (market == null || player == null || catalog == null)
                 throw new InvalidOperationException("마을 시장·플레이어·상점 카탈로그가 필요합니다.");
 

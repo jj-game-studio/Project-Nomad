@@ -46,7 +46,8 @@ StreamingAssets의 라이선스 파일은 플레이어 빌드에도 포함됩니
 ### 독립 테스트
 
 `Nomad > Shop > Open Shop Debug`에서 씬을 열고 Play를 누릅니다.
-씬 파일은 `Assets/Nomad/Shop/ShopDebug.unity`입니다. 시작 위치에서 상점과 거래할 수 있습니다.
+씬이 없으면 `Assets/Nomad/Shop/Editor/Generated/ShopDebug.unity`를 생성합니다. 시작 위치에서 상점과 거래할 수 있습니다.
+테스트 씬과 전용 재질은 필요할 때 만드는 로컬 산출물로 Git에서 제외합니다. 상점 검증도 먼저 같은 생성 경로를 실행합니다.
 
 | 입력 | 동작 |
 | --- | --- |
@@ -75,11 +76,11 @@ StreamingAssets의 라이선스 파일은 플레이어 빌드에도 포함됩니
 ## 임시 값과 재사용
 
 - 시작 재화: `PlayerWallet.startingGold`, 데모 1,000 G. 재화 지급은 `TryAddGold`를 사용합니다.
-- 상품 설정: `Demo/TemporaryShop.asset` (`ShopCatalog`). 아이템·구매 단가·판매 단가·초기 재고를 설정합니다.
+- 상품 설정: `Data/VillageMarket.asset` (`ShopCatalog`). 아이템·구매 단가·판매 단가·초기 재고를 설정합니다.
 - 재입고 주기: `ShopCatalog.restockSeconds`. 0이면 자동 보충하지 않습니다. 300초는 이번 구현의 테스트 값이며 덕코프의 실제 주기를 뜻하지 않습니다.
 - 임시 구매/판매 단가: Scrap 5/2 G, Field Knife 120/60 G, Field Vest 200/100 G.
 - 카탈로그의 판매 단가를 0으로 두거나 상품에서 제외하면 그 아이템을 매입하지 않습니다.
-- 배치: `Demo/TemporaryShop.prefab`을 놓습니다. 각 상점의 `interactionId`는 고유하게 지정합니다.
+- 마을 배치: `Place Shop In Village` 메뉴를 사용합니다. 다른 장소에는 Shopkeeper와 접근용 트리거를 배치하고 카탈로그를 연결합니다. 각 상점의 `interactionId`는 고유하게 지정합니다.
 - 플레이어는 `PlayerInventory`, `PlayerWallet`, `PlayerInteraction`이 필요합니다. 구매할 ItemDefinition은 플레이어 인벤토리의 items에도 같은 에셋으로 등록합니다.
 - 상호작용 지점은 상점 원점 위 0.5m입니다. 원점은 카운터 앞, 플레이어가 다가갈 수 있는 바닥에 둡니다.
 - 탐지/가림 레이어는 기존 PlayerInteraction 설정과 Shopkeeper.obstacleLayers를 함께 맞춥니다.
@@ -90,6 +91,7 @@ StreamingAssets의 라이선스 파일은 플레이어 빌드에도 포함됩니
 현재 마을 씬을 다시 로드하면 지갑·재고는 초기화됩니다. #89의 영속 Player/지역 전환은 별도 작업입니다.
 가격·시작 재화는 테스트 값이며 최종 경제 규칙은 사람 검토 대상입니다.
 씬 재생성 메뉴는 `Nomad > Shop > Rebuild Shop Debug`이며 기존 카탈로그의 사용자 설정은 보존합니다.
+미사용 데모 프리팹과 전용 씬/재질의 저장본은 제거했습니다. 실사용 카탈로그의 GUID는 유지해 마을 씬 참조를 보존합니다.
 
 ## 검증
 

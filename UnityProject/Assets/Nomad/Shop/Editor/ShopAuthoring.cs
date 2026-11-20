@@ -12,13 +12,19 @@ namespace Nomad.Shop.Editor
     public static class ShopAuthoring
     {
         internal const string Folder = "Assets/Nomad/Shop";
-        internal const string ScenePath = Folder + "/ShopDebug.unity";
+        internal const string CatalogPath = Folder + "/Data/VillageMarket.asset";
+        internal const string GeneratedFolder = Folder + "/Editor/Generated";
+        internal const string ScenePath = GeneratedFolder + "/ShopDebug.unity";
 
         [MenuItem("Nomad/Shop/Open Shop Debug")]
         public static void Open()
         {
             if (EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+            {
+                if (AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath) == null)
+                    Build();
                 EditorSceneManager.OpenScene(ScenePath);
+            }
         }
 
         [MenuItem("Nomad/Shop/Rebuild Shop Debug")]
@@ -32,17 +38,22 @@ namespace Nomad.Shop.Editor
         // 배치 실행과 메뉴가 동일한 생성 경로를 사용합니다.
         public static void Build()
         {
-            EnsureFolder(Folder + "/Demo");
+            EnsureFolder(Folder + "/Data");
+            EnsureFolder(GeneratedFolder);
+            Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             ItemDefinition[] items = {
                 AssetDatabase.LoadAssetAtPath<ItemDefinition>("Assets/Nomad/Inventory/Demo/scrap.asset"),
                 AssetDatabase.LoadAssetAtPath<ItemDefinition>("Assets/Nomad/Inventory/Demo/field-knife.asset"),
                 AssetDatabase.LoadAssetAtPath<ItemDefinition>("Assets/Nomad/Inventory/Demo/field-vest.asset")
             };
-            var catalog = AssetDatabase.LoadAssetAtPath<ShopCatalog>(Folder + "/Demo/TemporaryShop.asset");
+            foreach (ItemDefinition item in items)
+                if (item == null)
+                    throw new System.InvalidOperationException("상점 검증에 필요한 기본 아이템을 찾을 수 없습니다.");
+            var catalog = AssetDatabase.LoadAssetAtPath<ShopCatalog>(CatalogPath);
             if (catalog == null)
             {
                 catalog = ScriptableObject.CreateInstance<ShopCatalog>();
-                AssetDatabase.CreateAsset(catalog, Folder + "/Demo/TemporaryShop.asset");
+                AssetDatabase.CreateAsset(catalog, CatalogPath);
                 var data = new SerializedObject(catalog);
                 SerializedProperty offers = data.FindProperty("offers");
                 offers.arraySize = items.Length;
@@ -65,7 +76,6 @@ namespace Nomad.Shop.Editor
                 data.ApplyModifiedPropertiesWithoutUndo();
             }
 
-            Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             Material floor = MaterialAsset("Ground", new Color(0.17f, 0.23f, 0.23f));
             Material counter = MaterialAsset("Counter", new Color(0.44f, 0.32f, 0.18f));
             Material playerMaterial = MaterialAsset("Player", new Color(0.12f, 0.60f, 0.66f));
@@ -127,7 +137,6 @@ namespace Nomad.Shop.Editor
             sign.characterSize = 0.06f;
             sign.color = new Color(0.95f, 0.85f, 0.6f);
 
-            PrefabUtility.SaveAsPrefabAsset(shop, Folder + "/Demo/TemporaryShop.prefab");
             SetReference(new GameObject("Shop Demo").AddComponent<ShopDemo>(), "inventory", inventory);
             EditorSceneManager.SaveScene(scene, ScenePath);
             AssetDatabase.SaveAssets();
@@ -136,7 +145,7 @@ namespace Nomad.Shop.Editor
 
         private static Material MaterialAsset(string name, Color color)
         {
-            string path = Folder + "/Demo/" + name + ".mat";
+            string path = GeneratedFolder + "/" + name + ".mat";
             Material material = AssetDatabase.LoadAssetAtPath<Material>(path);
             if (material != null)
                 return material;

@@ -35,7 +35,7 @@ namespace Nomad.Shop.Editor
             if (!Application.isBatchMode)
                 throw new InvalidOperationException("이 검증은 종료 코드를 반환하므로 배치 모드에서 실행해 주세요.");
 
-            EditorSceneManager.OpenScene(ShopAuthoring.ScenePath);
+            ShopAuthoring.Build();
             SessionState.SetBool(SessionKey, true);
             Resume();
             EditorApplication.EnterPlaymode();
