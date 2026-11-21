@@ -422,6 +422,9 @@ MonoBehaviour:
   m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Player.TopDownCamera
   target: {fileID: 451336758}
+  maxLookAhead: 2
+  smoothTime: 0.15
+  deadZone: 0.1
 --- !u!81 &654134749
 AudioListener:
   m_ObjectHideFlags: 0

@@ -107,8 +107,10 @@ namespace Nomad.Player
                 if (canvas == null || !canvas.isActiveAndEnabled)
                     continue;
 
-                foreach (Graphic graphic in GraphicRegistry.GetRaycastableGraphicsForCanvas(canvas))
+                var graphics = GraphicRegistry.GetRaycastableGraphicsForCanvas(canvas);
+                for (int index = 0; index < graphics.Count; index++)
                 {
+                    Graphic graphic = graphics[index];
                     if (graphic == null || !graphic.isActiveAndEnabled || graphic.canvasRenderer.cull)
                         continue;
 

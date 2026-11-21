@@ -24,3 +24,5 @@
 `Nomad > Player > Verify Cursor Camera Settings`는 저장된 TerrainIntegration 카메라 설정을 확인합니다. Test Runner의 PlayMode `Nomad.Camera.PlayModeTests`가 격리된 실제 프레임·입력·가방·조준/HUD 검증입니다. `Nomad > Terrain > Open Integration Test Scene` → Play에서 WASD/점프/구르기와 커서 좌우·상하·대각선 이동, Tab 가방, E 상자를 확인합니다.
 
 실제 Unity 이동량·방향 전환 체감은 @VirtualExplorer7613의 플레이 검토 대상입니다. 시뮬레이션 승인은 구현 지시이며 완성된 Unity 결과의 병합 승인을 뜻하지 않습니다.
+
+자동 검증: Unity6000.6.9f1 PlayMode7/7 통과. 고정 커서 드리프트·상하좌우/대각선 제한·중앙 영역·실제 시간 보간·UI/포커스/화면 이탈/일시정지·대상 교체/순간이동/재활성화·부분 viewport·이동한 카메라의 조준점/스태미나 HUD 위치를 확인했습니다. 저장 통합 씬의 실제 WASD 이동·E 상자 열기·Tab 닫기·O 전체보기 왕복도 통과했습니다. 카메라 렌더 캡처는 Overlay UI를 포함하지 않습니다. Windows 빌드·사람 조작감 검토 및 미병합 상점/지역 모듈 통합은 실행하지 않았습니다.

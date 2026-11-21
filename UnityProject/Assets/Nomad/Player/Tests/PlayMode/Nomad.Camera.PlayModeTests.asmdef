@@ -1,0 +1,5 @@
+{
+    "name": "Nomad.Camera.PlayModeTests",
+    "references": ["Unity.InputSystem", "Unity.ugui", "Nomad.Combat"],
+    "optionalUnityReferences": ["TestAssemblies"]
+}
