@@ -196,6 +196,8 @@ namespace Nomad.Hud
             }
 
             root = new GameObject("Player HUD", typeof(RectTransform), typeof(Canvas), typeof(UnityEngine.UI.CanvasScaler));
+            // 지역 씬이 바뀌어도 HUD가 플레이어와 함께 남도록 플레이어와 같은 씬에 둡니다.
+            UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(root, gameObject.scene);
             canvas = root.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = 5;

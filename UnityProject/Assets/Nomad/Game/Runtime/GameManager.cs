@@ -9,11 +9,17 @@ namespace Nomad.Game
     [DisallowMultipleComponent]
     public sealed class GameManager : MonoBehaviour
     {
+        public const string PlayerTag = "Player";
+
         public static GameManager Instance { get; private set; }
 
         public GameConfig Config { get; private set; }
         public Scene CurrentRegion { get; private set; }
+        public string PreviousRegion { get; private set; }
         public bool IsLoading { get; private set; }
+
+        // 모듈 중 Player 태그가 붙은 오브젝트입니다. 지역이 바뀌어도 같은 인스턴스를 유지합니다.
+        public GameObject Player { get; private set; }
 
         // 지역 씬이 로드되어 활성 씬이 된 뒤 호출됩니다. 모듈은 직렬화 참조 대신 이 이벤트로 연결합니다.
         public event Action<Scene> RegionLoaded;
@@ -66,6 +72,11 @@ namespace Nomad.Game
                 if (module != null)
                     Instantiate(module, transform).name = module.name;
             }
+
+            // 지역이 플레이어 위치를 정하기 전까지는 숨겨 떨어지거나 잘못된 곳에서 움직이지 않게 합니다.
+            Player = FindTagged(transform, PlayerTag);
+            if (Player != null)
+                Player.SetActive(false);
         }
 
         private void Start()
@@ -75,7 +86,7 @@ namespace Nomad.Game
 
             // 지역 씬 단독 Play는 이미 열린 씬을 그대로 쓰고, Game 씬에서는 시작 지역을 불러옵니다.
             if (CurrentRegion.IsValid())
-                RegionLoaded?.Invoke(CurrentRegion);
+                EnterRegion(CurrentRegion);
             else
                 LoadRegion(Config.StartRegion);
         }
@@ -96,10 +107,27 @@ namespace Nomad.Game
             return true;
         }
 
+        // CharacterController는 활성 상태에서 위치를 바꾸면 되돌아가므로 끈 상태에서 옮깁니다.
+        public void PlacePlayer(Vector3 position, Quaternion rotation)
+        {
+            if (Player == null)
+                return;
+
+            Player.SetActive(false);
+            Player.transform.SetPositionAndRotation(position, rotation);
+            Player.SetActive(true);
+            Physics.SyncTransforms();
+        }
+
         private IEnumerator LoadRegionRoutine(string sceneName)
         {
             IsLoading = true;
             Scene previous = CurrentRegion;
+
+            // 언로드 후에는 Scene 핸들이 무효가 되어 이름을 읽을 수 없으므로 먼저 기억합니다.
+            string previousName = previous.IsValid() ? previous.name : null;
+            if (Player != null)
+                Player.SetActive(false);
 
             // 씬이 하나만 남으면 언로드할 수 없으므로 새 지역을 먼저 불러온 뒤 이전 지역을 내립니다.
             AsyncOperation load = SceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Additive);
@@ -121,9 +149,39 @@ namespace Nomad.Game
             if (previous.IsValid() && previous.isLoaded)
                 yield return SceneManager.UnloadSceneAsync(previous);
 
+            PreviousRegion = previousName;
             CurrentRegion = next;
             IsLoading = false;
-            RegionLoaded?.Invoke(next);
+            EnterRegion(next);
+        }
+
+        // 지역 전용 모듈을 그 씬에 만들고, 입구가 있으면 플레이어를 세운 뒤 알립니다.
+        // 입구가 없는 지역(필드)은 지형 생성이 끝난 뒤 지역 스스로 PlacePlayer를 호출합니다.
+        private void EnterRegion(Scene region)
+        {
+            foreach (GameObject prefab in Config.GetRegionModules(region.name))
+            {
+                GameObject module = Instantiate(prefab);
+                module.name = prefab.name;
+                SceneManager.MoveGameObjectToScene(module, region);
+            }
+
+            RegionEntrance entrance = RegionEntrance.Find(region, PreviousRegion);
+            if (entrance != null)
+                PlacePlayer(entrance.transform.position, entrance.transform.rotation);
+
+            RegionLoaded?.Invoke(region);
+        }
+
+        private static GameObject FindTagged(Transform root, string tag)
+        {
+            foreach (Transform child in root.GetComponentsInChildren<Transform>(true))
+            {
+                if (child.CompareTag(tag))
+                    return child.gameObject;
+            }
+
+            return null;
         }
     }
 }
