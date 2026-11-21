@@ -7,6 +7,8 @@ using Nomad.Hud;
 using Nomad.Interaction;
 using Nomad.Inventory;
 using Nomad.Loot;
+using Nomad.Monsters;
+using Nomad.Monsters.Demo;
 using Nomad.Player;
 using Nomad.Terrain;
 using Nomad.Village.Editor;
@@ -26,7 +28,11 @@ namespace Nomad.Game.Editor
     internal static class GameContentAuthoring
     {
         internal const string PlayerPrefabPath = "Assets/Nomad/Game/Prefabs/PlayerRig.prefab";
+        internal const string MonsterModulePath = "Assets/Nomad/Game/Prefabs/FieldMonsters.prefab";
         internal const string FieldPath = GameSceneAuthoring.FieldPath;
+        // 몬스터 외형·재질은 #59 통합 씬(GameplayIntegrationSetup)과 같은 에셋을 씁니다.
+        private const string MonsterMaterialFolder = "Assets/Nomad/Monsters/Demo/CombatMaterials";
+        private const string MonsterAppearancePath = "Assets/ThirdParty/Nomad/Monsters/Skeletons/SkeletonAppearances.asset";
         // 필드 원본: #73 TerrainTest(Terrain 지면·꾸밈·조명·Volume). 원본 씬은 수정하지 않고 복사합니다(#94).
         private const string FieldSourcePath = Nomad.Terrain.Editor.FieldDressingAuthoring.ScenePath;
         private const string ProjectilePath = "Assets/Nomad/Combat/PlayerProjectile.prefab";
@@ -42,9 +48,29 @@ namespace Nomad.Game.Editor
             BuildFieldScene();
             ConnectVillage();
             ConfigureGame(player);
+            BuildFieldMonsters();
 
             EditorSceneManager.OpenScene(GameSceneAuthoring.ScenePath);
             Debug.Log("GAME_CONTENT_BUILT");
+        }
+
+        // 필드 몬스터 지역 모듈만 다시 만들고 GameConfig의 Field 지역 모듈로 등록합니다(#89 5단계).
+        [MenuItem("Nomad/Game/Build Field Monsters")]
+        public static void BuildFieldMonsters()
+        {
+            var module = new GameObject("FieldMonsters");
+            var factory = module.AddComponent<MonsterActorFactory>();
+            factory.ConfigureMaterials(MonsterMaterial("Monster"), MonsterMaterial("Elite"),
+                MonsterMaterial("HeavyWarning"), MonsterMaterial("WarningFill"));
+            factory.ConfigureAppearances(AssetDatabase.LoadAssetAtPath<MonsterAppearanceSet>(MonsterAppearancePath));
+            module.AddComponent<FieldMonsters>();
+
+            GameObject prefab = PrefabUtility.SaveAsPrefabAsset(module, MonsterModulePath);
+            Object.DestroyImmediate(module);
+
+            RegisterRegionModule("Field", prefab);
+            AssetDatabase.SaveAssets();
+            Debug.Log("FIELD_MONSTERS_BUILT");
         }
 
         // 이동·전투·체력·가방·장비·HUD·상호작용을 한 Player에 모으고, 카메라·EventSystem을 같은 프리팹에 둡니다.
@@ -234,6 +260,40 @@ namespace Nomad.Game.Editor
             GameSceneAuthoring.RegisterBuildScenes();
             AssetDatabase.SaveAssets();
         }
+
+        // 지역 모듈 목록에 프리팹을 한 번만 추가합니다. 다른 작업이 등록한 항목은 유지합니다.
+        private static void RegisterRegionModule(string region, GameObject prefab)
+        {
+            var data = new SerializedObject(AssetDatabase.LoadAssetAtPath<GameConfig>(GameSceneAuthoring.ConfigPath));
+            SerializedProperty entries = data.FindProperty("regionModules");
+
+            SerializedProperty entry = null;
+            for (int i = 0; i < entries.arraySize && entry == null; i++)
+            {
+                if (entries.GetArrayElementAtIndex(i).FindPropertyRelative("region").stringValue == region)
+                    entry = entries.GetArrayElementAtIndex(i);
+            }
+
+            if (entry == null)
+            {
+                entries.arraySize++;
+                entry = entries.GetArrayElementAtIndex(entries.arraySize - 1);
+                entry.FindPropertyRelative("region").stringValue = region;
+                entry.FindPropertyRelative("prefabs").arraySize = 0;
+            }
+
+            SerializedProperty prefabs = entry.FindPropertyRelative("prefabs");
+            if (!Enumerable.Range(0, prefabs.arraySize).Any(i => prefabs.GetArrayElementAtIndex(i).objectReferenceValue == prefab))
+            {
+                prefabs.arraySize++;
+                prefabs.GetArrayElementAtIndex(prefabs.arraySize - 1).objectReferenceValue = prefab;
+            }
+
+            data.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static Material MonsterMaterial(string name) =>
+            AssetDatabase.LoadAssetAtPath<Material>($"{MonsterMaterialFolder}/{name}.mat");
 
         private static void DestroyRoot(Component component)
         {

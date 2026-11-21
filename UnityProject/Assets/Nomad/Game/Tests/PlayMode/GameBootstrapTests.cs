@@ -138,6 +138,7 @@ namespace Nomad.Game.Tests
             AssertUiKept(player);
             Assert.That(Terrain.activeTerrain != null && Terrain.activeTerrain.gameObject.scene == manager.CurrentRegion, Is.True, "TerrainTest 지면(#94)");
             Assert.That(camera.clearFlags, Is.EqualTo(CameraClearFlags.SolidColor), "필드 카메라 배경");
+            yield return AssertFieldMonsters(manager);
 
             // 필드 출구에 들어가면 마을의 필드 쪽 입구로 돌아옵니다.
             Transform exit = FindInRegion(manager, "FieldExit_");
@@ -155,6 +156,7 @@ namespace Nomad.Game.Tests
             AssertAtEntrance(manager, "Field");
             AssertUiKept(player);
             Assert.That(camera.clearFlags, Is.EqualTo(villageClear), "필드를 떠나면 카메라 복원");
+            Assert.That(Object.FindObjectsByType(FieldMonstersType, FindObjectsSortMode.None).Length, Is.EqualTo(0), "필드를 떠나면 몬스터 모듈도 사라짐");
             Assert.That(CallInventory(player, "Remove", "scrap", int.MaxValue), Is.EqualTo(5), "가방 내용 유지");
         }
 
@@ -171,6 +173,7 @@ namespace Nomad.Game.Tests
             Assert.That(manager.Player.GetComponent("PlayerInventory"), Is.Not.Null, "메인 게임 Player 프리팹");
             Assert.That(FieldSeed(manager), Is.Not.EqualTo(51), "진입마다 새 seed(검토 씬 고정 seed 51 아님)");
             AssertChestsOnlyOnProps(manager);
+            yield return AssertFieldMonsters(manager);
         }
 
         [UnityTest]
@@ -246,6 +249,39 @@ namespace Nomad.Game.Tests
                     for (Transform parent = chest.transform; parent != null; parent = parent.parent)
                         Assert.That(parent.name, Is.Not.EqualTo("FieldDressing"), "꾸밈 오브젝트가 상자로 판정됨: " + chest.name);
                 }
+            }
+        }
+
+        private static System.Type FieldMonstersType => System.Type.GetType("Nomad.Game.Modules.FieldMonsters, Assembly-CSharp");
+
+        // 필드 몬스터 지역 모듈(#89 5단계)이 필드 씬에 생성되어, 시작점 밖에 Player를 노리는 몬스터를 배치합니다.
+        private static IEnumerator AssertFieldMonsters(GameManager manager)
+        {
+            Component module = null;
+            foreach (GameObject root in manager.CurrentRegion.GetRootGameObjects())
+            {
+                if (module == null)
+                    module = root.GetComponentInChildren(FieldMonstersType);
+            }
+            Assert.That(module, Is.Not.Null, "GameConfig에 등록된 Field 몬스터 모듈");
+
+            // 모듈 Start가 생성 완료보다 늦을 수 있어 몇 프레임 기다립니다.
+            var enemies = new System.Collections.Generic.List<Component>();
+            float end = Time.realtimeSinceStartup + Timeout;
+            while (enemies.Count == 0)
+            {
+                Assert.That(Time.realtimeSinceStartup, Is.LessThan(end), "몬스터 배치 시간 초과");
+                yield return null;
+                foreach (object enemy in (IEnumerable)FieldMonstersType.GetProperty("Enemies").GetValue(module))
+                    enemies.Add((Component)enemy);
+            }
+
+            Assert.That(enemies.Count, Is.LessThanOrEqualTo(8), "일반6·엘리트1·보스1 이하");
+            foreach (Component enemy in enemies)
+            {
+                Assert.That(enemy.gameObject.scene, Is.EqualTo(manager.CurrentRegion), "몬스터는 필드 씬에 생성");
+                Assert.That(Vector3.Distance(enemy.transform.position, manager.Player.transform.position),
+                    Is.GreaterThan(11f), "시작점 안전 거리 밖");
             }
         }
 
