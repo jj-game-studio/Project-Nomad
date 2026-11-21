@@ -19,8 +19,14 @@ namespace Nomad.Game.Modules
         [SerializeField] private CameraClearFlags clearFlags = CameraClearFlags.SolidColor;
         [SerializeField] private Color background = new Color(0.16f, 0.2f, 0.14f);
 
+        [Tooltip("진입마다 새 seed를 쓰므로, 경로 준비에 실패한 seed는 이 횟수까지 새 seed로 다시 생성합니다.")]
+        [SerializeField, Min(0)] private int maxRetries = 5;
+
         private TerrainIntegrationControls controls;
+        private FieldNavigation navigation;
         private CameraState previousCamera;
+        private int retries;
+        private bool retryPending;
 
         private void Start()
         {
@@ -37,6 +43,8 @@ namespace Nomad.Game.Modules
             controls = GetComponent<TerrainIntegrationControls>();
             controls.Bind(manager.Player, camera);
             controls.ExitReached += OnExitReached;
+            navigation = GetComponent<FieldNavigation>();
+            navigation.GenerationCompleted += OnGenerationCompleted;
 
             // 이전 지역(마을)이 아직 언로드되지 않았으면 그 충돌체가 지형 바닥·경로 판정에 섞입니다.
             // 꺼 둔 컴포넌트는 Start가 미뤄지므로, 지역 전환이 끝난 뒤 켜서 생성을 시작합니다.
@@ -56,11 +64,32 @@ namespace Nomad.Game.Modules
             controls.enabled = true;
         }
 
+        // 실패한 생성은 플레이어를 배치하지 않아 멈추므로 새 seed로 다시 만듭니다.
+        // 생성 도중 호출되는 이벤트 안에서 재생성하면 바깥 생성 흐름과 겹치므로 다음 프레임에 처리합니다.
+        private void OnGenerationCompleted(FieldGenerationResult result)
+        {
+            if (!result.Success && retries < maxRetries)
+                retryPending = true;
+        }
+
+        private void Update()
+        {
+            if (!retryPending)
+                return;
+
+            retryPending = false;
+            retries++;
+            Debug.LogWarning($"필드 경로 준비 실패({navigation.LastResult?.FailureReason}). 새 seed로 다시 생성합니다 ({retries}/{maxRetries}).", this);
+            controls.Regenerate(true);
+        }
+
         // 영속 카메라를 다른 지역(마을)에서도 쓰므로 필드를 떠날 때 원래 설정으로 되돌립니다.
         private void OnDestroy()
         {
             if (controls != null)
                 controls.ExitReached -= OnExitReached;
+            if (navigation != null)
+                navigation.GenerationCompleted -= OnGenerationCompleted;
             if (GameManager.Instance != null)
                 GameManager.Instance.RegionLoaded -= OnRegionLoaded;
 

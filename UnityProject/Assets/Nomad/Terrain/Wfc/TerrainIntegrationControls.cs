@@ -28,6 +28,9 @@ namespace Nomad.Terrain
         // 검토 씬의 R/T/L/P/O/G 키입니다. 메인 게임 필드에서는 끕니다.
         [SerializeField] private bool testControls = true;
 
+        // 시작할 때 새 seed로 생성합니다. 검토 씬은 재현을 위해 끄고, 메인 게임 필드는 진입마다 새 지형을 씁니다.
+        [SerializeField] private bool newSeedOnStart;
+
         [SerializeField] private TerrainPiece[] microSources;
 
         private Vector3 spawn;
@@ -55,7 +58,7 @@ namespace Nomad.Terrain
             viewCamera = targetCamera;
         }
 
-        private void Start() => Regenerate(false);
+        private void Start() => Regenerate(newSeedOnStart);
 
         private void Update()
         {

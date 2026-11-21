@@ -578,6 +578,7 @@ MonoBehaviour:
   width: 18
   height: 18
   testControls: 0
+  newSeedOnStart: 1
   microSources:
   - {fileID: 2222155994254282205, guid: 347829489d082c345b791efc25001f29, type: 3}
   - {fileID: 8307354202130595620, guid: 24f0ebf0c5742de47b4e6b3321227a4e, type: 3}

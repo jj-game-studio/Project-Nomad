@@ -169,6 +169,7 @@ namespace Nomad.Game.Tests
             Assert.That(manager, Is.Not.Null, "Field 단독 Play에서 생성");
             yield return WaitForActive(manager.Player);
             Assert.That(manager.Player.GetComponent("PlayerInventory"), Is.Not.Null, "메인 게임 Player 프리팹");
+            Assert.That(FieldSeed(manager), Is.Not.EqualTo(51), "진입마다 새 seed(검토 씬 고정 seed 51 아님)");
         }
 
         [UnityTest]
@@ -231,6 +232,19 @@ namespace Nomad.Game.Tests
             }
 
             return null;
+        }
+
+        private static int FieldSeed(GameManager manager)
+        {
+            foreach (GameObject root in manager.CurrentRegion.GetRootGameObjects())
+            {
+                Component controls = root.GetComponentInChildren(System.Type.GetType("Nomad.Terrain.TerrainIntegrationControls, Assembly-CSharp"));
+                if (controls != null)
+                    return (int)controls.GetType().GetProperty("Seed").GetValue(controls);
+            }
+
+            Assert.Fail("Field 생성 컨트롤");
+            return 0;
         }
 
         // 테스트 어셈블리는 Player 쪽 스크립트를 참조할 수 없어 이름으로 호출합니다.

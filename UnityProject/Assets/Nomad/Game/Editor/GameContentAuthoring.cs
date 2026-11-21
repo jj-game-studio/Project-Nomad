@@ -147,6 +147,7 @@ namespace Nomad.Game.Editor
             data.FindProperty("viewCamera").objectReferenceValue = null;
             data.FindProperty("status").objectReferenceValue = null;
             data.FindProperty("testControls").boolValue = false;
+            data.FindProperty("newSeedOnStart").boolValue = true; // 진입마다 새 지형(#94 판단 5)
             data.ApplyModifiedPropertiesWithoutUndo();
 
             // 원본 카메라의 후처리·배경은 필드에 있는 동안 영속 카메라에 적용합니다.
