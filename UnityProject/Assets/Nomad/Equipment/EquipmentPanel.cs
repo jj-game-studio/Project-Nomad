@@ -127,6 +127,12 @@ namespace Nomad.Equipment
             Mouse mouse = Mouse.current;
             if (combat != null) combat.EquipmentUiOpen = IsOpen ||
                 (mouse != null && Contains(toolbar, mouse.position.ReadValue()));
+            if (inventoryView != null && inventoryView.BlocksSplitInput)
+            {
+                CancelSelection();
+                return;
+            }
+
             if (visuals != null)
             {
                 rangeLabel.text = $"공격 범위 [F2] : {(visuals.ShowRange ? "ON" : "OFF")}  (클릭)";
