@@ -16,6 +16,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
 
 namespace Nomad.Game.Editor
@@ -26,7 +27,8 @@ namespace Nomad.Game.Editor
     {
         internal const string PlayerPrefabPath = "Assets/Nomad/Game/Prefabs/PlayerRig.prefab";
         internal const string FieldPath = GameSceneAuthoring.FieldPath;
-        private const string TerrainIntegrationPath = "Assets/Nomad/Terrain/Wfc/TerrainIntegration.unity";
+        // 필드 원본: #73 TerrainTest(Terrain 지면·꾸밈·조명·Volume). 원본 씬은 수정하지 않고 복사합니다(#94).
+        private const string FieldSourcePath = Nomad.Terrain.Editor.FieldDressingAuthoring.ScenePath;
         private const string ProjectilePath = "Assets/Nomad/Combat/PlayerProjectile.prefab";
         private static readonly string[] ItemFolders = { "Assets/Nomad/Inventory/Demo", "Assets/Nomad/Equipment/Items" };
 
@@ -131,10 +133,10 @@ namespace Nomad.Game.Editor
             kit.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        // 지형 통합 검토 씬을 복사해 검토용 Player·카메라·상태 UI·디버그 키만 빼고 메인 게임 Player에 연결합니다.
+        // TerrainTest 씬을 복사해 검토용 Player·카메라·상태 UI·디버그 키만 빼고 메인 게임 Player에 연결합니다.
         internal static void BuildFieldScene()
         {
-            Scene scene = EditorSceneManager.OpenScene(TerrainIntegrationPath, OpenSceneMode.Single);
+            Scene scene = EditorSceneManager.OpenScene(FieldSourcePath, OpenSceneMode.Single);
             var controls = Object.FindAnyObjectByType<TerrainIntegrationControls>();
             var data = new SerializedObject(controls);
             var testPlayer = (GameObject)data.FindProperty("player").objectReferenceValue;
@@ -146,6 +148,19 @@ namespace Nomad.Game.Editor
             data.FindProperty("status").objectReferenceValue = null;
             data.FindProperty("testControls").boolValue = false;
             data.ApplyModifiedPropertiesWithoutUndo();
+
+            // 원본 카메라의 후처리·배경은 필드에 있는 동안 영속 카메라에 적용합니다.
+            var region = new SerializedObject(controls.gameObject.AddComponent<FieldRegion>());
+            if (testCamera != null)
+            {
+                UniversalAdditionalCameraData cameraData = testCamera.GetUniversalAdditionalCameraData();
+                region.FindProperty("postProcessing").boolValue = cameraData.renderPostProcessing;
+                region.FindProperty("antialiasing").enumValueIndex = (int)cameraData.antialiasing;
+                region.FindProperty("clearFlags").enumValueFlag = (int)testCamera.clearFlags;
+                region.FindProperty("background").colorValue = testCamera.backgroundColor;
+                region.ApplyModifiedPropertiesWithoutUndo();
+            }
+
             DestroyRoot(testPlayer);
             DestroyRoot(testCamera);
             DestroyRoot(status);
@@ -166,7 +181,6 @@ namespace Nomad.Game.Editor
             foreach (AudioListener listener in Object.FindObjectsByType<AudioListener>(FindObjectsInactive.Include))
                 Object.DestroyImmediate(listener);
 
-            controls.gameObject.AddComponent<FieldRegion>();
             EditorSceneManager.SaveScene(scene, FieldPath, true);
         }
 

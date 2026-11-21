@@ -8,6 +8,8 @@ Duckov 참고 화면처럼 덜 밋밋한 필드를 만들기 위한 1단계입�
 
 `Assets/Nomad/Terrain/Test/TerrainTest.unity`를 사용합니다. 몬스터 작업 등이 사용하는 `TerrainIntegration.unity`는 수정하지 않습니다.
 
+메인 게임의 `Game/Field.unity`는 이 씬을 복사해 검토용 Player·UI·디버그 키를 뺀 것입니다(#94, `Nomad > Game > Build Game Content`). TerrainTest를 바꾸면 이 메뉴로 Field를 다시 만듭니다.
+
 - `Nomad > Terrain > Dressing > Open TerrainTest Scene`으로 엽니다. 씬이 없으면 통합 씬을 복사해 만듭니다.
 - `Rebuild TerrainTest Scene`은 통합 씬을 다시 복사하고 아래 구성을 덧붙입니다. TerrainTest를 직접 편집했다면 덮어쓰므로 주의합니다.
 - 입력은 통합 씬과 같습니다(R/T 재생성, O 전체 보기, WASD 이동 등).

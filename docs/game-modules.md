@@ -20,6 +20,7 @@
 - `RegionEntrance`: 지역에 들어올 때 서는 위치. `fromRegion`이 이전 지역과 같은 입구를 먼저 쓰고, 없으면 기본 입구(빈 값)를 씁니다.
 - `RegionExit`: 트리거에 Player가 들어오면 `targetRegion`으로 전환합니다. 마을의 `Field Exit Trigger`에 붙어 있습니다.
 - Field는 입구 대신 `FieldRegion`이 지형·경로가 Ready된 뒤 생성 시작점에 Player를 세우고, 필드 출구(`FieldExit`)에 닿으면 Village로 돌아갑니다.
+- Field 지형은 #73 TerrainTest(Perlin 언덕 Terrain 지면·꾸밈·조명·Volume)를 따릅니다(#94). 필드에 있는 동안만 영속 카메라에 후처리·SMAA·단색 배경을 적용하고, 떠나면 원래대로 되돌립니다.
 
 ## 기능 추가 방법
 
@@ -29,4 +30,4 @@
 
 ## 다시 만들기
 
-`Nomad > Game > Build Game Content`가 최신 main 기준으로 Player 프리팹, `Field.unity`(TerrainIntegration 복사본에서 검토용 Player·카메라·상태 UI·디버그 키 제외), 마을 입출구, GameConfig·Build Settings를 다시 만듭니다. 각 기능의 원본 테스트 씬은 수정하지 않습니다. 다른 작업이 GameConfig에 등록한 모듈은 유지합니다.
+`Nomad > Game > Build Game Content`가 최신 main 기준으로 Player 프리팹, `Field.unity`(TerrainTest 복사본에서 검토용 Player·카메라·상태 UI·디버그 키 제외), 마을 입출구, GameConfig·Build Settings를 다시 만듭니다. 각 기능의 원본 테스트 씬은 수정하지 않습니다. 다른 작업이 GameConfig에 등록한 모듈은 유지합니다.

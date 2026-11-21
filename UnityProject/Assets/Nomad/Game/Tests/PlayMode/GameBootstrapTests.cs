@@ -126,6 +126,8 @@ namespace Nomad.Game.Tests
             AssertAtEntrance(manager, null);
             AssertUiKept(player);
             Assert.That(CallInventory(player, "Add", "scrap", 5), Is.EqualTo(5), "가방에 넣기");
+            Camera camera = manager.GetComponentInChildren<Camera>();
+            CameraClearFlags villageClear = camera.clearFlags;
 
             // 필드: 지형·경로 준비 후 Field가 플레이어를 배치합니다.
             Assert.That(manager.LoadRegion("Field"), Is.True);
@@ -134,6 +136,8 @@ namespace Nomad.Game.Tests
             yield return WaitForActive(player);
             Assert.That(manager.Player, Is.SameAs(player), "같은 Player 유지");
             AssertUiKept(player);
+            Assert.That(Terrain.activeTerrain != null && Terrain.activeTerrain.gameObject.scene == manager.CurrentRegion, Is.True, "TerrainTest 지면(#94)");
+            Assert.That(camera.clearFlags, Is.EqualTo(CameraClearFlags.SolidColor), "필드 카메라 배경");
 
             // 필드 출구에 들어가면 마을의 필드 쪽 입구로 돌아옵니다.
             Transform exit = FindInRegion(manager, "FieldExit_");
@@ -150,6 +154,7 @@ namespace Nomad.Game.Tests
 
             AssertAtEntrance(manager, "Field");
             AssertUiKept(player);
+            Assert.That(camera.clearFlags, Is.EqualTo(villageClear), "필드를 떠나면 카메라 복원");
             Assert.That(CallInventory(player, "Remove", "scrap", int.MaxValue), Is.EqualTo(5), "가방 내용 유지");
         }
 
