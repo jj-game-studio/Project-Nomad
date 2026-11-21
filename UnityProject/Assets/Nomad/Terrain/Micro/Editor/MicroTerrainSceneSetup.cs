@@ -29,6 +29,8 @@ namespace Nomad.Terrain.Editor
             controls.Generator.ConfigureWfc(AssetDatabase.LoadAssetAtPath<WfcTerrainCatalog>(MicroTerrainAuthoring.CatalogPath),
                 18, 18, 51, new Bounds(Vector3.zero, new Vector3(400f, 100f, 400f)));
             Nomad.Loot.Editor.TerrainLootIntegrationSetup.ConfigureScene();
+            if (controls.GetComponent<Nomad.Gameplay.GameplayIntegration>() != null)
+                Nomad.Gameplay.Editor.GameplayIntegrationSetup.ConfigureScene();
             EditorSceneManager.SaveScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene(), TerrainIntegrationAuthoring.ScenePath);
             AssetDatabase.SaveAssets();
         }

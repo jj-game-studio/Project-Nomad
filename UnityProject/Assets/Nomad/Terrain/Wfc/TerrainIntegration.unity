@@ -244,6 +244,9 @@ GameObject:
   - component: {fileID: 451336756}
   - component: {fileID: 451336759}
   - component: {fileID: 451336760}
+  - component: {fileID: 451336763}
+  - component: {fileID: 451336762}
+  - component: {fileID: 451336761}
   m_Layer: 0
   m_Name: Integration Player
   m_TagString: Untagged
@@ -304,6 +307,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 2053139436}
+  - {fileID: 1955340542}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &451336759
@@ -339,6 +343,53 @@ MonoBehaviour:
   obstacleLayers:
     serializedVersion: 2
     m_Bits: 4294967291
+--- !u!114 &451336761
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 451336755}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8f3073bbb94faea4d9fb1d618cb50a60, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::Nomad.Player.PlayerCombat
+  viewCamera: {fileID: 654134747}
+  muzzle: {fileID: 1955340542}
+  projectile: {fileID: 5089398602212540021, guid: 2cc2ec9c69fa5404db88118fd98087d8, type: 3}
+  collisionLayers:
+    serializedVersion: 2
+    m_Bits: 4294967291
+  shotDamage: 25
+  projectileSpeed: 45
+--- !u!114 &451336762
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 451336755}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bd2ffb773888d3449a875417e1e2c9ff, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Nomad.Monsters::Nomad.Monsters.SegmentedHealthBar
+  segments: 10
+  worldOffset: {x: 0, y: 2.4, z: 0}
+--- !u!114 &451336763
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 451336755}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a973d702e83013f4e82f4baabfe6b696, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Nomad.Combat::Nomad.Combat.Health
+  maxHealth: 100
 --- !u!1 &654134746
 GameObject:
   m_ObjectHideFlags: 0
@@ -1015,6 +1066,8 @@ GameObject:
   - component: {fileID: 1930808192}
   - component: {fileID: 1930808194}
   - component: {fileID: 1930808195}
+  - component: {fileID: 1930808197}
+  - component: {fileID: 1930808196}
   m_Layer: 0
   m_Name: Terrain Integration Controls
   m_TagString: Untagged
@@ -1115,6 +1168,41 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 99e5f6aaeb9e40e39930375cb5606e3a, type: 3}
   m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Terrain.FieldNavigation
+--- !u!114 &1930808196
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1930808191}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2f2d142741dee614fa7cf81a72388592, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::Nomad.Gameplay.GameplayIntegration
+  normalCount: 6
+  eliteCount: 1
+  bossCount: 1
+  diagnosticPanels:
+  - {fileID: 1951189840}
+  - {fileID: 657166042}
+--- !u!114 &1930808197
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1930808191}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f0bdf78cab3de3a438970a281b287f1f, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::Nomad.Monsters.Demo.MonsterActorFactory
+  normalMaterial: {fileID: 2100000, guid: e71b810fa74d311429fff88083d800e9, type: 2}
+  eliteMaterial: {fileID: 2100000, guid: a809024f3ded8a14a9d2474e04b182ca, type: 2}
+  warningMaterial: {fileID: 2100000, guid: b9604fba17d86e74eacf26b1dc4c04b5, type: 2}
+  fillMaterial: {fileID: 2100000, guid: 9c58b52eadffe20469f6d3477a6e01f1, type: 2}
+  appearances: {fileID: 11400000, guid: b3188f7ebaa2f6046a3dde7c430845a0, type: 2}
 --- !u!1 &1951189840
 GameObject:
   m_ObjectHideFlags: 0
@@ -1191,6 +1279,37 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1951189840}
   m_CullTransparentMesh: 1
+--- !u!1 &1955340541
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1955340542}
+  m_Layer: 0
+  m_Name: Muzzle
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1955340542
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1955340541}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 1.2, z: 0.45}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 451336758}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2053139435
 GameObject:
   m_ObjectHideFlags: 0
@@ -1249,7 +1368,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
+  - {fileID: 2100000, guid: 939f63cdd63255848a04b02e98b319d3, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0

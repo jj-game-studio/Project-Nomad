@@ -43,6 +43,7 @@ namespace Nomad.Terrain
         public string LastReachedExit { get; private set; }
         public int Seed => seed;
         public bool Legacy => legacy;
+        public bool GameplayView => view == 0;
         public string Summary => status != null ? status.text : string.Empty;
         public TerrainGenerator Generator => generator;
         public GameObject Player => player;
