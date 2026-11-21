@@ -59,11 +59,20 @@ namespace Nomad.Inventory
             if (item == null)
                 return false;
 
-            if (items[quickSlot] != item)
+            bool changed = items[quickSlot] != item;
+            for (int index = 0; index < Capacity; index++)
             {
-                items[quickSlot] = item;
-                Changed?.Invoke();
+                if (index != quickSlot && items[index] == item)
+                {
+                    items[index] = null;
+                    changed = true;
+                }
             }
+
+            // 이전 등록 제거와 새 위치 반영을 마친 뒤 완성된 상태만 알립니다.
+            items[quickSlot] = item;
+            if (changed)
+                Changed?.Invoke();
 
             return true;
         }
