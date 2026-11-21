@@ -123,7 +123,7 @@ namespace Nomad.Inventory.Editor
                         Check(!confirm.interactable, "empty disabled");
                         amount.text = "56";
                         Check(confirm.interactable && slider.value == 56, "numeric input sync");
-                        Check(dialog.Find("Card/Remaining").GetComponent<UnityEngine.UI.Text>().text.Contains("40"), "remaining count");
+                        Check(dialog.Find("Card/Remaining") == null, "remaining count label removed");
                         slider.value = 1;
                         Check(amount.text == "1", "slider sync minimum");
                         slider.value = 95;

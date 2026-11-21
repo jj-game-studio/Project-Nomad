@@ -14,7 +14,6 @@ namespace Nomad.Inventory
         private readonly RectTransform card;
         private readonly Font font;
         private readonly UnityEngine.UI.Text itemName;
-        private readonly UnityEngine.UI.Text remaining;
         private readonly UnityEngine.UI.Text feedback;
         private readonly UnityEngine.UI.Image icon;
         private readonly UnityEngine.UI.InputField amountInput;
@@ -51,7 +50,6 @@ namespace Nomad.Inventory
 
             amountInput = CreateInput();
             slider = CreateSlider();
-            remaining = Text("Remaining", "", new Vector2(540, 30), new Vector2(0, -45), 17);
             feedback = Text("Feedback", "", new Vector2(540, 46), new Vector2(0, -88), 16);
             feedback.color = new Color32(244, 167, 139, 255);
 
@@ -155,7 +153,6 @@ namespace Nomad.Inventory
                 error = "빈 가방칸이 필요합니다.";
 
             if (validAmount) slider.SetValueWithoutNotify(amount);
-            remaining.text = validAmount ? $"분할 {amount}개  ·  원래 칸에 {count - amount}개 남음" : "분할할 수량을 선택하세요.";
             feedback.text = error;
             confirm.interactable = error.Length == 0;
             return confirm.interactable;
