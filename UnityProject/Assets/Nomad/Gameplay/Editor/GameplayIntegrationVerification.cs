@@ -214,7 +214,13 @@ namespace Nomad.Gameplay.Editor
             controls.Player.GetComponent<PlayerMovement>().enabled = true;
             yield return null;
             yield return Press(UnityEngine.InputSystem.Key.E);
-            yield return Until(() => Scrap(inventory) == 10, "E key transferred real chest contents", 2f);
+
+            // main의 상자 UI: E로 창을 열고 Take All로 옮긴 뒤 창을 닫습니다.
+            yield return Until(() => LootPanel() != null, "E key opens real chest panel", 2f);
+            LootPanel().Find("Take All").GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
+            yield return Until(() => Scrap(inventory) == 10, "Take All transferred real chest contents", 2f);
+            LootPanel().Find("Close").GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
+            yield return Until(() => LootPanel() == null, "chest panel closed", 2f);
 
             // 생성이 시작되면 날아가던 발사체와 이전 세대를 즉시 비활성화합니다.
             Projectile prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Nomad/Combat/PlayerProjectile.prefab").GetComponent<Projectile>();
@@ -249,6 +255,8 @@ namespace Nomad.Gameplay.Editor
             Require(controls.Player.GetComponent<PlayerInventory>().UsedSlots == 0 && gameplay.Enemies.Count == 8,
                 "retry clears carried loot and restores encounters");
         }
+
+        private static Transform LootPanel() => GameObject.Find("ChestLootPanel")?.transform;
 
         private static void Bind()
         {
