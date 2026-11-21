@@ -1,50 +1,61 @@
 using System.Collections.Generic;
 using Nomad.Inventory;
-using Nomad.Props;
+using Nomad.Terrain;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 namespace Nomad.Loot
 {
-    // 저장된 지형 통합 검토 씬의 기존 상자에만 연결합니다. 배치 정책은 변경하지 않습니다.
+    // 저장된 지형 통합 검토 씬에서 Ready 결과의 상자 지점에 상자를 배치하고 파밍 검토 키를 제공합니다.
     public sealed class TerrainLootIntegration : MonoBehaviour
     {
+        private static readonly string[] ReviewItems = { "scrap", "field-knife", "field-vest" };
+
         [SerializeField] private PlayerInventory inventory;
         [SerializeField] private UnityEngine.UI.Text status;
-        private readonly List<LootChest> chests = new();
+        private ChestSpawner spawner;
         private LootChest lastChest;
 
         public string Summary => status == null ? string.Empty : status.text;
-
-        public void Refresh(PropScatter scatter)
+        public ChestSpawner Spawner
         {
-            chests.Clear();
-            lastChest = null;
-            if (scatter == null) return;
-
-            // 도달성 복구로 제거된 큐브는 제외하고 최종 활성 배치에만 적용합니다.
-            foreach (BoxCollider box in scatter.GetComponentsInChildren<BoxCollider>())
+            get
             {
-                var chest = box.gameObject.AddComponent<LootChest>();
-                chest.Initialize($"{scatter.GenerationId}/chest-{chests.Count}", new[] { new LootStack("scrap", 10) });
-                chest.Changed += () => lastChest = chest;
-                chests.Add(chest);
+                if (spawner == null && !TryGetComponent(out spawner))
+                    spawner = gameObject.AddComponent<ChestSpawner>();
+                return spawner;
             }
+        }
+        public IReadOnlyList<LootChest> Chests => Spawner.Chests;
+
+        // 재생성 시작에는 null로 이전 상자를 정리하고, Ready 결과가 나오면 새 상자를 배치합니다.
+        public void Refresh(FieldGenerationResult field)
+        {
+            lastChest = null;
+            foreach (LootChest chest in Spawner.Spawn(field))
+                chest.Changed += () => lastChest = chest;
         }
 
         private void Update()
         {
             if (inventory == null || !inventory.isActiveAndEnabled) return;
             Keyboard keyboard = Keyboard.current;
+
+            // F: 가방을 가득 채워 공간 부족을 확인합니다. V: 검토용 아이템을 모두 비웁니다.
             if (keyboard?.fKey.wasPressedThisFrame == true)
             {
-                inventory.Remove("scrap", int.MaxValue);
-                inventory.Remove("field-knife", int.MaxValue);
+                ClearReviewItems();
                 inventory.Add("scrap", 96);
                 inventory.Add("field-knife", 19);
             }
             if (keyboard?.vKey.wasPressedThisFrame == true)
-                inventory.Remove("scrap", int.MaxValue);
+                ClearReviewItems();
+        }
+
+        private void ClearReviewItems()
+        {
+            foreach (string id in ReviewItems)
+                inventory.Remove(id, int.MaxValue);
         }
 
         private void LateUpdate()
@@ -53,9 +64,9 @@ namespace Nomad.Loot
             int scrap = 0;
             for (int i = 0; i < inventory.UsedSlots; i++)
                 if (inventory.GetStack(i).Item.ItemId == "scrap") scrap += inventory.GetStack(i).Count;
-            string result = lastChest == null ? "Approach a crate and press E"
+            string result = lastChest == null ? "Approach a chest and press E"
                 : $"Last chest: {lastChest.CountItems()} items  ·  {lastChest.Status}";
-            status.text = $"E Open chest | F Fill inventory | V Free scrap | Chests {chests.Count}\n"
+            status.text = $"E Open chest | F Fill inventory | V Empty bag | Chests {Chests.Count}\n"
                 + $"Scrap {scrap} | Slots {inventory.UsedSlots}/20 | {result}";
         }
     }

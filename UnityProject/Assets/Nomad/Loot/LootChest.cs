@@ -56,6 +56,16 @@ namespace Nomad.Loot
             RefreshVisuals();
         }
 
+        // 런타임에 생성한 상자의 상호작용점과 상태별 외형을 지정합니다.
+        public void ConfigureVisuals(Transform point, GameObject closed, GameObject open, GameObject empty)
+        {
+            interactionPoint = point;
+            closedVisual = closed;
+            openVisual = open;
+            emptyVisual = empty;
+            RefreshVisuals();
+        }
+
         // 생성 시 한 번 초기화합니다. 진행 중인 루팅에서 보유 목록을 교체하지 않습니다.
         public void Initialize(string id, LootStack[] stacks)
         {
