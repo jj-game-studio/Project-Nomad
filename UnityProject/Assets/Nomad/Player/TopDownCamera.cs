@@ -80,11 +80,14 @@ namespace Nomad.Player
 
             Rect rect = viewCamera.pixelRect;
             Vector2 pointer = mouse.position.ReadValue();
-            if (rect.width <= 0f || rect.height <= 0f || !rect.Contains(pointer))
+            if (rect.width <= 0f || rect.height <= 0f)
                 return Vector3.zero;
 
             // 이동 후의 플레이어 화면 좌표가 아닌 고정된 화면 중앙을 기준으로 합니다.
             Vector2 direction = (pointer - rect.center) / (rect.size * 0.5f);
+            // 화면 밖에서도 가장자리 방향을 유지해 경계에서 중앙으로 돌아오지 않습니다.
+            direction.x = Mathf.Clamp(direction.x, -1f, 1f);
+            direction.y = Mathf.Clamp(direction.y, -1f, 1f);
             float radius = direction.magnitude;
             float zone = Mathf.Clamp(deadZone, 0f, 0.95f);
             if (radius <= zone)

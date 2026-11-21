@@ -141,9 +141,9 @@ namespace Nomad.Camera.PlayModeTests
         }
 
         [UnityTest]
-        public IEnumerator UiFocusOutsideAndPauseReturnToCenter()
+        public IEnumerator UiFocusAndPauseReturnToCenterWithOutsidePointer()
         {
-            Point(Vector2.right * .9f);
+            Point(Vector2.right * 1.1f);
             yield return Frames();
             Assert.That(Shift.x, Is.GreaterThan(1f));
             var window = new GameObject("Window", typeof(Canvas), typeof(GraphicRaycaster));
@@ -165,11 +165,42 @@ namespace Nomad.Camera.PlayModeTests
             Focus(true);
             Point(new Vector2(1.1f, 0));
             yield return Frames();
-            Assert.That(Shift.magnitude, Is.LessThan(.001f));
+            Assert.That(Shift.x, Is.EqualTo(2f).Within(.001f), "포커스 복귀 시 화면 밖 커서는 가장자리 유지");
             Point(Vector2.right * .9f);
             Time.timeScale = 0f;
             yield return Frames();
             Assert.That(Shift.magnitude, Is.LessThan(.001f));
+        }
+
+        [UnityTest]
+        public IEnumerator OutsideViewportClampsEveryEdgeAndCornerWithoutRecentering()
+        {
+            foreach (Rect viewport in new[] { new Rect(0, 0, 1, 1), new Rect(.1f, .15f, .6f, .55f) })
+            {
+                view.rect = viewport;
+                foreach (Vector2 direction in new[] { Vector2.right, Vector2.left, Vector2.up, Vector2.down,
+                    new Vector2(1, 1), new Vector2(-1, -1), new Vector2(1, -1), new Vector2(-1, 1) })
+                {
+                    Point(direction * .9999f);
+                    yield return Frames();
+                    Vector3 inside = Shift;
+                    Point(direction * 1.0001f);
+                    yield return Frames();
+                    Assert.That(Vector3.Distance(Shift, inside), Is.LessThan(.001f), "경계 왕복 연속성");
+                    Point(direction * 3f);
+                    yield return Frames();
+                    Assert.That(Shift.magnitude, Is.EqualTo(2f).Within(.001f));
+                    Assert.That(Vector3.Dot(Shift.normalized, new Vector3(direction.x, 0, direction.y).normalized),
+                        Is.GreaterThan(.999f), "경계 밖에서도 같은 방향 유지");
+                }
+
+                Point(new Vector2(1, .3f));
+                yield return Frames();
+                Vector3 edge = Shift;
+                Point(new Vector2(4, .3f));
+                yield return Frames();
+                Assert.That(Vector3.Distance(Shift, edge), Is.LessThan(.001f), "축별 제한으로 화면 밖 거리와 무관한 방향");
+            }
         }
 
         [UnityTest]
