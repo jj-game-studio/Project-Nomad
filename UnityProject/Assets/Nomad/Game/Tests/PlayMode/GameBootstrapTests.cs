@@ -170,6 +170,7 @@ namespace Nomad.Game.Tests
             yield return WaitForActive(manager.Player);
             Assert.That(manager.Player.GetComponent("PlayerInventory"), Is.Not.Null, "메인 게임 Player 프리팹");
             Assert.That(FieldSeed(manager), Is.Not.EqualTo(51), "진입마다 새 seed(검토 씬 고정 seed 51 아님)");
+            AssertChestsOnlyOnProps(manager);
         }
 
         [UnityTest]
@@ -232,6 +233,20 @@ namespace Nomad.Game.Tests
             }
 
             return null;
+        }
+
+        // 돌담·나무 같은 꾸밈(FieldDressing 하위)은 상자로 판정되면 안 됩니다.
+        private static void AssertChestsOnlyOnProps(GameManager manager)
+        {
+            System.Type chestType = System.Type.GetType("Nomad.Loot.LootChest, Assembly-CSharp");
+            foreach (GameObject root in manager.CurrentRegion.GetRootGameObjects())
+            {
+                foreach (Component chest in root.GetComponentsInChildren(chestType, true))
+                {
+                    for (Transform parent = chest.transform; parent != null; parent = parent.parent)
+                        Assert.That(parent.name, Is.Not.EqualTo("FieldDressing"), "꾸밈 오브젝트가 상자로 판정됨: " + chest.name);
+                }
+            }
         }
 
         private static int FieldSeed(GameManager manager)
