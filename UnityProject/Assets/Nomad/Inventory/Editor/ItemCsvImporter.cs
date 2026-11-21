@@ -57,6 +57,8 @@ namespace Nomad.Inventory.Editor
                 {
                     if (item.ItemId != row.Id)
                         throw new InvalidOperationException($"기존 ID의 대소문자를 유지하세요. {item.ItemId}");
+                    if (!row.Equipment.HasValue && item.EquipmentType != EquipmentType.None && row.MaxStack != 1)
+                        throw new InvalidOperationException($"장비 중첩 수는 1이어야 합니다. {row.Id}");
                     if (!AssetDatabase.IsOpenForEdit(item))
                         throw new InvalidOperationException($"쓰기 불가능한 에셋입니다. {row.Id}");
                 }
@@ -80,6 +82,15 @@ namespace Nomad.Inventory.Editor
                 serialized.FindProperty("displayName").stringValue = row.Name;
                 serialized.FindProperty("description").stringValue = row.Description;
                 serialized.FindProperty("maxStack").intValue = row.MaxStack;
+                if (row.Equipment.HasValue)
+                {
+                    serialized.FindProperty("equipmentType").enumValueIndex = (int)row.Equipment.Value;
+                    serialized.FindProperty("attackPower").intValue = row.AttackPower;
+                    serialized.FindProperty("defense").intValue = row.Defense;
+                    serialized.FindProperty("attackMode").enumValueIndex = (int)row.AttackMode;
+                    serialized.FindProperty("attackRange").floatValue = row.AttackRange;
+                    serialized.FindProperty("attackInterval").floatValue = row.AttackInterval;
+                }
                 serialized.ApplyModifiedPropertiesWithoutUndo();
 
                 if (created)

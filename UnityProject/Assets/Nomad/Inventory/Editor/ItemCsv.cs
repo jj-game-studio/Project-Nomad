@@ -14,13 +14,27 @@ namespace Nomad.Inventory.Editor
             public readonly string Name;
             public readonly string Description;
             public readonly int MaxStack;
+            public readonly EquipmentType? Equipment;
+            public readonly int AttackPower;
+            public readonly int Defense;
+            public readonly WeaponAttackMode AttackMode;
+            public readonly float AttackRange;
+            public readonly float AttackInterval;
 
-            public Row(string id, string name, string description, int maxStack)
+            public Row(string id, string name, string description, int maxStack,
+                EquipmentType? equipment = null, int attackPower = 0, int defense = 0,
+                WeaponAttackMode attackMode = WeaponAttackMode.None, float attackRange = 0, float attackInterval = 0)
             {
                 Id = id;
                 Name = name;
                 Description = description;
                 MaxStack = maxStack;
+                Equipment = equipment;
+                AttackPower = attackPower;
+                Defense = defense;
+                AttackMode = attackMode;
+                AttackRange = attackRange;
+                AttackInterval = attackInterval;
             }
         }
 
@@ -28,16 +42,18 @@ namespace Nomad.Inventory.Editor
         {
             var records = ReadRecords(text.TrimStart('\uFEFF'));
             string[] header = { "item_id", "display_name", "description", "max_stack" };
-            if (records.Count < 2 || !EqualHeader(records[0], header))
-                throw new FormatException("헤더는 item_id,display_name,description,max_stack이며 데이터가 1행 이상 필요합니다.");
+            string[] equipmentHeader = { "item_id", "display_name", "description", "max_stack", "equipment_type", "attack_power", "defense", "attack_mode", "attack_range", "attack_interval" };
+            bool extended = records.Count > 0 && EqualHeader(records[0], equipmentHeader);
+            if (records.Count < 2 || (!extended && !EqualHeader(records[0], header)))
+                throw new FormatException("기본4열 또는 장비10열 헤더와 데이터가 1행 이상 필요합니다.");
 
             var result = new List<Row>();
             var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             for (int index = 1; index < records.Count; index++)
             {
                 List<string> cells = records[index];
-                if (cells.Count != 4)
-                    throw new FormatException($"레코드 {index + 1}: 열이 4개여야 합니다.");
+                if (cells.Count != (extended ? 10 : 4))
+                    throw new FormatException($"레코드 {index + 1}: 헤더와 열 수가 다릅니다.");
 
                 string id = cells[0];
                 if (!Regex.IsMatch(id, @"\A[A-Za-z0-9][A-Za-z0-9_-]*\z") || !ids.Add(id))
@@ -47,7 +63,35 @@ namespace Nomad.Inventory.Editor
                     !int.TryParse(cells[3], NumberStyles.None, CultureInfo.InvariantCulture, out int maxStack) || maxStack < 1)
                     throw new FormatException($"레코드 {index + 1}: 이름과 양의 정수 max_stack이 필요합니다.");
 
-                result.Add(new Row(id, cells[1], cells[2], maxStack));
+                EquipmentType? equipment = null;
+                int attack = 0;
+                int defense = 0;
+                WeaponAttackMode mode = WeaponAttackMode.None;
+                float range = 0;
+                float interval = 0;
+                if (extended)
+                {
+                    if (!Enum.TryParse(cells[4], false, out EquipmentType type) ||
+                        !Enum.IsDefined(typeof(EquipmentType), type) || type.ToString() != cells[4] ||
+                        !int.TryParse(cells[5], NumberStyles.None, CultureInfo.InvariantCulture, out attack) ||
+                        !int.TryParse(cells[6], NumberStyles.None, CultureInfo.InvariantCulture, out defense) ||
+                        (type != EquipmentType.None && maxStack != 1) ||
+                        (type == EquipmentType.Weapon ? attack <= 0 || defense != 0 : attack != 0) ||
+                        (type == EquipmentType.None && defense != 0))
+                        throw new FormatException($"레코드 {index + 1}: 장비 분류/수치/중첩 수가 잘못되었습니다.");
+
+                    equipment = type;
+                    if (!Enum.TryParse(cells[7], false, out mode) ||
+                        !Enum.IsDefined(typeof(WeaponAttackMode), mode) || mode.ToString() != cells[7] ||
+                        !float.TryParse(cells[8], NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out range) ||
+                        !float.TryParse(cells[9], NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out interval) ||
+                        float.IsNaN(range) || float.IsNaN(interval) || float.IsInfinity(range) || float.IsInfinity(interval) ||
+                        (type == EquipmentType.Weapon ? mode == WeaponAttackMode.None || range <= 0 || interval <= 0 :
+                            mode != WeaponAttackMode.None || range != 0 || interval != 0))
+                        throw new FormatException($"레코드 {index + 1}: 공격 방식/사거리/간격이 잘못되었습니다.");
+                }
+
+                result.Add(new Row(id, cells[1], cells[2], maxStack, equipment, attack, defense, mode, range, interval));
             }
 
             return result;

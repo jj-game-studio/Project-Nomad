@@ -60,6 +60,18 @@ namespace Nomad.Inventory.Editor
                 Reject(() => ItemCsvImporter.Import(Header + "test,손상,,1", Root, Root), "기존 에셋 ID 중복");
                 Check(item.DisplayName == "둘째 이름", "중복 에셋 오류 무변경");
 
+                AssetDatabase.DeleteAsset(Root + "/duplicate.asset");
+                string equipmentHeader = "item_id,display_name,description,max_stack,equipment_type,attack_power,defense,attack_mode,attack_range,attack_interval\n";
+                ItemCsvImporter.Import(equipmentHeader + "test,활,장비,1,Weapon,35,0,Ranged,200,0.8", Root, Root);
+                Check(item.EquipmentType == EquipmentType.Weapon && item.AttackPower == 35 &&
+                    item.AttackMode == WeaponAttackMode.Ranged && item.AttackRange == 200 && item.AttackInterval == 0.8f,
+                    "실제 장비 CSV 에셋 갱신");
+                ItemCsvImporter.Import(Header + "test,새 이름,설명,1", Root, Root);
+                Check(item.AttackPower == 35 && item.AttackMode == WeaponAttackMode.Ranged && item.Icon == icon,
+                    "기존4열 가져오기 장비·아이콘 유지");
+                Reject(() => ItemCsvImporter.Import(Header + "test,손상,,3", Root, Root), "기존4열 장비 중첩 보호");
+                Check(item.MaxStack == 1 && item.DisplayName == "새 이름", "장비 검증 오류 무변경");
+
                 AssetDatabase.DeleteAsset(Root);
                 Debug.Log($"ITEM_CSV_PASS: {checks} checks");
                 EditorApplication.Exit(0);

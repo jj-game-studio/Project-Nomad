@@ -31,6 +31,9 @@ namespace Nomad.Combat
             if (amount <= 0 || IsDead || (kind == DamageKind.Combat && IsCombatImmune))
                 return false;
 
+            if (kind == DamageKind.Combat && TryGetComponent(out ICombatDamageModifier modifier))
+                amount = Mathf.Max(1, modifier.ModifyCombatDamage(amount));
+
             CurrentHealth = Mathf.Max(0, CurrentHealth - amount);
             if (IsDead)
                 Died?.Invoke(this);
