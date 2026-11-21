@@ -1,3 +1,4 @@
+using System.Linq;
 using Nomad.Player;
 using Nomad.Loot;
 using Nomad.Props;
@@ -30,7 +31,9 @@ namespace Nomad.Terrain
         private bool props = true;
         private int view;
         private GameObject gallery;
+        private GameObject exitRoot;
         public string NavigationFailure { get; private set; }
+        public string LastReachedExit { get; private set; }
         public int Seed => seed;
         public bool Legacy => legacy;
         public bool GameplayView => view == 0;
@@ -66,6 +69,7 @@ namespace Nomad.Terrain
         public TerrainGenerationResult Regenerate(bool newSeed)
         {
             player.SetActive(false);
+            ClearExits();
             if (Navigation == null) gameObject.AddComponent<FieldNavigation>();
             Navigation.Configure(generator);
             bool micro = !legacy && catalog.microTiles;
@@ -105,10 +109,12 @@ namespace Nomad.Terrain
             NavigationFailure = field.FailureReason;
             bool safe = field.Success;
             spawn = field.PlayerPosition + Vector3.up * 0.05f;
+            if (safe) CreateExits(field);
             if (safe) PlacePlayer();
             SetView(safe ? view : 1);
             status.text = $"TERRAIN INTEGRATION | {(legacy ? "Legacy" : "WFC")} | Seed {seed}\n"
-                + $"{Navigation.State} | Tiles {result.Pieces.Count} | Props {scatter.Positions.Count} | Enemy slots {field.EnemyPoints.Count} | Chest slots {field.ChestPoints.Count}\n"
+                + $"{Navigation.State} | Tiles {result.Pieces.Count} | Props {scatter.Positions.Count} | Enemy slots {field.EnemyPoints.Count} | Chest slots {field.ChestPoints.Count}"
+                + $" | Exits {field.ExitPoints.Count} ({string.Join("/", field.ExitPoints.Select(point => point.Id.Replace("exit-", "")))})\n"
                 + $"Attempts {result.Attempts} | Candidate checks {result.CandidateChecks}\n"
                 + "R New seed | T Replay | L WFC/Legacy | P Props on/off\n"
                 + "O Field overview/player | G 3m tile gallery/player\n"
@@ -116,6 +122,37 @@ namespace Nomad.Terrain
                 + $"Levels 0/1/2m | Reachable samples {generator.ReachableSamples} | {NavigationFailure}{generator.WalkabilityFailure}";
             GetComponent<TerrainLootIntegration>()?.Refresh(safe ? scatter : null);
             return result;
+        }
+
+        // 출구 결과를 임시 표식으로 보여 주고, 플레이어 진입을 HUD에 표시합니다.
+        private void CreateExits(FieldGenerationResult field)
+        {
+            exitRoot = new GameObject("FieldExits");
+            exitRoot.transform.SetParent(transform, false);
+            foreach (FieldSpawnPoint point in field.ExitPoints)
+                FieldExit.Create(point, exitRoot.transform).Entered += OnExitEntered;
+        }
+
+        private void OnExitEntered(FieldExit exit, Collider other)
+        {
+            if (!other.transform.IsChildOf(player.transform)) return;
+            LastReachedExit = exit.Point.Id;
+            Debug.Log($"FIELD_EXIT_REACHED {exit.Point.Id} seed={seed}");
+
+            // 이전 도달 표시 줄만 바꿔 다른 HUD 내용은 유지합니다.
+            int line = status.text.IndexOf("\nExit reached");
+            status.text = (line < 0 ? status.text : status.text.Substring(0, line)) + "\nExit reached: " + exit.Point.Id;
+        }
+
+        private void ClearExits()
+        {
+            LastReachedExit = null;
+            if (exitRoot == null) return;
+
+            exitRoot.SetActive(false);
+            if (Application.isPlaying) Destroy(exitRoot);
+            else DestroyImmediate(exitRoot);
+            exitRoot = null;
         }
 
         private void PlacePlayer()

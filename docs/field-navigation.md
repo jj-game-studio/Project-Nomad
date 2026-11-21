@@ -11,7 +11,7 @@
 ## 결과와 수명
 
 - 상태: `Idle / Generating / Ready / Failed`. `Ready`에서만 `HasNavigation`과 사용 가능한 지점이 있습니다.
-- 결과: `GenerationId`, `Seed`, `Success`, `FailureReason`, `PlayerPosition`, `PlayerRotation`, `EnemyPoints`, `ChestPoints`.
+- 결과: `GenerationId`, `Seed`, `Success`, `FailureReason`, `PlayerPosition`, `PlayerRotation`, `EnemyPoints`, `ChestPoints`, `ExitPoints`.
 - 지점: 세대 내 고유 `Id`, 월드 `Position`·`Rotation`, 점유 `Radius`, 도달 가능한 `ApproachPosition`. 지점 ID는 세대 ID와 함께 사용합니다. 결과 목록은 읽기 전용 스냅샷입니다.
 - 지형 재생성 시작 시 이전 결과와 NavMesh를 즉시 무효화합니다. 같은 최신 결과의 반복 `Prepare`는 같은 결과를 반환하고 통지를 반복하지 않습니다. 실패 시 지점은 비우고 NavMesh를 제거합니다. 컴포넌트 비활성화/파괴 시에도 제거합니다.
 - 통합 씬은 재생성 전에 플레이어를 비활성화하고 최종 성공 후 안전 시작점에 배치합니다. 다른 호출 측도 입력 잠금과 기존 개체 정리를 담당합니다.
@@ -26,9 +26,15 @@
 
 3m 지형의 중앙 상자 주변 통행 기준은 기존 통합 씬과 같은 실제 캡슐 보행 검사입니다. 구형10m 조각은 연결부 폭을 추가로 예약합니다. 구형 비교 모드의 모든 표면 검증을 신규3m 검증과 동일하다고 보고하지 않습니다.
 
+## 출구 (#90)
+
+`ExitPoints`는 필드 가장자리의 임시 출구입니다. 시작점에 가장 가까운 면을 입구 쪽으로 보고(모서리 시작처럼 비슷하게 가까운 면이 여럿이면 seed로 하나를 고름), 나머지 3면에서 계단이 아닌 가장자리 타일을 지형 seed로 섞어 면마다 1개를 고릅니다. 가장자리 줄에 유효한 자리가 없으면 한 줄 안쪽 타일까지 대체 후보로 봅니다. 출구는 시작점에서9m, 다른 출구에서12m 이상 떨어져 있고, 상자 예약과 겹치지 않으며 시작점에서 NavMesh 경로로 도달 가능합니다. 적 지점은 출구 자리를 피합니다. 지점 ID는 `exit-west/east/south/north`, `Rotation`의 forward는 필드 바깥 방향입니다. 대체 후보까지 없는 면은 건너뛰며 필드를 실패시키지 않습니다. 검증 seed15개에서는 모두3개가 나왔습니다.
+
+통합 씬은 출구마다 초록 원판·기둥 표식과 `FieldExit` 트리거를 만들고, 플레이어가 들어가면 HUD에 `Exit reached`를 표시합니다. 실제 마을 이동·출구별 목적지 규칙은 소비 측(#89)에서 `FieldExit.Entered` 또는 `ExitPoints`로 연결합니다.
+
 ## 통합 씬과 검증
 
-`Nomad > Terrain > Open Integration Test Scene` → Play. HUD에서 Ready/Failed, Enemy slots, Chest slots를 확인합니다. R은 새 seed, T는 동일 seed 재현, P는 기존 소품 토글입니다. L은 구형 비교입니다. 적과 신규 상자를 실제 생성하는 정책은 #39/#20에서 연결하며, 기존 #16의 루팅 상자는 그대로 유지합니다.
+`Nomad > Terrain > Open Integration Test Scene` → Play. HUD에서 Ready/Failed, Enemy slots, Chest slots, Exits를 확인합니다. R은 새 seed, T는 동일 seed 재현, P는 기존 소품 토글입니다. L은 구형 비교입니다. 적과 신규 상자를 실제 생성하는 정책은 #39/#20에서 연결하며, 기존 #16의 루팅 상자는 그대로 유지합니다.
 
 `Nomad > Terrain > Validate Field Navigation` 또는 Unity 배치 실행의 `Nomad.Terrain.Editor.FieldNavigationValidation.Run`으로 같은 저장 씬을 검사합니다. 실행 시 연결 컴포넌트가 없으면 이를 추가하고 런타임 지형 생성 전에 씬을 저장합니다. 검사 결과는 `Artifacts/field-navigation-results.txt`, 화면은 `field-navigation-overview.png`와 `field-navigation-player.png`입니다.
 

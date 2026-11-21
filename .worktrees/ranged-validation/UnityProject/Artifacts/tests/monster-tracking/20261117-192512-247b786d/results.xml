@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="21" result="Failed(Child)" total="21" passed="20" failed="1" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-11-17 10:25:20Z" end-time="2026-11-17 10:25:43Z" duration="23.4425149">
+  <test-suite type="TestSuite" id="1075" name="UnityProject" fullname="UnityProject" runstate="Runnable" testcasecount="59" result="Failed" site="Child" start-time="2026-11-17 10:25:20Z" end-time="2026-11-17 10:25:43Z" duration="23.442515" total="21" passed="20" failed="1" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <failure>
+      <message><![CDATA[One or more child tests had errors]]></message>
+    </failure>
+    <test-suite type="Assembly" id="1143" name="Nomad.Monsters.PlayModeTests.dll" fullname="C:/Users/JUNGLE/Desktop/JungleGameTech/JJya/.worktrees/ranged-validation/UnityProject/Library/ScriptAssemblies/Nomad.Monsters.PlayModeTests.dll" runstate="Runnable" testcasecount="59" result="Failed" site="Child" start-time="2026-11-17 10:25:20Z" end-time="2026-11-17 10:25:43Z" duration="23.434972" total="21" passed="20" failed="1" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="48568" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <failure>
+        <message><![CDATA[One or more child tests had errors]]></message>
+      </failure>
+      <test-suite type="TestSuite" id="1144" name="Nomad" fullname="Nomad" runstate="Runnable" testcasecount="59" result="Failed" site="Child" start-time="2026-11-17 10:25:20Z" end-time="2026-11-17 10:25:43Z" duration="23.433733" total="21" passed="20" failed="1" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <failure>
+          <message><![CDATA[One or more child tests had errors]]></message>
+        </failure>
+        <test-suite type="TestSuite" id="1145" name="Monsters" fullname="Nomad.Monsters" runstate="Runnable" testcasecount="59" result="Failed" site="Child" start-time="2026-11-17 10:25:20Z" end-time="2026-11-17 10:25:43Z" duration="23.432979" total="21" passed="20" failed="1" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <failure>
+            <message><![CDATA[One or more child tests had errors]]></message>
+          </failure>
+          <test-suite type="TestSuite" id="1146" name="Tests" fullname="Nomad.Monsters.Tests" runstate="Runnable" testcasecount="59" result="Failed" site="Child" start-time="2026-11-17 10:25:20Z" end-time="2026-11-17 10:25:43Z" duration="23.432030" total="21" passed="20" failed="1" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-suite type="TestFixture" id="1076" name="MonsterAppearanceTests" fullname="Nomad.Monsters.Tests.MonsterAppearanceTests" classname="Nomad.Monsters.Tests.MonsterAppearanceTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-11-17 10:25:20Z" end-time="2026-11-17 10:25:21Z" duration="1.090947" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1079" name="RealAgentMovementSelectsRunAnimationWithoutRootMotion" fullname="Nomad.Monsters.Tests.MonsterAppearanceTests.RealAgentMovementSelectsRunAnimationWithoutRootMotion" methodname="RealAgentMovementSelectsRunAnimationWithoutRootMotion" classname="Nomad.Monsters.Tests.MonsterAppearanceTests" runstate="Runnable" seed="1162872094" result="Passed" start-time="2026-11-17 10:25:20Z" end-time="2026-11-17 10:25:21Z" duration="0.536241" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <output><![CDATA[Failed to create agent because there is no valid NavMesh
+]]></output>
+              </test-case>
+              <test-case id="1078" name="TexturedFlashCoversEveryBodyPartThenRestoresAtlasAndDeathAnimation" fullname="Nomad.Monsters.Tests.MonsterAppearanceTests.TexturedFlashCoversEveryBodyPartThenRestoresAtlasAndDeathAnimation" methodname="TexturedFlashCoversEveryBodyPartThenRestoresAtlasAndDeathAnimation" classname="Nomad.Monsters.Tests.MonsterAppearanceTests" runstate="Runnable" seed="1470713992" result="Passed" start-time="2026-11-17 10:25:21Z" end-time="2026-11-17 10:25:21Z" duration="0.520956" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <output><![CDATA[Failed to create agent because there is no valid NavMesh
+]]></output>
+              </test-case>
+              <test-case id="1077" name="ThreeNormalWeaponStylesHaveSkinsMaterialsAndIdleAnimation" fullname="Nomad.Monsters.Tests.MonsterAppearanceTests.ThreeNormalWeaponStylesHaveSkinsMaterialsAndIdleAnimation" methodname="ThreeNormalWeaponStylesHaveSkinsMaterialsAndIdleAnimation" classname="Nomad.Monsters.Tests.MonsterAppearanceTests" runstate="Runnable" seed="1055329177" result="Passed" start-time="2026-11-17 10:25:21Z" end-time="2026-11-17 10:25:21Z" duration="0.019186" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <output><![CDATA[Failed to create agent because there is no valid NavMesh
+]]></output>
+              </test-case>
+            </test-suite>
+            <test-suite type="TestFixture" id="1087" name="MonsterDebugTests" fullname="Nomad.Monsters.Tests.MonsterDebugTests" classname="Nomad.Monsters.Tests.MonsterDebugTests" runstate="Runnable" testcasecount="4" result="Failed" site="Child" start-time="2026-11-17 10:25:21Z" end-time="2026-11-17 10:25:26Z" duration="4.707942" total="4" passed="3" failed="1" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[One or more child tests had errors]]></message>
+              </failure>
+              <test-case id="1088" name="DebugLineupHasThreeWeaponStylesTwoLargeMonstersAndFaintDetection" fullname="Nomad.Monsters.Tests.MonsterDebugTests.DebugLineupHasThreeWeaponStylesTwoLargeMonstersAndFaintDetection" methodname="DebugLineupHasThreeWeaponStylesTwoLargeMonstersAndFaintDetection" classname="Nomad.Monsters.Tests.MonsterDebugTests" runstate="Runnable" seed="1678450535" result="Passed" start-time="2026-11-17 10:25:21Z" end-time="2026-11-17 10:25:21Z" duration="0.062587" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <output><![CDATA[Failed to create agent because there is no valid NavMesh
+]]></output>
+              </test-case>
+              <test-case id="1090" name="DragonLegsStayWithinBoundedGaitWithoutRotationFlips" fullname="Nomad.Monsters.Tests.MonsterDebugTests.DragonLegsStayWithinBoundedGaitWithoutRotationFlips" methodname="DragonLegsStayWithinBoundedGaitWithoutRotationFlips" classname="Nomad.Monsters.Tests.MonsterDebugTests" runstate="Runnable" seed="779676172" result="Passed" start-time="2026-11-17 10:25:21Z" end-time="2026-11-17 10:25:22Z" duration="0.603741" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <output><![CDATA[Failed to create agent because there is no valid NavMesh
+]]></output>
+              </test-case>
+              <test-case id="1091" name="DragonUsesReducedFlatShadedSkinnedMeshWithOriginalRig" fullname="Nomad.Monsters.Tests.MonsterDebugTests.DragonUsesReducedFlatShadedSkinnedMeshWithOriginalRig" methodname="DragonUsesReducedFlatShadedSkinnedMeshWithOriginalRig" classname="Nomad.Monsters.Tests.MonsterDebugTests" runstate="Runnable" seed="1960524075" result="Failed" start-time="2026-11-17 10:25:22Z" end-time="2026-11-17 10:25:22Z" duration="0.031249" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <failure>
+                  <message><![CDATA[  Expected: less than 0.0f
+  But was:  2412
+]]></message>
+                  <stack-trace><![CDATA[at Nomad.Monsters.Tests.MonsterDebugTests.DragonUsesReducedFlatShadedSkinnedMeshWithOriginalRig () [0x00020] in C:\Users\JUNGLE\Desktop\JungleGameTech\JJya\.worktrees\ranged-validation\UnityProject\Assets\Nomad\Monsters\Tests\PlayMode\MonsterDebugTests.cs:141
+]]></stack-trace>
+                </failure>
+                <output><![CDATA[Failed to create agent because there is no valid NavMesh
+Not allowed to access triangles/indices on mesh 'dragon' (isReadable is false; Read/Write must be enabled in import settings)
+]]></output>
+              </test-case>
+              <test-case id="1089" name="SwordSwingsWhileCrossbowAndStaffAimDuringTheirRealAttacks" fullname="Nomad.Monsters.Tests.MonsterDebugTests.SwordSwingsWhileCrossbowAndStaffAimDuringTheirRealAttacks" methodname="SwordSwingsWhileCrossbowAndStaffAimDuringTheirRealAttacks" classname="Nomad.Monsters.Tests.MonsterDebugTests" runstate="Runnable" seed="1604043545" result="Passed" start-time="2026-11-17 10:25:22Z" end-time="2026-11-17 10:25:26Z" duration="4.008302" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <output><![CDATA[Failed to create agent because there is no valid NavMesh
+]]></output>
+              </test-case>
+            </test-suite>
+            <test-suite type="TestFixture" id="1119" name="MonsterTestPanelTests" fullname="Nomad.Monsters.Tests.MonsterTestPanelTests" classname="Nomad.Monsters.Tests.MonsterTestPanelTests" runstate="Runnable" testcasecount="14" result="Passed" start-time="2026-11-17 10:25:26Z" end-time="2026-11-17 10:25:43Z" duration="17.629211" total="14" passed="14" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1127" name="AllRanksDropOneVisualEquipmentMarkerWithoutPickupAndClearTogether" fullname="Nomad.Monsters.Tests.MonsterTestPanelTests.AllRanksDropOneVisualEquipmentMarkerWithoutPickupAndClearTogether" methodname="AllRanksDropOneVisualEquipmentMarkerWithoutPickupAndClearTogether" classname="Nomad.Monsters.Tests.MonsterTestPanelTests" runstate="Runnable" seed="2103472601" result="Passed" start-time="2026-11-17 10:25:26Z" end-time="2026-11-17 10:25:27Z" duration="0.819851" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <output><![CDATA[Failed to create agent because there is no valid NavMesh
+]]></output>
+              </test-case>
+              <test-case id="1132" name="ApplyResetsOnlySelectedAndKeepsItIfHomeIsOccupied" fullname="Nomad.Monsters.Tests.MonsterTestPanelTests.ApplyResetsOnlySelectedAndKeepsItIfHomeIsOccupied" methodname="ApplyResetsOnlySelectedAndKeepsItIfHomeIsOccupied" classname="Nomad.Monsters.Tests.MonsterTestPanelTests" runstate="Runnable" seed="82570312" result="Passed" start-time="2026-11-17 10:25:27Z" end-time="2026-11-17 10:25:27Z" duration="0.013626" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <output><![CDATA[Failed to create agent because there is no valid NavMesh
+]]></output>
+              </test-case>
+              <test-case id="1125" name="BossSpawnsWithModelAndInvalidOrOccupiedSpawnAreRejected" fullname="Nomad.Monsters.Tests.MonsterTestPanelTests.BossSpawnsWithModelAndInvalidOrOccupiedSpawnAreRejected" methodname="BossSpawnsWithModelAndInvalidOrOccupiedSpawnAreRejected" classname="Nomad.Monsters.Tests.MonsterTestPanelTests" runstate="Runnable" seed="40651568" result="Passed" start-time="2026-11-17 10:25:27Z" end-time="2026-11-17 10:25:27Z" duration="0.011540" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <output><![CDATA[Failed to create agent because there is no valid NavMesh
+]]></output>
+              </test-case>
+              <test-case id="1126" name="DragonIdleMovesActualBonesAndDeathPlaysSuppliedClip" fullname="Nomad.Monsters.Tests.MonsterTestPanelTests.DragonIdleMovesActualBonesAndDeathPlaysSuppliedClip" methodname="DragonIdleMovesActualBonesAndDeathPlaysSuppliedClip" classname="Nomad.Monsters.Tests.MonsterTestPanelTests" runstate="Runnable" seed="238932687" result="Passed" start-time="2026-11-17 10:25:27Z" end-time="2026-11-17 10:25:28Z" duration="0.809383" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <output><![CDATA[Failed to create agent because there is no valid NavMesh
+]]></output>
+              </test-case>
+              <test-case id="1123" name="GolemBonesWalkAndDieAndDragonHasLargerBodyAndDamageTrail" fullname="Nomad.Monsters.Tests.MonsterTestPanelTests.GolemBonesWalkAndDieAndDragonHasLargerBodyAndDamageTrail" methodname="GolemBonesWalkAndDieAndDragonHasLargerBodyAndDamageTrail" classname="Nomad.Monsters.Tests.MonsterTestPanelTests" runstate="Runnable" seed="487361195" result="Passed" start-time="2026-11-17 10:25:28Z" end-time="2026-11-17 10:25:30Z" duration="2.715303" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <output><![CDATA[Failed to create agent because there is no valid NavMesh
+]]></output>
+              </test-case>
+              <test-case id="1129" name="HomeLimitReturnsToSpawnWithoutTrackingDuringReturn" fullname="Nomad.Monsters.Tests.MonsterTestPanelTests.HomeLimitReturnsToSpawnWithoutTrackingDuringReturn" methodname="HomeLimitReturnsToSpawnWithoutTrackingDuringReturn" classname="Nomad.Monsters.Tests.MonsterTestPanelTests" runstate="Runnable" seed="1201877638" result="Passed" start-time="2026-11-17 10:25:30Z" end-time="2026-11-17 10:25:33Z" duration="2.389318" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <output><![CDATA[Failed to create agent because there is no valid NavMesh
+]]></output>
+              </test-case>
+              <test-case id="1131" name="InvincibilitySurvivesMovementAndBlocksActualMeleeHits" fullname="Nomad.Monsters.Tests.MonsterTestPanelTests.InvincibilitySurvivesMovementAndBlocksActualMeleeHits" methodname="InvincibilitySurvivesMovementAndBlocksActualMeleeHits" classname="Nomad.Monsters.Tests.MonsterTestPanelTests" runstate="Runnable" seed="1772380679" result="Passed" start-time="2026-11-17 10:25:33Z" end-time="2026-11-17 10:25:34Z" duration="1.509406" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <output><![CDATA[Failed to create agent because there is no valid NavMesh
+]]></output>
+              </test-case>
+              <test-case id="1128" name="PanelAndPlacementBlockTheRealPlayerShootingApi" fullname="Nomad.Monsters.Tests.MonsterTestPanelTests.PanelAndPlacementBlockTheRealPlayerShootingApi" methodname="PanelAndPlacementBlockTheRealPlayerShootingApi" classname="Nomad.Monsters.Tests.MonsterTestPanelTests" runstate="Runnable" seed="1809702353" result="Passed" start-time="2026-11-17 10:25:34Z" end-time="2026-11-17 10:25:34Z" duration="0.012063" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <output><![CDATA[Failed to create agent because there is no valid NavMesh
+]]></output>
+              </test-case>
+              <test-case id="1121" name="RangedAimLocksAndPlayerCanDodgeDuringWindup" fullname="Nomad.Monsters.Tests.MonsterTestPanelTests.RangedAimLocksAndPlayerCanDodgeDuringWindup" methodname="RangedAimLocksAndPlayerCanDodgeDuringWindup" classname="Nomad.Monsters.Tests.MonsterTestPanelTests" runstate="Runnable" seed="564933258" result="Passed" start-time="2026-11-17 10:25:34Z" end-time="2026-11-17 10:25:37Z" duration="2.410834" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <output><![CDATA[Failed to create agent because there is no valid NavMesh
+]]></output>
+              </test-case>
+              <test-case id="1122" name="RangedProjectileIsBlockedByCoverAndDeathCancelsPendingShot" fullname="Nomad.Monsters.Tests.MonsterTestPanelTests.RangedProjectileIsBlockedByCoverAndDeathCancelsPendingShot" methodname="RangedProjectileIsBlockedByCoverAndDeathCancelsPendingShot" classname="Nomad.Monsters.Tests.MonsterTestPanelTests" runstate="Runnable" seed="2018929600" result="Passed" start-time="2026-11-17 10:25:37Z" end-time="2026-11-17 10:25:41Z" duration="4.711621" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <output><![CDATA[Failed to create agent because there is no valid NavMesh
+]]></output>
+              </test-case>
+              <test-case id="1120" name="RangedWindupLaunchesRealProjectileAndHitsPlayerOnce" fullname="Nomad.Monsters.Tests.MonsterTestPanelTests.RangedWindupLaunchesRealProjectileAndHitsPlayerOnce" methodname="RangedWindupLaunchesRealProjectileAndHitsPlayerOnce" classname="Nomad.Monsters.Tests.MonsterTestPanelTests" runstate="Runnable" seed="62282791" result="Passed" start-time="2026-11-17 10:25:41Z" end-time="2026-11-17 10:25:43Z" duration="1.979973" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <output><![CDATA[Failed to create agent because there is no valid NavMesh
+]]></output>
+              </test-case>
+              <test-case id="1133" name="RangeTogglesAndPauseControlActualSimulation" fullname="Nomad.Monsters.Tests.MonsterTestPanelTests.RangeTogglesAndPauseControlActualSimulation" methodname="RangeTogglesAndPauseControlActualSimulation" classname="Nomad.Monsters.Tests.MonsterTestPanelTests" runstate="Runnable" seed="1433255751" result="Passed" start-time="2026-11-17 10:25:43Z" end-time="2026-11-17 10:25:43Z" duration="0.215990" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <output><![CDATA[Failed to create agent because there is no valid NavMesh
+]]></output>
+              </test-case>
+              <test-case id="1130" name="RestoreRevivesPlayerAndClearRemovesTrackedActors" fullname="Nomad.Monsters.Tests.MonsterTestPanelTests.RestoreRevivesPlayerAndClearRemovesTrackedActors" methodname="RestoreRevivesPlayerAndClearRemovesTrackedActors" classname="Nomad.Monsters.Tests.MonsterTestPanelTests" runstate="Runnable" seed="1827437504" result="Passed" start-time="2026-11-17 10:25:43Z" end-time="2026-11-17 10:25:43Z" duration="0.013489" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <output><![CDATA[Failed to create agent because there is no valid NavMesh
+]]></output>
+              </test-case>
+              <test-case id="1124" name="SpawnUsesPerTypeHealthSpeedAndTrackingSettings" fullname="Nomad.Monsters.Tests.MonsterTestPanelTests.SpawnUsesPerTypeHealthSpeedAndTrackingSettings" methodname="SpawnUsesPerTypeHealthSpeedAndTrackingSettings" classname="Nomad.Monsters.Tests.MonsterTestPanelTests" runstate="Runnable" seed="104099753" result="Passed" start-time="2026-11-17 10:25:43Z" end-time="2026-11-17 10:25:43Z" duration="0.011556" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <output><![CDATA[Failed to create agent because there is no valid NavMesh
+Saving results to: C:/Users/JUNGLE/AppData/LocalLow/DefaultCompany/UnityProject\TestResults.xml
+]]></output>
+              </test-case>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

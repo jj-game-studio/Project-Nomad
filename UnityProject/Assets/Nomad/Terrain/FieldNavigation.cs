@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -71,6 +72,7 @@ namespace Nomad.Terrain
             ReleaseMesh();
             var enemies = new List<FieldSpawnPoint>();
             var chests = new List<FieldSpawnPoint>();
+            var exits = new List<FieldSpawnPoint>();
             Vector3 start = default;
             string reason = terrain.FailureReason;
             bool success = terrain.Success && terrain.Pieces.Count > 0;
@@ -99,15 +101,21 @@ namespace Nomad.Terrain
                 }
                 if (chests.Count == 0) Bake(terrain, obstacles, chests);
                 success = HasNavigation && ValidateRoutes(terrain, start, obstacles, chests, out reason);
-                if (success) SelectPoints(terrain, start, enemies, false, chests);
+                if (success)
+                {
+                    // 출구를 먼저 정하고 적 지점이 출구·상자 자리를 피하도록 합니다.
+                    SelectExits(terrain, start, exits, chests);
+                    SelectPoints(terrain, start, enemies, false, new List<FieldSpawnPoint>(chests.Concat(exits)));
+                }
             }
             if (!success)
             {
                 ReleaseMesh();
                 enemies.Clear();
                 chests.Clear();
+                exits.Clear();
             }
-            LastResult = new FieldGenerationResult(terrain, success, reason, start, enemies, chests);
+            LastResult = new FieldGenerationResult(terrain, success, reason, start, enemies, chests, exits);
             completedId = terrain.GenerationId;
             State = success ? FieldGenerationState.Ready : FieldGenerationState.Failed;
             GenerationCompleted?.Invoke(LastResult);
@@ -178,6 +186,69 @@ namespace Nomad.Terrain
             }
         }
 
+        private const float ExitRadius = 0.75f;
+        private const float ExitStartDistance = 9f;
+        // 이웃한 면의 출구가 같은 모서리에 몰리지 않도록 출구끼리 4타일 이상 띄웁니다.
+        private const float ExitSpacing = 12f;
+        private const int ExitDepth = 2;
+        private static readonly string[] ExitSides = { "west", "east", "south", "north" };
+
+        // 시작점에 가장 가까운 면을 입구로 보고, 나머지 3면의 가장자리 근처 타일에 출구를 하나씩 랜덤 배치합니다.
+        private void SelectExits(TerrainGenerationResult terrain, Vector3 start, List<FieldSpawnPoint> exits,
+            List<FieldSpawnPoint> reserved)
+        {
+            Transform frame = terrain.Pieces[0].transform.parent;
+            Vector3[] centers = terrain.Pieces.Select(piece => frame.InverseTransformPoint(piece.WorldOccupancy.center)).ToArray();
+            float[] edges = { centers.Min(c => c.x), centers.Max(c => c.x), centers.Min(c => c.z), centers.Max(c => c.z) };
+
+            Vector3 local = frame.InverseTransformPoint(start);
+            float[] gaps = { local.x - edges[0], edges[1] - local.x, local.z - edges[2], edges[3] - local.z };
+
+            // 같은 seed·설정에서 같은 출구가 나오도록 지형 seed로 고릅니다.
+            // 모서리 시작점처럼 가까운 면이 여럿이면 그중 하나를 랜덤으로 입구 면으로 둡니다.
+            var random = new System.Random(terrain.Seed);
+            int[] nearest = Enumerable.Range(0, 4).Where(side => gaps[side] <= gaps.Min() + MicroTerrainTile.Size * 0.5f).ToArray();
+            int entrance = nearest[random.Next(nearest.Length)];
+
+            for (int side = 0; side < 4; side++)
+            {
+                if (side == entrance) continue;
+                Vector3 outward = side switch { 0 => Vector3.left, 1 => Vector3.right, 2 => Vector3.back, _ => Vector3.forward };
+                Quaternion rotation = Quaternion.LookRotation(frame.TransformDirection(outward));
+
+                // 가장자리 줄에 유효한 자리가 없으면 한 줄 안쪽까지 대체 후보로 써서 출구 없는 면을 줄입니다.
+                bool found = false;
+                for (int depth = 0; depth < ExitDepth && !found; depth++)
+                {
+                    float line = edges[side] + (side % 2 == 0 ? depth : -depth) * MicroTerrainTile.Size;
+                    List<int> candidates = Enumerable.Range(0, centers.Length)
+                        .Where(index => Mathf.Abs((side < 2 ? centers[index].x : centers[index].z) - line) < 0.1f
+                            && terrain.Pieces[index].Kind != TerrainPieceKind.Stairs)
+                        .OrderBy(_ => random.Next()).ToList();
+
+                    // Any는 첫 성공에서 멈추므로 섞인 순서의 첫 유효 타일이 출구가 됩니다.
+                    found = candidates.Any(index => TryExit(terrain.Pieces[index], start, rotation, ExitSides[side], exits, reserved));
+                }
+            }
+        }
+
+        private bool TryExit(TerrainPiece piece, Vector3 start, Quaternion rotation, string side,
+            List<FieldSpawnPoint> exits, List<FieldSpawnPoint> reserved)
+        {
+            foreach (Vector3 candidate in Candidates(piece))
+            {
+                if (!TryFloor(piece, candidate, ExitRadius, out Vector3 floor)
+                    || Vector3.Distance(floor, start) < ExitStartDistance
+                    || Overlaps(floor, ExitRadius, reserved)
+                    || exits.Any(other => Vector3.Distance(floor, other.Position) < ExitSpacing)
+                    || !Sample(floor, out Vector3 approach) || !Reachable(start, approach)) continue;
+
+                exits.Add(new FieldSpawnPoint("exit-" + side, floor, rotation, ExitRadius, approach));
+                return true;
+            }
+            return false;
+        }
+
         private static IEnumerable<Vector3> Candidates(TerrainPiece piece)
         {
             Bounds bounds = piece.LocalOccupancy;
@@ -191,14 +262,14 @@ namespace Nomad.Terrain
         {
             floor = default;
             if (!Physics.Raycast(origin, Vector3.down, out RaycastHit hit, 20f, ~0, QueryTriggerInteraction.Ignore)
-                || !hit.collider.transform.IsChildOf(piece.transform) || hit.normal.y < 0.99f) return false;
+                || !FieldGround.BelongsTo(hit.collider, hit.point, piece) || hit.normal.y < 0.99f) return false;
             floor = hit.point;
             foreach (Vector2 offset in new[] { new Vector2(-1f, -1f), new Vector2(1f, -1f),
                 new Vector2(-1f, 1f), new Vector2(1f, 1f) })
             {
                 Vector3 sample = floor + new Vector3(offset.x * radius, 0.5f, offset.y * radius);
                 if (!Physics.Raycast(sample, Vector3.down, out RaycastHit support, 0.55f, ~0, QueryTriggerInteraction.Ignore)
-                    || !support.collider.transform.IsChildOf(piece.transform) || support.normal.y < 0.99f
+                    || !FieldGround.BelongsTo(support.collider, support.point, piece) || support.normal.y < 0.99f
                     || Mathf.Abs(support.point.y - floor.y) > 0.02f) return false;
             }
             return !Physics.CheckCapsule(floor + Vector3.up * (radius + 0.05f),
@@ -246,9 +317,10 @@ namespace Nomad.Terrain
                 {
                     Vector3 inside = connection.Position - connection.transform.forward * 0.45f;
                     // 계단의 포트 바닥과 첫 단 높이는 다르므로 실제 표면에 투영합니다.
+                    // 필드 Terrain 표면은 타일 연결점 높이와 2m까지 다를 수 있어 아래로 넉넉히 내려 쏩니다.
                     if (!Physics.Raycast(inside + Vector3.up * 3f, Vector3.down, out RaycastHit floor,
-                        4f, ~0, QueryTriggerInteraction.Ignore)
-                        || floor.collider.GetComponentInParent<TerrainPiece>() != connection.GetComponentInParent<TerrainPiece>()
+                        6f, ~0, QueryTriggerInteraction.Ignore)
+                        || !FieldGround.BelongsTo(floor.collider, floor.point, connection.GetComponentInParent<TerrainPiece>())
                         || !Sample(floor.point, out Vector3 hit) || !Reachable(start, hit))
                     { reason = $"도달할 수 없는 필수 연결부: {connection.transform.parent.name}/{connection.name} inside={inside} floor={floor.point}"; return false; }
                 }

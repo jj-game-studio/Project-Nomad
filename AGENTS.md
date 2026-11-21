@@ -1,99 +1,70 @@
-# 에이전트 협업 작업 지침
+# Agent Collaboration Guidelines
 
-## 협업의 전제
+Every team member works through AI agents, and other tasks are run by agents too. Coordinate through GitHub records, not private chat. Humans decide goals, priorities, game experience, and exceptions; agents implement, verify, and coordinate technically on their own.
 
-두 팀원 모두 AI 에이전트를 적극적으로 사용합니다. 다른 작업의 실행 주체도 에이전트라고 가정하고, 개인 채팅에 의존하지 않는 GitHub 기록으로 협업합니다. 사람은 목표, 우선순위, 게임 경험과 예외를 판단하고 에이전트는 구현·검증·기술 조율을 자율적으로 수행합니다.
+- Repo: https://github.com/jj-game-studio/Project-Nomad · Board: https://github.com/orgs/jj-game-studio/projects/1
+- Speak to users in Korean (polite form, 존댓말). Write Issues, PRs, and comments in Korean.
+- The whole schedule is 10 days. Prefer small, verifiable changes over structural expansion.
+- Read docs only when the task needs them, and only the relevant section: game rules in `docs/game-design.md`, phase goals and ownership in `docs/implementation-plan.md`.
 
-- 저장소: https://github.com/jj-game-studio/Project-Nomad
-- 공유 보드: https://github.com/orgs/jj-game-studio/projects/1
-- 게임 규칙은 `docs/game-design.md`, 전체 흐름은 `docs/development-loop.md`를 확인합니다.
-- 단계별 목표와 담당 범위는 `docs/implementation-plan.md`를 따릅니다. 1차 목표에 몬스터 시스템(탐지·추적·공격·피해·사망·랜덤 배치·전투 통합)을 포함하며, #17·#19의 담당자는 Lemonade8080입니다.
-- 전체 개발 기간은 10일입니다. 불필요한 구조 확장보다 작고 검증 가능한 변경을 우선합니다.
-- 사용자와는 존댓말로 소통합니다.
+Read these process docs when the step applies:
 
-## 구현 지침
+- Writing an Issue, PR, or comment → `docs/process/github-records.md`
+- Reviewers, approvals, merging, closing, branch cleanup → `docs/process/review-and-merge.md`
 
-이하 지침은 코드를 수정하거나 구현할 때 적용합니다.
+## Code
 
-- 작업 디렉터리의 코딩 스타일을 존중하고 준수합니다. 모든 코드는 사람이 읽을 수 있도록 가독성을 높게 유지하고, 설명이 필요한 부분에는 한국어 주석을 적절히 작성합니다.
-- 필요한 부분이 아니라면 수정 사항을 작게 유지합니다. 장황하고 방대한 코드를 지양합니다.
-- 코드를 10~30줄씩 빈 줄 없이 하나의 거대한 덩어리로 작성하지 않습니다. 코드 흐름의 단계별로 빈 줄을 삽입하여 가독성을 확보합니다.
+- Follow the existing style. Keep code readable and add Korean comments where explanation helps.
+- Keep changes small unless more is needed. Avoid verbose code.
+- Do not write 10–30 lines as one block without blank lines; separate the steps of the flow with blank lines.
+- Do not read large Unity files (`.unity`, `.prefab`, logs) whole; search or tail them. Exclude `Assets/ThirdParty`, `Library`, and `Artifacts` from searches.
+- Changes that affect terrain integration must also update and verify `TerrainIntegration.unity` (see `docs/terrain-integration.md`).
 
-## 1. Issue 등록과 작업 선점
+## 1. Issue first
 
-- 프로젝트를 변경하는 모든 작업은 반드시 GitHub Issue에 등록하거나 기존 Issue에 연결한 뒤 시작합니다. 중복 구현을 막고 다른 팀원과 에이전트에게 작업 내용을 공유하기 위한 필수 절차입니다.
-- 단순 질의응답과 읽기 전용 조사는 제외합니다. 조사에서 변경으로 전환하면 수정 전에 Issue를 등록합니다.
-- 착수 전 열린 Issue, 관련 PR, 보드와 최신 댓글을 확인합니다. 유사 작업을 발견하면 기존 Issue에서 역할과 범위를 조율하며 중복 등록하지 않습니다.
-- Issue에 목표, 완료 조건, 수정·제외 범위, 의존성, 자율 결정 범위와 사람 판단 사항을 기록합니다.
-- 파일 수정 전에 착수 댓글을 남깁니다. 사람 담당 계정, 에이전트/세션 식별 정보, 브랜치, 예정 수정 파일·디렉터리·공용 인터페이스를 기재하고 보드를 `작업 중`으로 변경합니다.
-- 착수 댓글 등록 후 최신 댓글을 다시 확인합니다. 동일 작업의 동시 착수가 발견되면 먼저 기록된 작업을 우선하고, 중복 영역은 조율 전까지 수정하지 않습니다. 댓글만으로 원자적인 잠금이 보장된다고 가정하지 않습니다.
-- GitHub에 기록할 수 없으면 변경을 시작하지 말고 연결 문제를 보고합니다. 팀원이 명시적으로 예외를 지시하면 아래 예외 규칙을 따릅니다.
+- Every change to the project starts from a GitHub Issue, new or existing. Q&A and read-only investigation are exempt; register an Issue before the first edit.
+- Before starting, check open Issues, related PRs, the board, and the latest comments. If similar work exists, coordinate in that Issue instead of opening a duplicate.
+- The Issue body states goal, completion conditions, scope in/out, dependencies, what the agent may decide, and what needs human judgment.
+- Before editing files, post a `[착수]` comment and move the board to `작업 중`. Then re-read the latest comments: if the same work was claimed earlier, the earlier claim wins and you leave the overlapping area alone until coordinated. Comments are not atomic locks.
+- Record requests received outside GitHub (chat, verbal) in the Issue before acting: new work in the body, additions or changes as `[요청]` comments. Keep the user's instruction separate from your interpretation, do not invent requirements, and keep the current requirements in the body up to date. Report per-request results in the Issue, not only in the PR or chat.
+- If you cannot write to GitHub, do not start; report the connection problem (unless a team member grants an exception, see §6).
 
-### 사용자 요청과 변경 이력 기록
+## 2. Coordination between agents
 
-- 채팅이나 구두 전달 등 GitHub 밖에서 받은 신규 작업, 보완, 수정, 취소와 방향 변경 요청도 실제 변경 전에 관련 Issue에 기록합니다. 작업명과 착수 사실만 적지 말고 무엇을 지시받았는지 다른 팀원과 에이전트가 이해할 수 있도록 남깁니다.
-- 신규 작업은 Issue 본문에, 기존 작업의 추가 요청은 해당 Issue 댓글에 기록합니다. 독립적인 작업이면 새 Issue로 분리하고 원래 Issue와 연결합니다. GitHub에 이미 적힌 요청은 원문 링크를 참조하며 불필요하게 중복 전재하지 않습니다.
-- 기록에는 요청자와 전달 경로, 요청 내용, 명시된 배경·제약·완료 조건을 포함합니다. 요청자는 확인 가능한 정보만 기재하고 계정을 추측하지 않습니다. 원문의 의미와 중요한 표현을 보존하되 비밀정보나 불필요한 개인정보를 복사하지 않습니다.
-- 사용자 지시와 에이전트의 해석·구현 계획을 구분합니다. 명시되지 않은 조건을 사용자 요구로 단정하지 않으며 모호한 부분은 질문으로 남깁니다.
-- 요구가 바뀌면 이전 기록을 지우지 않고 새 댓글에 변경 전후와 대체되는 요청을 명시합니다. 현재 유효한 요구사항과 완료 조건은 Issue 본문에도 갱신하여 이력과 최신 기준을 함께 확인할 수 있게 합니다.
-- 반영 후에는 요청 항목별 처리 결과, 관련 PR·커밋, 검증 결과와 미반영 사항을 Issue에 답합니다. PR이나 개인 채팅에만 결과를 남기지 않습니다.
+- Do not edit areas another agent has claimed. Use a dedicated branch and a separate checkout or worktree. Never modify, delete, or commit another task's uncommitted changes.
+- Record scope expansion, shared-interface changes, handoffs, pauses, and resumes in the Issue and Draft PR, so another agent can continue from the record alone.
+- On overlap, stop that part, link the Issues/PRs, and agree on the split, order, and merge sequence. Independent parts may continue. Agents may coordinate in GitHub comments; no reply is not agreement. Escalate to humans when agreement fails or a product decision is needed.
+- For unavoidable concurrent edits, state the scope and who resolves conflicts. Avoid reformatting or moving files. Edit scenes, prefabs, and other hard-to-merge assets sequentially.
+- Right before merging, check the target branch's latest changes. When resolving conflicts, keep both sides' intent, never overwrite or drop other work wholesale, and re-verify. If intent is unclear, ask the original agent or a human.
 
-## 2. 에이전트 간 영역 조율
+## 3. No commits without a PR
 
-- 다른 에이전트가 사용 중이라고 공개한 영역은 동시에 수정하지 않는 것을 우선합니다. 작업별 브랜치와 별도 checkout/worktree를 사용하며, 다른 작업의 미커밋 변경을 수정·삭제·커밋하지 않습니다.
-- 범위 확대, 공용 인터페이스 변경, 인계, 중단과 재개는 Issue와 Draft PR에 기록합니다. 다른 에이전트가 이 기록만 읽어도 현재 상태와 다음 행동을 알 수 있어야 합니다.
-- 중복 영역을 발견하면 해당 부분을 멈추고 관련 Issue/PR을 연결하여 분리 범위, 선행 변경과 병합 순서를 합의합니다. 독립적인 부분은 계속 진행할 수 있습니다.
-- 기술적인 조율은 에이전트끼리 GitHub 댓글로 진행할 수 있습니다. 응답이 없다고 동의를 가정하지 않으며, 합의가 안 되거나 제품 판단이 필요하면 사람에게 요청합니다.
-- 불가피한 동시 수정에는 수정 범위와 충돌 해결 담당자를 명시합니다. 불필요한 포맷 변경·파일 이동을 피하고 장면·프리팹 등 병합이 어려운 에셋은 순차 수정합니다.
-- 병합 직전 대상 브랜치의 최신 변경을 확인합니다. 충돌 해결 시 다른 작업을 일괄 덮어쓰거나 버리지 말고 양쪽 의도를 보존합니다. 통합 후 관련 기능을 다시 검증하며, 의도가 불명확하면 원 담당 에이전트 또는 사람에게 확인합니다.
+- All work goes through a linked Issue, a dedicated branch, and a PR. Never commit directly to the default branch or integrate without a PR.
+- One exception: a single initial commit so the Draft PR can exist. Push it, immediately open the Draft PR linked to the Issue, and make no further commits until the PR exists. If creating it fails, fix or report before committing more.
+- Every later commit must be tracked by that open PR and stay within its scope. Do not stack new work on the branch of a closed or merged PR.
+- Keep the PR body current: changed areas, progress, verification results, and open decisions.
+- Reviewer: the task's human owner; all members when everyone must agree (details in `docs/process/review-and-merge.md`).
 
-## 3. PR 없는 커밋 금지
+## 4. Implement, verify, review
 
-- 모든 작업은 연결된 Issue, 전용 브랜치와 PR로 관리합니다. 기본 브랜치에 직접 커밋하거나 PR 없이 통합하지 않습니다.
-- GitHub PR 생성에는 기준 브랜치와의 커밋 차이가 필요하므로 Draft PR 생성을 위한 최초 커밋 한 개만 예외로 허용합니다.
-- 최초 커밋을 푸시한 직후 Draft PR을 생성하고 Issue에 연결합니다. Draft PR 생성 전에는 추가 커밋을 하지 않습니다. 생성에 실패하면 문제를 해결하거나 보고하고 추가 커밋을 보류합니다.
-- 이후 모든 커밋은 열린 해당 PR에서 추적되어야 합니다. 닫히거나 병합된 PR의 브랜치에 새 작업 커밋을 쌓지 않습니다.
-- 각 커밋은 해당 PR 범위만 포함합니다. PR에는 수정 영역, 진행 상태, 검증 결과와 남은 판단을 갱신합니다.
+- Within the allowed scope, implement and fix errors on your own. Run the needed checks; report checks you could not run with the reason, never as passed.
+- Submit completion conditions, how to run, build/scene, the commit to review, and known issues; then mark the PR ready and move the board to `검토 대기`.
+- Technical feedback goes in the PR; game experience and product decisions go in the Issue; link them. Tag feedback `[필수]`, `[후속]`, or `[질문]`, and split follow-up ideas into new Issues.
+- When addressing `[필수]` feedback, move the board to `수정 중`, reply per item with the change and re-verification, and announce the new commit with a re-review request.
+- While waiting for review, work only on approved tasks that do not depend on unapproved results. Do not assume running or spawning agents is pre-authorized.
 
-### PR 리뷰어 지정
+## 5. Human approval and merge
 
-- 일반 PR의 검토 담당자는 해당 작업의 사람 담당자(작업자)로 지정합니다. 실행 에이전트나 PR 작성 계정과 사람 작업자를 구분하며, 작업자와 다른 팀원을 관례적으로 지정하지 않습니다.
-- 팀원 모두의 합의가 필요한 사안은 작업자를 포함한 모든 팀원을 검토 담당자로 지정합니다. Issue에 전원 합의 대상과 이유를 명시하고 모든 팀원의 합의를 확인합니다. 한 사람의 승인이나 응답 부재를 전원 합의로 간주하지 않습니다.
-- 지정한 검토 담당자에게 GitHub Reviewers로 실제 리뷰 요청을 등록합니다. 다만 GitHub는 PR 작성자 본인을 Reviewers에 추가할 수 없으므로, 작업자와 PR 작성 계정이 같으면 Issue와 PR에 해당 작업자를 검토 담당자로 명시하고 지정 불가 사유와 검토·승인 결과를 기록합니다. 이 제한만을 이유로 다른 팀원을 대신 지정하지 않습니다. 전원 합의 사안에서도 작성자를 제외한 나머지 팀원에게 실제 리뷰 요청을 보내고 작성자의 합의는 별도로 기록합니다.
-- Draft PR 생성 시 검토 담당자를 Issue와 PR에 기록합니다. Draft 상태에서 리뷰 요청을 등록할 수 없다면, Draft 해제 직후 요청하고 `검토 대기`로 옮기기 전에 Reviewers 반영 여부와 작성자 본인 지정 불가 사유의 기록을 확인합니다.
-- 리뷰어 계정이나 권한을 확인할 수 없거나 요청이 실패하면 사유를 Issue에 기록하고 팀원에게 지정을 요청합니다. 검토 요청을 보낸 것으로 보고하지 않습니다.
-- 리뷰어 지정은 기존 병합 권한을 바꾸지 않습니다. 일반 PR은 자율 병합 조건과 저장소 규칙을 따르고, 사람 판단 대상은 지정된 사람이 검토·승인하며, 승인 후 실행은 아래 병합·종료 규칙을 따릅니다. 미해결 필수 의견은 병합 전에 처리합니다.
+- An agent may merge on its own once completion conditions and verification are met and no required feedback, conflicts, open dependencies, or human-judgment items remain. Never bypass required checks or branch protection.
+- Humans must review and approve: fun, game feel, difficulty, presentation and art direction, game rules, changes to agreed scope, high-impact shared structure, and anything of unclear acceptability. Label these `판단 필요` with a concrete question. When unsure, treat it as human-judgment.
+- Another agent's review is not human approval. Passing checks or a casual human comment is not merge permission. Never claim a review that did not happen.
+- Approval relayed outside GitHub: record it before acting, then carry out the approved follow-up (merge, close, cleanup) without asking again. If the reviewed code, docs, or scope change after approval, get the affected part re-approved.
+- Check PR and Issue completion separately. Close the Issue and move the board to `완료` only when no review or work remains; do not use auto-close keywords while play review is pending.
+- After a PR is merged or closed, clean up its local and remote branches.
 
-## 4. 구현·검증·검토
+## 6. Guideline conflicts and explicit exceptions
 
-- 허용된 범위에서는 스스로 구현하고 오류를 수정합니다. 필요한 검사를 실행하고 실행하지 못한 검사는 이유를 적으며 통과했다고 보고하지 않습니다.
-- 완료 조건, 실행 방법, 빌드/장면, 검토 대상 커밋, 알려진 문제를 제출한 뒤 Draft를 해제하고 보드를 `검토 대기`로 옮깁니다.
-- 기술 의견은 PR에, 게임 경험과 제품 결정은 Issue에 기록하고 서로 연결합니다. `[필수]`, `[후속]`, `[질문]`을 구분합니다. 후속 아이디어는 별도 Issue로 분리합니다.
-- 필수 의견을 반영할 때는 `수정 중`으로 옮기고 항목별 변경과 재검증 결과를 답합니다. 검토 중 변경했으면 새 커밋을 알리고 재검토를 요청합니다.
-- 검토 대기 중에는 미승인 결과에 의존하지 않는 승인된 다른 작업만 진행합니다. 에이전트 실행이나 별도 에이전트 소환이 자동으로 허가되었다고 가정하지 않습니다.
-
-## 5. 사람 승인과 에이전트의 병합·종료
-
-- 에이전트는 완료 조건을 충족하고 필요한 검증을 마쳤으며 필수 의견·충돌·미해결 의존성·사람 판단 사항이 없으면 PR을 자율적으로 병합할 수 있습니다. 저장소의 필수 검사와 보호 규칙을 우회하지 않습니다.
-- 다른 에이전트의 기술 검토는 활용할 수 있지만 사람의 승인으로 간주하지 않습니다. 별도 검토를 받지 않았다면 받았다고 기록하지 않습니다.
-- 재미, 조작감, 난이도, 연출·아트 방향, 게임 규칙, 합의 범위 변경, 영향이 큰 공용 구조 변경 또는 수용 여부가 불명확한 변경은 반드시 사람이 검토·승인합니다. 사람은 검토 결과와 승인을 에이전트에게 전달하여 후속 작업을 맡길 수 있습니다.
-- 사람 판단 대상에는 `판단 필요` 라벨과 구체적인 질문을 남깁니다. 자동 검사 통과나 사람의 단순 댓글을 병합 허가로 간주하지 않습니다. 불확실하면 사람 검토 대상으로 분류합니다.
-- 채팅 등 GitHub 밖에서 승인을 전달받으면 에이전트는 실행 전에 승인자, 전달 경로, 대상 Issue·PR, 검토한 커밋과 승인 범위·조건을 관련 Issue와 PR에 기록합니다. 확인할 수 없는 계정이나 승인 범위는 추측하지 않고, 모호하면 사람에게 확인합니다.
-- 에이전트는 승인 범위의 필수 의견·추가 검토·충돌·미해결 의존성이 없고 필요한 검증을 마쳤으면 별도 실행 확인을 반복 요청하지 않고 PR 병합 등 후속 작업을 직접 수행합니다. 저장소에서 요구하는 정식 리뷰 승인과 보호 규칙은 별도로 충족해야 하며, 전달받은 승인을 GitHub 리뷰로 가장하지 않습니다.
-- 승인 후 검토 대상 코드·문서나 범위가 바뀌면 변경 내용을 알리고 영향을 받는 부분의 재검토·승인을 받습니다. 이전 승인을 새 변경에 자동 적용하지 않습니다.
-- PR과 Issue의 검토 완료 여부는 각각 확인합니다. PR을 병합했더라도 Issue에 플레이 검토·제품 판단·완료 조건이 남아 있으면 종료하지 않습니다. 연결된 PR 하나의 승인이나 병합을 Issue 전체의 완료로 간주하지 않습니다.
-- 에이전트는 필요한 병합과 통합 확인을 마치고 Issue에도 남은 검토·작업이 없으면 처리 결과와 검증 근거를 기록한 뒤 Issue를 직접 종료하고 보드를 `완료`로 옮깁니다. 플레이 검토 등 완료 조건이 남았다면 자동 종료 문구를 사용하지 않습니다. 병합 없이 PR을 닫았다는 이유만으로 Issue를 종료하지 않습니다.
-
-### PR 종료 후 브랜치 정리
-
-- 각 Issue의 작업 PR을 병합하거나 병합 없이 닫으면 해당 작업에 사용한 로컬·원격 브랜치를 모두 정리합니다. Issue 종료 여부와 브랜치 정리는 별도로 판단하며, 기본 브랜치와 열린 다른 PR·진행 중인 작업이 사용하는 브랜치는 삭제하지 않습니다.
-- 삭제 직전에 최신 PR 상태, 브랜치의 현재 커밋, 다른 PR·작업 트리의 사용 여부를 확인합니다. PR 종료 뒤 추가된 커밋이나 미공유 변경이 있으면 먼저 보존하고, 다른 작업에서 사용 중이면 담당자와 조율한 뒤 정리합니다. 확인 없이 강제 삭제하거나 다른 작업의 미커밋 파일을 버리지 않습니다.
-- 현재 체크아웃된 종료 브랜치는 작업 파일과 필요한 커밋을 보존한 뒤 다른 브랜치 또는 동일 커밋의 detached HEAD로 전환하고 삭제합니다. 작업 트리의 파일 삭제를 브랜치 삭제와 혼동하지 않습니다.
-- 원격 작업 브랜치 삭제 후 로컬 작업 브랜치와 오래된 원격 추적 참조를 정리하고 목록을 재조회합니다. 삭제한 브랜치, 보존한 커밋과 위치, 남은 대상과 보류 사유를 관련 Issue와 PR에 기록합니다. 권한·연결 문제로 정리하지 못하면 완료한 것으로 보고하지 않습니다.
-
-## 6. 지침 안내와 명시적 예외
-
-- 팀원의 요청이 지침과 충돌하면 해당 규칙, 이유와 지침을 따르는 방법을 짧게 안내합니다. 지침을 잊었다는 이유로 조용히 생략하지 않습니다.
-- 안내 후 팀원이 해당 작업에 대해 지침보다 우선하는 진행 방법을 명시적으로 지시하면 그 판단을 우선합니다. 일반적인 작업 요청이나 침묵을 예외 승인으로 해석하지 않습니다.
-- 예외의 범위, 이유와 팀원의 지시를 Issue 또는 PR에 기록합니다. GitHub 기록 자체가 불가능하면 로컬에 남기고 연결 복구 후 공유합니다.
-- 한 작업의 예외를 영구적인 지침 변경으로 확대하지 않습니다. 이 규칙은 도구의 권한 제한이나 상위 안전 정책을 우회하는 근거가 아닙니다.
+- If a team member's request conflicts with these guidelines, briefly explain the rule, why it exists, and how to follow it. Never skip a rule silently.
+- If the member then explicitly instructs another way for that task, follow it. A plain request or silence is not an exception.
+- Record the exception's scope, reason, and instruction in the Issue or PR (locally if GitHub is unavailable, shared once it recovers).
+- An exception does not change the guidelines permanently and never overrides tool permissions or higher-level safety policy.

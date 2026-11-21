@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace Nomad.Combat
@@ -14,9 +15,16 @@ namespace Nomad.Combat
         private float speed;
         private float remainingDistance;
         private int damage;
+        private Action<Vector3> impact;
 
         public static bool TryLaunch(Projectile prefab, Transform owner, Vector3 origin, Vector3 aimPoint,
             LayerMask layers, float speed, float range, int damage)
+        {
+            return TryLaunch(prefab, owner, origin, aimPoint, layers, speed, range, damage, null);
+        }
+
+        public static bool TryLaunch(Projectile prefab, Transform owner, Vector3 origin, Vector3 aimPoint,
+            LayerMask layers, float speed, float range, int damage, Action<Vector3> impact)
         {
             Vector3 path = aimPoint - origin;
             if (prefab == null || owner == null || speed <= 0f || range <= 0f || damage <= 0 || path.sqrMagnitude < 0.000001f)
@@ -38,6 +46,7 @@ namespace Nomad.Combat
             projectile.speed = speed;
             projectile.remainingDistance = range;
             projectile.damage = damage;
+            projectile.impact = impact;
             return true;
         }
 
@@ -53,6 +62,7 @@ namespace Nomad.Combat
                 Health health = hit.collider.GetComponentInParent<Health>();
                 if (health != null)
                     health.TryApplyDamage(damage);
+                impact?.Invoke(hit.point);
                 return;
             }
 
