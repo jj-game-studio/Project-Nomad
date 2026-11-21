@@ -48,11 +48,13 @@ namespace Nomad.Inventory
             icon.preserveAspect = true;
             icon.raycastTarget = false;
             itemName = Text("Item", "", new Vector2(420, 42), new Vector2(20, 99), 19);
+
             amountInput = CreateInput();
             slider = CreateSlider();
             remaining = Text("Remaining", "", new Vector2(540, 30), new Vector2(0, -45), 17);
             feedback = Text("Feedback", "", new Vector2(540, 46), new Vector2(0, -88), 16);
             feedback.color = new Color32(244, 167, 139, 255);
+
             confirm = Button("Confirm", "분할 [Enter]", new Vector2(310, 50), new Vector2(95, -150), Accent, Confirm);
             Button("Cancel", "취소 [Esc]", new Vector2(170, 50), new Vector2(-155, -150),
                 new Color32(64, 69, 70, 255), Close);
@@ -202,16 +204,19 @@ namespace Nomad.Inventory
         {
             RectTransform track = Rect("Slider", card, new Vector2(500, 28), new Vector2(0, -13));
             track.gameObject.AddComponent<UnityEngine.UI.Image>().color = new Color32(51, 56, 57, 255);
+
             RectTransform fill = Rect("Fill", track, Vector2.zero, Vector2.zero);
             fill.anchorMin = Vector2.zero;
             fill.anchorMax = Vector2.one;
             fill.gameObject.AddComponent<UnityEngine.UI.Image>().color = Accent;
+
             RectTransform area = Rect("HandleArea", track, new Vector2(-24, 0), Vector2.zero);
             area.anchorMin = Vector2.zero;
             area.anchorMax = Vector2.one;
             RectTransform handle = Rect("Handle", area, new Vector2(28, 38), Vector2.zero);
             var grip = handle.gameObject.AddComponent<UnityEngine.UI.Image>();
             grip.color = Ink;
+
             var control = track.gameObject.AddComponent<UnityEngine.UI.Slider>();
             control.fillRect = fill;
             control.handleRect = handle;

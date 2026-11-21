@@ -24,6 +24,7 @@ namespace Nomad.Inventory
         private readonly SlotView[] slots = new SlotView[PlayerInventory.Capacity];
         private Canvas canvas;
         private InventoryTooltip tooltip;
+        private InventorySplitDialog splitDialog;
         private bool pointerFocused = true;
         private SlotView dragPreview;
         private Mouse dragMouse;
@@ -46,6 +47,7 @@ namespace Nomad.Inventory
 
         internal bool HasOpenChest => chestPanel != null && chestPanel.IsOpen;
         internal LootChest OpenChest => chestPanel?.Chest;
+        internal bool BlocksSplitInput => splitDialog != null && splitDialog.BlocksInput;
 
         internal static InventoryPanel GetOrCreate(PlayerInventory target)
         {
@@ -111,14 +113,19 @@ namespace Nomad.Inventory
                     inventory.Panel = null;
             }
 
+            splitDialog?.Close();
             tooltip?.Hide();
             CloseChest();
             CancelDrag();
         }
 
+        private void OnDestroy() => splitDialog?.Dispose();
+
         private void OnApplicationFocus(bool hasFocus)
         {
             pointerFocused = hasFocus;
+            if (!hasFocus)
+                splitDialog?.Close();
             if (!hasFocus)
                 tooltip?.Hide();
             if (!hasFocus)
@@ -133,6 +140,22 @@ namespace Nomad.Inventory
                     Destroy(gameObject);
                 return;
             }
+
+            if (splitDialog?.IsOpen == true)
+            {
+                if (!panel.activeInHierarchy)
+                    splitDialog.Close();
+                else if (Keyboard.current?.tabKey.wasPressedThisFrame == true)
+                {
+                    splitDialog.Close();
+                    if (HasOpenChest) CloseChest();
+                    else panel.SetActive(false);
+                }
+                else splitDialog.Tick();
+                return;
+            }
+            if (BlocksSplitInput)
+                return;
 
             if (HasOpenChest && (Keyboard.current?.tabKey.wasPressedThisFrame == true ||
                                  Keyboard.current?.escapeKey.wasPressedThisFrame == true))
@@ -156,8 +179,11 @@ namespace Nomad.Inventory
 
         private void LateUpdate()
         {
+            if (!panel.activeInHierarchy)
+                splitDialog?.Close();
+
             Mouse mouse = Mouse.current;
-            if (inventory == null || !panel.activeInHierarchy || !pointerFocused || mouse == null ||
+            if (BlocksSplitInput || inventory == null || !panel.activeInHierarchy || !pointerFocused || mouse == null ||
                 mouse.leftButton.isPressed || dragSource >= 0 || quickDragSource >= 0 || lootDragSource >= 0)
             {
                 tooltip.Hide();
@@ -239,6 +265,20 @@ namespace Nomad.Inventory
         {
             Mouse mouse = Mouse.current;
             int pointerSlot = FindPointerSlot(mouse);
+            Keyboard splitKeyboard = Keyboard.current;
+            if (pointerFocused && mouse?.leftButton.wasPressedThisFrame == true && pointerSlot >= 0 &&
+                splitKeyboard != null && (splitKeyboard.leftCtrlKey.isPressed || splitKeyboard.rightCtrlKey.isPressed))
+            {
+                CancelDrag();
+                if (inventory.GetSlot(pointerSlot).Count >= 2)
+                {
+                    tooltip.Hide();
+                    splitDialog ??= new InventorySplitDialog((RectTransform)canvas.transform);
+                    splitDialog.Open(inventory, pointerSlot);
+                }
+                return;
+            }
+
             if ((dragSource >= 0 || quickDragSource >= 0) &&
                 (mouse != dragMouse || Keyboard.current?.escapeKey.wasPressedThisFrame == true))
                 CancelDrag();
