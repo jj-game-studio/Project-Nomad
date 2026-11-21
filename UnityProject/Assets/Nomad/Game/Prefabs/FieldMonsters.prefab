@@ -1,0 +1,68 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &8351672738845913115
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3395252528046581452}
+  - component: {fileID: 3677853248672717785}
+  - component: {fileID: 8828608015072005484}
+  m_Layer: 0
+  m_Name: FieldMonsters
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3395252528046581452
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8351672738845913115}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &3677853248672717785
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8351672738845913115}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f0bdf78cab3de3a438970a281b287f1f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Nomad.Monsters.Demo.MonsterActorFactory
+  normalMaterial: {fileID: 2100000, guid: e71b810fa74d311429fff88083d800e9, type: 2}
+  eliteMaterial: {fileID: 2100000, guid: a809024f3ded8a14a9d2474e04b182ca, type: 2}
+  warningMaterial: {fileID: 2100000, guid: b9604fba17d86e74eacf26b1dc4c04b5, type: 2}
+  fillMaterial: {fileID: 2100000, guid: 9c58b52eadffe20469f6d3477a6e01f1, type: 2}
+  appearances: {fileID: 11400000, guid: b3188f7ebaa2f6046a3dde7c430845a0, type: 2}
+--- !u!114 &8828608015072005484
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8351672738845913115}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8d06f57bac2c05d47ae1825f42513302, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Nomad.Game.Modules.FieldMonsters
+  normalCount: 6
+  eliteCount: 1
+  bossCount: 1
+  safeRadius: 12
