@@ -5,6 +5,7 @@ using Nomad.Inventory;
 using Nomad.Inventory.Editor;
 using Nomad.Player;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
@@ -30,7 +31,7 @@ namespace Nomad.Equipment.Editor
         public static void Run()
         {
             VerifyCsv();
-            EquipmentAuthoring.Create();
+            EditorSceneManager.OpenScene(EquipmentAuthoring.ScenePath);
             SessionState.SetBool(Key, true);
             Resume();
             EditorApplication.EnterPlaymode();
@@ -202,7 +203,7 @@ namespace Nomad.Equipment.Editor
             foreach (EquipmentSlot slot in Enum.GetValues(typeof(EquipmentSlot)))
                 if (slot != EquipmentSlot.Weapon1 && slot != EquipmentSlot.Weapon2 && slot != EquipmentSlot.Body)
                     Check(equipment.TryUnequip(slot), "분류 해제/가방 복귀");
-            Check(equipment.TotalDefense == 20 && inventory.UsedSlots == 7, "보유 수량 보존");
+            Check(equipment.TotalDefense == 20 && inventory.UsedSlots == 8, "보유 수량 보존");
             Check(!equipment.TryEquip(-1, EquipmentSlot.Body) && !equipment.TryUnequip((EquipmentSlot)100), "잘못된 인덱스");
 
             ItemDefinition originalArmor = equipment.GetItem(EquipmentSlot.Body);

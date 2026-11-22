@@ -21,6 +21,10 @@ namespace Nomad.Equipment
         private LineRenderer rangeLine;
         private readonly Dictionary<Color, Material> materials = new();
         private Vector3 direction = Vector3.forward;
+        private ItemDefinition displayedWeapon;
+        private GameObject weaponModel;
+        private const float SlashDuration = 0.18f;
+        private float slashUntil;
 
         public bool ShowRange { get; set; }
         public LineRenderer RangeLine => rangeLine;
@@ -46,6 +50,8 @@ namespace Nomad.Equipment
             rangeLine.enabled = false;
             foreach (Effect effect in effects) Destroy(effect.Line.gameObject);
             effects.Clear();
+            if (weaponModel != null)
+                weaponModel.SetActive(false);
         }
 
         private void Update()
@@ -59,6 +65,7 @@ namespace Nomad.Equipment
             }
 
             ItemDefinition weapon = combat.CurrentWeapon;
+            UpdateWeaponModel(weapon);
             rangeLine.enabled = ShowRange && weapon != null;
             if (rangeLine.enabled)
             {
@@ -97,6 +104,46 @@ namespace Nomad.Equipment
             }
         }
 
+        private void UpdateWeaponModel(ItemDefinition weapon)
+        {
+            if (displayedWeapon != weapon)
+            {
+                displayedWeapon = weapon;
+                slashUntil = 0f;
+                if (weaponModel != null)
+                {
+                    weaponModel.SetActive(false);
+                    Destroy(weaponModel);
+                }
+
+                GameObject prefab = weapon != null ? weapon.EquippedVisual : null;
+                weaponModel = prefab != null ? Instantiate(prefab, transform, false) : null;
+                if (weaponModel != null)
+                {
+                    // 원본 배치용 콜라이더는 장착 외형의 물리 판정에 참여하지 않습니다.
+                    foreach (Collider collider in weaponModel.GetComponentsInChildren<Collider>(true))
+                        collider.enabled = false;
+                }
+            }
+
+            if (weaponModel == null)
+                return;
+
+            Quaternion facing = Quaternion.LookRotation(direction);
+            Quaternion pose = Quaternion.identity;
+            if (Time.time < slashUntil)
+            {
+                float progress = 1f - (slashUntil - Time.time) / SlashDuration;
+                pose = Quaternion.Euler(55f, Mathf.Lerp(65f, -65f, progress), 0f);
+            }
+
+            weaponModel.transform.SetPositionAndRotation(
+                combat.AttackOrigin + facing * new Vector3(0.43f, 0.1f, 0.2f),
+                facing * pose * weapon.EquippedVisual.transform.localRotation);
+            if (!weaponModel.activeSelf)
+                weaponModel.SetActive(true);
+        }
+
         private Vector3[] Arc(float radius, bool clipped)
         {
             const int segments = 32;
@@ -125,12 +172,14 @@ namespace Nomad.Equipment
                 Vector3[] fan = Arc(combat.CurrentWeapon.AttackRange, true);
                 var slash = new Vector3[fan.Length - 2];
                 System.Array.Copy(fan, 1, slash, 0, slash.Length);
-                AddEffect(slash, new Color(1f, 0.72f, 0.2f), 0.18f);
+                slashUntil = Time.time + SlashDuration;
+                AddEffect(slash, new Color(1f, 0.72f, 0.2f), SlashDuration);
             }
             else
             {
                 Vector3 path = ((combat.AimPoint ?? combat.ProjectileOrigin + direction) - combat.ProjectileOrigin).normalized;
-                AddEffect(new[] { combat.ProjectileOrigin, combat.ProjectileOrigin + path * 0.8f }, new Color(0.5f, 0.9f, 1f), 0.12f);
+                Color tint = mode == WeaponAttackMode.Bow ? new Color(1f, 0.8f, 0.45f) : new Color(0.5f, 0.9f, 1f);
+                AddEffect(new[] { combat.ProjectileOrigin, combat.ProjectileOrigin + path * 0.8f }, tint, 0.12f);
             }
         }
 

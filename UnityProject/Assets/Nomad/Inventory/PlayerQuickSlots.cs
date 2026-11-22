@@ -34,19 +34,7 @@ namespace Nomad.Inventory
 
         public int GetCount(int index)
         {
-            ItemDefinition item = items[index];
-            if (item == null)
-                return 0;
-
-            int count = 0;
-            for (int slot = 0; slot < PlayerInventory.Capacity; slot++)
-            {
-                PlayerInventory.ItemStack stack = inventory.GetSlot(slot);
-                if (stack.Item == item)
-                    count += stack.Count;
-            }
-
-            return count;
+            return inventory.GetCount(items[index]);
         }
 
         // 가방 칸이 바뀌어도 등록을 유지하도록 위치 대신 아이템 정의를 참조합니다.

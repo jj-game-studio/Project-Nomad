@@ -390,6 +390,9 @@ GameObject:
   - component: {fileID: 452661513}
   - component: {fileID: 452661512}
   - component: {fileID: 452661511}
+  - component: {fileID: 452661517}
+  - component: {fileID: 452661516}
+  - component: {fileID: 452661515}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -500,19 +503,20 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Equipment.EquipmentDemo
   items:
   - {fileID: 11400000, guid: 3bc5ee3aa47bcb5419199fe0c678c793, type: 2}
+  - {fileID: 11400000, guid: 91bcb142c26e7a1409c2a2540242819f, type: 2}
+  - {fileID: 11400000, guid: 0665a2b2765b3864f9c1013078fcca6e, type: 2}
   - {fileID: 11400000, guid: 742c2de271dd3e544aa09851eb69383a, type: 2}
   - {fileID: 11400000, guid: 2fd922611dde74b42afdc04ec0edc323, type: 2}
   - {fileID: 11400000, guid: 149f770f4d68c4b4c965c16a1d2cf4f3, type: 2}
   - {fileID: 11400000, guid: ac569c023422c424c820c4419ec75c5e, type: 2}
+  - {fileID: 11400000, guid: 41af70b866070234bb765a441c7fa6b9, type: 2}
+  - {fileID: 11400000, guid: 7aca8cc904480a6468ae63996425734c, type: 2}
   - {fileID: 11400000, guid: 66283d5a9c3d2e740accb3efa6487ef3, type: 2}
   - {fileID: 11400000, guid: f26f2a5ac639f474bbe49b31cf21f24f, type: 2}
   - {fileID: 11400000, guid: 6d4d13ace88e69f4692b95903876f8a4, type: 2}
   - {fileID: 11400000, guid: d00b362630e382f4eac5c4603a0b0516, type: 2}
   - {fileID: 11400000, guid: e907610ddd7ebde4e91a139ed2c789e5, type: 2}
-  - {fileID: 11400000, guid: 91bcb142c26e7a1409c2a2540242819f, type: 2}
-  - {fileID: 11400000, guid: 0665a2b2765b3864f9c1013078fcca6e, type: 2}
-  - {fileID: 11400000, guid: 41af70b866070234bb765a441c7fa6b9, type: 2}
-  - {fileID: 11400000, guid: 7aca8cc904480a6468ae63996425734c, type: 2}
+  - {fileID: 11400000, guid: f8378015573b54e49bc98fa3876b463e, type: 2}
 --- !u!114 &452661512
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -528,6 +532,7 @@ MonoBehaviour:
   viewCamera: {fileID: 1148901705}
   muzzle: {fileID: 859592495}
   projectile: {fileID: 5089398602212540021, guid: 2cc2ec9c69fa5404db88118fd98087d8, type: 3}
+  arrowProjectile: {fileID: 4067171791401039473, guid: af40170abcfb6064ab6eb2bbded3d7db, type: 3}
   unarmedDefinition: {fileID: 11400000, guid: e907610ddd7ebde4e91a139ed2c789e5, type: 2}
   collisionLayers:
     serializedVersion: 2
@@ -558,19 +563,59 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Inventory.PlayerInventory
   items:
   - {fileID: 11400000, guid: 3bc5ee3aa47bcb5419199fe0c678c793, type: 2}
+  - {fileID: 11400000, guid: 91bcb142c26e7a1409c2a2540242819f, type: 2}
+  - {fileID: 11400000, guid: 0665a2b2765b3864f9c1013078fcca6e, type: 2}
   - {fileID: 11400000, guid: 742c2de271dd3e544aa09851eb69383a, type: 2}
   - {fileID: 11400000, guid: 2fd922611dde74b42afdc04ec0edc323, type: 2}
   - {fileID: 11400000, guid: 149f770f4d68c4b4c965c16a1d2cf4f3, type: 2}
   - {fileID: 11400000, guid: ac569c023422c424c820c4419ec75c5e, type: 2}
+  - {fileID: 11400000, guid: 41af70b866070234bb765a441c7fa6b9, type: 2}
+  - {fileID: 11400000, guid: 7aca8cc904480a6468ae63996425734c, type: 2}
   - {fileID: 11400000, guid: 66283d5a9c3d2e740accb3efa6487ef3, type: 2}
   - {fileID: 11400000, guid: f26f2a5ac639f474bbe49b31cf21f24f, type: 2}
   - {fileID: 11400000, guid: 6d4d13ace88e69f4692b95903876f8a4, type: 2}
   - {fileID: 11400000, guid: d00b362630e382f4eac5c4603a0b0516, type: 2}
   - {fileID: 11400000, guid: e907610ddd7ebde4e91a139ed2c789e5, type: 2}
-  - {fileID: 11400000, guid: 91bcb142c26e7a1409c2a2540242819f, type: 2}
-  - {fileID: 11400000, guid: 0665a2b2765b3864f9c1013078fcca6e, type: 2}
-  - {fileID: 11400000, guid: 41af70b866070234bb765a441c7fa6b9, type: 2}
-  - {fileID: 11400000, guid: 7aca8cc904480a6468ae63996425734c, type: 2}
+  - {fileID: 11400000, guid: f8378015573b54e49bc98fa3876b463e, type: 2}
+--- !u!114 &452661515
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 452661505}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0ed554056f644abfb744bb3838d8a177, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::Nomad.Equipment.EquipmentPanel
+--- !u!114 &452661516
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 452661505}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2653d231f1cf45aeaf283e40cb4ec902, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::Nomad.Equipment.EquipmentCombatVisuals
+--- !u!114 &452661517
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 452661505}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 08348671e10dc104cb2ce10527808c20, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::Nomad.Player.PlayerMana
+  maximum: 100
+  recoveryPerSecond: 8
+  recoveryDelay: 2
 --- !u!1 &465616440
 GameObject:
   m_ObjectHideFlags: 0
@@ -1326,6 +1371,9 @@ MonoBehaviour:
   m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Player.TopDownCamera
   target: {fileID: 452661506}
+  maxLookAhead: 2
+  smoothTime: 0.15
+  deadZone: 0.1
 --- !u!20 &1148901705
 Camera:
   m_ObjectHideFlags: 0

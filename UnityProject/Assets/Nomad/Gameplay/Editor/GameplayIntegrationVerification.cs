@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Nomad.Combat;
+using Nomad.Equipment;
 using Nomad.Interaction;
 using Nomad.Inventory;
 using Nomad.Loot;
@@ -77,7 +78,7 @@ namespace Nomad.Gameplay.Editor
                     return;
                 }
                 Directory.CreateDirectory("Artifacts");
-                string report = "GAMEPLAY_INTEGRATION_PASS: saved scene, seeds0/7/51 and replay, valid 6+1+1 actors, generation cleanup/projectiles, real tracker across height, real PlayerCombat/projectiles, UI blocking, E-key chest inventory, real melee death, input lock and scene-reload retry";
+                string report = "GAMEPLAY_INTEGRATION_PASS: saved scene, seeds0/7/51 and replay, valid 6+1+1 actors, generation cleanup/projectiles, real tracker across height, bow ammo and damage, staff held fire and mana, UI blocking, E-key chest inventory, real melee death, input lock and scene-reload retry";
                 File.WriteAllText("Artifacts/gameplay-integration-results.txt", report);
                 Debug.Log(report);
                 Finish(0);
@@ -95,9 +96,12 @@ namespace Nomad.Gameplay.Editor
             Bind();
             Require(gameplay.Enemies.Count == 8, "initial normal6 + elite1 + boss1");
             Require(gameplay.PlayerHealth.CurrentHealth == 100, "player HP bound");
-            Require(controls.Player.GetComponent<PlayerCombat>() != null && controls.Player.GetComponent<PlayerInteraction>() != null,
+            Require(controls.Player.GetComponent<PlayerEquipmentCombat>() != null && controls.Player.GetComponent<PlayerInteraction>() != null,
                 "shooting and interaction share player");
             var inventory = controls.Player.GetComponent<PlayerInventory>();
+            var equippedCombat = controls.Player.GetComponent<PlayerEquipmentCombat>();
+            yield return Until(() => HasVisibleModel(equippedCombat), "starter sword model has no active colliders", 2f);
+            Require(inventory.UsedSlots == 8, "seven spare weapons and one arrow stack");
             inventory.Add("scrap", 7);
             string previousId = gameplay.GenerationId;
             foreach (int seed in new[] { 0, 7, 51 })
@@ -188,21 +192,42 @@ namespace Nomad.Gameplay.Editor
             Require(PlaceNear(target.transform.position, 3f), "supported shooting position");
             controls.SetView(0);
             yield return null;
-            var shooting = controls.Player.GetComponent<PlayerCombat>();
-            Require(!shooting.TryShoot(new Vector2(25f, Screen.height - 50f)), "HUD blocks actual shooting API");
-            for (int shot = 1; shot <= 4; shot++)
+            var shooting = controls.Player.GetComponent<PlayerEquipmentCombat>();
+            var equipment = shooting.GetComponent<PlayerEquipment>();
+            Require(equipment.SelectWeapon(EquipmentSlot.Weapon2), "select starter bow");
+            int arrows = shooting.ArrowCount;
+            Require(arrows == 30, "starter arrows remain across regeneration");
+            Require(!shooting.TryAttack(new Vector2(25f, Screen.height - 50f)) && shooting.ArrowCount == arrows,
+                "HUD blocks the shot and preserves arrows");
+            Vector2 aim = Camera.main.WorldToScreenPoint(target.transform.position + Vector3.up);
+            var wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            wall.transform.position = shooting.ProjectileOrigin;
+            wall.transform.localScale = Vector3.one * 0.1f;
+            Physics.SyncTransforms();
+            Require(!shooting.TryAttack(aim) && shooting.ArrowCount == arrows, "blocked muzzle preserves arrows");
+            wall.SetActive(false);
+            Object.Destroy(wall);
+
+            int damage = equipment.ActiveWeapon.AttackPower;
+            for (int shot = 1; shot <= Mathf.CeilToInt((float)target.MaxHealth / damage); shot++)
             {
-                Vector2 pointer = Camera.main.WorldToScreenPoint(target.transform.position + Vector3.up);
-                bool fired = shooting.TryShoot(pointer);
-                Require(fired, $"actual player shot {shot}; enabled={shooting.isActiveAndEnabled}, hp={gameplay.PlayerHealth.CurrentHealth}, pointer={pointer}, screen={Screen.width}x{Screen.height}, aim={shooting.AimPoint}, player={controls.Player.transform.position}, target={target.transform.position}");
-                int expected = 100 - shot * 25;
+                float next = Time.time + equipment.ActiveWeapon.AttackInterval;
+                Require(shooting.TryAttack(aim) && shooting.ArrowCount == arrows - shot, "bow fires and consumes one arrow");
+                Require(!shooting.TryAttack(aim) && shooting.ArrowCount == arrows - shot, "bow cooldown preserves arrows");
+                int expected = Mathf.Max(0, target.MaxHealth - shot * damage);
                 yield return Until(() => target.CurrentHealth == expected, "projectile damage " + shot, 2f);
+                yield return Until(() => Time.time >= next, "bow cooldown elapses", 3f);
             }
             Require(target.IsDead, "monster death integration");
             Require(target.GetComponent<MonsterDeathDrop>().SpawnedDrop != null, "real projectile kill drops marker");
             yield return Until(() => target.GetComponent<MonsterDeathDrop>().SpawnedDrop.Landed, "equipment marker landed", 2f);
             ScreenCapture.CaptureScreenshot("Artifacts/monster-drop-playtest.png");
             yield return null;
+
+            yield return VerifyBowPress(shooting, aim);
+            inventory.Remove(PlayerEquipmentCombat.ArrowItemId, int.MaxValue);
+            Require(!shooting.TryAttack(aim) && shooting.ArrowCount == 0, "empty bow cannot fire");
+            yield return VerifyStaff(shooting, equipment, inventory, aim);
 
             // 같은 플레이어의 실제 E키 상호작용으로 상자를 인벤토리에 옮깁니다.
             // 상자는 생성 지점(ChestPoints)에만 놓이므로, 지점이 없는 seed면 상자가 있는 seed로 다시 생성합니다.
@@ -270,8 +295,67 @@ namespace Nomad.Gameplay.Editor
             Bind();
             Require(!gameplay.IsDefeated && gameplay.PlayerHealth.CurrentHealth == 100,
                 "retry resets health and defeat state");
-            Require(controls.Player.GetComponent<PlayerInventory>().UsedSlots == 0 && gameplay.Enemies.Count == 8,
-                "retry clears carried loot and restores encounters");
+            var newInventory = controls.Player.GetComponent<PlayerInventory>();
+            Require(Scrap(newInventory) == 0 && newInventory.GetCount(PlayerEquipmentCombat.ArrowItemId) == 30 &&
+                controls.Player.GetComponent<PlayerMana>().Current == 100 && gameplay.Enemies.Count == 8,
+                "retry clears carried loot and restores starter resources and encounters");
+        }
+
+        private static IEnumerator VerifyBowPress(PlayerEquipmentCombat shooting, Vector2 aim)
+        {
+            int arrows = shooting.ArrowCount;
+            Mouse mouse = InputSystem.AddDevice<Mouse>();
+            mouse.MakeCurrent();
+            InputSystem.QueueStateEvent(mouse, new MouseState { position = aim }.WithButton(MouseButton.Left));
+            yield return Until(() => shooting.ArrowCount == arrows - 1, "mouse press fires a bow shot", 2f);
+            float next = Time.time + shooting.CurrentWeapon.AttackInterval + 0.1f;
+            yield return Until(() => Time.time >= next, "bow button is held past one attack interval", 2f);
+            Require(shooting.ArrowCount == arrows - 1, "a held bow button does not fire another arrow");
+
+            InputSystem.QueueStateEvent(mouse, new MouseState { position = aim });
+            yield return null;
+            InputSystem.RemoveDevice(mouse);
+        }
+
+        private static IEnumerator VerifyStaff(PlayerEquipmentCombat shooting, PlayerEquipment equipment, PlayerInventory inventory, Vector2 aim)
+        {
+            int source = Enumerable.Range(0, PlayerInventory.Capacity)
+                .First(index => inventory.GetSlot(index).Item?.ItemId == "weapon-archmage-staff");
+            Require(equipment.TryEquip(source, EquipmentSlot.Weapon2), "staff replaces the bow");
+            var mana = shooting.GetComponent<PlayerMana>();
+            var hud = shooting.GetComponent<Nomad.Hud.PlayerHud>();
+            int cost = equipment.ActiveWeapon.ManaCost;
+            int count = mana.Maximum / cost;
+            float expected = mana.Current - count * cost;
+            yield return Until(() => HasVisibleModel(shooting), "equipped staff model has no active colliders", 2f);
+
+            Mouse mouse = InputSystem.AddDevice<Mouse>();
+            int shots = 0;
+            Action<WeaponAttackMode> recordShot = mode => { if (mode == WeaponAttackMode.Staff) shots++; };
+            shooting.Attacked += recordShot;
+            mouse.MakeCurrent();
+            InputSystem.QueueStateEvent(mouse, new MouseState { position = aim }.WithButton(MouseButton.Left));
+            yield return Until(() => shots == count, "held staff fires one shot per interval until mana is low", 5f);
+            Require(mana.Current == expected && shooting.ArrowCount == 0, "staff consumes exact mana and no arrows");
+            float next = Time.time + equipment.ActiveWeapon.AttackInterval + 0.1f;
+            yield return Until(() => Time.time >= next, "staff interval elapses while held", 2f);
+            Require(shots == count && Mathf.Approximately(hud.ManaFraction, expected / mana.Maximum),
+                $"insufficient mana stops held fire and updates HUD: shots={shots}/{count}, mana={mana.Current}/{expected}, HUD={hud.ManaFraction}");
+
+            InputSystem.QueueStateEvent(mouse, new MouseState { position = aim });
+            yield return null;
+            shooting.Attacked -= recordShot;
+            InputSystem.RemoveDevice(mouse);
+            yield return Until(() => mana.Current > expected, "mana recovers after the casting delay", 4f);
+        }
+
+        private static bool HasVisibleModel(PlayerEquipmentCombat combat)
+        {
+            GameObject asset = combat.CurrentWeapon?.EquippedVisual;
+            Transform model = asset != null ? combat.transform.Find(asset.name + "(Clone)") : null;
+            return model != null && model.gameObject.activeInHierarchy &&
+                model.GetComponentsInChildren<Renderer>().Any(renderer => renderer.enabled) &&
+                model.GetComponentsInChildren<Collider>().All(collider => !collider.enabled);
         }
 
         private static Transform LootPanel() => GameObject.Find("ChestLootPanel")?.transform;

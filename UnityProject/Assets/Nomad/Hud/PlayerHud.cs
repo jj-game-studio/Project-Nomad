@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using Nomad.Combat;
+using Nomad.Equipment;
 using Nomad.Inventory;
+using Nomad.Player;
 using TMPro;
 using UnityEngine;
 
@@ -19,11 +21,17 @@ namespace Nomad.Hud
         private RectTransform healthFill;
         private TMP_Text healthText;
         private TMP_Text weaponText;
+        private TMP_FontAsset weaponFont;
         private HudArtwork manaRing;
         private HudArtwork staminaRing;
         private TMP_Text manaText;
         private TMP_Text staminaText;
         private GameObject root;
+        private PlayerMana mana;
+        private PlayerEquipmentCombat combat;
+        private ItemDefinition shownWeapon;
+        private int shownArrows = -1;
+        private float shownMana = -1f;
         private readonly List<HudArtwork> surfaces = new List<HudArtwork>();
         private readonly List<GameObject> trims = new List<GameObject>();
         private HudArtwork selection;
@@ -57,6 +65,8 @@ namespace Nomad.Hud
             if (health == null)
                 health = GetComponentInParent<Health>();
 
+            mana = GetComponentInParent<PlayerMana>();
+            combat = GetComponentInParent<PlayerEquipmentCombat>();
             PlayerInventory inventory = GetComponentInParent<PlayerInventory>();
             if (inventory != null)
             {
@@ -66,6 +76,12 @@ namespace Nomad.Hud
             }
 
             Build();
+            if (combat != null && Resources.Load<Font>("ShopFonts/NanumGothic-Regular") is Font koreanFont)
+            {
+                weaponFont = TMP_FontAsset.CreateFontAsset(koreanFont);
+                weaponText.font = weaponFont;
+            }
+
             SetResources(0, 0, 0, 0);
             SetWeapon(null);
             SetStyle(style);
@@ -91,6 +107,24 @@ namespace Nomad.Hud
 
         private void LateUpdate()
         {
+            if (mana != null && shownMana != mana.Current)
+            {
+                shownMana = mana.Current;
+                SetResource(manaRing, manaText, shownMana, mana.Maximum);
+            }
+
+            if (combat != null)
+            {
+                ItemDefinition weapon = combat.CurrentWeapon;
+                int arrows = weapon?.AttackMode == WeaponAttackMode.Bow ? combat.ArrowCount : -1;
+                if (weapon != shownWeapon || arrows != shownArrows)
+                {
+                    shownWeapon = weapon;
+                    shownArrows = arrows;
+                    SetWeapon(arrows >= 0 ? $"{weapon.DisplayName}  ·  {arrows}" : weapon?.DisplayName);
+                }
+            }
+
             int current = health == null ? 0 : health.CurrentHealth;
             int maximum = health == null ? 0 : health.MaxHealth;
             if (current == shownHealth && maximum == shownMaxHealth)
@@ -243,8 +277,9 @@ namespace Nomad.Hud
                 if (index == 0)
                 {
                     Art("Weapon", empty, new Vector2(75, 65), new Vector2(0, 3), HudArtwork.Shape.Weapon, new Color32(217, 210, 190, 255));
-                    weaponText = Label("Weapon Name", empty, "", new Vector2(190, 26), new Vector2(0, 76), 16);
-                    Label("Current", empty, "CURRENT", new Vector2(120, 20), new Vector2(0, 55), 11);
+                    Transform captionParent = combat != null ? slot : empty;
+                    weaponText = Label("Weapon Name", captionParent, "", new Vector2(190, 26), new Vector2(0, 76), 16);
+                    Label("Current", captionParent, "CURRENT", new Vector2(120, 20), new Vector2(0, 55), 11);
                 }
                 else
                     Label("Empty", empty, "+", new Vector2(32, 32), Vector2.zero, 23).color = new Color32(94, 104, 121, 255);
@@ -318,6 +353,9 @@ namespace Nomad.Hud
 
         private void OnDestroy()
         {
+            if (weaponFont != null)
+                Destroy(weaponFont);
+
             if (root != null)
                 Destroy(root);
 

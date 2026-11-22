@@ -13,13 +13,15 @@ MonoBehaviour:
   m_Name: demo-bow
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Inventory.ItemDefinition
   itemId: demo-bow
-  displayName: "\uD65C"
-  description: "\uD22C\uC0AC\uCCB4 \uACF5\uACA9 \uAC80\uC99D\uC6A9 \uD65C"
+  displayName: "\uC0AC\uB0E5\uD65C"
+  description: "\uAC00\uBC29\uC758 \uD654\uC0B4 1\uAC1C\uB97C \uC18C\uBAA8\uD569\uB2C8\uB2E4."
   icon: {fileID: 0}
   maxStack: 1
   equipmentType: 1
   attackPower: 35
   defense: 0
-  attackMode: 1
-  attackRange: 200
+  attackMode: 3
+  attackRange: 24
   attackInterval: 0.8
+  manaCost: 0
+  equippedVisual: {fileID: 1445000710448190, guid: 540a4181c60e5d24eb2e496a2cd4916c, type: 3}

@@ -1,7 +1,6 @@
-using System.IO;
 using System.Linq;
+using Nomad.Combat;
 using Nomad.Inventory;
-using Nomad.Inventory.Editor;
 using Nomad.Player;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -20,37 +19,13 @@ namespace Nomad.Equipment.Editor
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
                 return;
 
-            ItemCsvImporter.Import(File.ReadAllText(CsvPath), "Assets/Nomad/Equipment/Items");
+            WeaponContentAuthoring.Import();
             // 씬을 여는 동안 미사용 에셋이 언로드되므로 아이템 참조는 그 뒤에 읽습니다.
             EditorSceneManager.OpenScene("Assets/Nomad/Player/A_PlayerCombat.unity");
-            var definitions = AssetDatabase.FindAssets("t:ItemDefinition", new[] { "Assets/Nomad/Equipment/Items" })
-                .Select(guid => AssetDatabase.LoadAssetAtPath<ItemDefinition>(AssetDatabase.GUIDToAssetPath(guid))).ToArray();
-
             // 원본 씬을 저장하지 않고 새 장비 전용 사본에만 컴포넌트를 추가합니다.
             var old = Object.FindAnyObjectByType<PlayerCombat>();
-            var equipment = old.gameObject.AddComponent<PlayerEquipment>();
-            var inventory = equipment.GetComponent<PlayerInventory>();
-            var serialized = new SerializedObject(inventory);
-            var items = serialized.FindProperty("items");
-            items.arraySize = definitions.Length;
-            for (int index = 0; index < definitions.Length; index++)
-                items.GetArrayElementAtIndex(index).objectReferenceValue = definitions[index];
-            serialized.ApplyModifiedPropertiesWithoutUndo();
-
-            var combat = old.gameObject.AddComponent<PlayerEquipmentCombat>();
-            var source = new SerializedObject(old);
-            foreach (string field in new[] { "viewCamera", "muzzle", "projectile" })
-                Set(combat, field, source.FindProperty(field).objectReferenceValue);
-            Set(combat, "unarmedDefinition", definitions.Single(item => item.ItemId == "demo-unarmed"));
-            old.gameObject.AddComponent<EquipmentCombatVisuals>();
-            old.gameObject.AddComponent<EquipmentPanel>();
-
-            var demo = new SerializedObject(old.gameObject.AddComponent<EquipmentDemo>());
-            var demoItems = demo.FindProperty("items");
-            demoItems.arraySize = definitions.Length;
-            for (int index = 0; index < definitions.Length; index++)
-                demoItems.GetArrayElementAtIndex(index).objectReferenceValue = definitions[index];
-            demo.ApplyModifiedPropertiesWithoutUndo();
+            old.gameObject.AddComponent<EquipmentDemo>();
+            ConfigurePlayer(old);
 
             foreach (float x in new[] { -0.65f, 0.65f })
             {
@@ -61,6 +36,26 @@ namespace Nomad.Equipment.Editor
                 Set(target.AddComponent<CombatDemoTarget>(), "health", targetHealth);
             }
             EditorSceneManager.SaveScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene(), ScenePath);
+        }
+
+        internal static void UpdateWeaponReferences()
+        {
+            var scene = EditorSceneManager.OpenScene(ScenePath);
+            ConfigurePlayer(Object.FindAnyObjectByType<PlayerCombat>());
+            EditorSceneManager.SaveScene(scene);
+        }
+
+        private static void ConfigurePlayer(PlayerCombat legacy)
+        {
+            var source = new SerializedObject(legacy);
+            WeaponContentAuthoring.ConfigureCombat(legacy.gameObject, (Camera)source.FindProperty("viewCamera").objectReferenceValue,
+                (Transform)source.FindProperty("muzzle").objectReferenceValue,
+                (Projectile)source.FindProperty("projectile").objectReferenceValue);
+
+            ItemDefinition[] definitions = WeaponContentAuthoring.Definitions().Where(item =>
+                item.ItemId.StartsWith("demo-", System.StringComparison.Ordinal) || item.ItemId == PlayerEquipmentCombat.ArrowItemId).ToArray();
+            WeaponContentAuthoring.SetItems(new SerializedObject(legacy.GetComponent<PlayerInventory>()), "items", definitions);
+            WeaponContentAuthoring.SetItems(new SerializedObject(legacy.GetComponent<EquipmentDemo>()), "items", definitions);
         }
 
         [MenuItem("Nomad/Equipment/Open Equipment Demo")]

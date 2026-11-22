@@ -14,9 +14,13 @@ namespace Nomad.Equipment
     [DefaultExecutionOrder(100)]
     public sealed class PlayerEquipmentCombat : MonoBehaviour
     {
+        public const string ArrowItemId = "weapon-arrow";
+        public const float MeleeHalfAngle = 60f;
+
         [SerializeField] private Camera viewCamera;
         [SerializeField] private Transform muzzle;
         [SerializeField] private Projectile projectile;
+        [SerializeField] private Projectile arrowProjectile;
         [SerializeField] private ItemDefinition unarmedDefinition;
         [SerializeField] private LayerMask collisionLayers = Physics.DefaultRaycastLayers;
 
@@ -25,6 +29,7 @@ namespace Nomad.Equipment
         private PlayerMovement movement;
         private PlayerInventory inventory;
         private Health health;
+        private PlayerMana mana;
         private PlayerCombat legacyCombat;
         private bool restoreLegacy;
         private float nextAttackTime;
@@ -34,11 +39,11 @@ namespace Nomad.Equipment
         public Vector3? AimPoint { get; private set; }
         public bool InputBlocked { get; set; }
         public bool EquipmentUiOpen { get; internal set; }
-        public const float MeleeHalfAngle = 60f;
         public Vector3 AttackOrigin => transform.position + Vector3.up;
         public Vector3 ProjectileOrigin => muzzle != null ? muzzle.position : AttackOrigin;
         public LayerMask CollisionLayers => collisionLayers;
         public ItemDefinition CurrentWeapon => equipment.ActiveWeapon != null ? equipment.ActiveWeapon : unarmedDefinition;
+        public int ArrowCount => inventory != null ? inventory.GetCount(ArrowItemId) : 0;
 
         private void Awake()
         {
@@ -46,6 +51,7 @@ namespace Nomad.Equipment
             movement = GetComponent<PlayerMovement>();
             TryGetComponent(out inventory);
             health = GetComponent<Health>();
+            mana = GetComponent<PlayerMana>();
             legacyCombat = GetComponent<PlayerCombat>();
         }
 
@@ -65,8 +71,10 @@ namespace Nomad.Equipment
 
         private void LateUpdate()
         {
-            if (Mouse.current?.leftButton.wasPressedThisFrame == true)
-                TryAttack(Mouse.current.position.ReadValue());
+            Mouse mouse = Mouse.current;
+            if (mouse != null && (mouse.leftButton.wasPressedThisFrame ||
+                (CurrentWeapon?.AttackMode == WeaponAttackMode.Staff && mouse.leftButton.isPressed)))
+                TryAttack(mouse.position.ReadValue());
         }
 
         public bool TryAttack(Vector2 pointer)
@@ -82,29 +90,46 @@ namespace Nomad.Equipment
             if (IsOverUi(pointer) || !TryGetAim(pointer, out Vector3 aim))
                 return false;
 
-            Vector3 origin = AttackOrigin;
-            bool launched;
-            if (weapon.AttackMode == WeaponAttackMode.Ranged)
-                launched = muzzle != null && Projectile.TryLaunch(projectile, transform, muzzle.position, aim,
-                    collisionLayers, 45f, weapon.AttackRange, weapon.AttackPower, NotifyImpact);
-            else if (weapon.AttackMode == WeaponAttackMode.Melee)
+            WeaponAttackMode mode = weapon.AttackMode;
+            if (mode == WeaponAttackMode.Melee)
             {
+                Vector3 origin = AttackOrigin;
                 Vector3 direction = Vector3.ProjectOnPlane(aim - origin, Vector3.up).normalized;
                 if (direction.sqrMagnitude < 0.001f)
                     return false;
+
                 nextAttackTime = Time.time + weapon.AttackInterval;
                 Melee(origin, direction, weapon);
-                launched = true;
             }
-            else
-                return false;
-
-            if (!launched)
+            else if (!TryFire(weapon, aim))
                 return false;
 
             AimPoint = aim;
+            Attacked?.Invoke(mode);
+            return true;
+        }
+
+        private bool TryFire(ItemDefinition weapon, Vector3 aim)
+        {
+            WeaponAttackMode mode = weapon.AttackMode;
+            bool bow = mode == WeaponAttackMode.Bow;
+            bool staff = mode == WeaponAttackMode.Staff;
+            if (muzzle == null || (!bow && !staff && mode != WeaponAttackMode.Ranged) ||
+                (bow && ArrowCount == 0) || (staff && (mana == null || !mana.CanSpend(weapon.ManaCost))))
+                return false;
+
+            Projectile shot = bow ? arrowProjectile : projectile;
+            if (!Projectile.TryLaunch(shot, transform, muzzle.position, aim,
+                    collisionLayers, 45f, weapon.AttackRange, weapon.AttackPower, NotifyImpact))
+                return false;
+
+            // 막힌 발사구나 유효하지 않은 조준에는 재화나 공격 간격을 적용하지 않습니다.
             nextAttackTime = Time.time + weapon.AttackInterval;
-            Attacked?.Invoke(weapon.AttackMode);
+            if (bow)
+                inventory.Remove(ArrowItemId, 1);
+            else if (staff)
+                mana.TrySpend(weapon.ManaCost);
+
             return true;
         }
 

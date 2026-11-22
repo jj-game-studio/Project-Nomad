@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Nomad.Combat;
+using Nomad.Equipment;
 using Nomad.Interaction;
 using Nomad.Inventory;
 using Nomad.Monsters;
@@ -25,7 +26,7 @@ namespace Nomad.Gameplay
         private TerrainIntegrationControls controls;
         private MonsterActorFactory factory;
         private Health player;
-        private PlayerCombat shooting;
+        private PlayerEquipmentCombat shooting;
         private PlayerInteraction interaction;
         private PlayerInventory inventory;
         private GameObject enemyRoot;
@@ -65,7 +66,7 @@ namespace Nomad.Gameplay
             controls = GetComponent<TerrainIntegrationControls>();
             factory = GetComponent<MonsterActorFactory>();
             player = controls.Player.GetComponent<Health>();
-            shooting = controls.Player.GetComponent<PlayerCombat>();
+            shooting = controls.Player.GetComponent<PlayerEquipmentCombat>();
             interaction = controls.Player.GetComponent<PlayerInteraction>();
             inventory = controls.Player.GetComponent<PlayerInventory>();
             controls.Player.GetComponent<SegmentedHealthBar>().Compact = true;
@@ -238,7 +239,7 @@ namespace Nomad.Gameplay
             GUILayout.Label($"HP {player.CurrentHealth}/{player.MaxHealth} | Enemies {AliveEnemies}/{enemies.Count}");
             GUILayout.Label($"Scrap {scrap} | Inventory {inventory.UsedSlots}/20 | Seed {controls.Seed}");
             GUILayout.Label(Ready && AliveEnemies == 0 && !IsDefeated ? "Patrols cleared. Loot crates or explore another field." : message);
-            GUILayout.Label("WASD / LMB shoot / E loot / Shift roll\nR new field / T replay / F1 diagnostics");
+            GUILayout.Label("WASD / LMB attack / Tab gear / E loot\nShift roll / R new field / T replay / F1 diagnostics");
             GUILayout.EndArea();
             if (diagnostics)
             {

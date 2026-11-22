@@ -22,6 +22,8 @@ namespace Nomad.Loot.Editor
         private static readonly string[] Items = { "scrap", "field-knife", "field-vest" };
         private static double deadline;
         private static int frame;
+        private static int starterSlots;
+        private static long starterTotal;
         private static int waitUntil;
         private static int stage;
         private static Keyboard keyboard;
@@ -68,6 +70,8 @@ namespace Nomad.Loot.Editor
                     keyboard.MakeCurrent();
                     controls = Object.FindAnyObjectByType<TerrainIntegrationControls>();
                     inventory = controls.Player.GetComponent<PlayerInventory>();
+                    starterSlots = inventory.UsedSlots;
+                    starterTotal = Total();
                     Require(controls.Generator.LastResult.Success && controls.Player.activeSelf &&
                             controls.Player.GetComponent<PlayerInteraction>() != null, "saved scene input and inventory connected");
                     RequirePlacement("initial seed");
@@ -114,12 +118,12 @@ namespace Nomad.Loot.Editor
                     Press(Key.V);
                     break;
                 case 2:
-                    Require(inventory.UsedSlots == 0, "V empties the review bag");
+                    Require(inventory.UsedSlots == starterSlots && Total() == starterTotal, "V clears only loot review items");
                     long remaining = ItemsIn(chest);
                     TakeAll();
-                    Require(chest.Status == LootStatus.Empty && Total() == remaining, "remaining items collected exactly once");
+                    Require(chest.Status == LootStatus.Empty && Total() == starterTotal + remaining, "remaining items collected exactly once");
                     TakeAll();
-                    Require(Total() == remaining, "empty chest does not duplicate");
+                    Require(Total() == starterTotal + remaining, "empty chest does not duplicate");
                     Press(Key.E);
                     break;
                 case 3:

@@ -56,6 +56,21 @@ namespace Nomad.Inventory
             return slots[index];
         }
 
+        public int GetCount(string itemId)
+        {
+            return TryGetItem(itemId, out ItemDefinition item) ? GetCount(item) : 0;
+        }
+
+        internal int GetCount(ItemDefinition item)
+        {
+            int count = 0;
+            foreach (int index in stackOrder)
+                if (slots[index].Item == item)
+                    count += slots[index].Count;
+
+            return count;
+        }
+
         internal int SpaceInSlot(int index, ItemDefinition item)
         {
             ItemStack slot = slots[index];
