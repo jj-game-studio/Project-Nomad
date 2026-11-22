@@ -144,5 +144,3 @@ namespace Nomad.Visibility.Editor
         }
     }
 }
-
-

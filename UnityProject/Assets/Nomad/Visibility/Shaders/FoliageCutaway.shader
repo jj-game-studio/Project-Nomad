@@ -121,4 +121,3 @@ Shader "Nomad/Visibility/Foliage Cutaway"
         }
     }
 }
-

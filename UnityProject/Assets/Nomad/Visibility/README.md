@@ -30,3 +30,9 @@ Renderer.forceRenderingOff 및 체력바·피격 숫자만 제어하고 Collider
 `Nomad > Visibility > Verify Visibility`로 실제 마우스 방향, 벽/낮은 엄폐물/고저차, 숨긴 적의 피해/충돌, 동적 효과, 모듈/관찰자 해제 및 식생 재질 복원을 검사합니다.
 검증 결과와 렌더는 PR에 기록합니다. 렌더는 사람 조작 검토와 구분합니다.
 
+
+## 메인 게임 모듈 연결
+
+PlayerVisibilityModule.prefab은 씬 참조 없이 활성 PlayerMovement를 찾아 연결합니다.
+#89 담당자와 합의한 뒤 GameConfig.modules에 이 프리팹을 등록하면 영속 플레이어에 연결할 수 있습니다.
+등록 파일은 이번 PR에서 수정하지 않습니다. 저장 프리팹의 생성/해제와 자동 바인딩은 전용 Play 검사에서 확인합니다.

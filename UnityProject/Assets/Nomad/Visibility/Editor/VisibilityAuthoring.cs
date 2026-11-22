@@ -29,6 +29,7 @@ namespace Nomad.Visibility.Editor
         [MenuItem("Nomad/Visibility/Build Visibility Demo")]
         public static void BuildDemo()
         {
+            if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
             EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             Material floor = MaterialAsset("Ground", new Color(0.22f, 0.3f, 0.22f));
             Material wall = MaterialAsset("Wall", new Color(0.35f, 0.38f, 0.42f));
@@ -39,10 +40,8 @@ namespace Nomad.Visibility.Editor
             Primitive("Wall", PrimitiveType.Cube, new Vector3(-4f, 1.5f, 0f), new Vector3(5f, 3f, 0.6f), wall);
             Primitive("Low cover", PrimitiveType.Cube, new Vector3(4f, 0.3f, 3f), new Vector3(3f, 0.6f, 0.5f), wall);
 
-            GameObject player = Primitive("Player", PrimitiveType.Capsule, new Vector3(0f, 1f, -5f), Vector3.one, blue);
-            Object.DestroyImmediate(player.GetComponent<Collider>());
+            GameObject player = new GameObject("Player");
             player.transform.position = new Vector3(0f, 0.1f, -5f);
-            player.GetComponent<Renderer>().enabled = false;
             GameObject body = Primitive("Body", PrimitiveType.Capsule, Vector3.zero, new Vector3(0.7f, 0.9f, 0.7f), blue);
             body.transform.SetParent(player.transform, false);
             body.transform.localPosition = Vector3.up * 0.9f;
@@ -76,19 +75,28 @@ namespace Nomad.Visibility.Editor
             Enemy("Behind wall", new Vector3(-4f, 0f, 3f), red);
             Enemy("Behind player", new Vector3(0f, 0f, -10f), red);
             Enemy("Inside foliage", new Vector3(5f, 0f, 2f), red);
-            GameObject bush = Primitive("Bush cutaway sample", PrimitiveType.Sphere, new Vector3(5f, 1.8f, 2f),
-                new Vector3(5f, 3.6f, 5f), green);
-            Object.DestroyImmediate(bush.GetComponent<Collider>());
+            GameObject bush = new GameObject("Bush cutaway sample");
             bush.transform.position = new Vector3(5f, 0f, 2f);
             GameObject crown = Primitive("Leaves", PrimitiveType.Sphere, Vector3.zero, new Vector3(5f, 3.6f, 5f), green);
             crown.transform.SetParent(bush.transform, false);
             crown.transform.localPosition = Vector3.up * 1.8f;
-            bush.transform.localScale = Vector3.one;
-            bush.GetComponent<Renderer>().enabled = false;
             Object.DestroyImmediate(crown.GetComponent<Collider>());
             bush.AddComponent<VisibilityFoliage>().Configure(shader);
 
+            GameObject tree = new GameObject("Tree cutaway sample");
+            tree.transform.position = new Vector3(-6f, 0f, -1f);
+            GameObject trunk = Primitive("Trunk", PrimitiveType.Cube, Vector3.zero, new Vector3(0.4f, 2f, 0.4f),
+                MaterialAsset("Trunk", new Color(0.4f, 0.22f, 0.1f)));
+            trunk.transform.SetParent(tree.transform, false);
+            trunk.transform.localPosition = Vector3.up;
+            GameObject leaves = Primitive("Leaves", PrimitiveType.Sphere, Vector3.zero, new Vector3(4f, 4f, 4f), green);
+            leaves.transform.SetParent(tree.transform, false);
+            leaves.transform.localPosition = Vector3.up * 3f;
+            Object.DestroyImmediate(leaves.GetComponent<Collider>());
+            tree.AddComponent<VisibilityFoliage>().Configure(shader, 1.5f, true);
+
             EditorSceneManager.SaveScene(SceneManager.GetActiveScene(), ScenePath);
+            BuildModule();
             AssetDatabase.SaveAssets();
             Debug.Log("VISIBILITY_DEMO_CREATED");
         }
@@ -97,6 +105,7 @@ namespace Nomad.Visibility.Editor
         [MenuItem("Nomad/Visibility/Build Field Preview")]
         public static void BuildField()
         {
+            if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
             EditorSceneManager.OpenScene("Assets/Nomad/Terrain/Wfc/TerrainIntegration.unity");
             EditorSceneManager.SaveScene(SceneManager.GetActiveScene(), FieldPath);
             var controls = Object.FindFirstObjectByType<TerrainIntegrationControls>();
@@ -114,6 +123,18 @@ namespace Nomad.Visibility.Editor
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
             if (!File.Exists(FieldPath)) BuildField();
             else EditorSceneManager.OpenScene(FieldPath);
+        }
+
+        [MenuItem("Nomad/Visibility/Build Visibility Module")]
+        public static void BuildModule()
+        {
+            var module = new GameObject("PlayerVisibilityModule");
+            var sight = module.AddComponent<PlayerVisibility>();
+            module.AddComponent<VisibilityField>().Configure(sight,
+                AssetDatabase.LoadAssetAtPath<Shader>(Folder + "/Shaders/FoliageCutaway.shader"));
+            module.AddComponent<VisibilityBinding>();
+            PrefabUtility.SaveAsPrefabAsset(module, Folder + "/PlayerVisibilityModule.prefab");
+            Object.DestroyImmediate(module);
         }
 
         private static void Enemy(string name, Vector3 position, Material material)
@@ -160,4 +181,3 @@ namespace Nomad.Visibility.Editor
         }
     }
 }
-

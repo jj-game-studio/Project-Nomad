@@ -99,5 +99,3 @@ namespace Nomad.Visibility
         private void OnDisable() { Active.Remove(this); Release(); }
     }
 }
-
-

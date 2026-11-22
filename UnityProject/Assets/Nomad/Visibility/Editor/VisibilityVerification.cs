@@ -26,6 +26,7 @@ namespace Nomad.Visibility.Editor
         private static float started;
         private static int stage;
         private static int checks;
+        private static GameObject module;
         private static Material[] foliageMaterials;
         private static Renderer foliageRenderer;
 
@@ -177,8 +178,8 @@ namespace Nomad.Visibility.Editor
                 case 5:
                     Evaluate();
                     Check(!front.IsVisible, "module restart reapplies occlusion");
-                    var foliage = Object.FindFirstObjectByType<VisibilityFoliage>();
-                    foliageRenderer = foliage.GetComponentsInChildren<Renderer>()[1];
+                    var foliage = GameObject.Find("Bush cutaway sample").GetComponent<VisibilityFoliage>();
+                    foliageRenderer = foliage.GetComponentsInChildren<Renderer>()[0];
                     foliage.enabled = false;
                     foliageMaterials = foliageRenderer.sharedMaterials;
                     foliage.enabled = true;
@@ -204,6 +205,18 @@ namespace Nomad.Visibility.Editor
                     break;
                 case 8:
                     Capture("visibility-rear.png");
+                    field.enabled = false;
+                    sight.enabled = false;
+                    module = Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(
+                        VisibilityAuthoring.Folder + "/PlayerVisibilityModule.prefab"));
+                    break;
+                case 9:
+                    Check(module.GetComponent<PlayerVisibility>().Observer == player, "prefab binds current player without scene reference");
+                    Check(front.Controlled, "prefab controls existing targets");
+                    Object.Destroy(module);
+                    break;
+                case 10:
+                    Check(!front.Controlled && !front.GetComponentInChildren<Renderer>().forceRenderingOff, "prefab removal restores target");
                     Debug.Log("VISIBILITY_PLAYMODE_PASS checks=" + checks + " frames=" + Time.frameCount);
                     Finish(0);
                     break;
@@ -254,4 +267,3 @@ namespace Nomad.Visibility.Editor
         }
     }
 }
-
