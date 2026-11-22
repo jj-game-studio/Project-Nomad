@@ -14,8 +14,15 @@ namespace Nomad.Shop
         [SerializeField] private float radius = 12;
         [SerializeField] private float strokeWidth = 1.5f;
         [SerializeField] private Color stroke = new Color(0.65f, 0.68f, 0.57f);
+        [SerializeField, Range(0, 0.2f)] private float shading;
 
         public float Radius => radius;
+
+        internal void SetShading(float amount)
+        {
+            shading = Mathf.Clamp(amount, 0, 0.2f);
+            SetVerticesDirty();
+        }
 
         public void Style(float cornerRadius, float borderWidth, Color borderColor)
         {
@@ -56,6 +63,20 @@ namespace Nomad.Shop
             mesh.AddVert(rect.center, color, Vector2.zero);
             for (int index = 0; index < RingSize; index++)
                 mesh.AddTriangle(center, RingSize * 2 + index, RingSize * 2 + (index + 1) % RingSize);
+
+            // 상점 테마에서만 얕은 명암을 사용하며, 테두리의 투명도는 유지합니다.
+            if (shading > 0)
+            {
+                var vertex = new UIVertex();
+                for (int index = 0; index < mesh.currentVertCount; index++)
+                {
+                    mesh.PopulateUIVertex(ref vertex, index);
+                    float light = Mathf.Lerp(1 - shading, 1 + shading,
+                        Mathf.InverseLerp(rect.yMin, rect.yMax, vertex.position.y));
+                    vertex.color = (Color)vertex.color * new Color(light, light, light, 1);
+                    mesh.SetUIVertex(vertex, index);
+                }
+            }
         }
 
         private static Rect Inset(Rect rect, float amount) => new Rect(

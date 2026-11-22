@@ -43,6 +43,7 @@ namespace Nomad.Shop
             var shape = rect.gameObject.AddComponent<ShopRoundedRect>();
             shape.color = fill;
             shape.Style(radius, borderWidth, border ?? Border);
+            shape.SetShading(0.055f);
             return shape;
         }
 
@@ -87,7 +88,7 @@ namespace Nomad.Shop
             ColorBlock colors = button.colors;
             colors.highlightedColor = new Color(1.18f, 1.18f, 1.18f);
             colors.pressedColor = new Color(0.8f, 0.8f, 0.8f);
-            colors.disabledColor = new Color(0.65f, 0.65f, 0.65f, 1);
+            colors.disabledColor = new Color(0.94f, 0.92f, 0.87f, 1);
             button.colors = colors;
             button.navigation = new Navigation { mode = Navigation.Mode.None };
             button.onClick.AddListener(action);
