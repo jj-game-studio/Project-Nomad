@@ -1,0 +1,190 @@
+using System;
+using System.IO;
+using System.Linq;
+using Nomad.Player;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+using Object = UnityEngine.Object;
+
+namespace Nomad.PlayerVisual.Editor
+{
+    // 외형은 별도 프리팹, 기능은 기존 PlayerRig의 Variant로 유지합니다.
+    internal static class PlayerVisualAuthoring
+    {
+        internal const string Folder = "Assets/Nomad/PlayerVisual";
+        internal const string VisualPath = Folder + "/PrototypeMaleVisual.prefab";
+        internal const string RigPath = Folder + "/PrototypePlayerRig.prefab";
+        internal const string ScenePath = Folder + "/PlayerVisualPreview.unity";
+        internal const string BaseRigPath = "Assets/Nomad/Game/Prefabs/PlayerRig.prefab";
+        private const string SourcePath = "Assets/ThirdParty/Synty_Prototype/PolygonPrototype/Prefabs/Characters/Character_Male_Face_01_FixedScale.prefab";
+
+        [MenuItem("Nomad/Player Visual/Build Preview")]
+        public static void Build()
+        {
+            if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+                return;
+
+            Directory.CreateDirectory(Folder);
+            AssetDatabase.Refresh();
+            BuildVisual();
+            BuildRig();
+            BuildScene();
+            Validate();
+            Debug.Log("PLAYER_VISUAL_BUILT");
+        }
+
+        [MenuItem("Nomad/Player Visual/Open Preview")]
+        public static void Open()
+        {
+            if (EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+                EditorSceneManager.OpenScene(ScenePath);
+        }
+
+        private static void BuildVisual()
+        {
+            var root = new GameObject("PrototypeMaleVisual");
+            try
+            {
+                var source = AssetDatabase.LoadAssetAtPath<GameObject>(SourcePath);
+                Require(source != null, "Source character prefab is missing");
+                var model = (GameObject)PrefabUtility.InstantiatePrefab(source, root.transform);
+                model.name = "Model";
+                model.transform.localPosition = Vector3.zero;
+                model.transform.localRotation = Quaternion.identity;
+
+                foreach (var animator in model.GetComponentsInChildren<Animator>(true))
+                    animator.applyRootMotion = false;
+
+                // 렌더러의 실제 높이를 기존 1.8m 캡슐에 맞추고 발바닥을 원점에 둡니다.
+                Bounds bounds = BoundsOf(root);
+                Require(bounds.size.y > 0.01f, "Source model has no visible height");
+                model.transform.localScale *= 1.8f / bounds.size.y;
+                bounds = BoundsOf(root);
+                model.transform.localPosition -= new Vector3(bounds.center.x, bounds.min.y, bounds.center.z);
+                PrefabUtility.SaveAsPrefabAsset(root, VisualPath);
+            }
+            finally { Object.DestroyImmediate(root); }
+        }
+
+        private static void BuildRig()
+        {
+            var source = AssetDatabase.LoadAssetAtPath<GameObject>(BaseRigPath);
+            Require(source != null, "Base PlayerRig is missing");
+            var rig = (GameObject)PrefabUtility.InstantiatePrefab(source);
+            try
+            {
+                rig.name = "PrototypePlayerRig";
+                var player = rig.GetComponentInChildren<PlayerMovement>();
+                var body = player.transform.Find("Player Body");
+                Require(body != null, "Expected placeholder body is missing");
+                body.gameObject.SetActive(false);
+                PrefabUtility.RecordPrefabInstancePropertyModifications(body.gameObject);
+
+                var visual = (GameObject)PrefabUtility.InstantiatePrefab(
+                    AssetDatabase.LoadAssetAtPath<GameObject>(VisualPath), player.transform);
+                visual.name = "Visual";
+                visual.transform.localPosition = Vector3.zero;
+                visual.transform.localRotation = Quaternion.identity;
+                PrefabUtility.SaveAsPrefabAsset(rig, RigPath);
+            }
+            finally { Object.DestroyImmediate(rig); }
+        }
+
+        private static void BuildScene()
+        {
+            Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            RenderSettings.ambientLight = new Color(0.65f, 0.68f, 0.75f);
+            var light = new GameObject("Preview Sun").AddComponent<Light>();
+            light.type = LightType.Directional;
+            light.intensity = 1.5f;
+            light.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
+
+            Box("Ground", new Vector3(0f, -0.25f, 0f), new Vector3(20f, 0.5f, 20f));
+            Box("Wall", new Vector3(0f, 1f, 4f), new Vector3(6f, 2f, 0.5f));
+            Box("Step", new Vector3(3f, 0.15f, 0f), new Vector3(1.5f, 0.3f, 3f));
+
+            var rig = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(RigPath));
+            var player = rig.GetComponentInChildren<PlayerMovement>();
+            player.transform.position = Vector3.up * 0.02f;
+            rig.GetComponentInChildren<TopDownCamera>().ResetTracking();
+            Label("Instructions", new Vector3(-4f, 0.02f, -3f),
+                "PLAYER MODEL PREVIEW\nWASD: move | Space: jump | Shift: roll\nStatic pose / animation pending", 0.07f);
+
+            // 정면·측면은 움직이는 플레이어와 분리해 외형 크기와 방향을 비교합니다.
+            PreviewModel("Front Reference", new Vector3(-3f, 0f, 0f), Quaternion.Euler(0f, 180f, 0f));
+            PreviewModel("Side Reference", new Vector3(-5f, 0f, 0f), Quaternion.Euler(0f, 90f, 0f));
+            EditorSceneManager.SaveScene(scene, ScenePath);
+            AssetDatabase.SaveAssets();
+        }
+
+        private static void PreviewModel(string name, Vector3 position, Quaternion rotation)
+        {
+            var visual = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(VisualPath));
+            visual.name = name;
+            visual.transform.SetPositionAndRotation(position, rotation);
+        }
+
+        private static void Box(string name, Vector3 position, Vector3 scale)
+        {
+            var box = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            box.name = name;
+            box.transform.position = position;
+            box.transform.localScale = scale;
+        }
+
+        private static void Label(string name, Vector3 position, string text, float size)
+        {
+            var label = new GameObject(name).AddComponent<TextMesh>();
+            label.transform.SetPositionAndRotation(position, Quaternion.Euler(90f, 0f, 0f));
+            label.text = text;
+            label.characterSize = size;
+            label.fontSize = 64;
+            label.color = Color.white;
+        }
+
+        [MenuItem("Nomad/Player Visual/Validate Presets")]
+        public static void Validate()
+        {
+            var visual = AssetDatabase.LoadAssetAtPath<GameObject>(VisualPath);
+            var rig = AssetDatabase.LoadAssetAtPath<GameObject>(RigPath);
+            Require(visual != null && rig != null, "Generated prefabs are missing");
+            Require(PrefabUtility.GetPrefabAssetType(rig) == PrefabAssetType.Variant, "Player preset must inherit PlayerRig");
+            Require(PrefabUtility.GetCorrespondingObjectFromSource(rig) == AssetDatabase.LoadAssetAtPath<GameObject>(BaseRigPath), "Unexpected base rig");
+
+            var player = rig.GetComponentInChildren<PlayerMovement>();
+            Require(!player.transform.Find("Player Body").gameObject.activeSelf, "Placeholder is still visible");
+            Require(player.transform.Find("Visual") != null, "Visual is missing");
+            Require(player.GetComponent<CharacterController>().height == 1.8f, "Collision size changed");
+            Require(visual.GetComponentsInChildren<Collider>(true).Length == 0, "Visual must not add colliders");
+            Require(visual.GetComponentsInChildren<Animator>(true).All(a => !a.applyRootMotion), "Root motion must be off");
+            Require(visual.GetComponentsInChildren<SkinnedMeshRenderer>().Any(r => r.sharedMesh != null), "Skinned mesh is missing");
+
+            var instance = (GameObject)PrefabUtility.InstantiatePrefab(visual);
+            try
+            {
+                Bounds bounds = BoundsOf(instance);
+                Require(Mathf.Abs(bounds.size.y - 1.8f) < 0.02f && Mathf.Abs(bounds.min.y) < 0.02f, $"Height/feet mismatch: {bounds}");
+                foreach (var renderer in instance.GetComponentsInChildren<Renderer>())
+                    Require(renderer.sharedMaterials.All(m => m != null && m.shader != null && m.shader.isSupported), "Missing or unsupported material");
+            }
+            finally { Object.DestroyImmediate(instance); }
+            Debug.Log("PLAYER_VISUAL_ASSETS_PASS: inherited rig, model, height, feet, collider and material checks");
+        }
+
+        internal static Bounds BoundsOf(GameObject root)
+        {
+            Renderer[] renderers = root.GetComponentsInChildren<Renderer>();
+            Require(renderers.Length > 0, "No active renderer");
+            Bounds bounds = renderers[0].bounds;
+            foreach (var renderer in renderers.Skip(1)) bounds.Encapsulate(renderer.bounds);
+            return bounds;
+        }
+
+        internal static void Require(bool condition, string message)
+        {
+            if (!condition) throw new InvalidOperationException(message);
+        }
+    }
+}
