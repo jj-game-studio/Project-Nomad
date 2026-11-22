@@ -1,7 +1,9 @@
 {
     "name": "Nomad.Game.PlayModeTests",
     "references": [
-        "Nomad.Game"
+        "Nomad.Game",
+        "Unity.InputSystem",
+        "UnityEngine.UI"
     ],
     "optionalUnityReferences": [
         "TestAssemblies"

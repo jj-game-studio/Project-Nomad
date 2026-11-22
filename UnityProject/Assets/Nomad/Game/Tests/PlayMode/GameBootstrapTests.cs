@@ -3,6 +3,9 @@ using System.Collections;
 using NUnit.Framework;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.LowLevel;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 
@@ -232,6 +235,121 @@ namespace Nomad.Game.Tests
             yield return null;
             Assert.That(GameManager.BootstrapRegion(), Is.Null);
             Assert.That(GameManager.Instance, Is.Null);
+        }
+
+        [UnityTest]
+        public IEnumerator Escape_PausesAndSettingsKeepsGameplayPaused()
+        {
+            yield return EditorSceneManager.LoadSceneAsyncInPlayMode(GameScenePath,
+                new LoadSceneParameters(LoadSceneMode.Additive));
+            GameManager manager = GameManager.Instance;
+            yield return WaitForRegion(manager);
+            Transform pause = manager.transform.Find("PauseMenu");
+            Assert.That(pause, Is.Not.Null, "GameConfig에 등록된 일시정지 모듈");
+
+            Vector3 position = manager.Player.transform.position;
+            Behaviour interaction = (Behaviour)manager.Player.GetComponent("PlayerInteraction");
+            float originalScale = Time.timeScale;
+            bool originalAudioPause = AudioListener.pause;
+
+            yield return PressEscape();
+            Assert.That(Time.timeScale, Is.Zero);
+            Assert.That(AudioListener.pause, Is.True);
+            Assert.That(interaction.enabled, Is.False);
+            Assert.That(Vector3.Distance(manager.Player.transform.position, position), Is.LessThan(0.05f));
+            Assert.That(EventSystem.current.currentSelectedGameObject, Is.EqualTo(PauseButton(pause, "PausePanel", "Resume")));
+
+            Click(PauseButton(pause, "PausePanel", "Settings"));
+            Assert.That(PauseButton(pause, "SettingsPanel", "Back").activeInHierarchy, Is.True);
+            Assert.That(PauseButton(pause, "PausePanel", "Resume").activeInHierarchy, Is.False);
+            Assert.That(Time.timeScale, Is.Zero);
+
+            yield return PressEscape();
+            Assert.That(PauseButton(pause, "SettingsPanel", "Back").activeInHierarchy, Is.False);
+            Assert.That(Time.timeScale, Is.Zero);
+
+            Click(PauseButton(pause, "PausePanel", "Resume"));
+            Assert.That(Time.timeScale, Is.EqualTo(originalScale));
+            Assert.That(AudioListener.pause, Is.EqualTo(originalAudioPause));
+            Assert.That(interaction.enabled, Is.True);
+            Assert.That(PauseButton(pause, "PausePanel", "Resume").activeInHierarchy, Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator PauseRestart_StartsFreshInVillage()
+        {
+            yield return EditorSceneManager.LoadSceneAsyncInPlayMode(GameScenePath,
+                new LoadSceneParameters(LoadSceneMode.Additive));
+            GameManager manager = GameManager.Instance;
+            yield return WaitForRegion(manager);
+            GameObject player = manager.Player;
+            Assert.That(CallInventory(player, "Add", "scrap", 5), Is.EqualTo(5));
+
+            yield return PressEscape();
+            Assert.That(Time.timeScale, Is.Zero);
+            Click(PauseButton(manager.transform.Find("PauseMenu"), "PausePanel", "Restart"));
+
+            float end = Time.realtimeSinceStartup + Timeout;
+            while (GameManager.Instance == null || GameManager.Instance.IsLoading || !GameManager.Instance.CurrentRegion.IsValid())
+            {
+                Assert.That(Time.realtimeSinceStartup, Is.LessThan(end), "재시작 시간 초과");
+                yield return null;
+            }
+
+            GameManager next = GameManager.Instance;
+            Assert.That(manager == null, Is.True);
+            Assert.That(next.CurrentRegion.path, Is.EqualTo(VillagePath));
+            Assert.That(next.Player, Is.Not.SameAs(player));
+            Assert.That(CallInventory(next.Player, "Remove", "scrap", int.MaxValue), Is.Zero);
+            Assert.That(Time.timeScale, Is.EqualTo(1f));
+            AssertAtEntrance(next, null);
+        }
+
+        private static IEnumerator PressEscape()
+        {
+            bool previousRunInBackground = Application.runInBackground;
+            InputSettings settings = InputSystem.settings;
+            var previousBackground = settings.backgroundBehavior;
+            var previousEditorInput = settings.editorInputBehaviorInPlayMode;
+            Keyboard previousKeyboard = Keyboard.current;
+
+            // 배치 모드에서 Game 뷰에 포커스가 없어도 가상 키 입력을 처리합니다.
+            Application.runInBackground = true;
+            settings.backgroundBehavior = InputSettings.BackgroundBehavior.IgnoreFocus;
+            settings.editorInputBehaviorInPlayMode = InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
+            Keyboard keyboard = InputSystem.AddDevice<Keyboard>();
+            keyboard.MakeCurrent();
+
+            try
+            {
+                InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.Escape));
+                yield return null;
+                Assert.That(keyboard.escapeKey.isPressed, Is.True, "가상 ESC가 Input System에 도달");
+                InputSystem.QueueStateEvent(keyboard, new KeyboardState());
+                yield return null;
+            }
+            finally
+            {
+                InputSystem.RemoveDevice(keyboard);
+                previousKeyboard?.MakeCurrent();
+                settings.editorInputBehaviorInPlayMode = previousEditorInput;
+                settings.backgroundBehavior = previousBackground;
+                Application.runInBackground = previousRunInBackground;
+            }
+        }
+
+        private static GameObject PauseButton(Transform pause, string panel, string button)
+        {
+            Transform target = pause.Find($"PauseCanvas/Backdrop/{panel}/{button}");
+            Assert.That(target, Is.Not.Null, button);
+            return target.gameObject;
+        }
+
+        private static void Click(GameObject button)
+        {
+            Assert.That(button.activeInHierarchy, Is.True);
+            var pointer = new PointerEventData(EventSystem.current) { button = PointerEventData.InputButton.Left };
+            Assert.That(ExecuteEvents.Execute(button, pointer, ExecuteEvents.pointerClickHandler), Is.True);
         }
 
         private static IEnumerator WaitForRegion(GameManager manager)
