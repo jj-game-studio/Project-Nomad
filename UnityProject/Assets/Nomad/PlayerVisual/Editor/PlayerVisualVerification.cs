@@ -15,6 +15,9 @@ namespace Nomad.PlayerVisual.Editor
         private const string SessionKey = "Nomad.PlayerVisual.Verify";
         private static PlayerMovement player;
         private static Keyboard keyboard;
+        private static PlayerAnimation animation;
+        private static Quaternion idleLeg;
+        private static bool sawRun, sawJump, sawFall, sawRoll;
         private static int stage;
         private static float start;
         private static float peak;
@@ -50,6 +53,8 @@ namespace Nomad.PlayerVisual.Editor
                     player = Object.FindAnyObjectByType<PlayerMovement>();
                     if (player == null || Camera.main == null) return;
                     Application.runInBackground = true;
+                    animation = player.GetComponent<PlayerAnimation>();
+                    Check(animation != null, "Animation driver missing");
                     Time.captureFramerate = 60;
                     InputSystem.settings.backgroundBehavior = InputSettings.BackgroundBehavior.IgnoreFocus;
                     InputSystem.settings.editorInputBehaviorInPlayMode = InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
@@ -61,11 +66,40 @@ namespace Nomad.PlayerVisual.Editor
                 Vector3 position = player.transform.position;
                 float elapsed = Time.time - start;
                 Check(player.transform.Find("Visual").gameObject.activeInHierarchy, "Visual became inactive");
+                if (stage == 2 && elapsed > 0.15f && !sawRun)
+                {
+                    Check(animation.CurrentState == "Run", "Run state missing");
+                    Check(Quaternion.Angle(idleLeg, animation.Animator.GetBoneTransform(HumanBodyBones.RightUpperLeg).localRotation) > 5f, "Retargeted leg did not animate");
+                    CaptureFront("player-animation-run.png");
+                    sawRun = true;
+                }
+                if (stage == 3 && elapsed > 0.15f && !sawJump)
+                {
+                    Check(animation.CurrentState == "Jump", "Jump state missing");
+                    CaptureFront("player-animation-jump.png");
+                    sawJump = true;
+                }
+                if (stage == 3 && elapsed > 0.45f && !sawFall)
+                {
+                    Check(animation.CurrentState == "Fall", "Fall state missing");
+                    sawFall = true;
+                }
+                if (stage == 4 && elapsed > 0.12f && !sawRoll)
+                {
+                    Check(animation.CurrentState == "Roll", "Roll state missing");
+                    CaptureFront("player-animation-roll.png");
+                    sawRoll = true;
+                }
                 switch (stage)
                 {
-                    case 1 when elapsed > 0.25f:
+                    case 1 when elapsed > 1.2f:
                         Check(Time.frameCount > 5 && Mathf.Abs(position.y) < 0.1f, "Frames or grounding");
                         Capture("player-visual-top.png", Camera.main);
+                        Check(animation.CurrentState == "Idle", "Idle state missing");
+                        Check(animation.Animator.GetBoneTransform(HumanBodyBones.Hips).name == "Hips", "Incorrect pelvis mapping");
+                        float soleY = SoleHeight();
+                        Check(soleY > -0.05f && soleY < 0.08f, $"Animated feet are not grounded: {soleY}");
+                        idleLeg = animation.Animator.GetBoneTransform(HumanBodyBones.RightUpperLeg).localRotation;
                         CaptureFront();
                         origin = position;
                         Advance(Key.W);
@@ -96,7 +130,8 @@ namespace Nomad.PlayerVisual.Editor
                     case 5 when elapsed > 0.6f:
                         Check(player.transform.position.z < 3.5f, "Wall collision regression");
                         InputSystem.QueueStateEvent(keyboard, new KeyboardState());
-                        Debug.Log($"PLAYER_VISUAL_PLAY_PASS: frame={Time.frameCount}, model, grounding, movement, facing, jump, roll, wall");
+                        Check(sawRun && sawJump && sawFall && sawRoll, "Missing animation state evidence");
+                        Debug.Log($"PLAYER_VISUAL_PLAY_PASS: frame={Time.frameCount}, model, animated feet, idle loop, run leg motion, jump/fall/roll states, movement, facing, jump, roll, wall");
                         Finish(0);
                         break;
                 }
@@ -106,6 +141,20 @@ namespace Nomad.PlayerVisual.Editor
                 Debug.LogError($"PLAYER_VISUAL_PLAY_FAIL stage={stage}: {exception}");
                 Finish(1);
             }
+        }
+
+        private static float SoleHeight()
+        {
+            float min = float.PositiveInfinity;
+            var mesh = new Mesh();
+            foreach (var renderer in animation.Animator.GetComponentsInChildren<SkinnedMeshRenderer>())
+            {
+                renderer.BakeMesh(mesh);
+                foreach (var vertex in mesh.vertices)
+                    min = Mathf.Min(min, renderer.transform.TransformPoint(vertex).y - player.transform.position.y);
+            }
+            Object.DestroyImmediate(mesh);
+            return min;
         }
 
         private static void Advance(params Key[] keys)
@@ -124,15 +173,20 @@ namespace Nomad.PlayerVisual.Editor
             Physics.SyncTransforms();
         }
 
-        private static void CaptureFront()
+        private static void CaptureFront(string filename = "player-visual-front.png")
         {
+            var a = animation.Animator;
+            Debug.Log($"ANIMATED_POSE {filename} avatar={a.avatar.name} root={a.transform.position} body={a.bodyPosition} hips={a.GetBoneTransform(HumanBodyBones.Hips).position} foot={a.GetBoneTransform(HumanBodyBones.LeftFoot).position}");
             var cameraObject = new GameObject("Capture Camera");
             var camera = cameraObject.AddComponent<Camera>();
-            camera.transform.position = new Vector3(0f, 1.2f, 4f);
-            camera.transform.LookAt(new Vector3(0f, 0.9f, 0f));
+            camera.transform.position = player.transform.position + new Vector3(0f, 1.2f, 3f);
+            camera.transform.LookAt(player.transform.position + Vector3.up * 0.9f);
             camera.orthographic = true;
             camera.orthographicSize = 1.2f;
-            Capture("player-visual-front.png", camera);
+            var instructions = GameObject.Find("Instructions");
+            if (instructions != null) instructions.SetActive(false);
+            Capture(filename, camera);
+            if (instructions != null) instructions.SetActive(true);
             Object.DestroyImmediate(cameraObject);
         }
 

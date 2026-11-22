@@ -30,6 +30,7 @@ namespace Nomad.PlayerVisual.Editor
             AssetDatabase.Refresh();
             RenamePreset(Folder + "/PrototypeMaleVisual.prefab", VisualPath);
             RenamePreset(Folder + "/PrototypePlayerRig.prefab", RigPath);
+            PlayerAnimationAuthoring.Build();
             BuildVisual();
             BuildRig();
             BuildScene();
@@ -58,20 +59,52 @@ namespace Nomad.PlayerVisual.Editor
 
                 foreach (var animator in model.GetComponentsInChildren<Animator>(true))
                 {
+                    ConfigureAvatar(animator);
                     animator.applyRootMotion = false;
-                    // 외형 검토 단계에서는 원본의 데모 Controller 참조를 사용하지 않습니다.
-                    animator.runtimeAnimatorController = null;
+                    // 프로젝트 소유 Controller로 기존 에셋의 동작을 재생합니다.
+                    animator.runtimeAnimatorController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(PlayerAnimationAuthoring.ControllerPath);
                 }
 
-                // 렌더러의 실제 높이를 기존 1.8m 캡슐에 맞추고 발바닥을 원점에 둡니다.
+                // 높이를 기존 캡슐에 맞추되, 애니메이션의 발 기준인 원본 루트 높이는 유지합니다.
                 Bounds bounds = BoundsOf(root);
                 Require(bounds.size.y > 0.01f, "Source model has no visible height");
                 model.transform.localScale *= 1.8f / bounds.size.y;
                 bounds = BoundsOf(root);
-                model.transform.localPosition -= new Vector3(bounds.center.x, bounds.min.y, bounds.center.z);
+                model.transform.localPosition -= new Vector3(bounds.center.x, 0f, bounds.center.z);
                 PrefabUtility.SaveAsPrefabAsset(root, VisualPath);
             }
             finally { Object.DestroyImmediate(root); }
+        }
+
+        private static void ConfigureAvatar(Animator animator)
+        {
+            var description = animator.avatar.humanDescription;
+            // 원본 Avatar는 바닥 Root를 골반으로 지정합니다. 실제 Hips에 매핑해 접지를 복구합니다.
+            var human = description.human;
+            for (int i = 0; i < human.Length; i++)
+                if (human[i].humanName == "Hips") human[i].boneName = "Hips";
+            description.human = human;
+            description.skeleton = animator.GetComponentsInChildren<Transform>(true).Select(t => new SkeletonBone
+            {
+                name = t.name,
+                position = t.localPosition,
+                rotation = t.localRotation,
+                scale = t.localScale
+            }).ToArray();
+
+            var avatar = AvatarBuilder.BuildHumanAvatar(animator.gameObject, description);
+            Require(avatar.isValid && avatar.isHuman, "Could not build player Avatar");
+            avatar.name = "KingdomPlayerAvatar";
+            string path = Folder + "/KingdomPlayerAvatar.asset";
+            var saved = AssetDatabase.LoadAssetAtPath<Avatar>(path);
+            if (saved == null) AssetDatabase.CreateAsset(avatar, path);
+            else
+            {
+                EditorUtility.CopySerialized(avatar, saved);
+                Object.DestroyImmediate(avatar);
+                avatar = saved;
+            }
+            animator.avatar = avatar;
         }
 
         private static void BuildRig()
@@ -93,6 +126,10 @@ namespace Nomad.PlayerVisual.Editor
                 visual.name = "Visual";
                 visual.transform.localPosition = Vector3.zero;
                 visual.transform.localRotation = Quaternion.identity;
+                var animation = player.gameObject.AddComponent<PlayerAnimation>();
+                var data = new SerializedObject(animation);
+                data.FindProperty("animator").objectReferenceValue = visual.GetComponentInChildren<Animator>();
+                data.ApplyModifiedPropertiesWithoutUndo();
                 PrefabUtility.SaveAsPrefabAsset(rig, RigPath);
             }
             finally { Object.DestroyImmediate(rig); }
@@ -126,7 +163,7 @@ namespace Nomad.PlayerVisual.Editor
             player.transform.position = Vector3.up * 0.02f;
             rig.GetComponentInChildren<TopDownCamera>().ResetTracking();
             Label("Instructions", new Vector3(-4f, 0.02f, -3f),
-                "PLAYER MODEL PREVIEW\nWASD: move | Space: jump | Shift: roll\nStatic pose / animation pending", 0.07f);
+                "PLAYER MODEL PREVIEW\nWASD: move | Space: jump | Shift: roll\nARPG idle/run + Mixamo jump/roll", 0.07f);
 
             // 정면·측면은 움직이는 플레이어와 분리해 외형 크기와 방향을 비교합니다.
             PreviewModel("Front Reference", new Vector3(-3f, 0f, 0f), Quaternion.Euler(0f, 180f, 0f));
@@ -175,13 +212,17 @@ namespace Nomad.PlayerVisual.Editor
             Require(player.GetComponent<CharacterController>().height == 1.8f, "Collision size changed");
             Require(visual.GetComponentsInChildren<Collider>(true).Length == 0, "Visual must not add colliders");
             Require(visual.GetComponentsInChildren<Animator>(true).All(a => !a.applyRootMotion), "Root motion must be off");
+            var animator = visual.GetComponentInChildren<Animator>();
+            Require(animator.avatar != null && animator.avatar.isValid && animator.avatar.isHuman, "Invalid character Avatar");
+            Require(animator.runtimeAnimatorController != null, "Locomotion Controller is missing");
+            Require(player.GetComponent<PlayerAnimation>() != null, "Animation driver is missing");
             Require(visual.GetComponentsInChildren<SkinnedMeshRenderer>().Any(r => r.sharedMesh != null), "Skinned mesh is missing");
 
             var instance = (GameObject)PrefabUtility.InstantiatePrefab(visual);
             try
             {
                 Bounds bounds = BoundsOf(instance);
-                Require(Mathf.Abs(bounds.size.y - 1.8f) < 0.02f && Mathf.Abs(bounds.min.y) < 0.02f, $"Height/feet mismatch: {bounds}");
+                Require(Mathf.Abs(bounds.size.y - 1.8f) < 0.02f && bounds.min.y > -0.15f && bounds.min.y < 0.02f, $"Height/feet mismatch: {bounds}");
                 foreach (var renderer in instance.GetComponentsInChildren<Renderer>())
                     Require(renderer.sharedMaterials.All(m => m != null && m.shader != null && m.shader.isSupported), "Missing or unsupported material");
             }

@@ -70,7 +70,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4842998965800138, guid: 767b276e5b6e4b14bbcd51b5a6e78ca8, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.091364145
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4842998965800138, guid: 767b276e5b6e4b14bbcd51b5a6e78ca8, type: 3}
       propertyPath: m_LocalPosition.z
@@ -105,9 +105,13 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 95700630886227062, guid: 767b276e5b6e4b14bbcd51b5a6e78ca8, type: 3}
+      propertyPath: m_Avatar
+      value:
+      objectReference: {fileID: 9000000, guid: a2830582d49776549bca71da4bafb2fe, type: 2}
+    - target: {fileID: 95700630886227062, guid: 767b276e5b6e4b14bbcd51b5a6e78ca8, type: 3}
       propertyPath: m_Controller
-      value: 
-      objectReference: {fileID: 0}
+      value:
+      objectReference: {fileID: 9100000, guid: b40edf0f738960c42b75d066c1db1095, type: 2}
     - target: {fileID: 95700630886227062, guid: 767b276e5b6e4b14bbcd51b5a6e78ca8, type: 3}
       propertyPath: m_ApplyRootMotion
       value: 0

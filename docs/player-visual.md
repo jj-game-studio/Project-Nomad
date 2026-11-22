@@ -20,7 +20,7 @@ Issue #134. 사용자의 단색 외형 거절 피드백에 따라 의상·갑옷
 
 ## 현재 제한
 
-- 이번 프리셋에는 동작용 Animator Controller를 연결하지 않아 정적 기본 자세입니다. 원본의 데모 Controller 참조는 프리셋에서 해제합니다. 이동·공격 애니메이션 및 무기 손 부착은 별도 후속입니다.
+- 대기·이동·점프·낙하·구르기를 연결했습니다. 공격 애니메이션과 무기 손 부착은 별도 후속입니다.
 - 기존 Game PlayerRig, GameConfig, TerrainIntegration과 지역 씬은 교체하지 않았습니다. 이 PR의 프리셋 외형 검토 후 실제 게임 연결 범위를 정합니다.
 - Windows 배포 빌드와 사람의 외형·크기·조작감 수용 판단은 별도입니다.
 
@@ -32,3 +32,25 @@ Unity 6000.6.9f1에서 생성·에셋 검사가 통과했습니다. 저장된 �
 - Play 검사: `unity open <UnityProject 절대 경로> --batchmode --args "-executeMethod Nomad.PlayerVisual.Editor.PlayerVisualVerification.Run"` (검사 완료 후 Editor 종료)
 - 근거: 로컬 `Artifacts/player-visual-build.log`, `player-visual-play.log`, `player-visual-front.png`, `player-visual-top.png`.
 - 최초 Play에서 UnityEditor.Search.SearchDatabase 시작 인덱싱의 ArgumentOutOfRangeException이 1회 기록되었습니다. 프리셋 검사는 통과했으나 Editor 로그 전체가 무오류인 것으로 보고하지 않습니다.
+
+## 애니메이션 연결
+
+`PlayerAnimation`은 PlayerMovement의 구르기 여부와 CharacterController의 실제 속도·접지 결과만 읽어 외형 Animator를 전환합니다. 기존 입력·점프 높이·이동 속도·구르기 거리와 충돌은 변경하지 않습니다. 벽에 막혀 실제 수평 속도가 없으면 달리기를 멈추고, 공중에서는 상승/낙하 상태로 바뀝니다.
+
+- Idle: ARPG Warrior `Idle_no_weapon`.
+- Run: ARPG Warrior `Run_no_weapon_IPC`. 실제 수평 속도에 따라 재생 속도를 조절합니다.
+- Jump: Mixamo `StandingJump`. 상승 중 재생합니다.
+- Fall: ARPG Warrior `Airborne`. 낙하 중 재생합니다.
+- Roll: Mixamo `StandToRoll`. 기존 0.3초 구르기에 맞춰 재생합니다.
+
+원본은 #136에서 공유된 ThirdParty 커밋을 참조하며 수정하지 않습니다. 프로젝트 소유 Animations 폴더에 클립 복사본과 PlayerLocomotion Controller를 생성해 반복·루트 이동 설정을 조정합니다. 캐릭터 이동은 기존 코드가 담당하므로 Apply Root Motion은 끄고, 일회 클립의 루트 위치 이동은 적용하지 않습니다.
+
+Build Preview로 Controller·클립·프리셋·씬을 함께 다시 생성할 수 있습니다. 자세와 전환, 특히 짧은 구르기의 재생 속도는 사람 검토 대상입니다. 정식 Game PlayerRig에는 아직 연결하지 않았습니다.
+
+원본 Avatar의 골반 매핑(Root)을 실제 Hips로 수정한 KingdomPlayerAvatar를 생성합니다. 클립의 원본 기준 높이를 유지하고, 원본 모델의 루트 높이를 보존해 바닥 잠김과 떠 있는 발을 방지합니다. Play 검증은 실제 변형 메시의 최저점으로 대기 자세의 접지를 확인합니다.
+
+## 애니메이션 검증 결과 (2026-11-23)
+
+최신 main의 공유 에셋 7e3cbab을 결합했습니다. Unity 6000.6.9f1 생성·컴파일·Avatar/클립 Humanoid 검사와 저장 씬 Play 214프레임 검증이 통과했습니다. 대기 반복, 실제 변형 메시의 발 접지, 달리기 다리 뼈대 변화, Jump/Fall/Roll 전환, 기존 점프 높이·구르기·벽 충돌을 확인했습니다. 동작별 캡처도 확인했습니다.
+
+캡처: Artifacts/player-visual-front.png, player-visual-top.png, player-animation-run.png, player-animation-jump.png, player-animation-roll.png. Play 로그의 Unity Search 시작 색인 예외는 여전히 기록되며 애니메이션 코드 경로의 예외와 구분합니다. Windows 빌드·공격 동작·사람의 전환/구르기 속도 수용·정식 지역 전환 검증은 포함하지 않습니다.
