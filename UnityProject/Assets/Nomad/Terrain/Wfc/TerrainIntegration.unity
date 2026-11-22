@@ -254,6 +254,8 @@ GameObject:
   - component: {fileID: 451336766}
   - component: {fileID: 451336765}
   - component: {fileID: 451336764}
+  - component: {fileID: 451336772}
+  - component: {fileID: 451336771}
   m_Layer: 0
   m_Name: Integration Player
   m_TagString: Untagged
@@ -559,6 +561,38 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1bc559f1224e45d78f50a79b37e7e63e, type: 3}
   m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Equipment.PlayerEquipment
+--- !u!114 &451336771
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 451336755}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aeeaca6b7d860d54b8f91932369b395a, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::Nomad.WorldHud.CharacterStaminaHud
+  viewCamera: {fileID: 654134747}
+  worldOffset: {x: 0, y: 1, z: 0}
+  screenOffset: {x: 100, y: -60}
+  fullHoldSeconds: 0.7
+--- !u!114 &451336772
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 451336755}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4af9bd5b251bd4f4c91f9fb5dfeceedc, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::Nomad.Player.PlayerStamina
+  maximum: 100
+  recoveryPerSecond: 25
+  recoveryDelay: 1
+  rollCost: 25
 --- !u!1 &654134746
 GameObject:
   m_ObjectHideFlags: 0

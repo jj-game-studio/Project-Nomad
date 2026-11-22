@@ -16,7 +16,9 @@ X100으로 추가 조정했습니다. 기존 수동 배치 컴포넌트는 Inspe
 Screen Offset을 X=100, Y=-60으로 맞추면 됩니다. 열린 씬은 디스크 변경 후에도
 이전 직렬화 값이 남을 수 있으므로 실제 Inspector 값과 Play 화면을 함께 확인합니다.
 
-게임의 자원 시스템에서 `CharacterStaminaHud.SetStamina(current, maximum)`을 호출하고,
+같은 오브젝트에 `PlayerStamina`가 있으면 그 값과 부족 알림을 자동으로 표시합니다(#146, 통합 씬 연결).
+구르기는 `PlayerStamina`가 있을 때만 스태미나를 소모하고, 부족하면 거절됩니다.
+그 밖의 자원 시스템에서는 `CharacterStaminaHud.SetStamina(current, maximum)`을 호출하고,
 스태미나 부족으로 행동을 거절했을 때 `NotifyInsufficient()`를 호출합니다.
 최대치가 0 이하이거나 값이 NaN/무한대면 숨깁니다. 부분 잔량은 주황 원호로 표시하고
 완전 회복 후 0.7초가 지나면 숨깁니다. 처음에는 데이터가 없어 숨겨집니다.

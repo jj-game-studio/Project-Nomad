@@ -28,6 +28,8 @@ namespace Nomad.Hud
         private TMP_Text staminaText;
         private GameObject root;
         private PlayerMana mana;
+        private PlayerStamina stamina;
+        private float shownStamina = -1f;
         private PlayerEquipmentCombat combat;
         private ItemDefinition shownWeapon;
         private int shownArrows = -1;
@@ -66,6 +68,7 @@ namespace Nomad.Hud
                 health = GetComponentInParent<Health>();
 
             mana = GetComponentInParent<PlayerMana>();
+            stamina = GetComponentInParent<PlayerStamina>();
             combat = GetComponentInParent<PlayerEquipmentCombat>();
             PlayerInventory inventory = GetComponentInParent<PlayerInventory>();
             if (inventory != null)
@@ -111,6 +114,12 @@ namespace Nomad.Hud
             {
                 shownMana = mana.Current;
                 SetResource(manaRing, manaText, shownMana, mana.Maximum);
+            }
+
+            if (stamina != null && shownStamina != stamina.Current)
+            {
+                shownStamina = stamina.Current;
+                SetResource(staminaRing, staminaText, shownStamina, stamina.Maximum);
             }
 
             if (combat != null)

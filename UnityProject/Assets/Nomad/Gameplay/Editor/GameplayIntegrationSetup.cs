@@ -7,6 +7,7 @@ using Nomad.Monsters.Demo;
 using Nomad.Player;
 using Nomad.Terrain;
 using Nomad.Terrain.Editor;
+using Nomad.WorldHud;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -47,6 +48,15 @@ namespace Nomad.Gameplay.Editor
             var projectile = AssetDatabase.LoadAssetAtPath<GameObject>(
                 "Assets/Nomad/Combat/PlayerProjectile.prefab").GetComponent<Projectile>();
             WeaponContentAuthoring.Configure(player, Camera.main, muzzle, projectile);
+
+            // 구르기 스태미나와 캐릭터 옆 곡선 게이지(#146)
+            if (player.GetComponent<PlayerStamina>() == null) player.AddComponent<PlayerStamina>();
+            var staminaHud = player.GetComponent<CharacterStaminaHud>();
+            if (staminaHud == null) staminaHud = player.AddComponent<CharacterStaminaHud>();
+            var hudSettings = new SerializedObject(staminaHud);
+            hudSettings.FindProperty("viewCamera").objectReferenceValue = Camera.main;
+            hudSettings.ApplyModifiedPropertiesWithoutUndo();
+
             Renderer body = player.GetComponentInChildren<Renderer>(true);
             body.sharedMaterial = Material("Player");
 
