@@ -14,11 +14,11 @@ namespace Nomad.PlayerVisual.Editor
     internal static class PlayerVisualAuthoring
     {
         internal const string Folder = "Assets/Nomad/PlayerVisual";
-        internal const string VisualPath = Folder + "/PrototypeMaleVisual.prefab";
-        internal const string RigPath = Folder + "/PrototypePlayerRig.prefab";
+        internal const string VisualPath = Folder + "/KingdomSoldierVisual.prefab";
+        internal const string RigPath = Folder + "/KingdomPlayerRig.prefab";
         internal const string ScenePath = Folder + "/PlayerVisualPreview.unity";
         internal const string BaseRigPath = "Assets/Nomad/Game/Prefabs/PlayerRig.prefab";
-        private const string SourcePath = "Assets/ThirdParty/Synty_Prototype/PolygonPrototype/Prefabs/Characters/Character_Male_Face_01_FixedScale.prefab";
+        private const string SourcePath = "Assets/ThirdParty/Synty_Kingdom/PolygonFantasyKingdom/Prefabs/Characters/SM_Chr_Soldier_Male_01.prefab";
 
         [MenuItem("Nomad/Player Visual/Build Preview")]
         public static void Build()
@@ -28,6 +28,8 @@ namespace Nomad.PlayerVisual.Editor
 
             Directory.CreateDirectory(Folder);
             AssetDatabase.Refresh();
+            RenamePreset(Folder + "/PrototypeMaleVisual.prefab", VisualPath);
+            RenamePreset(Folder + "/PrototypePlayerRig.prefab", RigPath);
             BuildVisual();
             BuildRig();
             BuildScene();
@@ -44,7 +46,7 @@ namespace Nomad.PlayerVisual.Editor
 
         private static void BuildVisual()
         {
-            var root = new GameObject("PrototypeMaleVisual");
+            var root = new GameObject("KingdomSoldierVisual");
             try
             {
                 var source = AssetDatabase.LoadAssetAtPath<GameObject>(SourcePath);
@@ -55,7 +57,11 @@ namespace Nomad.PlayerVisual.Editor
                 model.transform.localRotation = Quaternion.identity;
 
                 foreach (var animator in model.GetComponentsInChildren<Animator>(true))
+                {
                     animator.applyRootMotion = false;
+                    // 외형 검토 단계에서는 원본의 데모 Controller 참조를 사용하지 않습니다.
+                    animator.runtimeAnimatorController = null;
+                }
 
                 // 렌더러의 실제 높이를 기존 1.8m 캡슐에 맞추고 발바닥을 원점에 둡니다.
                 Bounds bounds = BoundsOf(root);
@@ -75,7 +81,7 @@ namespace Nomad.PlayerVisual.Editor
             var rig = (GameObject)PrefabUtility.InstantiatePrefab(source);
             try
             {
-                rig.name = "PrototypePlayerRig";
+                rig.name = "KingdomPlayerRig";
                 var player = rig.GetComponentInChildren<PlayerMovement>();
                 var body = player.transform.Find("Player Body");
                 Require(body != null, "Expected placeholder body is missing");
@@ -90,6 +96,16 @@ namespace Nomad.PlayerVisual.Editor
                 PrefabUtility.SaveAsPrefabAsset(rig, RigPath);
             }
             finally { Object.DestroyImmediate(rig); }
+        }
+
+        private static void RenamePreset(string previousPath, string path)
+        {
+            if (AssetDatabase.LoadAssetAtPath<GameObject>(previousPath) == null)
+                return;
+
+            // 기존 참조를 보존하도록 GUID를 유지한 채 이름만 변경합니다.
+            string error = AssetDatabase.MoveAsset(previousPath, path);
+            Require(string.IsNullOrEmpty(error), error);
         }
 
         private static void BuildScene()

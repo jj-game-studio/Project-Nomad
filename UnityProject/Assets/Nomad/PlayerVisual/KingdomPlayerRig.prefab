@@ -54,7 +54,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7897914465955937552, guid: 44974f7561b60c945a324084a222e9d5, type: 3}
       propertyPath: m_Name
-      value: PrototypePlayerRig
+      value: KingdomPlayerRig
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
