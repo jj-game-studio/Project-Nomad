@@ -174,9 +174,12 @@ namespace Nomad.Equipment.Editor
         {
             Check(PlayerEquipment.Capacity == 10 && equipment.ActiveWeapon.AttackPower == 25, "10칸/CSV 검 장착");
             int original = inventory.UsedSlots;
+            int armorCount = inventory.GetCount("demo-armor");
+            int totemCount = inventory.GetCount("demo-totem");
             Check(!equipment.TryEquip(Find("demo-armor"), EquipmentSlot.Weapon1) && inventory.UsedSlots == original, "잘못된 부위 무변경");
             bool completeState = false;
-            Action listener = () => completeState = equipment.GetItem(EquipmentSlot.Body) != null && Find("demo-armor") == -1;
+            Action listener = () => completeState = equipment.GetItem(EquipmentSlot.Body)?.ItemId == "demo-armor" &&
+                inventory.GetCount("demo-armor") == armorCount - 1;
             inventory.Changed += listener;
             Check(equipment.TryEquip(Find("demo-armor"), EquipmentSlot.Body), "몸통 장착");
             inventory.Changed -= listener;
@@ -203,7 +206,9 @@ namespace Nomad.Equipment.Editor
             foreach (EquipmentSlot slot in Enum.GetValues(typeof(EquipmentSlot)))
                 if (slot != EquipmentSlot.Weapon1 && slot != EquipmentSlot.Weapon2 && slot != EquipmentSlot.Body)
                     Check(equipment.TryUnequip(slot), "분류 해제/가방 복귀");
-            Check(equipment.TotalDefense == 20 && inventory.UsedSlots == 8, "보유 수량 보존");
+            Check(equipment.TotalDefense == 20 && inventory.UsedSlots == original &&
+                inventory.GetCount("demo-armor") == armorCount - 1 && inventory.GetCount("demo-totem") == totemCount + 1,
+                "보유 수량 보존");
             Check(!equipment.TryEquip(-1, EquipmentSlot.Body) && !equipment.TryUnequip((EquipmentSlot)100), "잘못된 인덱스");
 
             ItemDefinition originalArmor = equipment.GetItem(EquipmentSlot.Body);
