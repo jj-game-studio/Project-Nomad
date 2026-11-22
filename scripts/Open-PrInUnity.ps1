@@ -15,8 +15,10 @@ $repository = 'jj-game-studio/Project-Nomad'
 $repositoryUrl = "https://github.com/$repository.git"
 if (-not $env:LOCALAPPDATA) { throw 'LOCALAPPDATA 환경 변수가 필요합니다.' }
 
-$reviewPath = Join-Path $env:LOCALAPPDATA 'ProjectNomad/PRReview'
+$reviewPath = [IO.Path]::GetFullPath((Join-Path $env:LOCALAPPDATA 'ProjectNomad/PRReview'))
 $projectPath = Join-Path $reviewPath 'UnityProject'
+$reviewPrefix = $reviewPath + [IO.Path]::DirectorySeparatorChar
+$cachePaths = @('UnityProject/Library', 'UnityProject/Temp')
 
 function Invoke-Checked {
     param([string]$Program, [string[]]$Arguments)
@@ -30,9 +32,9 @@ function Invoke-Checked {
 }
 
 function Invoke-ReviewGit {
-    param([string[]]$Arguments)
+    param([string[]]$Arguments, [string]$Path = $reviewPath)
 
-    Invoke-Checked git (@('-c', 'core.hooksPath=NUL', '-C', $reviewPath) + $Arguments)
+    Invoke-Checked git (@('-c', 'core.hooksPath=NUL', '-C', $Path) + $Arguments)
 }
 
 function Assert-ProjectClosed {
@@ -52,23 +54,69 @@ function Assert-ProjectClosed {
     }
 }
 
-function Assert-CleanCheckout {
-    $top = Invoke-ReviewGit @('rev-parse', '--show-toplevel')
-    if ([IO.Path]::GetFullPath($top) -ne [IO.Path]::GetFullPath($reviewPath)) {
-        throw '검토 경로가 독립된 저장소가 아닙니다.'
+function Assert-ReviewPath([string]$Path) {
+    $fullPath = [IO.Path]::GetFullPath($Path)
+    if ($fullPath -ne $reviewPath -and -not $fullPath.StartsWith($reviewPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "공용 검토 폴더 밖의 경로입니다: $fullPath"
     }
 
-    $remote = Invoke-ReviewGit @('config', '--get', 'remote.origin.url')
-    if ($remote -ne $repositoryUrl) { throw '검토 폴더의 원격 저장소가 다릅니다.' }
+    for ($item = Get-Item -LiteralPath $fullPath -Force; $null -ne $item; $item = $item.Parent) {
+        if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) {
+            throw "연결된 경로에서는 검토 변경을 폐기하지 않습니다: $($item.FullName)"
+        }
+    }
+}
 
-    $changes = Invoke-ReviewGit @('status', '--porcelain', '--untracked-files=all', '--ignore-submodules=none')
-    if ($changes) {
-        Write-Host ($changes -join "`n")
-        throw '미커밋 또는 미추적 변경이 있습니다. 변경을 직접 확인한 뒤 다시 실행해 주세요.'
+function Assert-ReviewRepository([string]$Path) {
+    Assert-ReviewPath $Path
+    $top = Invoke-ReviewGit @('rev-parse', '--show-toplevel') $Path
+    if ([IO.Path]::GetFullPath($top) -ne [IO.Path]::GetFullPath($Path)) {
+        throw "독립된 검토 저장소가 아닙니다: $Path"
     }
 
-    $branch = Invoke-ReviewGit @('branch', '--show-current')
-    if ($branch) { throw '검토 폴더에 작업 브랜치가 있습니다. 자동 전환을 중단합니다.' }
+    $gitDir = [IO.Path]::GetFullPath((Invoke-ReviewGit @('rev-parse', '--absolute-git-dir') $Path))
+    Assert-ReviewPath $gitDir
+    $mainGitDir = Join-Path $reviewPath '.git'
+    $modulePrefix = (Join-Path $mainGitDir 'modules') + [IO.Path]::DirectorySeparatorChar
+    if (($Path -eq $reviewPath -and $gitDir -ne $mainGitDir) -or
+        ($Path -ne $reviewPath -and -not $gitDir.StartsWith($modulePrefix, [StringComparison]::OrdinalIgnoreCase))) {
+        throw "공용 검토 폴더가 소유한 Git 저장 경로가 아닙니다: $gitDir"
+    }
+
+    $branch = Invoke-ReviewGit @('branch', '--show-current') $Path
+    if ($branch) { throw "작업 브랜치가 있는 검토 저장소입니다: $Path ($branch)" }
+}
+
+function Clear-ReviewChanges([string]$Path) {
+    $changes = Invoke-ReviewGit @('status', '--porcelain', '--untracked-files=normal', '--ignore-submodules=dirty') $Path
+    if (-not $changes) { return }
+
+    Write-Host "검토용 미커밋 변경 폐기: $Path"
+    Invoke-ReviewGit @('restore', '--source=HEAD', '--staged', '--worktree',
+        '--no-recurse-submodules', '--ignore-skip-worktree-bits', '--', '.') $Path
+    Invoke-ReviewGit @('clean', '-fd', '-e', 'Library/', '-e', 'Temp/', '--', '.') $Path
+}
+
+function Clear-ReviewRepository([string]$Path) {
+    Clear-ReviewChanges $Path
+    if (-not (Test-Path -LiteralPath (Join-Path $Path '.gitmodules') -PathType Leaf)) { return }
+
+    $parentPrefix = $Path + [IO.Path]::DirectorySeparatorChar
+    $moduleConfig = Invoke-ReviewGit @('config', '--file', '.gitmodules', '--list') $Path
+    foreach ($entry in $moduleConfig) {
+        if ($entry -notmatch '^submodule\..+\.path=(.+)$') { continue }
+
+        $module = [IO.Path]::GetFullPath((Join-Path $Path $Matches[1]))
+        if (-not $module.StartsWith($parentPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+            throw "서브모듈 경로가 상위 검토 저장소 밖입니다: $module"
+        }
+
+        # 이전 커밋의 등록되지 않은 gitlink와 초기화되지 않은 모듈은 정리 대상이 아닙니다.
+        if (Test-Path -LiteralPath (Join-Path $module '.git')) {
+            Assert-ReviewRepository $module
+            Clear-ReviewRepository $module
+        }
+    }
 }
 
 foreach ($program in @('git', 'gh')) {
@@ -102,8 +150,12 @@ try {
     if (-not $ownsMutex) { throw '다른 PR 검토 준비가 실행 중입니다. 완료 후 다시 실행해 주세요.' }
 
     Assert-ProjectClosed
-    if (Test-Path -LiteralPath $reviewPath) {
-        Assert-CleanCheckout
+    $reuseCheckout = Test-Path -LiteralPath $reviewPath
+    if ($reuseCheckout) {
+        Assert-ReviewRepository $reviewPath
+        if (Test-Path -LiteralPath $projectPath) { Assert-ReviewPath $projectPath }
+        $remote = Invoke-ReviewGit @('config', '--get', 'remote.origin.url')
+        if ($remote -ne $repositoryUrl) { throw '검토 폴더의 원격 저장소가 다릅니다.' }
         # 검토 폴더에서 만든 detached 커밋도 PR 전환 전에 로컬 참조로 보존합니다.
         $previousSha = Invoke-ReviewGit @('rev-parse', 'HEAD')
         Invoke-ReviewGit @('update-ref', "refs/review/history/$previousSha", $previousSha)
@@ -119,8 +171,7 @@ try {
     }
 
     # PR이 실수로 캐시를 추적하더라도 기존 Library를 덮어쓰지 않습니다.
-    $trackedCache = Invoke-ReviewGit @('ls-tree', '-r', '--name-only', $fetchedSha,
-        '--', 'UnityProject/Library', 'UnityProject/Temp')
+    $trackedCache = Invoke-ReviewGit (@('ls-tree', '-r', '--name-only', $fetchedSha, '--') + $cachePaths)
     if ($trackedCache) { throw 'PR에 Library 또는 Temp 파일이 추적되어 있어 전환을 중단합니다.' }
 
     $versionText = Invoke-ReviewGit @('show', "${fetchedSha}:UnityProject/ProjectSettings/ProjectVersion.txt")
@@ -138,11 +189,19 @@ try {
     }
 
     Assert-ProjectClosed
+    if ($reuseCheckout) {
+        $oldCache = Invoke-ReviewGit (@('ls-tree', '-r', '--name-only', 'HEAD', '--') + $cachePaths)
+        $indexedCache = Invoke-ReviewGit (@('ls-files', '--') + $cachePaths)
+        if ($oldCache -or $indexedCache) { throw '현재 검토 checkout에 Library 또는 Temp 파일이 추적되어 있습니다.' }
+
+        Clear-ReviewRepository $reviewPath
+    }
+
     Invoke-ReviewGit @('update-ref', "refs/review/PR-$PrNumber/$fetchedSha", $fetchedSha)
-    # --no-overwrite-ignore로 다른 PR이 추적하기 시작한 파일도 조용히 덮어쓰지 않습니다.
-    Invoke-ReviewGit @('checkout', '--detach', '--no-overwrite-ignore', $fetchedSha)
+    # 혼합 줄바꿈이 추적된 과거 커밋은 복원 직후에도 Git이 변경으로 인식할 수 있습니다.
+    Invoke-ReviewGit @('checkout', '--force', '--detach', '--no-recurse-submodules', '--no-overwrite-ignore', $fetchedSha)
     Invoke-ReviewGit @('submodule', 'sync', '--recursive')
-    Invoke-ReviewGit @('submodule', 'update', '--init', '--recursive')
+    Invoke-ReviewGit @('submodule', 'update', '--init', '--recursive', '--checkout')
 
     Write-Host "준비 완료: PR #$PrNumber / $fetchedSha / Unity $editorVersion"
     Write-Host 'Library 캐시는 유지했습니다. 에셋·패키지·Unity 버전에 따라 재임포트는 발생할 수 있습니다.'
