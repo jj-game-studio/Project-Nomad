@@ -113,9 +113,10 @@ namespace Nomad.Shop.Editor
                         panel = Object.FindAnyObjectByType<ShopPanel>();
                         Require(panel != null && Read("Gold").Contains("1,000") && !Popup.activeSelf && Node("Trade tray") == null,
                             "상점 열기는 목록만 표시·하단 거래 제거");
+                        Canvas.ForceUpdateCanvases();
                         backpackPosition = Node("Backpack/Content").GetComponent<RectTransform>().anchoredPosition;
                         stockPosition = Node("Stock/Content").GetComponent<RectTransform>().anchoredPosition;
-                        slotPosition = Node("Stock/Content/Slot 0").position;
+                        slotPosition = Node("Stock/Content/Slot 0").GetComponent<RectTransform>().anchoredPosition;
                         expectedGold = 1000;
                         RequireVisible("Backpack/Content/Slot 0/Count");
                         RequireVisible("Stock/Content/Slot 0/Name");
@@ -154,7 +155,8 @@ namespace Nomad.Shop.Editor
                     case 9:
                         Require(!Popup.activeSelf && Node("Backpack/Content").GetComponent<RectTransform>().anchoredPosition == backpackPosition &&
                             Node("Stock/Content").GetComponent<RectTransform>().anchoredPosition == stockPosition &&
-                            Node("Stock/Content/Slot 0").position == slotPosition, "팝업·거래 후 슬롯/스크롤 위치 고정");
+                            (Vector3)Node("Stock/Content/Slot 0").GetComponent<RectTransform>().anchoredPosition == slotPosition,
+                            "팝업·거래 후 슬롯/스크롤 위치 고정");
                         Queue(Key.LeftShift);
                         Pointer("Backpack/Content/Slot 0", true);
                         break;

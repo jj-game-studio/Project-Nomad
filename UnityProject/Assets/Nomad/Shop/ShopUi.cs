@@ -169,8 +169,9 @@ namespace Nomad.Shop
             RectTransform viewport = Rect(parent, name, x, 206, 530, 530);
             Rounded(viewport, merchant ? Canvas : Slot, 18, merchant ? 0 : 1, Border);
             viewport.gameObject.AddComponent<RectMask2D>();
-            RectTransform content = Rect(viewport, "Content", 8, 8, 514, 334);
+            RectTransform content = Rect(viewport, "Content", 0, 0, 530, 350);
             var layout = content.gameObject.AddComponent<GridLayoutGroup>();
+            layout.padding = new RectOffset(8, 8, 8, 8);
             layout.cellSize = merchant ? new Vector2(164, 196) : new Vector2(CellSize, CellHeight);
             layout.spacing = new Vector2(8, 8);
             layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
