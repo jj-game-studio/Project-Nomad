@@ -214,7 +214,7 @@ namespace Nomad.Shop.Editor
                     case 27:
                         Require(Quantity.isFocused, "Q 수량 입력 포커스");
                         Quantity.text = "";
-                        TypeQuantity("3");
+                        TypeQuantity("3x");
                         Queue(Key.Enter);
                         break;
                     case 28:
@@ -259,7 +259,7 @@ namespace Nomad.Shop.Editor
                         break;
                     case 37: Queue(Key.Escape); break;
                     case 38:
-                        Require(Object.FindAnyObjectByType<ShopPanel>() == null && !inventory.HasOpenTrade, "목록에서 Esc 상점 닫기");
+                        Require(Object.FindAnyObjectByType<ShopPanel>() == null, "목록에서 Esc 상점 닫기");
                         Queue();
                         break;
                     case 39: Queue(Key.E); break;
@@ -271,7 +271,7 @@ namespace Nomad.Shop.Editor
                         Queue();
                         break;
                     case 41:
-                        Require(Object.FindAnyObjectByType<ShopPanel>() == null && !inventory.HasOpenTrade, "거리 이탈 닫기");
+                        Require(Object.FindAnyObjectByType<ShopPanel>() == null, "거리 이탈 닫기");
                         inventory.transform.position = position;
                         Queue();
                         break;

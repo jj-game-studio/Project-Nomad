@@ -246,6 +246,8 @@ namespace Nomad.Shop
 
             int available = AvailableQuantity;
             quantity = Mathf.Clamp(quantity, 0, available);
+            if (available > 0 && quantity == 0 && !quantityInput.isFocused)
+                quantity = 1;
             if (!quantityInput.isFocused || quantity > 0)
                 quantityInput.SetTextWithoutNotify(quantity.ToString(CultureInfo.InvariantCulture));
             quantityInput.interactable = available > 0;
