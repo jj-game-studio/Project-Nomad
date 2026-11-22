@@ -21,12 +21,13 @@ Unity Hub에서 `UnityProject` 폴더를 추가해 여세요.
 
 ## 자동 테스트
 
-Unity 에디터를 닫은 상태에서 저장소 루트에서 실행합니다. 결과는 JSON 요약과 종료 코드로 확인하고, XML·로그는 `UnityProject/Artifacts/tests/unity/`에 남습니다.
+Unity 에디터를 닫은 상태에서 저장소 루트에서 실행합니다. 결과는 플랫폼별 통과·실패 수와 실패한 테스트를 담은 요약과 종료 코드(성공 0, 실패 1)로 확인하고, XML·로그는 `UnityProject/Artifacts/tests/unity/`에 남습니다.
 
 ```powershell
 ./scripts/Test-Unity.ps1                       # EditMode 후 PlayMode 전체
 ./scripts/Test-Unity.ps1 -Platform EditMode    # 핵심 로직만 빠르게
 ./scripts/Test-Unity.ps1 -Platform PlayMode -AssemblyNames Nomad.Monsters.PlayModeTests -TestFilter MonsterEliteTests
+./scripts/Test-Unity.ps1 -Json                 # AI 에이전트용: JSON 한 줄만 출력
 ```
 
 카메라 테스트는 RenderTexture가 필요해 기본으로 그래픽 장치를 사용합니다. GPU 없는 환경에서는 `-NoGraphics`를 붙이되 카메라 테스트는 실패합니다.

@@ -23,12 +23,13 @@ The runner is this repository's `scripts/Test-Unity.ps1`; from the skill directo
 
 ## Running
 
+- Always pass `-Json`. Without it the runner prints a human-readable summary meant for people, not for parsing.
 - `-Platform All` takes about 2–3 minutes after compilation; a checkout with a cold or stale `Library` can take much longer. Give the command a timeout of at least 15 minutes or run it in the background and wait for it to exit. Never start a second run on the same project while one is running.
 - If the runner says the project is open in the Unity Editor, stop and tell the person to close that Editor or to test through the PR checkout. Never close an Editor, delete `Temp/UnityLockfile` or `Library`, or reset, clean, or stash to get around it.
 
 ## Reporting
 
-The runner prints JSON `{ success, runs: [...] }` and exits 0 only when every run passed. Report:
+With `-Json` the runner prints only one line of JSON, `{ success, runs: [{ platform, success, total, passed, failed, skipped, seconds, timedOut, error, failedTests: [{ name, message }], logDiagnostics, results }] }`, and exits 0 only when every run passed. A run that could not start has only `platform`, `success`, and `error`. Report to the person in prose, not raw JSON:
 
 - the tested commit (`git rev-parse --short HEAD` in the target checkout) and the command options;
 - per platform: total, passed, failed, skipped, seconds;
