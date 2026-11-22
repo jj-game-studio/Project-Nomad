@@ -19,6 +19,22 @@ Unity **6000.6.9f1**, Universal 3D(URP) 프로젝트입니다.
 Unity Hub에서 `UnityProject` 폴더를 추가해 여세요.
 기본 장면: `Assets/Scenes/SampleScene.unity`
 
+## 자동 테스트
+
+Unity 에디터를 닫은 상태에서 저장소 루트에서 실행합니다. 결과는 JSON 요약과 종료 코드로 확인하고, XML·로그는 `UnityProject/Artifacts/tests/unity/`에 남습니다.
+
+```powershell
+./scripts/Test-Unity.ps1                       # EditMode 후 PlayMode 전체
+./scripts/Test-Unity.ps1 -Platform EditMode    # 핵심 로직만 빠르게
+./scripts/Test-Unity.ps1 -Platform PlayMode -AssemblyNames Nomad.Monsters.PlayModeTests -TestFilter MonsterEliteTests
+```
+
+카메라 테스트는 RenderTexture가 필요해 기본으로 그래픽 장치를 사용합니다. GPU 없는 환경에서는 `-NoGraphics`를 붙이되 카메라 테스트는 실패합니다.
+에디터에서는 Window > General > Test Runner로 같은 테스트를 실행합니다.
+
+- `Assets/Nomad/Tests/Editor/`: asmdef 없는 게임 코드(인벤토리·장비·퀵슬롯·상자·체력·CSV·WFC 지형)의 EditMode 테스트입니다. 컴포넌트 수명주기가 필요하면 `PlayModeFixture`를 상속합니다.
+- `*/Tests/PlayMode/`: asmdef가 있는 몬스터·카메라의 PlayMode 테스트입니다.
+
 ## 프로젝트 받기
 
 애셋 저장소 접근 권한이 있는 개발자는 다음 명령을 사용합니다.

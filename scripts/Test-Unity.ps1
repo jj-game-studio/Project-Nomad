@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
 Unity Test Runner를 배치 모드로 실행하고 결과를 JSON으로 요약합니다.
 
@@ -14,7 +14,9 @@ param(
     [string] $TestFilter,
     [string] $ProjectPath = (Join-Path $PSScriptRoot '../UnityProject'),
     [string] $UnityPath,
-    [ValidateRange(1, 3600)] [int] $TimeoutSeconds = 900
+    [ValidateRange(1, 3600)] [int] $TimeoutSeconds = 900,
+    # 카메라 테스트는 RenderTexture가 필요해 기본은 그래픽 장치를 사용합니다. GPU 없는 환경에서만 켭니다.
+    [switch] $NoGraphics
 )
 
 $ErrorActionPreference = 'Stop'
@@ -29,11 +31,12 @@ function Invoke-UnityTests([string] $TestPlatform, [string] $RunDirectory) {
     $resultPath = Join-Path $RunDirectory "$TestPlatform.xml"
     $logPath = Join-Path $RunDirectory "$TestPlatform.log"
     $arguments = @(
-        '-batchmode', '-nographics', '-runTests', '-testPlatform', $TestPlatform,
+        '-batchmode', '-runTests', '-testPlatform', $TestPlatform,
         '-projectPath', ('"' + $ProjectPath + '"'),
         '-testResults', ('"' + $resultPath + '"'),
         '-logFile', ('"' + $logPath + '"')
     )
+    if ($NoGraphics) { $arguments += '-nographics' }
     if ($AssemblyNames) { $arguments += @('-assemblyNames', ('"' + ($AssemblyNames -join ';') + '"')) }
     if ($TestFilter) { $arguments += @('-testFilter', ('"' + $TestFilter + '"')) }
 
@@ -47,8 +50,8 @@ function Invoke-UnityTests([string] $TestPlatform, [string] $RunDirectory) {
         while (-not $process.WaitForExit(1000)) {
             if ($stopwatch.Elapsed.TotalSeconds -ge $TimeoutSeconds) {
                 $timedOut = $true
-                # 이 실행기가 시작한 Unity와 자식 프로세스만 종료합니다.
-                $process.Kill($true)
+                # 이 실행기가 시작한 Unity와 자식 프로세스만 종료합니다. Windows PowerShell 5.1과 7 모두 지원합니다.
+                & taskkill.exe /PID $process.Id /T /F | Out-Null
                 $process.WaitForExit(5000) | Out-Null
                 throw "제한 시간 ${TimeoutSeconds}초를 초과했습니다."
             }
