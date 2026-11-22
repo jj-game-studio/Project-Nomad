@@ -63,6 +63,9 @@ namespace Nomad.Inventory
 
             InventoryPanel view = Instantiate(prefab);
             view.gameObject.name = prefab.gameObject.name;
+
+            // 지역 씬이 바뀌어도 가방 UI가 플레이어와 함께 남도록 플레이어와 같은 씬에 둡니다.
+            UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(view.gameObject, target.gameObject.scene);
             view.runtimeInstance = true;
             view.inventory = target;
             view.Subscribe();

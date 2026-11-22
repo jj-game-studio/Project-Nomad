@@ -20,10 +20,11 @@ namespace Nomad.Loot
         {
             chests.Clear();
             lastChest = null;
-            if (scatter == null) return;
+            if (scatter == null || scatter.GeneratedRoot == null) return;
 
             // 도달성 복구로 제거된 큐브는 제외하고 최종 활성 배치에만 적용합니다.
-            foreach (BoxCollider box in scatter.GetComponentsInChildren<BoxCollider>())
+            // 같은 PropScatter 하위의 꾸밈(돌담·나무·엄폐물)은 상자가 아니므로 소품 루트만 봅니다.
+            foreach (BoxCollider box in scatter.GeneratedRoot.GetComponentsInChildren<BoxCollider>())
             {
                 var chest = box.gameObject.AddComponent<LootChest>();
                 chest.Initialize($"{scatter.GenerationId}/chest-{chests.Count}", new[] { new LootStack("scrap", 10) });

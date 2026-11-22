@@ -1,4 +1,4 @@
-using Nomad.Player;
+using Nomad.Game;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -16,6 +16,9 @@ namespace Nomad.Village.Editor
         private const float Half = 34f;
         private const float GateHalfWidth = 4f;
 
+        // 메인 게임 Player가 처음 서는 위치입니다. Player·카메라는 GameManager의 Player 모듈이 만듭니다.
+        internal static readonly Vector3 StartPosition = new Vector3(0f, 0.1f, -14f);
+
         [MenuItem("Nomad/Village/Create Village")]
         public static void Create()
         {
@@ -31,7 +34,7 @@ namespace Nomad.Village.Editor
             CreateFieldEntrance(root);
             CreateNature(root);
 
-            CreatePlayer(new Vector3(0f, 0.1f, -14f));
+            CreateEntrance("Player Entrance", null, StartPosition, Quaternion.identity);
 
             Light sun = new GameObject("Sun").AddComponent<Light>();
             sun.type = LightType.Directional;
@@ -195,12 +198,36 @@ namespace Nomad.Village.Editor
             Place(Load("SM_Prop_Fence_Gate_01"), entrance, new Vector3(-GateHalfWidth - 0.5f, 0f, 0f), 90f, true, false);
             Place(Load("SM_Prop_Direction_Sign_01"), entrance, new Vector3(GateHalfWidth + 1.5f, 0f, 2f), 180f, true, false);
 
-            // 장면 전환은 범위 밖이므로 위치만 표시하는 트리거를 둡니다.
             BoxCollider trigger = new GameObject("Field Exit Trigger").AddComponent<BoxCollider>();
             trigger.transform.SetParent(entrance, false);
             trigger.transform.localPosition = new Vector3(0f, 1f, -1.5f);
             trigger.size = new Vector3(GateHalfWidth * 2f, 2f, 1f);
             trigger.isTrigger = true;
+            LinkFieldExit(trigger.transform);
+        }
+
+        // 출구 트리거는 Field로 전환하고, 필드에서 돌아오면 문 안쪽에 마을을 바라보며 섭니다.
+        internal static void LinkFieldExit(Transform trigger)
+        {
+            if (trigger.GetComponent<RegionExit>() == null)
+                SetString(trigger.gameObject.AddComponent<RegionExit>(), "targetRegion", "Field");
+
+            Transform gate = trigger.parent;
+            if (gate.Find("Field Return Entrance") != null)
+                return;
+
+            RegionEntrance back = CreateEntrance("Field Return Entrance", "Field", Vector3.zero, Quaternion.identity);
+            back.transform.SetParent(gate, false);
+            back.transform.localPosition = new Vector3(0f, 0.1f, 3f);
+        }
+
+        internal static RegionEntrance CreateEntrance(string name, string fromRegion, Vector3 position, Quaternion rotation)
+        {
+            var entrance = new GameObject(name).AddComponent<RegionEntrance>();
+            entrance.transform.SetPositionAndRotation(position, rotation);
+            if (!string.IsNullOrEmpty(fromRegion))
+                SetString(entrance, "fromRegion", fromRegion);
+            return entrance;
         }
 
         private static void CreateNature(Transform root)
@@ -237,31 +264,6 @@ namespace Nomad.Village.Editor
             }
 
             Random.state = saved;
-        }
-
-        private static void CreatePlayer(Vector3 position)
-        {
-            Transform player = new GameObject("Player").transform;
-            player.position = position;
-            CharacterController controller = player.gameObject.AddComponent<CharacterController>();
-            controller.height = 1.8f;
-            controller.radius = 0.35f;
-            controller.center = Vector3.up * 0.9f;
-            controller.stepOffset = 0.4f;
-            controller.slopeLimit = 50f; // 계단 경사로를 오를 수 있게 기본 45도보다 넉넉히
-            controller.minMoveDistance = 0f;
-
-            GameObject body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            body.name = "Player Body";
-            body.transform.SetParent(player, false);
-            body.transform.localPosition = controller.center;
-            body.transform.localScale = new Vector3(0.7f, 0.9f, 0.7f);
-            Object.DestroyImmediate(body.GetComponent<Collider>());
-
-            Camera camera = new GameObject("Top Down Camera").AddComponent<Camera>();
-            camera.tag = "MainCamera";
-            SetReference(camera.gameObject.AddComponent<TopDownCamera>(), "target", player);
-            SetReference(player.gameObject.AddComponent<PlayerMovement>(), "viewCamera", camera);
         }
 
         // 프리팹을 배치하고, 렌더러 경계 중심이 목표 위치에 오도록 맞춥니다.
@@ -505,10 +507,10 @@ namespace Nomad.Village.Editor
             return new Vector3(Mathf.Cos(rad), 0f, Mathf.Sin(rad)) * radius;
         }
 
-        private static void SetReference(Object component, string property, Object value)
+        private static void SetString(Object component, string property, string value)
         {
             var serialized = new SerializedObject(component);
-            serialized.FindProperty(property).objectReferenceValue = value;
+            serialized.FindProperty(property).stringValue = value;
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
     }

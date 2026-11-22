@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using Nomad.Player;
 using Nomad.Loot;
@@ -24,6 +25,12 @@ namespace Nomad.Terrain
         [SerializeField, Range(12, 24)] private int width = 6;
         [SerializeField, Range(12, 24)] private int height = 6;
 
+        // 검토 씬의 R/T/L/P/O/G 키입니다. 메인 게임 필드에서는 끕니다.
+        [SerializeField] private bool testControls = true;
+
+        // 시작할 때 새 seed로 생성합니다. 검토 씬은 재현을 위해 끄고, 메인 게임 필드는 진입마다 새 지형을 씁니다.
+        [SerializeField] private bool newSeedOnStart;
+
         [SerializeField] private TerrainPiece[] microSources;
 
         private Vector3 spawn;
@@ -37,15 +44,28 @@ namespace Nomad.Terrain
         public int Seed => seed;
         public bool Legacy => legacy;
         public bool GameplayView => view == 0;
-        public string Summary => status.text;
+        public string Summary => status != null ? status.text : string.Empty;
         public TerrainGenerator Generator => generator;
         public GameObject Player => player;
         public FieldNavigation Navigation => GetComponent<FieldNavigation>();
 
-        private void Start() => Regenerate(false);
+        // 플레이어가 출구 트리거에 들어오면 호출됩니다. 지역 전환은 소비 측이 연결합니다.
+        public event Action<FieldExit> ExitReached;
+
+        // 씬 밖에서 만든 플레이어·카메라(메인 게임의 영속 Player)를 생성 전에 연결합니다.
+        public void Bind(GameObject target, Camera targetCamera)
+        {
+            player = target;
+            viewCamera = targetCamera;
+        }
+
+        private void Start() => Regenerate(newSeedOnStart);
 
         private void Update()
         {
+            if (player != null && player.activeSelf && player.transform.position.y < spawn.y - 15f) PlacePlayer();
+            if (!testControls) return;
+
             Keyboard keyboard = Keyboard.current;
             if (keyboard?.rKey.wasPressedThisFrame == true) Regenerate(true);
             else if (keyboard?.tKey.wasPressedThisFrame == true) Regenerate(false);
@@ -57,7 +77,6 @@ namespace Nomad.Terrain
             }
             if (keyboard?.oKey.wasPressedThisFrame == true) SetView(view == 1 ? 0 : 1);
             if (keyboard?.gKey.wasPressedThisFrame == true) SetView(view == 2 ? 0 : 2);
-            if (player.activeSelf && player.transform.position.y < spawn.y - 15f) PlacePlayer();
         }
 
         public void ToggleLegacy()
@@ -68,7 +87,7 @@ namespace Nomad.Terrain
 
         public TerrainGenerationResult Regenerate(bool newSeed)
         {
-            player.SetActive(false);
+            if (player != null) player.SetActive(false);
             ClearExits();
             if (Navigation == null) gameObject.AddComponent<FieldNavigation>();
             Navigation.Configure(generator);
@@ -112,7 +131,7 @@ namespace Nomad.Terrain
             if (safe) CreateExits(field);
             if (safe) PlacePlayer();
             SetView(safe ? view : 1);
-            status.text = $"TERRAIN INTEGRATION | {(legacy ? "Legacy" : "WFC")} | Seed {seed}\n"
+            if (status != null) status.text = $"TERRAIN INTEGRATION | {(legacy ? "Legacy" : "WFC")} | Seed {seed}\n"
                 + $"{Navigation.State} | Tiles {result.Pieces.Count} | Props {scatter.Positions.Count} | Enemy slots {field.EnemyPoints.Count} | Chest slots {field.ChestPoints.Count}"
                 + $" | Exits {field.ExitPoints.Count} ({string.Join("/", field.ExitPoints.Select(point => point.Id.Replace("exit-", "")))})\n"
                 + $"Attempts {result.Attempts} | Candidate checks {result.CandidateChecks}\n"
@@ -135,9 +154,11 @@ namespace Nomad.Terrain
 
         private void OnExitEntered(FieldExit exit, Collider other)
         {
-            if (!other.transform.IsChildOf(player.transform)) return;
+            if (player == null || !other.transform.IsChildOf(player.transform)) return;
             LastReachedExit = exit.Point.Id;
             Debug.Log($"FIELD_EXIT_REACHED {exit.Point.Id} seed={seed}");
+            ExitReached?.Invoke(exit);
+            if (status == null) return;
 
             // 이전 도달 표시 줄만 바꿔 다른 HUD 내용은 유지합니다.
             int line = status.text.IndexOf("\nExit reached");
@@ -157,6 +178,7 @@ namespace Nomad.Terrain
 
         private void PlacePlayer()
         {
+            if (player == null) return;
             player.SetActive(false);
             player.transform.SetPositionAndRotation(spawn, Quaternion.identity);
             player.SetActive(true);
@@ -166,6 +188,7 @@ namespace Nomad.Terrain
         public void SetView(int mode)
         {
             view = mode;
+            if (viewCamera == null) return;
             viewCamera.GetComponent<TopDownCamera>().enabled = view == 0;
             if (gallery != null) gallery.SetActive(view == 2);
             if (view == 0)

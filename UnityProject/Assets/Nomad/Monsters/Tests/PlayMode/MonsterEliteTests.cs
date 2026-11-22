@@ -182,7 +182,7 @@ namespace Nomad.Monsters.Tests
                 Assert.That(attack.WindupProgress, Is.GreaterThanOrEqualTo(previous));
                 previous = attack.WindupProgress;
                 Assert.That(fillRenderer.enabled, Is.True);
-                Assert.That(fill.transform.localScale.x,
+                Assert.That(FillReach(),
                     Is.EqualTo(attack.CurrentAttackRange * attack.WindupProgress).Within(0.01f));
                 fullSeen |= attack.WindupProgress >= 1f;
                 yield return null;
@@ -234,9 +234,48 @@ namespace Nomad.Monsters.Tests
             Assert.That(warning.enabled, Is.False);
             Assert.That(fillRenderer.enabled, Is.False);
             yield return EnterHeavyWindup();
-            Assert.That(warning.positionCount, Is.EqualTo(19));
-            Assert.That(fill.sharedMesh.bounds.min.z, Is.GreaterThanOrEqualTo(0f));
-            Assert.That(fill.sharedMesh.vertexCount, Is.EqualTo(34));
+            // 외곽선은 지형을 따라 잘게 나눠지므로 개수 대신 몬스터에서 시작해 돌아오는 닫힌 부채꼴인지 봅니다.
+            Assert.That(warning.positionCount, Is.GreaterThanOrEqualTo(19));
+            Assert.That(Flat(warning.GetPosition(0) - elite.transform.position).magnitude, Is.LessThan(0.01f));
+            Assert.That(Flat(warning.GetPosition(warning.positionCount - 1) - elite.transform.position).magnitude, Is.LessThan(0.01f));
+            foreach (Vector3 vertex in fill.sharedMesh.vertices)
+            {
+                Vector3 offset = Flat(fill.transform.TransformPoint(vertex) - elite.transform.position);
+                Assert.That(Vector3.Dot(offset, attack.AttackDirection), Is.GreaterThanOrEqualTo(-0.01f), "부채꼴은 공격 방향 앞쪽");
+            }
+            Assert.That(fill.sharedMesh.vertexCount % 33, Is.EqualTo(0), "각도 32칸 x 반지름 고리 격자");
+        }
+
+        [UnityTest]
+        public IEnumerator WarningFollowsRaisedTerrainSurface()
+        {
+            // 몬스터 발보다 0.8m 높은 필드 Terrain이 있어도 경고 외곽선·채움이 그 표면 위에 그려져 묻히지 않습니다.
+            Vector3 feet = elite.transform.position;
+            float surface = feet.y + 0.8f;
+            var data = new TerrainData { heightmapResolution = 33, size = new Vector3(40f, 2f, 40f) };
+            GameObject ground = UnityEngine.Terrain.CreateTerrainGameObject(data);
+            ground.GetComponent<TerrainCollider>().enabled = false;
+            ground.transform.position = new Vector3(feet.x - 20f, surface, feet.z - 20f);
+
+            yield return EnterHeavyWindup();
+            yield return Until(() => attack.WindupProgress > 0.3f, 2f, "강공격 부분 채움");
+            for (int i = 0; i < warning.positionCount; i++)
+                Assert.That(warning.GetPosition(i).y, Is.GreaterThan(surface), "외곽선이 지면 위");
+            foreach (Vector3 vertex in fill.sharedMesh.vertices)
+                Assert.That(fill.transform.TransformPoint(vertex).y, Is.GreaterThan(surface), "채움이 지면 위");
+
+            UnityEngine.Object.Destroy(ground);
+        }
+
+        private static Vector3 Flat(Vector3 value) => Vector3.ProjectOnPlane(value, Vector3.up);
+
+        // 채움 메시에서 몬스터로부터 가장 먼 수평 거리입니다(진행도만큼 자란 반지름).
+        private float FillReach()
+        {
+            float reach = 0f;
+            foreach (Vector3 vertex in fill.sharedMesh.vertices)
+                reach = Mathf.Max(reach, Flat(fill.transform.TransformPoint(vertex) - elite.transform.position).magnitude);
+            return reach;
         }
 
         private IEnumerator EnterHeavyWindup()

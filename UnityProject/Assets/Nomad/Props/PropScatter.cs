@@ -23,6 +23,9 @@ namespace Nomad.Props
         private readonly List<Vector3> positions = new();
         public IReadOnlyList<Vector3> Positions => positions.AsReadOnly();
         public string GenerationId { get; private set; }
+
+        // 이번 세대에 배치한 소품만 담는 루트입니다. 같은 오브젝트 하위의 꾸밈(FieldDressing)과 구분합니다.
+        public Transform GeneratedRoot => generatedRoot != null ? generatedRoot.transform : null;
         public int CandidateChecks { get; private set; }
 
         public void Configure(TerrainGenerator source, GameObject prefab, int count = 2)
