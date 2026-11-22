@@ -17,7 +17,7 @@
 
 `LootChest`는 A의 `Nomad.Interaction.IInteractable`을 구현합니다. `InteractionId`는 기존 ChestId이며 `CanInteract`는 활성 상태·유효 ID·플레이어/인벤토리·잔여 수량·재진입을 확인합니다. `Interact`는 기존 `TryLoot(context.Inventory)`를 호출합니다. 빈 상자는 대상에서 제외하고, 공간 부족 시 남은 상자는 다시 시도할 수 있습니다. 거리·시야·구르기와 E 1회 입력은 기존 A `PlayerInteraction`이 담당합니다.
 
-상자 루트 또는 항상 활성인 자식에 탐지 Collider를 두고 상호작용점을 그 안에 지정합니다. 상태별 Visual에는 Collider를 두지 않습니다. 상자마다 고유 ID를 지정하고, 플레이어 루트에는 PlayerMovement·CharacterController·PlayerInventory·PlayerInteraction을 연결합니다. 상자 랜덤 배치는 #20입니다.
+상자 루트 또는 항상 활성인 자식에 탐지 Collider를 두고 상호작용점을 그 안에 지정합니다. 상태별 Visual에는 Collider를 두지 않습니다. 상자마다 고유 ID를 지정하고, 플레이어 루트에는 PlayerMovement·CharacterController·PlayerInventory·PlayerInteraction을 연결합니다. 상자 랜덤 배치는 #20의 `ChestSpawner`입니다.
 
 ### 실제 E키 검토
 
@@ -55,4 +55,4 @@ Unity CLI의 `run`은 자동으로 -quit를 붙여 비동기 Play Mode 검증 �
 
 ## 저장 지형 통합 씬 연결
 
-#56 병합 후 #16 추가 요청에 따라 `Nomad > Terrain > Open Integration Test Scene`에서도 기존 생성 큐브를 E키로 루팅합니다. 별도 검토 장면 없이 저장 씬의 PlayerInventory/PlayerInteraction과 최종 배치 큐브의 LootChest를 사용합니다. 기존7% 배치·크기·도달성을 유지하며 새 랜덤 정책은 추가하지 않았습니다. 통합 씬에서는 **G가 갤러리**이므로 공간 확보는 **V**, 인벤토리 채우기는 F입니다. R/T/L/P 재생성은 상자를 초기화하고 인벤토리는 유지합니다. 상세 절차와 검증은 `docs/terrain-integration.md`를 참조합니다.
+`Nomad > Terrain > Open Integration Test Scene`에서 상자를 E키로 루팅합니다. #20부터 상자는 소품 큐브가 아니라 `ChestSpawner`가 Ready 결과의 `ChestPoints`에만 seed 기반으로 배치합니다(지점 중 절반 이상~전부, 임시 내용물 Scrap·칼·조끼). 재생성 시작 시 이전 상자를 정리하고 Failed면 만들지 않으며, 같은 세대에는 한 번만 배치합니다. 통합 씬에서는 **G가 갤러리**이므로 가방 비우기는 **V**, 가득 채우기는 F입니다. 상세 절차와 검증은 `docs/terrain-integration.md`를 참조합니다.

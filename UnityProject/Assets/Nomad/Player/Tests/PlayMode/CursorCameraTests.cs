@@ -348,14 +348,35 @@ namespace Nomad.Camera.PlayModeTests
             bool accessible = false;
             Type chestType = RuntimeType("Nomad.Loot.LootChest");
             MethodInfo canAccess = interaction.GetType().GetMethod("CanAccessChest", Fields);
+
+            // 상자는 생성 지점에만 놓이므로, 시작 seed에 상자가 없으면 상자가 있는 seed로 다시 생성합니다.
+            for (int seed = 0; UnityEngine.Object.FindAnyObjectByType(chestType) == null && seed < 20; seed++)
+            {
+                Set(controls, "seed", seed);
+                controlType.GetMethod("Regenerate").Invoke(controls, new object[] { false });
+                yield return Frames();
+            }
+
+            // 상자 단계에서는 몬스터 공격이 상자 창을 닫지 않도록 생성된 몬스터를 끕니다.
+            Type gameplayType = RuntimeType("Nomad.Gameplay.GameplayIntegration");
+            UnityEngine.Object gameplay = UnityEngine.Object.FindAnyObjectByType(gameplayType);
+            if (gameplay != null)
+                foreach (Health enemy in (IEnumerable)gameplayType.GetProperty("Enemies").GetValue(gameplay))
+                    enemy.gameObject.SetActive(false);
+
             foreach (GameObject root in terrainScene.GetRootGameObjects())
             {
                 foreach (Component chest in root.GetComponentsInChildren(chestType))
                 {
                     foreach (Vector3 direction in new[] { Vector3.right, Vector3.left, Vector3.forward, Vector3.back })
                     {
+                        // 상자 옆 1.2m 지점의 실제 지면에 발을 놓습니다.
+                        Vector3 sample = chest.transform.position + direction * 1.2f;
+                        if (!Physics.Raycast(sample + Vector3.up * 4f, Vector3.down, out RaycastHit hit, 8f,
+                                Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+                            continue;
                         controller.enabled = false;
-                        target.position = chest.transform.position + direction * 1.2f - Vector3.up * .55f;
+                        target.position = hit.point + Vector3.up * .06f;
                         controller.enabled = true;
                         Physics.SyncTransforms();
                         accessible = (bool)canAccess.Invoke(interaction, new object[] { chest });

@@ -82,14 +82,16 @@ WFC는 후보 전파·최소 후보 셀 선택·가중 선택을 유지합니다
 
 근거는 로컬 `UnityProject/Artifacts/micro-final-validation.log`, `micro-play.log`, `micro-legacy-props.log`, `micro-terrain-results.txt`, `micro-play-results.txt`, `micro-*.png`에 기록합니다. Windows 빌드·몬스터/실제 필드 상자 통합·대규모 성능 프로파일링은 별도입니다. 벽 제거 후 절벽 외형·중앙 상자·고저차와 계단의 자연스러움은 사람 재검토가 필요합니다.
 
-## 통합 씬의 실제 상자 루팅 (#16 / PR #57)
+## 통합 씬의 상자 랜덤 배치와 루팅 (#16 / PR #57, #20)
 
-기존 `TerrainIntegration.unity`의 플레이어에 PlayerInventory·PlayerInteraction을 저장하고, 최종 소품 도달성 복구 후 남은 큐브에만 LootChest를 연결합니다. 기존7%·타일 중앙·1.2m 큐브·Collider·보행 공간 조건은 유지합니다. 세대 ID와 상자 순번으로 고유 ID를 부여하고, 기존 큐브 중심을 상호작용점으로 사용합니다. 상자는 각각 검토용 Scrap10개를 가지며 외형과 Collider는 빈 상자도 유지합니다.
+`TerrainIntegration.unity`의 플레이어에 PlayerInventory·PlayerInteraction을 저장합니다. 상자는 `FieldNavigation`의 Ready 결과 `ChestPoints`에만 `ChestSpawner`가 배치합니다(#20). 소품 큐브는 더 이상 상자가 아니라 장애물로만 남습니다.
 
-- 가까운 상자에서 **E**로 획득합니다. 하단 HUD는 실제 Scrap 합계·슬롯·방금 사용한 상자의 잔여/Empty 상태를 표시합니다.
-- **F**는 Scrap96/99·칼19개로 인벤토리를 채우는 검토 도구입니다. F → E로3개 획득/7개 잔여 → **V**로 Scrap 공간 확보 → E로7개 회수를 확인합니다. 기존 G 갤러리 조작은 유지합니다.
-- **R/T/L/P**로 필드를 재생성하면 이전 상자는 비활성화·삭제되고 새 배치 상자는10개로 초기화됩니다. 플레이어 인벤토리는 유지합니다. 이는 반복 검토용 필드 초기화이며 저장/경제/재방문 보존 규칙이 아닙니다.
-- 전용 미저장 검토 장면을 만들 필요 없이 `Nomad > Terrain > Open Integration Test Scene`에서 Play합니다. Rebuild에도 동일 연결을 적용합니다.
-- #18의 지속 NavMesh/Ready/스폰 계약과 #20의 정식 랜덤 상자 정책·전투 흐름은 별도입니다. 이번 연결로 다른 임의의 씬까지 자동 구성되는 것은 아닙니다.
+- 상자 수: 제공된 지점(최대8) 중 절반 이상~전부를 seed로 고릅니다. 지점이 없으면 상자도 없습니다. 상자 ID는 `세대 ID/지점 ID`입니다.
+- 내용물(임시): Scrap4~12개는 항상, 칼35%·조끼20% 확률로1개. 같은 seed는 같은 지점·회전·내용물을 재현합니다. 수량·확률은 Play 검토 후 조정합니다.
+- 임시 외형은 1×0.8×0.7m 상자이며 닫힘(뚜껑)/열림(뚜껑 젖힘)/빈 상자(회색)로 표시합니다. Collider는 상태가 바뀌어도 유지합니다.
+- 가까운 상자에서 **E**로 열고 획득합니다. 하단 HUD는 Scrap 합계·슬롯·방금 사용한 상자의 잔여/Empty 상태를 표시합니다.
+- **F**는 Scrap96/99·칼19개로 가방을 가득 채우는 검토 도구입니다. F → E → Take all로 Scrap3개만 들어가고 나머지가 상자에 남는지, **V**(검토용 아이템 모두 비우기) → Take all로 남은 수량을 정확히 한 번 받는지 확인합니다. 기존 G 갤러리 조작은 유지합니다.
+- **R/T/L/P**로 재생성하면 시작 시 이전 상자를 비활성화·삭제하고, Ready 이후에만 새 상자를 배치합니다. Failed면 상자를 만들지 않습니다. 플레이어 인벤토리는 유지합니다. 이는 반복 검토용 초기화이며 저장/재방문 규칙이 아닙니다.
+- 전투를 포함한 이동 → 파밍 → 전투 흐름은 몬스터 통합(#59) 이후 확인합니다.
 
-`Nomad.Loot.Editor.TerrainLootVerification.Run`은 저장 씬에서 실제 E/F/V/T/P 입력, 부분3+7·빈 상자·기존 Collider 유지·동일 seed 배치/새 상자 수량·이전 세대 정리·인벤토리 유지·HUD를 검사합니다. 성공 표식 `TERRAIN_LOOT_PASS`, 로그 `Artifacts/terrain-loot-play.log`, 캡처 `terrain-loot-player.png`와 `terrain-loot-overview.png`입니다. 기존 통합 Play 검증 진입점도 유지합니다.
+`Nomad.Loot.Editor.TerrainLootVerification.Run`은 저장 씬에서 실제 E/F/V/T 입력으로 상자 지점 배치·가득 찬 가방 부분 획득·반복 획득 무복제·빈 상자·Collider 유지·동일 seed 재현(위치·내용물)·이전 세대 정리·인벤토리 유지·HUD를 검사합니다. 이어서12개 seed에서 지점 외 배치 없음·수량 범위·같은 세대 중복 배치 없음·재현성, 지점0개·실패 결과의 상자 없음을 검사합니다. 성공 표식 `TERRAIN_LOOT_PASS`, 로그 `Artifacts/terrain-loot-play.log`, 캡처 `terrain-loot-player.png`와 `terrain-loot-overview.png`입니다. 기존 통합 Play 검증 진입점도 유지합니다.
