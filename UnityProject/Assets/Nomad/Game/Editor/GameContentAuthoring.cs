@@ -29,6 +29,7 @@ namespace Nomad.Game.Editor
     {
         internal const string PlayerPrefabPath = "Assets/Nomad/Game/Prefabs/PlayerRig.prefab";
         internal const string MonsterModulePath = "Assets/Nomad/Game/Prefabs/FieldMonsters.prefab";
+        internal const string DeathRestartPath = "Assets/Nomad/Game/Prefabs/DeathRestart.prefab";
         internal const string FieldPath = GameSceneAuthoring.FieldPath;
         // 몬스터 외형·재질은 #59 통합 씬(GameplayIntegrationSetup)과 같은 에셋을 씁니다.
         private const string MonsterMaterialFolder = "Assets/Nomad/Monsters/Demo/CombatMaterials";
@@ -49,6 +50,7 @@ namespace Nomad.Game.Editor
             ConnectVillage();
             ConfigureGame(player);
             BuildFieldMonsters();
+            BuildDeathRestart();
 
             EditorSceneManager.OpenScene(GameSceneAuthoring.ScenePath);
             Debug.Log("GAME_CONTENT_BUILT");
@@ -71,6 +73,23 @@ namespace Nomad.Game.Editor
             RegisterRegionModule("Field", prefab);
             AssetDatabase.SaveAssets();
             Debug.Log("FIELD_MONSTERS_BUILT");
+        }
+
+        // 사망 안내·R 키 재시작 모듈을 만들고 GameConfig의 영속 모듈로 등록합니다.
+        [MenuItem("Nomad/Game/Build Death Restart")]
+        public static void BuildDeathRestart()
+        {
+            var module = new GameObject("DeathRestart");
+            module.AddComponent<DeathRestart>();
+
+            GameObject prefab = PrefabUtility.SaveAsPrefabAsset(module, DeathRestartPath);
+            Object.DestroyImmediate(module);
+
+            var data = new SerializedObject(AssetDatabase.LoadAssetAtPath<GameConfig>(GameSceneAuthoring.ConfigPath));
+            AddModule(data.FindProperty("modules"), prefab);
+            data.ApplyModifiedPropertiesWithoutUndo();
+            AssetDatabase.SaveAssets();
+            Debug.Log("DEATH_RESTART_BUILT");
         }
 
         // 이동·전투·체력·가방·장비·HUD·상호작용을 한 Player에 모으고, 카메라·EventSystem을 같은 프리팹에 둡니다.
@@ -239,12 +258,7 @@ namespace Nomad.Game.Editor
             var config = AssetDatabase.LoadAssetAtPath<GameConfig>(GameSceneAuthoring.ConfigPath);
             var data = new SerializedObject(config);
 
-            SerializedProperty modules = data.FindProperty("modules");
-            if (!Enumerable.Range(0, modules.arraySize).Any(i => modules.GetArrayElementAtIndex(i).objectReferenceValue == player))
-            {
-                modules.arraySize++;
-                modules.GetArrayElementAtIndex(modules.arraySize - 1).objectReferenceValue = player;
-            }
+            AddModule(data.FindProperty("modules"), player);
 
             SerializedProperty regions = data.FindProperty("regionScenes");
             foreach (string region in GameSceneAuthoring.Regions.Select(path => Path.GetFileNameWithoutExtension(path)))
@@ -262,6 +276,16 @@ namespace Nomad.Game.Editor
         }
 
         // 지역 모듈 목록에 프리팹을 한 번만 추가합니다. 다른 작업이 등록한 항목은 유지합니다.
+        // 이미 등록된 모듈은 다시 넣지 않습니다.
+        private static void AddModule(SerializedProperty modules, GameObject prefab)
+        {
+            if (Enumerable.Range(0, modules.arraySize).Any(i => modules.GetArrayElementAtIndex(i).objectReferenceValue == prefab))
+                return;
+
+            modules.arraySize++;
+            modules.GetArrayElementAtIndex(modules.arraySize - 1).objectReferenceValue = prefab;
+        }
+
         private static void RegisterRegionModule(string region, GameObject prefab)
         {
             var data = new SerializedObject(AssetDatabase.LoadAssetAtPath<GameConfig>(GameSceneAuthoring.ConfigPath));

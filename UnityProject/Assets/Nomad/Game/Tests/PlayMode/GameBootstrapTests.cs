@@ -30,8 +30,11 @@ namespace Nomad.Game.Tests
         {
             yield return DestroyManager();
 
+            // 재시작 테스트는 Game 씬을 Single로 불러 러너 씬까지 내리므로, 마지막 씬을 내릴 수 있게 빈 씬을 둡니다.
             if (previousScene.IsValid() && previousScene.isLoaded)
                 SceneManager.SetActiveScene(previousScene);
+            else
+                SceneManager.SetActiveScene(SceneManager.CreateScene("Test Host"));
 
             // 테스트가 연 Game·Village 씬만 내립니다.
             for (int i = SceneManager.sceneCount - 1; i >= 0; i--)
@@ -177,6 +180,52 @@ namespace Nomad.Game.Tests
         }
 
         [UnityTest]
+        public IEnumerator PlayerDeath_ShowsNoticeAndRestartsFromGameScene()
+        {
+            yield return EditorSceneManager.LoadSceneAsyncInPlayMode(GameScenePath,
+                new LoadSceneParameters(LoadSceneMode.Additive));
+            GameManager manager = GameManager.Instance;
+            yield return WaitForRegion(manager);
+
+            GameObject player = manager.Player;
+            Assert.That(CallInventory(player, "Add", "scrap", 5), Is.EqualTo(5), "재시작 전 가방에 넣기");
+            Component restart = manager.GetComponentInChildren(DeathRestartType);
+            Assert.That(restart, Is.Not.Null, "사망 재시작 모듈(GameConfig.modules)");
+            yield return null;
+            Assert.That(IsShowingDeath(restart), Is.False, "살아 있을 때는 안내 없음");
+
+            // 낙하 피해는 구르기 무적과 관계없이 들어가므로 확실히 쓰러뜨릴 수 있습니다.
+            Component health = player.GetComponent("Health");
+            System.Reflection.MethodInfo damage = health.GetType().GetMethod("TryApplyDamage");
+            object fall = System.Enum.Parse(damage.GetParameters()[1].ParameterType, "Fall");
+            damage.Invoke(health, new[] { (object)int.MaxValue, fall });
+            yield return null;
+            Assert.That(IsShowingDeath(restart), Is.True, "사망 안내");
+
+            // R 키 입력이 호출하는 재시작: Game 씬부터 새 Player로 마을 입구에서 시작합니다.
+            manager.Restart();
+            float end = Time.realtimeSinceStartup + Timeout;
+            while (GameManager.Instance == null || GameManager.Instance.IsLoading || !GameManager.Instance.CurrentRegion.IsValid())
+            {
+                Assert.That(Time.realtimeSinceStartup, Is.LessThan(end), "재시작 시간 초과");
+                yield return null;
+            }
+
+            GameManager next = GameManager.Instance;
+            Assert.That(manager == null, Is.True, "이전 GameManager 정리");
+            Assert.That(next.CurrentRegion.path, Is.EqualTo(VillagePath), "시작 지역에서 다시 시작");
+            Assert.That(next.Player, Is.Not.SameAs(player), "새 Player");
+            AssertAtEntrance(next, null);
+
+            yield return null;
+            AssertUiKept(next.Player);
+            foreach (string ui in new[] { "Player HUD", "NomadInventory" })
+                Assert.That(CountRoots(next.gameObject.scene, ui), Is.EqualTo(1), ui + " 이전 UI가 남지 않음");
+            Assert.That(CallInventory(next.Player, "Remove", "scrap", int.MaxValue), Is.EqualTo(0), "가방 초기화");
+            Assert.That(IsShowingDeath(next.GetComponentInChildren(DeathRestartType)), Is.False, "새 Player는 살아 있음");
+        }
+
+        [UnityTest]
         public IEnumerator NonRegionScene_DoesNotCreateManager()
         {
             // 테스트 러너 씬처럼 지역 목록에 없는 씬에서는 기존 동작을 바꾸지 않습니다.
@@ -250,6 +299,22 @@ namespace Nomad.Game.Tests
                         Assert.That(parent.name, Is.Not.EqualTo("FieldDressing"), "꾸밈 오브젝트가 상자로 판정됨: " + chest.name);
                 }
             }
+        }
+
+        private static System.Type DeathRestartType => System.Type.GetType("Nomad.Game.Modules.DeathRestart, Assembly-CSharp");
+
+        private static bool IsShowingDeath(Component restart) => (bool)DeathRestartType.GetProperty("IsShowing").GetValue(restart);
+
+        private static int CountRoots(Scene scene, string name)
+        {
+            int count = 0;
+            foreach (GameObject root in scene.GetRootGameObjects())
+            {
+                if (root.name == name)
+                    count++;
+            }
+
+            return count;
         }
 
         private static System.Type FieldMonstersType => System.Type.GetType("Nomad.Game.Modules.FieldMonsters, Assembly-CSharp");

@@ -67,7 +67,10 @@ namespace Nomad.Monsters.Tests
             Place(MonsterRank.Elite, 8f);
             yield return Until(() => attack.Phase == MeleePhase.Windup, 3f);
             Assert.That(attack.Skill, Is.EqualTo(MonsterSkill.Charge));
-            Assert.That(actor.GetComponentsInChildren<LineRenderer>().Single(line => line.name == "Attack Outline").positionCount, Is.EqualTo(5));
+            // 돌진 외곽선은 지형을 따라 잘게 나눠지므로 닫힌 사각형(시작=끝)인지 봅니다.
+            LineRenderer outline = actor.GetComponentsInChildren<LineRenderer>().Single(line => line.name == "Attack Outline");
+            Assert.That(outline.positionCount, Is.GreaterThanOrEqualTo(5));
+            Assert.That(Vector3.Distance(outline.GetPosition(0), outline.GetPosition(outline.positionCount - 1)), Is.LessThan(0.01f));
             player.transform.position += Vector3.right * 3f;
             Physics.SyncTransforms();
             yield return Until(() => tactics.ChargesStarted == 1, 2f);

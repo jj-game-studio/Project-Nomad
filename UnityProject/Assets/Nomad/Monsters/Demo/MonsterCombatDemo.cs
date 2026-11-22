@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Nomad.Combat;
 using UnityEngine;
 
@@ -17,10 +18,17 @@ namespace Nomad.Monsters.Demo
         private Color idleColor;
         private Mesh fillMesh;
         private Renderer fillRenderer;
-        private float fillAngle = -1f;
         private MonsterHitFeedback hitFeedback;
         private Renderer[] bodies;
         public bool ShowSkillWarnings { get; set; } = true;
+
+        // 경고 표시를 지형에 맞출 때의 샘플 간격과 지면 위 띄움 높이입니다(언덕 Terrain에 묻히지 않게).
+        private const float SampleSpacing = 0.5f;
+        private const float OutlineLift = 0.07f;
+        private const float FillLift = 0.05f;
+        private readonly List<Vector3> corners = new List<Vector3>();
+        private readonly List<Vector3> points = new List<Vector3>();
+        private readonly List<int> triangles = new List<int>();
 
         public void ConfigureDisplay(Health victim, Health owner, MonsterMeleeAttack melee,
             Renderer body, LineRenderer outline, MeshFilter fill)
@@ -85,72 +93,125 @@ namespace Nomad.Monsters.Demo
                 return;
             }
 
-            Vector3 origin = monster.transform.position + Vector3.up * 0.04f;
+            Vector3 origin = monster.transform.position;
+            corners.Clear();
             if (attack.Skill == MonsterSkill.Charge)
             {
-                float half = attack.ChargeWidth * 0.5f;
-                Vector3 side = Quaternion.AngleAxis(90f, Vector3.up) * attack.AttackDirection * half;
-                Vector3 end = origin + attack.AttackDirection * attack.CurrentAttackRange;
-                heavyWarning.positionCount = 5;
-                heavyWarning.SetPositions(new[] { origin - side, origin + side, end + side, end - side, origin - side });
-                if (warningFill != null)
-                {
-                    if (fillAngle != -99f)
-                    {
-                        fillAngle = -99f;
-                        fillMesh.Clear();
-                        fillMesh.vertices = new[] { new Vector3(-1f, 0f, 0f), new Vector3(1f, 0f, 0f), new Vector3(1f, 0f, 1f), new Vector3(-1f, 0f, 1f) };
-                        fillMesh.triangles = new[] { 0, 2, 1, 0, 3, 2 };
-                        fillMesh.RecalculateBounds();
-                    }
-                    warningFill.transform.SetPositionAndRotation(origin, Quaternion.LookRotation(attack.AttackDirection));
-                    warningFill.transform.localScale = new Vector3(half, 1f, attack.CurrentAttackRange * attack.WindupProgress);
-                }
+                Vector3 forward = attack.AttackDirection;
+                Vector3 side = Quaternion.AngleAxis(90f, Vector3.up) * forward * (attack.ChargeWidth * 0.5f);
+                Vector3 end = origin + forward * attack.CurrentAttackRange;
+                corners.AddRange(new[] { origin - side, origin + side, end + side, end - side, origin - side });
+                SetOutline(origin.y);
+
+                if (warningFill == null)
+                    return;
+
+                // 돌진 폭 방향 2칸, 길이 방향은 샘플 간격마다 나눈 격자로 채웁니다.
+                float length = attack.CurrentAttackRange * attack.WindupProgress;
+                BuildGrid(Divisions(length), 2, (row, rows, column) => origin + forward * (length * row / rows) +
+                    side * (column - 1f), origin.y);
                 return;
             }
-            bool circle = attack.CurrentAttackAngle >= 359.9f;
-            heavyWarning.positionCount = circle ? 17 : 19;
+
+            float range = attack.CurrentAttackRange;
+            float angle = attack.CurrentAttackAngle;
+            bool circle = angle >= 359.9f;
             if (!circle)
-                heavyWarning.SetPosition(0, origin);
+                corners.Add(origin);
             for (int i = 0; i <= 16; i++)
-            {
-                float angle = -attack.CurrentAttackAngle * 0.5f + attack.CurrentAttackAngle * i / 16f;
-                Vector3 direction = Quaternion.AngleAxis(angle, Vector3.up) * attack.AttackDirection;
-                heavyWarning.SetPosition(circle ? i : i + 1, origin + direction * attack.CurrentAttackRange);
-            }
+                corners.Add(origin + Direction(-angle * 0.5f + angle * i / 16f) * range);
             if (!circle)
-                heavyWarning.SetPosition(18, origin);
+                corners.Add(origin);
+            SetOutline(origin.y);
 
             if (warningFill == null)
                 return;
 
-            if (!Mathf.Approximately(fillAngle, attack.CurrentAttackAngle))
-                BuildFill(attack.CurrentAttackAngle);
-            warningFill.transform.SetPositionAndRotation(origin - Vector3.up * 0.015f,
-                Quaternion.LookRotation(attack.AttackDirection));
-            warningFill.transform.localScale = Vector3.one * (attack.CurrentAttackRange * attack.WindupProgress);
+            // 부채꼴은 각도 32칸 x 반지름 방향 샘플 간격 고리로 나눠 언덕을 따라 휘게 합니다.
+            float radius = range * attack.WindupProgress;
+            BuildGrid(Divisions(radius), 32, (ring, rings, step) =>
+                origin + Direction(-angle * 0.5f + angle * step / 32f) * (radius * ring / rings), origin.y);
             tint.SetColor("_BaseColor", attack.IsHeavyAttack ?
                 new Color(1f, 0.15f, 0.05f, 0.35f) : new Color(1f, 0.55f, 0.1f, 0.3f));
             fillRenderer.SetPropertyBlock(tint);
         }
 
-        private void BuildFill(float angle)
+        private Vector3 Direction(float degrees) => Quaternion.AngleAxis(degrees, Vector3.up) * attack.AttackDirection;
+
+        private static int Divisions(float length) => Mathf.Max(1, Mathf.CeilToInt(length / SampleSpacing));
+
+        // 외곽선 꼭짓점 사이를 샘플 간격으로 나누고 각 점을 지면 위로 올립니다.
+        private void SetOutline(float fallbackY)
         {
-            fillAngle = angle;
-            var vertices = new Vector3[34];
-            var triangles = new int[96];
-            for (int i = 0; i <= 32; i++)
-                vertices[i + 1] = Quaternion.AngleAxis(-angle * 0.5f + angle * i / 32f, Vector3.up) * Vector3.forward;
-            for (int i = 0; i < 32; i++)
+            points.Clear();
+            for (int i = 0; i < corners.Count; i++)
             {
-                triangles[i * 3] = 0;
-                triangles[i * 3 + 1] = i + 1;
-                triangles[i * 3 + 2] = i + 2;
+                if (i > 0)
+                {
+                    Vector3 from = corners[i - 1];
+                    int steps = Divisions(Vector3.Distance(from, corners[i]));
+                    for (int step = 1; step < steps; step++)
+                        points.Add(OnGround(Vector3.Lerp(from, corners[i], (float)step / steps), fallbackY, OutlineLift));
+                }
+
+                points.Add(OnGround(corners[i], fallbackY, OutlineLift));
             }
+
+            heavyWarning.positionCount = points.Count;
+            for (int i = 0; i < points.Count; i++)
+                heavyWarning.SetPosition(i, points[i]);
+        }
+
+        // (rows+1) x (columns+1) 격자 꼭짓점을 지면에 맞춰 채움 메시를 다시 만듭니다.
+        // 위에서 볼 때 시계 방향으로 감아 기존 채움과 같은 면이 보입니다.
+        private void BuildGrid(int rows, int columns, System.Func<int, int, int, Vector3> point, float fallbackY)
+        {
+            Transform fill = warningFill.transform;
+            fill.localPosition = Vector3.zero;
+            fill.localRotation = Quaternion.identity;
+            fill.localScale = Vector3.one;
+
+            points.Clear();
+            for (int row = 0; row <= rows; row++)
+            {
+                for (int column = 0; column <= columns; column++)
+                    points.Add(fill.InverseTransformPoint(OnGround(point(row, rows, column), fallbackY, FillLift)));
+            }
+
+            triangles.Clear();
+            for (int row = 0; row < rows; row++)
+            {
+                for (int column = 0; column < columns; column++)
+                {
+                    int a = row * (columns + 1) + column;
+                    int d = a + columns + 1;
+                    triangles.AddRange(new[] { a, d, d + 1, a, d + 1, a + 1 });
+                }
+            }
+
             fillMesh.Clear();
-            fillMesh.vertices = vertices;
-            fillMesh.triangles = triangles;
+            fillMesh.SetVertices(points);
+            fillMesh.SetTriangles(triangles, 0);
             fillMesh.RecalculateBounds();
+        }
+
+        // 필드 Terrain 위에서는 표면 높이를, Terrain 밖(마을·검토 씬)에서는 기존처럼 몬스터 발 높이를 씁니다.
+        private static Vector3 OnGround(Vector3 point, float fallbackY, float lift)
+        {
+            point.y = fallbackY;
+            foreach (UnityEngine.Terrain terrain in UnityEngine.Terrain.activeTerrains)
+            {
+                Vector3 local = point - terrain.GetPosition();
+                Vector3 size = terrain.terrainData.size;
+                if (local.x < 0f || local.z < 0f || local.x > size.x || local.z > size.z)
+                    continue;
+
+                point.y = terrain.GetPosition().y + terrain.SampleHeight(point);
+                break;
+            }
+
+            point.y += lift;
+            return point;
         }
 
         private void OnDestroy()

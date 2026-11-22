@@ -11,12 +11,16 @@ namespace Nomad.Game
     {
         public const string PlayerTag = "Player";
 
+        // 처음부터 다시 시작할 때 불러오는 부트스트랩 씬입니다(Build Settings 첫 씬).
+        public const string GameSceneName = "Game";
+
         public static GameManager Instance { get; private set; }
 
         public GameConfig Config { get; private set; }
         public Scene CurrentRegion { get; private set; }
         public string PreviousRegion { get; private set; }
         public bool IsLoading { get; private set; }
+        public bool IsRestarting { get; private set; }
 
         // 모듈 중 Player 태그가 붙은 오브젝트입니다. 지역이 바뀌어도 같은 인스턴스를 유지합니다.
         public GameObject Player { get; private set; }
@@ -105,6 +109,22 @@ namespace Nomad.Game
 
             StartCoroutine(LoadRegionRoutine(sceneName));
             return true;
+        }
+
+        // 영속 모듈(Player·가방·장비 포함)과 현재 지역을 모두 버리고 Game 씬부터 새로 시작합니다.
+        // 지역 씬을 단독 Play한 경우에도 Game 씬으로 시작해 마을 입구에서 출발합니다.
+        public void Restart()
+        {
+            if (IsRestarting)
+                return;
+
+            IsRestarting = true;
+            StopAllCoroutines();
+
+            // 새 Game 씬의 GameManager가 Awake에서 자신을 Instance로 삼도록 먼저 비웁니다.
+            Instance = null;
+            Destroy(gameObject);
+            SceneManager.LoadScene(GameSceneName, LoadSceneMode.Single);
         }
 
         // CharacterController는 활성 상태에서 위치를 바꾸면 되돌아가므로 끈 상태에서 옮깁니다.
