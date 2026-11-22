@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using Nomad.Combat;
 using Nomad.Interaction;
 using Nomad.Inventory;
@@ -227,7 +228,9 @@ namespace Nomad.Shop.Editor
                     case 29: Queue(Key.Enter); break;
                     case 30:
                         expectedGold -= 360;
-                        Require(wallet.Gold == expectedGold && inventory.GetSlot(1).Count == 3 && Popup.activeSelf, "직접 입력 3개 구매");
+                        int knives = Enumerable.Range(0, PlayerInventory.Capacity).Sum(index =>
+                            inventory.GetSlot(index).Item == shop.Catalog.GetOffer(1).Item ? inventory.GetSlot(index).Count : 0);
+                        Require(wallet.Gold == expectedGold && knives == 3 && Popup.activeSelf, "직접 입력 3개 구매·장비는 슬롯별 보관");
                         Queue(Key.Escape);
                         break;
                     case 31:
