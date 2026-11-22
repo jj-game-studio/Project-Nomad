@@ -43,13 +43,14 @@ Renderer.forceRenderingOff 및 체력바·피격 숫자만 제어하고 Collider
 ## 메인 게임 모듈 연결
 
 PlayerVisibilityModule.prefab은 씬 참조 없이 활성 PlayerMovement를 찾아 연결합니다.
-#89 담당자와 합의한 뒤 GameConfig.modules에 이 프리팹을 등록하면 영속 플레이어에 연결할 수 있습니다.
-등록 파일은 이번 PR에서 수정하지 않습니다. 저장 프리팹의 생성/해제와 자동 바인딩은 전용 Play 검사에서 확인합니다.
+GameConfig.modules에 정식 등록되어 마을·필드·재시작에서 영속 플레이어에 자동 연결됩니다.
+기존 PlayerRig·DeathRestart·PauseMenu 모듈의 순서와 참조를 유지하고 시야 모듈만 마지막에 추가합니다.
 
 ## 정식 연결 후속 검증
 
-공용 GameConfig 수정은 #125/PR #126과 순차 진행합니다. 선점 해소 전에는 등록 메뉴를 실행하지 않습니다.
+#125/PR #126 병합 후 기존 GameConfig에 정식 등록했습니다. Game 생성 도구도 기존 모듈을 보존합니다.
 `Nomad > Visibility > Register Main Game Module`은 기존 영속 모듈을 유지하며 시야 프리팹을 한 번만 추가합니다.
+`VisibilityGameRegistration.RegisterAndVerify` 배치 진입점은 기존 모듈 보존과 반복 등록 시 설정 파일 불변을 검사합니다.
 등록 후 `Nomad > Visibility > Verify Main Game`으로 마을→필드→같은 seed 재생성→마을→필드→전체 재시작을 검사합니다.
 영속 관찰자·시야 인스턴스 유지, 중복 모듈/이전 적 잔존 없음, 적 숨김과 전투/충돌 유지 및 새 플레이어 재바인딩을 확인합니다.
 `VisibilityGameVerification.RunPreview` 배치 진입점은 등록 전 검증용입니다. Play 중에만 프리팹을 추가하며 GameConfig를 저장하지 않습니다.
