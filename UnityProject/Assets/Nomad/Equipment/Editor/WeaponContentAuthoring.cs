@@ -20,6 +20,7 @@ namespace Nomad.Equipment.Editor
     {
         internal const string ItemFolder = "Assets/Nomad/Equipment/Items";
         internal const string ArrowPath = "Assets/Nomad/Equipment/PlayerArrow.prefab";
+        internal const string VfxResourceFolder = "Assets/Nomad/Equipment/Resources";
         private const string ModelFolder = "Assets/ThirdParty/Synty_Kingdom/PolygonFantasyKingdom/Prefabs/Weapons";
         private const string ArrowModel = "Assets/ThirdParty/Nomad/Monsters/Candidates/Arrow.prefab";
         private static readonly (string Id, string Model)[] Models =
@@ -86,6 +87,25 @@ namespace Nomad.Equipment.Editor
                 Object.DestroyImmediate(root);
             }
 
+            CreateVfxMaterial();
+            AssetDatabase.SaveAssets();
+        }
+
+        // 무기 VFX 재질입니다. Resources에 두어 플레이어 빌드에도 입자 셰이더가 포함되게 합니다.
+        internal static void CreateVfxMaterial()
+        {
+            string path = $"{VfxResourceFolder}/{WeaponVfx.MaterialResource}.mat";
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (material == null)
+            {
+                Directory.CreateDirectory(VfxResourceFolder);
+                material = new Material(Shader.Find(WeaponVfx.ShaderName));
+                AssetDatabase.CreateAsset(material, path);
+            }
+
+            material.shader = Shader.Find(WeaponVfx.ShaderName);
+            WeaponVfx.ConfigureAdditive(material);
+            EditorUtility.SetDirty(material);
             AssetDatabase.SaveAssets();
         }
 

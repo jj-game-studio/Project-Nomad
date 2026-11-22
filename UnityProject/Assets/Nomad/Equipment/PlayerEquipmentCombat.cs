@@ -33,9 +33,13 @@ namespace Nomad.Equipment
         private PlayerCombat legacyCombat;
         private bool restoreLegacy;
         private float nextAttackTime;
+        private float walkableNormalY = Mathf.Cos(50f * Mathf.Deg2Rad);
 
         public event Action<WeaponAttackMode> Attacked;
         public event Action<Vector3> Impacted;
+        // 시각 효과가 무기별 연출을 고를 수 있도록 발사체와 명중 지점을 무기와 함께 알립니다.
+        public event Action<Projectile, ItemDefinition> Fired;
+        public event Action<Vector3, ItemDefinition> WeaponImpacted;
         public Vector3? AimPoint { get; private set; }
         public bool InputBlocked { get; set; }
         public bool EquipmentUiOpen { get; internal set; }
@@ -53,6 +57,8 @@ namespace Nomad.Equipment
             health = GetComponent<Health>();
             mana = GetComponent<PlayerMana>();
             legacyCombat = GetComponent<PlayerCombat>();
+            if (TryGetComponent(out CharacterController controller))
+                walkableNormalY = Mathf.Cos(controller.slopeLimit * Mathf.Deg2Rad);
         }
 
         private void OnEnable()
@@ -119,8 +125,8 @@ namespace Nomad.Equipment
                 return false;
 
             Projectile shot = bow ? arrowProjectile : projectile;
-            if (!Projectile.TryLaunch(shot, transform, muzzle.position, aim,
-                    collisionLayers, 45f, weapon.AttackRange, weapon.AttackPower, NotifyImpact))
+            if (!Projectile.TryLaunch(shot, transform, muzzle.position, aim, collisionLayers, 45f,
+                    weapon.AttackRange, weapon.AttackPower, point => NotifyImpact(point, weapon), out Projectile launched))
                 return false;
 
             // 막힌 발사구나 유효하지 않은 조준에는 재화나 공격 간격을 적용하지 않습니다.
@@ -130,6 +136,7 @@ namespace Nomad.Equipment
             else if (staff)
                 mana.TrySpend(weapon.ManaCost);
 
+            Fired?.Invoke(launched, weapon);
             return true;
         }
 
@@ -150,10 +157,13 @@ namespace Nomad.Equipment
             return true;
         }
 
-        private void NotifyImpact(Vector3 point)
+        private void NotifyImpact(Vector3 point, ItemDefinition weapon)
         {
-            if (this != null)
-                Impacted?.Invoke(point);
+            if (this == null)
+                return;
+
+            Impacted?.Invoke(point);
+            WeaponImpacted?.Invoke(point, weapon);
         }
 
         private void Melee(Vector3 origin, Vector3 direction, ItemDefinition weapon)
@@ -186,7 +196,7 @@ namespace Nomad.Equipment
                     Collider collider = target.GetComponentInChildren<Collider>();
                     Vector3 point = collider != null ? collider.bounds.center + Vector3.up * (collider.bounds.extents.y + 0.08f)
                         : target.transform.position + Vector3.up;
-                    if (target.TryApplyDamage(weapon.AttackPower)) NotifyImpact(point);
+                    if (target.TryApplyDamage(weapon.AttackPower)) NotifyImpact(point, weapon);
                 }
         }
 
@@ -194,7 +204,7 @@ namespace Nomad.Equipment
         {
             float reach = range;
             foreach (RaycastHit hit in Physics.RaycastAll(AttackOrigin, direction, range, collisionLayers, QueryTriggerInteraction.Ignore))
-                if (!hit.transform.IsChildOf(transform) && hit.collider.GetComponentInParent<Health>() == null)
+                if (BlocksMelee(hit))
                     reach = Mathf.Min(reach, hit.distance);
             return reach;
         }
@@ -206,10 +216,15 @@ namespace Nomad.Equipment
 
             foreach (RaycastHit hit in Physics.RaycastAll(origin, path.normalized, path.magnitude,
                          collisionLayers, QueryTriggerInteraction.Ignore))
-                if (!hit.transform.IsChildOf(transform) && hit.collider.GetComponentInParent<Health>() == null)
+                if (BlocksMelee(hit))
                     return true;
             return false;
         }
+
+        // 플레이어가 오를 수 있는 경사면은 벽이 아니라 지면이므로 근접 범위를 자르지 않습니다.
+        private bool BlocksMelee(RaycastHit hit) =>
+            hit.normal.y < walkableNormalY && !hit.transform.IsChildOf(transform) &&
+            hit.collider.GetComponentInParent<Health>() == null;
 
         private bool IsOverUi(Vector2 pointer)
         {

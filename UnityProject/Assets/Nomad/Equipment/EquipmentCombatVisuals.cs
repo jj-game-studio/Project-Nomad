@@ -40,13 +40,15 @@ namespace Nomad.Equipment
         private void OnEnable()
         {
             combat.Attacked += Attack;
-            combat.Impacted += Impact;
+            combat.Fired += Fire;
+            combat.WeaponImpacted += Impact;
         }
 
         private void OnDisable()
         {
             combat.Attacked -= Attack;
-            combat.Impacted -= Impact;
+            combat.Fired -= Fire;
+            combat.WeaponImpacted -= Impact;
             rangeLine.enabled = false;
             foreach (Effect effect in effects) Destroy(effect.Line.gameObject);
             effects.Clear();
@@ -71,7 +73,10 @@ namespace Nomad.Equipment
             {
                 if (weapon.AttackMode == WeaponAttackMode.Melee)
                 {
+                    // 가슴 높이 부채꼴을 그대로 그리면 오르막 지형에 묻혀 양 끝 선만 보이므로 바닥에 붙여 그립니다.
                     Vector3[] points = Arc(weapon.AttackRange, true);
+                    for (int index = 0; index < points.Length; index++)
+                        points[index] = OnGround(points[index]);
                     rangeLine.positionCount = points.Length;
                     rangeLine.SetPositions(points);
                 }
@@ -160,6 +165,23 @@ namespace Nomad.Equipment
             return points;
         }
 
+        private Vector3 OnGround(Vector3 point)
+        {
+            // 경사 한계(약 50도)까지 오른 지면도 찾도록 거리만큼 위에서 아래로 검사합니다.
+            float feet = transform.position.y;
+            float distance = Vector3.ProjectOnPlane(point - transform.position, Vector3.up).magnitude;
+            var ray = new Ray(new Vector3(point.x, feet + 1.6f + distance * 1.2f, point.z), Vector3.down);
+            Vector3 ground = new Vector3(point.x, feet, point.z);
+            float nearest = float.PositiveInfinity;
+            foreach (RaycastHit hit in Physics.RaycastAll(ray, ray.origin.y - feet + 3f, combat.CollisionLayers, QueryTriggerInteraction.Ignore))
+                if (hit.distance < nearest && !hit.transform.IsChildOf(transform) && hit.collider.GetComponentInParent<Health>() == null)
+                {
+                    nearest = hit.distance;
+                    ground = hit.point;
+                }
+            return ground + Vector3.up * 0.06f;
+        }
+
         private void Attack(WeaponAttackMode mode)
         {
             if (combat.AimPoint.HasValue)
@@ -167,13 +189,28 @@ namespace Nomad.Equipment
                 Vector3 planar = Vector3.ProjectOnPlane(combat.AimPoint.Value - combat.AttackOrigin, Vector3.up);
                 if (planar.sqrMagnitude > 0.001f) direction = planar.normalized;
             }
+
+            ItemDefinition weapon = combat.CurrentWeapon;
+            bool styled = WeaponVfx.TryGetStyle(weapon, out WeaponVfxStyle style);
             if (mode == WeaponAttackMode.Melee)
             {
-                Vector3[] fan = Arc(combat.CurrentWeapon.AttackRange, true);
+                slashUntil = Time.time + SlashDuration;
+                if (styled && style.Slash)
+                {
+                    SwordSlashVfx.Spawn(combat.AttackOrigin, direction, PlayerEquipmentCombat.MeleeHalfAngle,
+                        SweepReaches(weapon.AttackRange), style);
+                    return;
+                }
+
+                Vector3[] fan = Arc(weapon.AttackRange, true);
                 var slash = new Vector3[fan.Length - 2];
                 System.Array.Copy(fan, 1, slash, 0, slash.Length);
-                slashUntil = Time.time + SlashDuration;
                 AddEffect(slash, new Color(1f, 0.72f, 0.2f), SlashDuration);
+            }
+            else if (mode == WeaponAttackMode.Staff && styled)
+            {
+                // 지팡이 끝에서 작은 마법 섬광이 터집니다. 날아가는 탄은 Fire에서 붙입니다.
+                WeaponVfx.Burst(combat.ProjectileOrigin, style, 0.35f);
             }
             else
             {
@@ -183,8 +220,33 @@ namespace Nomad.Equipment
             }
         }
 
-        private void Impact(Vector3 point)
+        // 베기 VFX는 칼이 오른쪽에서 왼쪽으로 지나가므로 오른쪽 끝(+각)부터 도달 거리를 담습니다.
+        private float[] SweepReaches(float range)
         {
+            const int segments = 32;
+            var reaches = new float[segments + 1];
+            for (int index = 0; index <= segments; index++)
+            {
+                float angle = Mathf.Lerp(PlayerEquipmentCombat.MeleeHalfAngle, -PlayerEquipmentCombat.MeleeHalfAngle, index / (float)segments);
+                reaches[index] = combat.MeleeReach(Quaternion.AngleAxis(angle, Vector3.up) * direction, range);
+            }
+            return reaches;
+        }
+
+        private void Fire(Projectile projectile, ItemDefinition weapon)
+        {
+            if (projectile != null && weapon.AttackMode == WeaponAttackMode.Staff && WeaponVfx.TryGetStyle(weapon, out WeaponVfxStyle style))
+                MagicBoltVfx.Attach(projectile.transform, style);
+        }
+
+        private void Impact(Vector3 point, ItemDefinition weapon)
+        {
+            if (weapon != null && weapon.AttackMode == WeaponAttackMode.Staff && WeaponVfx.TryGetStyle(weapon, out WeaponVfxStyle style))
+            {
+                WeaponVfx.Burst(point, style);
+                return;
+            }
+
             AddEffect(new[] { point - Vector3.right * 0.16f, point + Vector3.right * 0.16f,
                 point, point - Vector3.up * 0.16f, point + Vector3.up * 0.16f }, new Color(1f, 0.9f, 0.5f), 0.2f);
         }

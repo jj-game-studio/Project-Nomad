@@ -256,9 +256,10 @@ namespace Nomad.Equipment.Editor
                         break;
                     case 14:
                         Check(visuals.ShowRange && visuals.RangeLine.enabled && visuals.RangeLine.positionCount == 35, "F2 범위 표시");
+                        // 범위 표시는 바닥에 붙여 그리므로 수평 거리로 사거리를 비교합니다.
                         for (int index = 0; index < visuals.RangeLine.positionCount; index++)
-                            Check(Vector3.Distance(visuals.RangeLine.GetPosition(index), combat.AttackOrigin) <= combat.CurrentWeapon.AttackRange + 0.02f,
-                                "표시 사거리 일치");
+                            Check(Vector3.ProjectOnPlane(visuals.RangeLine.GetPosition(index) - combat.AttackOrigin, Vector3.up).magnitude <=
+                                  combat.CurrentWeapon.AttackRange + 0.02f, "표시 사거리 일치");
                         Capture(1920, 1080, "range");
                         Keys();
                         Pointer(Screen(panel.Toolbar), true);
