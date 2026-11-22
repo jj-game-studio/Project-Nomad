@@ -205,12 +205,30 @@ namespace Nomad.Gameplay.Editor
             yield return null;
 
             // 같은 플레이어의 실제 E키 상호작용으로 상자를 인벤토리에 옮깁니다.
+            // 상자는 생성 지점(ChestPoints)에만 놓이므로, 지점이 없는 seed면 상자가 있는 seed로 다시 생성합니다.
             var chests = Object.FindObjectsByType<LootChest>(FindObjectsSortMode.None);
-            Require(chests.Length > 0, "existing generated loot chests retained");
-            bool adjacent = false;
+            for (int seed = 0; chests.Length == 0 && seed < 20; seed++)
+            {
+                var data = new SerializedObject(controls);
+                data.FindProperty("seed").intValue = seed;
+                data.ApplyModifiedPropertiesWithoutUndo();
+                controls.Regenerate(false);
+                yield return null;
+                chests = Object.FindObjectsByType<LootChest>(FindObjectsSortMode.None);
+            }
+            Require(chests.Length > 0, "generated loot chests on chest points");
+
+            // 상자 단계에서는 몬스터 개입 없이 E키 흐름만 확인합니다.
+            foreach (Health enemy in gameplay.Enemies) enemy.gameObject.SetActive(false);
+            LootChest lootChest = null;
             foreach (LootChest chest in chests)
-                if (PlaceNear(chest.InteractionPoint, 1.25f)) { adjacent = true; break; }
-            Require(adjacent, "chest approach position");
+                if (PlaceNear(chest.InteractionPoint, 1.25f)) { lootChest = chest; break; }
+            Require(lootChest != null, "chest approach position");
+
+            int looted = 0;
+            for (int i = 0; i < lootChest.StackCount; i++)
+                if (lootChest.GetStack(i).ItemId == "scrap") looted += lootChest.GetStack(i).Count;
+            Require(looted > 0, "chest has scrap");
             controls.Player.GetComponent<PlayerMovement>().enabled = true;
             yield return null;
             yield return Press(UnityEngine.InputSystem.Key.E);
@@ -218,7 +236,7 @@ namespace Nomad.Gameplay.Editor
             // main의 상자 UI: E로 창을 열고 Take All로 옮긴 뒤 창을 닫습니다.
             yield return Until(() => LootPanel() != null, "E key opens real chest panel", 2f);
             LootPanel().Find("Take All").GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
-            yield return Until(() => Scrap(inventory) == 10, "Take All transferred real chest contents", 2f);
+            yield return Until(() => Scrap(inventory) == looted, "Take All transferred real chest contents", 2f);
             LootPanel().Find("Close").GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
             yield return Until(() => LootPanel() == null, "chest panel closed", 2f);
 
@@ -231,7 +249,7 @@ namespace Nomad.Gameplay.Editor
             controls.Regenerate(false);
             yield return null;
             Require(Object.FindObjectsByType<Projectile>(FindObjectsSortMode.None).Length == 0, "regeneration cleared projectiles");
-            Require(gameplay.Enemies.Count == 8 && Scrap(inventory) == 10, "new generation and carried loot");
+            Require(gameplay.Enemies.Count == 8 && Scrap(inventory) == looted, "new generation and carried loot");
 
             foreach (Health enemy in gameplay.Enemies) enemy.gameObject.SetActive(false);
             Health attacker = gameplay.Enemies.First();
@@ -244,7 +262,7 @@ namespace Nomad.Gameplay.Editor
             Require(!controls.enabled && !shooting.enabled && !controls.Player.GetComponent<PlayerInteraction>().enabled,
                 "death locks regeneration, shooting and interaction");
             yield return Press(UnityEngine.InputSystem.Key.E);
-            Require(Scrap(inventory) == 10, "dead player cannot loot");
+            Require(Scrap(inventory) == looted, "dead player cannot loot");
             GameplayIntegration oldRun = gameplay;
             gameplay.RestartRun();
             yield return Until(() => oldRun == null && Object.FindFirstObjectByType<GameplayIntegration>()?.Ready == true,
