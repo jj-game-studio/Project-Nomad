@@ -31,6 +31,7 @@ Unity 에디터를 닫은 상태에서 저장소 루트에서 실행합니다. �
 
 카메라 테스트는 RenderTexture가 필요해 기본으로 그래픽 장치를 사용합니다. GPU 없는 환경에서는 `-NoGraphics`를 붙이되 카메라 테스트는 실패합니다.
 에디터에서는 Window > General > Test Runner로 같은 테스트를 실행합니다.
+AI 에이전트에게는 Codex에서 `$unity-test`, Claude Code에서 `/unity-test`로 요청합니다. PR 번호를 함께 주면 공용 PR 검토 checkout에서 실행합니다. 절차는 `.agents/skills/unity-test/SKILL.md` 한 곳에서 고치고, `.claude/skills/unity-test`는 그 파일을 참조만 합니다.
 
 - `Assets/Nomad/Tests/Editor/`: asmdef 없는 게임 코드(인벤토리·장비·퀵슬롯·상자·체력·CSV·WFC 지형)의 EditMode 테스트입니다. 컴포넌트 수명주기가 필요하면 `PlayModeFixture`를 상속합니다.
 - `*/Tests/PlayMode/`: asmdef가 있는 몬스터·카메라의 PlayMode 테스트입니다.
