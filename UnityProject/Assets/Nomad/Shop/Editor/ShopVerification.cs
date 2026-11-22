@@ -273,11 +273,13 @@ namespace Nomad.Shop.Editor
                         Require(panel != null && !Popup.activeSelf, "재열기는 목록에서 시작");
                         position = inventory.transform.position;
                         inventory.transform.position += Vector3.right * 10;
+                        Physics.SyncTransforms();
                         Queue();
                         break;
                     case 41:
                         Require(Object.FindAnyObjectByType<ShopPanel>() == null, "거리 이탈 닫기");
                         inventory.transform.position = position;
+                        Physics.SyncTransforms();
                         Queue();
                         break;
                     case 42: Queue(Key.E); break;
