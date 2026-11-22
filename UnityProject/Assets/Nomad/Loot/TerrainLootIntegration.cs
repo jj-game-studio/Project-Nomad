@@ -13,6 +13,7 @@ namespace Nomad.Loot
 
         [SerializeField] private PlayerInventory inventory;
         [SerializeField] private UnityEngine.UI.Text status;
+        [SerializeField] private bool useScatteredCrateSlots;
         private ChestSpawner spawner;
         private LootChest lastChest;
 
@@ -27,12 +28,13 @@ namespace Nomad.Loot
             }
         }
         public IReadOnlyList<LootChest> Chests => Spawner.Chests;
+        public bool UseScatteredCrateSlots => useScatteredCrateSlots;
 
         // 재생성 시작에는 null로 이전 상자를 정리하고, Ready 결과가 나오면 새 상자를 배치합니다.
         public void Refresh(FieldGenerationResult field)
         {
             lastChest = null;
-            foreach (LootChest chest in Spawner.Spawn(field))
+            foreach (LootChest chest in Spawner.Spawn(field, useScatteredCrateSlots))
                 chest.Changed += () => lastChest = chest;
         }
 

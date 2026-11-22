@@ -84,9 +84,9 @@ WFC는 후보 전파·최소 후보 셀 선택·가중 선택을 유지합니다
 
 ## 통합 씬의 상자 랜덤 배치와 루팅 (#16 / PR #57, #20)
 
-`TerrainIntegration.unity`의 플레이어에 PlayerInventory·PlayerInteraction을 저장합니다. 상자는 `FieldNavigation`의 Ready 결과 `ChestPoints`에만 `ChestSpawner`가 배치합니다(#20). 소품 큐브는 더 이상 상자가 아니라 장애물로만 남습니다.
+`TerrainIntegration.unity`의 플레이어에 PlayerInventory·PlayerInteraction을 저장합니다. #124에서 실제 필드와 두 검토 씬은 기존 소품 큐브의 위치를 신규 상자 자리로 사용합니다. 큐브는 보행 경로를 검사하는 데 사용하고, 검사 후 끕니다.
 
-- 상자 수: 제공된 지점(최대8) 중 절반 이상~전부를 seed로 고릅니다. 지점이 없으면 상자도 없습니다. 상자 ID는 `세대 ID/지점 ID`입니다.
+- `FieldNavigation`이 접근 가능하다고 확인한 자리마다 `ChestSpawner`가 상자 하나를 배치합니다. 상자 ID는 `세대 ID/지점 ID`입니다.
 - 내용물(임시): Scrap4~12개는 항상, 칼35%·조끼20% 확률로1개. 같은 seed는 같은 지점·회전·내용물을 재현합니다. 수량·확률은 Play 검토 후 조정합니다.
 - 임시 외형은 1×0.8×0.7m 상자이며 닫힘(뚜껑)/열림(뚜껑 젖힘)/빈 상자(회색)로 표시합니다. Collider는 상태가 바뀌어도 유지합니다.
 - 가까운 상자에서 **E**로 열고 획득합니다. 하단 HUD는 Scrap 합계·슬롯·방금 사용한 상자의 잔여/Empty 상태를 표시합니다.

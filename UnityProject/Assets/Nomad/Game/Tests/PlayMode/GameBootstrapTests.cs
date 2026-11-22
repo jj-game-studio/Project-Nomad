@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using System.Collections;
+using System.Linq;
 using NUnit.Framework;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -142,6 +143,7 @@ namespace Nomad.Game.Tests
             AssertUiKept(player);
             Assert.That(Terrain.activeTerrain != null && Terrain.activeTerrain.gameObject.scene == manager.CurrentRegion, Is.True, "TerrainTest 지면(#94)");
             Assert.That(camera.clearFlags, Is.EqualTo(CameraClearFlags.SolidColor), "필드 카메라 배경");
+            AssertFieldChestReplacement(manager);
             yield return AssertFieldMonsters(manager);
 
             // 필드 출구에 들어가면 마을의 필드 쪽 입구로 돌아옵니다.
@@ -167,7 +169,7 @@ namespace Nomad.Game.Tests
             yield return WaitForActive(manager.Player);
             Assert.That(manager.Player.GetComponent("PlayerInventory"), Is.Not.Null, "메인 게임 Player 프리팹");
             Assert.That(FieldSeed(manager), Is.Not.EqualTo(51), "진입마다 새 seed(검토 씬 고정 seed 51 아님)");
-            AssertChestsOnlyOnProps(manager);
+            AssertFieldChestReplacement(manager);
             yield return AssertFieldMonsters(manager);
         }
 
@@ -448,18 +450,21 @@ namespace Nomad.Game.Tests
             return null;
         }
 
-        // 돌담·나무 같은 꾸밈(FieldDressing 하위)은 상자로 판정되면 안 됩니다.
-        private static void AssertChestsOnlyOnProps(GameManager manager)
+        private static void AssertFieldChestReplacement(GameManager manager)
         {
+            GameObject[] roots = manager.CurrentRegion.GetRootGameObjects();
+            System.Type scatterType = System.Type.GetType("Nomad.Props.PropScatter, Assembly-CSharp");
             System.Type chestType = System.Type.GetType("Nomad.Loot.LootChest, Assembly-CSharp");
-            foreach (GameObject root in manager.CurrentRegion.GetRootGameObjects())
-            {
-                foreach (Component chest in root.GetComponentsInChildren(chestType, true))
-                {
-                    for (Transform parent = chest.transform; parent != null; parent = parent.parent)
-                        Assert.That(parent.name, Is.Not.EqualTo("FieldDressing"), "꾸밈 오브젝트가 상자로 판정됨: " + chest.name);
-                }
-            }
+            Component scatter = roots.SelectMany(root => root.GetComponentsInChildren(scatterType)).Single();
+            var generated = (Transform)scatterType.GetProperty("GeneratedRoot").GetValue(scatter);
+            Assert.That(generated == null || !generated.gameObject.activeInHierarchy, Is.True, "구형 큐브 숨김");
+
+            var positions = ((IEnumerable)scatterType.GetProperty("Positions").GetValue(scatter)).Cast<Vector3>().ToArray();
+            Component[] chests = roots.SelectMany(root => root.GetComponentsInChildren(chestType)).ToArray();
+            Assert.That(chests.Length, Is.EqualTo(positions.Length), "구형 큐브 자리마다 신규 상자 1개");
+            foreach (Component chest in chests)
+                Assert.That(positions.Any(position => (position - chest.transform.position).sqrMagnitude < 0.0001f),
+                    Is.True, "돌담·나무 등 다른 꾸밈에는 상자가 생기지 않음");
         }
 
         private static System.Type DeathRestartType => System.Type.GetType("Nomad.Game.Modules.DeathRestart, Assembly-CSharp");
