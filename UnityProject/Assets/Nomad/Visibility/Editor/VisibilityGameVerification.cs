@@ -38,6 +38,13 @@ namespace Nomad.Visibility.Editor
                 throw new InvalidOperationException("Stop Play Mode before verification.");
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
 
+            stage = 0;
+            checks = 0;
+            waitUntil = 0f;
+            manager = null;
+            sight = null;
+            observer = null;
+
             EditorSceneManager.OpenScene("Assets/Nomad/Game/Game.unity");
             SessionState.SetBool(SessionKey, true);
             SessionState.SetBool(PreviewKey, preview);
@@ -93,7 +100,7 @@ namespace Nomad.Visibility.Editor
                 }
                 else if (stage == 1 || stage == 2 || stage == 4)
                 {
-                    controls = Object.FindFirstObjectByType<TerrainIntegrationControls>();
+                    controls = Object.FindAnyObjectByType<TerrainIntegrationControls>();
                     if (controls == null || controls.Navigation.State != FieldGenerationState.Ready) return;
                     if (stage == 2 && controls.Navigation.LastResult.GenerationId == generation) return;
                     waitUntil = Time.unscaledTime + 0.3f;
@@ -104,7 +111,7 @@ namespace Nomad.Visibility.Editor
                     CheckModule(current);
                     Check(current == manager && active == sight, "same persistent visibility module");
                     Check(active.Observer == observer, "same persistent observer");
-                    MonsterIdentity[] monsters = Object.FindObjectsByType<MonsterIdentity>(FindObjectsSortMode.None);
+                    MonsterIdentity[] monsters = Object.FindObjectsByType<MonsterIdentity>();
                     Check(monsters.Length > 0, "Field contains monsters");
                     Check(monsters.All(m => m.GetComponent<VisibilityTarget>()?.Controlled == true), "all monsters controlled");
                     Check(VisibilityTarget.ActiveCount == monsters.Length, "no stale targets");
@@ -154,7 +161,7 @@ namespace Nomad.Visibility.Editor
 
         private static void CheckModule(GameManager current)
         {
-            Check(Object.FindObjectsByType<PlayerVisibility>(FindObjectsSortMode.None).Length == 1, "one visibility module");
+            Check(Object.FindObjectsByType<PlayerVisibility>().Length == 1, "one visibility module");
             Check(current.GetComponentInChildren<VisibilityBinding>() != null, "automatic binding present");
         }
 
@@ -173,4 +180,3 @@ namespace Nomad.Visibility.Editor
         }
     }
 }
-
