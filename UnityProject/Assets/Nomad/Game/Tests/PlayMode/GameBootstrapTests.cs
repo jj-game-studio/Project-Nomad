@@ -307,17 +307,34 @@ namespace Nomad.Game.Tests
 
         private static IEnumerator PressEscape()
         {
+            bool previousRunInBackground = Application.runInBackground;
+            InputSettings settings = InputSystem.settings;
+            var previousBackground = settings.backgroundBehavior;
+            var previousEditorInput = settings.editorInputBehaviorInPlayMode;
+            Keyboard previousKeyboard = Keyboard.current;
+
+            // 배치 모드에서 Game 뷰에 포커스가 없어도 가상 키 입력을 처리합니다.
+            Application.runInBackground = true;
+            settings.backgroundBehavior = InputSettings.BackgroundBehavior.IgnoreFocus;
+            settings.editorInputBehaviorInPlayMode = InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
             Keyboard keyboard = InputSystem.AddDevice<Keyboard>();
+            keyboard.MakeCurrent();
+
             try
             {
                 InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.Escape));
                 yield return null;
+                Assert.That(keyboard.escapeKey.isPressed, Is.True, "가상 ESC가 Input System에 도달");
                 InputSystem.QueueStateEvent(keyboard, new KeyboardState());
                 yield return null;
             }
             finally
             {
                 InputSystem.RemoveDevice(keyboard);
+                previousKeyboard?.MakeCurrent();
+                settings.editorInputBehaviorInPlayMode = previousEditorInput;
+                settings.backgroundBehavior = previousBackground;
+                Application.runInBackground = previousRunInBackground;
             }
         }
 
