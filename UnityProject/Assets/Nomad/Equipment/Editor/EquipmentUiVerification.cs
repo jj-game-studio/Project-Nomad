@@ -270,7 +270,9 @@ namespace Nomad.Equipment.Editor
                         Pointer(Point(new Vector3(0, 1, 1.5f)));
                         break;
                     case 17:
-                        Check(combat.TryAttack(Point(new Vector3(0, 1, 1.5f))) && visuals.ActiveEffects >= 3, "실제 공격/명중 효과");
+                        // 장검 베기는 VFX로, 두 대상 명중은 선 효과로 표시합니다.
+                        Check(combat.TryAttack(Point(new Vector3(0, 1, 1.5f))) && visuals.ActiveEffects >= 2 &&
+                              UnityEngine.Object.FindAnyObjectByType<SwordSlashVfx>() != null, "실제 공격/명중 효과");
                         Capture(1920, 1080, "attack");
                         frame = Time.frameCount + 35;
                         return;

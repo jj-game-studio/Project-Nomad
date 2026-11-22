@@ -53,6 +53,13 @@ namespace Nomad.Equipment
                 case "weapon-archmage-staff":
                     style = new WeaponVfxStyle(new Color(1f, 0.85f, 1f), new Color(0.7f, 0.25f, 1f), 1.3f);
                     return true;
+                // 검 3종은 모두 베기 궤적 VFX를 쓰고 색으로 구분합니다. 크기는 무기 사거리를 따릅니다.
+                case "weapon-dagger":
+                    style = new WeaponVfxStyle(new Color(0.9f, 0.97f, 1f), new Color(0.45f, 0.75f, 1f), 1f, true);
+                    return true;
+                case "demo-sword":
+                    style = new WeaponVfxStyle(Color.white, new Color(0.95f, 0.85f, 0.45f), 1f, true);
+                    return true;
                 case "weapon-greatsword":
                     style = new WeaponVfxStyle(new Color(1f, 0.97f, 0.88f), new Color(1f, 0.55f, 0.15f), 1f, true);
                     return true;

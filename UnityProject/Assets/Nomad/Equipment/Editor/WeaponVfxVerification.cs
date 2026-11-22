@@ -65,6 +65,9 @@ namespace Nomad.Equipment.Editor
                 {
                     case 0:
                         Initialize();
+                        foreach (string sword in new[] { "weapon-dagger", "demo-sword", "weapon-greatsword" })
+                            Check(WeaponVfx.TryGetStyle(Definition(sword), out WeaponVfxStyle swordStyle) && swordStyle.Slash, $"{sword} 베기 VFX");
+                        Check(!WeaponVfx.TryGetStyle(Definition("demo-unarmed"), out _), "맨손은 기존 선 효과");
                         Equip("weapon-dagger");
                         visuals.ShowRange = true;
                         break;
@@ -172,6 +175,9 @@ namespace Nomad.Equipment.Editor
             Check(slot >= 0 && equipment.TryEquip(slot, EquipmentSlot.Weapon1) && equipment.SelectWeapon(EquipmentSlot.Weapon1) &&
                   combat.CurrentWeapon.ItemId == itemId, $"{itemId} 장착");
         }
+
+        private static ItemDefinition Definition(string itemId) =>
+            AssetDatabase.LoadAssetAtPath<ItemDefinition>($"{WeaponContentAuthoring.ItemFolder}/{itemId}.asset");
 
         private static GameObject Ramp()
         {
