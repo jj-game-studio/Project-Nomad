@@ -264,6 +264,7 @@ namespace Nomad.Gameplay.Editor
             yield return Until(() => Scrap(inventory) == looted, "Take All transferred real chest contents", 2f);
             LootPanel().Find("Close").GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
             yield return Until(() => LootPanel() == null, "chest panel closed", 2f);
+            yield return VerifyStamina();
 
             // 생성이 시작되면 날아가던 발사체와 이전 세대를 즉시 비활성화합니다.
             Projectile prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Nomad/Combat/PlayerProjectile.prefab").GetComponent<Projectile>();
@@ -315,6 +316,39 @@ namespace Nomad.Gameplay.Editor
             InputSystem.QueueStateEvent(mouse, new MouseState { position = aim });
             yield return null;
             InputSystem.RemoveDevice(mouse);
+        }
+
+        // 실제 Shift 구르기가 스태미나를 쓰고, 캐릭터 옆 게이지와 하단 HUD가 같은 값을 표시하는지 확인합니다(#146).
+        private static IEnumerator VerifyStamina()
+        {
+            GameObject player = controls.Player;
+            var stamina = player.GetComponent<PlayerStamina>();
+            var movement = player.GetComponent<PlayerMovement>();
+            var sideHud = player.GetComponent<Nomad.WorldHud.CharacterStaminaHud>();
+            var hud = player.GetComponent<Nomad.Hud.PlayerHud>();
+            Require(stamina != null && sideHud != null && hud != null, "stamina and both HUDs on player");
+            yield return Until(() => stamina.Current >= stamina.Maximum, "stamina starts full", 5f);
+
+            yield return Press(UnityEngine.InputSystem.Key.LeftShift);
+            float afterRoll = stamina.Maximum - stamina.RollCost;
+            Require(stamina.Current <= afterRoll + 1f, "Shift roll spends stamina");
+            yield return null;
+            Require(Mathf.Abs(sideHud.Fraction - hud.StaminaFraction) < 0.02f && sideHud.Fraction < 1f,
+                "side gauge and bottom HUD show same partial stamina");
+            yield return Until(() => sideHud.Visible, "side stamina gauge visible", 1f);
+
+            // 쿨다운이 지난 뒤 스태미나를 비우면 구르기가 거절되고 부족 알림이 갑니다.
+            yield return Until(() => !movement.IsRolling, "roll ends", 2f);
+            float ready = Time.time + 1.1f;
+            yield return Until(() => Time.time >= ready, "roll cooldown elapses", 3f);
+            int alerts = 0;
+            stamina.Insufficient += () => alerts++;
+            Require(stamina.TrySpend(Mathf.FloorToInt(stamina.Current)), "drain stamina fixture");
+            yield return Press(UnityEngine.InputSystem.Key.LeftShift);
+            Require(!movement.IsRolling && alerts == 1, "roll refused when stamina is low");
+
+            float drained = stamina.Current;
+            yield return Until(() => stamina.Current > drained + 1f, "stamina recovers after delay", 3f);
         }
 
         private static IEnumerator VerifyStaff(PlayerEquipmentCombat shooting, PlayerEquipment equipment, PlayerInventory inventory, Vector2 aim)
