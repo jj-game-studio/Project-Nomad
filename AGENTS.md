@@ -45,6 +45,12 @@ Read these process docs when the step applies:
 - Keep the PR body current: changed areas, progress, verification results, and open decisions.
 - Reviewer: the task's human owner; all members when everyone must agree (details in `docs/process/review-and-merge.md`).
 
+### ThirdParty asset submodule
+
+- Open a PR against `main` in `jj-game-studio/Project-Nomad-Assets` for changes under `UnityProject/Assets/ThirdParty`. Merge it after the required checks and approvals.
+- In a separate `Project-Nomad` PR linked to the asset PR and the tracking Issue, update the submodule pointer to the resulting asset commit. Before merging the project PR, confirm the referenced commit is reachable from `Project-Nomad-Assets/main`.
+- After both PRs merge, run `git submodule update --init --recursive -- UnityProject/Assets/ThirdParty` from a clean checkout of `Project-Nomad/main` and confirm the submodule checks out the recorded commit. Record the result in the tracking Issue.
+
 ## 4. Implement, verify, review
 
 - Within the allowed scope, implement and fix errors on your own. Run the needed checks; report checks you could not run with the reason, never as passed.
