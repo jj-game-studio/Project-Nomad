@@ -1,5 +1,7 @@
 # 3m 지형과 단일 통합 테스트
 
+현재 이 저장 통합씬에는 플레이어 사격·체력, 기존 E키 루팅, 일반/엘리트 전투와 사망/런 재시작도 연결되어 있습니다. `Nomad > Gameplay > Open Integrated Gameplay`로 바로 실행합니다. 일반 플레이 HUD와 F1 진단 표시, 검증 결과 및 부족한 게임 루프는 [통합 게임플레이](gameplay-integration.md)를 참고합니다.
+
 조명·포스트 프로세싱·Kingdom 식생/엄폐물 꾸밈은 별도 `TerrainTest` 씬에서 검토합니다. [TerrainTest 씬과 필드 꾸밈](terrain-dressing.md)을 참고합니다.
 
 ## 현재 규격

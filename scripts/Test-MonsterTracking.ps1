@@ -87,7 +87,8 @@ finally {
 $failedTests = @()
 if ($null -ne $result) {
     $failedTests = @($result.SelectNodes('//test-case[@result="Failed"]') | ForEach-Object {
-        $message = [string] $_.failure.message
+        $messageNode = $_.SelectSingleNode('failure/message')
+        $message = if ($messageNode) { $messageNode.InnerText } else { '' }
         if ($message.Length -gt 1200) { $message = $message.Substring(0, 1200) }
         [ordered] @{ name = [string] $_.fullname; message = $message }
     })

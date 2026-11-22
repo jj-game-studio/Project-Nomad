@@ -1,4 +1,0 @@
-{
-    "name": "Nomad.Monsters",
-    "references": ["Nomad.Combat"]
-}
