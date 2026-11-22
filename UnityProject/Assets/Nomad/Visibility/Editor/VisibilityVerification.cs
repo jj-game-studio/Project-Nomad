@@ -228,6 +228,7 @@ namespace Nomad.Visibility.Editor
                 case 7:
                     Evaluate();
                     Check(!rear.IsVisible, "teleport invalidates stale visibility");
+                    VerifyNearby();
                     Capture("visibility-forward.png");
                     Point(Vector3.back);
                     break;
@@ -249,6 +250,85 @@ namespace Nomad.Visibility.Editor
                     Finish(0);
                     break;
             }
+        }
+
+        private static void VerifyNearby()
+        {
+            float savedRadius = sight.NearbyRadius;
+            float savedDistance = sight.Distance;
+            Vector3 savedRear = rear.transform.position;
+            sight.SetDirection(Vector3.forward);
+            sight.NearbyRadius = 3f;
+
+            Check(sight.CanSee(sight.Eye - Vector3.forward * 2f), "nearby rear visible outside cone");
+            Check(sight.CanSee(sight.Eye - Vector3.forward * 3f), "nearby edge included");
+            Check(!sight.CanSee(sight.Eye - Vector3.forward * 3.1f), "outside nearby rear hidden");
+            Check(sight.CanSee(sight.Eye + Vector3.right * 2f), "nearby side visible");
+            Check(sight.RangeAtAngle(180f) == 3f && sight.RangeAtAngle(0f) == savedDistance, "cone and nearby ranges combined");
+
+            rear.transform.position = player.position - Vector3.forward * 2f;
+            Physics.SyncTransforms();
+            rear.Evaluate(sight);
+            Check(rear.IsVisible && !rear.GetComponentInChildren<Renderer>().forceRenderingOff, "nearby reveals real rear enemy");
+            sight.NearbyRadius = 1.5f;
+            rear.Evaluate(sight);
+            Check(!rear.IsVisible, "reducing nearby radius hides rear enemy");
+            sight.NearbyRadius = 0f;
+            Check(!sight.CanSee(sight.Eye - Vector3.forward * 2f), "zero disables nearby vision");
+            sight.GetComponent<VisibilityDebugRange>().Configure(sight);
+            LineRenderer circle = sight.transform.Find("Visibility Debug Range/Nearby Circle").GetComponent<LineRenderer>();
+            Check(!circle.enabled, "zero hides debug circle");
+
+            sight.NearbyRadius = 3f;
+            GameObject wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            wall.name = "Nearby verification wall";
+            wall.transform.position = player.position - Vector3.forward + Vector3.up;
+            wall.transform.localScale = new Vector3(3f, 3f, 0.2f);
+            Physics.SyncTransforms();
+            rear.Evaluate(sight);
+            Check(!rear.IsVisible && !sight.CanSee(sight.Eye - Vector3.forward * 2f), "nearby cannot see through wall");
+            sight.GetComponent<VisibilityDebugRange>().Configure(sight);
+            LineRenderer clipped = sight.transform.Find("Visibility Debug Range/Nearby Boundary").GetComponent<LineRenderer>();
+            Check(Vector3.Distance(clipped.GetPosition(64), sight.Eye) < 1.1f, "nearby debug boundary stops at wall");
+            Check(Mathf.Abs(Vector3.Distance(circle.GetPosition(0), sight.Eye) - 3f) < 0.01f, "debug circle uses nearby radius");
+            Check(Vector3.Distance(circle.GetPosition(0), circle.GetPosition(circle.positionCount - 1)) < 0.001f, "debug circle closes");
+
+            wall.GetComponent<Collider>().isTrigger = true;
+            Physics.SyncTransforms();
+            Check(sight.CanSee(sight.Eye - Vector3.forward * 2f), "nearby ignores trigger");
+            wall.GetComponent<Collider>().enabled = false;
+            wall.GetComponent<Renderer>().enabled = false;
+            Object.Destroy(wall);
+            sight.GetComponent<VisibilityDebugRange>().Configure(sight);
+
+            sight.Configure(player, Camera.main, 1f, sight.Angle);
+            Check(sight.CanSee(sight.Eye + Vector3.forward * 2f), "nearby can exceed forward distance");
+            sight.Configure(player, Camera.main, savedDistance, sight.Angle);
+            sight.SetDirection(Vector3.forward);
+            rear.Evaluate(sight);
+            Transform bush = GameObject.Find("Bush cutaway sample").transform;
+            Vector3 savedBushPosition = bush.position;
+            Vector3 savedBushScale = bush.localScale;
+            bush.position = player.position - Vector3.forward * 1.5f;
+            bush.localScale = Vector3.one * 0.6f;
+            var open = Capture("visibility-nearby-open.png");
+            Vector4 parameters = Shader.GetGlobalVector("_NomadVisibilityParams");
+            Shader.SetGlobalVector("_NomadVisibilityParams", new Vector4(parameters.x, parameters.y, parameters.z, 0f));
+            var closed = Capture("visibility-nearby-closed.png");
+            Shader.SetGlobalVector("_NomadVisibilityParams", parameters);
+            Check(open.red > closed.red + 20, "nearby mask reveals enemy inside rear foliage in render");
+            bush.position = savedBushPosition;
+            bush.localScale = savedBushScale;
+
+            sight.NearbyRadius = -1f;
+            Check(sight.NearbyRadius == 0f, "nearby radius minimum");
+            sight.NearbyRadius = 21f;
+            Check(sight.NearbyRadius == 20f, "nearby radius maximum");
+            sight.NearbyRadius = savedRadius;
+            rear.transform.position = savedRear;
+            Physics.SyncTransforms();
+            rear.Evaluate(sight);
+            sight.GetComponent<VisibilityDebugRange>().Configure(sight);
         }
 
         private static (int green, int red) Capture(string name)

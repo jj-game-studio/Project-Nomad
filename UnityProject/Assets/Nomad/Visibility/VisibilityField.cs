@@ -8,7 +8,7 @@ namespace Nomad.Visibility
     [DefaultExecutionOrder(600)]
     public sealed class VisibilityField : MonoBehaviour
     {
-        private const int Samples = 256;
+        private const int Samples = 512;
         [SerializeField] private PlayerVisibility sight;
         [SerializeField] private Shader foliageShader;
         [SerializeField] private bool connectGeneratedFoliage = true;
@@ -56,9 +56,10 @@ namespace Nomad.Visibility
             // 식생은 눈높이 방사선으로 부분 노출합니다. 적은 별도의 3D 표본으로 판정합니다.
             for (int index = 0; index < Samples; index++)
             {
-                float degrees = -sight.Angle * 0.5f + sight.Angle * index / (Samples - 1f);
+                float degrees = -180f + 360f * index / (Samples - 1f);
                 Vector3 direction = Quaternion.AngleAxis(degrees, Vector3.up) * sight.Forward;
-                float clear = sight.ClearDistance(sight.Eye, direction, sight.Distance);
+                float range = sight.RangeAtAngle(degrees);
+                float clear = range > 0f ? sight.ClearDistance(sight.Eye, direction, range) : 0f;
                 pixels[index] = clear;
             }
             distances.SetPixelData(pixels, 0);
@@ -71,7 +72,7 @@ namespace Nomad.Visibility
         {
             Shader.SetGlobalVector("_NomadVisibilityEye", sight.Eye);
             Shader.SetGlobalVector("_NomadVisibilityForward", sight.Forward);
-            Shader.SetGlobalVector("_NomadVisibilityParams", new Vector4(sight.Distance, sight.Angle * Mathf.Deg2Rad, Samples, 0f));
+            Shader.SetGlobalVector("_NomadVisibilityParams", new Vector4(sight.Distance, sight.Angle * Mathf.Deg2Rad, Samples, sight.NearbyRadius));
             Shader.SetGlobalFloat("_NomadVisibilityActive", 1f);
         }
 

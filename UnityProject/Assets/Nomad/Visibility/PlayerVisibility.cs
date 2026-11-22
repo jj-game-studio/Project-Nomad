@@ -12,11 +12,13 @@ namespace Nomad.Visibility
         [SerializeField] private Camera viewCamera;
         [SerializeField, Min(1f)] private float distance = 24f;
         [SerializeField, Range(1f, 360f)] private float angle = 120f;
+        [Tooltip("방향과 관계없이 볼 수 있는 주변 반경입니다. 벽은 통과하지 않으며 0이면 끕니다.")]
+        [SerializeField, Range(0f, 20f)] private float nearbyRadius = 3f;
         [SerializeField, Min(0.1f)] private float eyeHeight = 1.2f;
         [SerializeField] private LayerMask blockers = Physics.DefaultRaycastLayers;
         [SerializeField, Range(0.02f, 0.2f)] private float interval = 0.08f;
         [Header("디버그")]
-        [Tooltip("F3으로도 전환합니다. 청록색은 최대 범위, 노란색은 장애물에 막히는 눈높이 경계입니다.")]
+        [Tooltip("F3 전환: 청록색 부채꼴, 보라색 주변 원형, 노란색 장애물 경계입니다.")]
         [SerializeField] private bool showDebugRange;
 
         private readonly RaycastHit[] hits = new RaycastHit[64];
@@ -31,6 +33,7 @@ namespace Nomad.Visibility
         public Vector3 Forward => forward;
         public float Distance => distance;
         public float Angle => angle;
+        public float NearbyRadius { get => Mathf.Clamp(nearbyRadius, 0f, 20f); set => nearbyRadius = Mathf.Clamp(value, 0f, 20f); }
         public bool Available => isActiveAndEnabled && observer != null && observer.gameObject.activeInHierarchy;
         public int Revision { get; private set; }
         public bool ShowDebugRange { get => showDebugRange; set => showDebugRange = value; }
@@ -101,10 +104,19 @@ namespace Nomad.Visibility
 
         public bool CanSee(Vector3 point, Transform target = null)
         {
-            if (!InCone(point)) return false;
+            if (!Available) return false;
+            Vector3 offset = point - observer.position;
+            offset.y = 0f;
+            bool nearby = NearbyRadius > 0f && offset.sqrMagnitude <= NearbyRadius * NearbyRadius;
+            if (!nearby && !InCone(point)) return false;
+
+            // 주변 원형도 일반 시야이므로 벽/지형에 의한 차단 검사를 유지합니다.
             Vector3 ray = point - Eye;
             return ClearDistance(Eye, ray.normalized, ray.magnitude, target) >= ray.magnitude - 0.01f;
         }
+
+        public float RangeAtAngle(float degrees) => Mathf.Abs(degrees) <= angle * 0.5f ?
+            Mathf.Max(distance, NearbyRadius) : NearbyRadius;
 
         public float ClearDistance(Vector3 origin, Vector3 direction, float length, Transform target = null)
         {

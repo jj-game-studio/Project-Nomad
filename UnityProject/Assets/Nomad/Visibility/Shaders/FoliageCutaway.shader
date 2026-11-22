@@ -58,9 +58,10 @@ Shader "Nomad/Visibility/Foliage Cutaway"
                 float2 forward = _NomadVisibilityForward.xz;
                 float signedAngle = atan2(forward.y * delta.x - forward.x * delta.y, dot(forward, delta));
                 float halfAngle = _NomadVisibilityParams.y * 0.5;
-                if (abs(signedAngle) <= halfAngle && length(delta) <= _NomadVisibilityParams.x)
+                bool nearby = _NomadVisibilityParams.w > 0 && length(delta) <= _NomadVisibilityParams.w;
+                if (nearby || (abs(signedAngle) <= halfAngle && length(delta) <= _NomadVisibilityParams.x))
                 {
-                    float u = saturate((signedAngle + halfAngle) / (2.0 * halfAngle));
+                    float u = saturate((signedAngle + PI) / TWO_PI);
                     float stepSize = 1.0 / _NomadVisibilityParams.z;
                     // 경계의 양쪽 중 짧은 거리를 사용해 얇은 벽 뒤 누출을 줄입니다.
                     float a = SAMPLE_TEXTURE2D_LOD(_NomadVisibilityDistances, sampler_NomadVisibilityDistances, float2(u, 0.5), 0).r;
