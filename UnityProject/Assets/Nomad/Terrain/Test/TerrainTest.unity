@@ -1198,6 +1198,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Loot.TerrainLootIntegration
   inventory: {fileID: 451336759}
   status: {fileID: 672197762}
+  useScatteredCrateSlots: 1
 --- !u!114 &1930808195
 MonoBehaviour:
   m_ObjectHideFlags: 0
