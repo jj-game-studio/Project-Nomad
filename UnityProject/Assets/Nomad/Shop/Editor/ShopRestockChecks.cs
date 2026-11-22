@@ -111,6 +111,7 @@ namespace Nomad.Shop.Editor
         }
 
         private static void Require(bool condition, string label) => ShopTransactionChecks.Require(condition, label);
-        private static string Read(string path) => panel.transform.Find("Shop Window/" + path).GetComponent<Text>().text;
+        private static string Read(string path) => (panel.transform.Find("Shop Window/" + path) ??
+            panel.transform.Find("Shop Window/Trade Popup/Card/" + path)).GetComponent<Text>().text;
     }
 }
