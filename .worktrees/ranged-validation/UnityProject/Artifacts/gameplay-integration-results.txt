@@ -1,1 +1,0 @@
-GAMEPLAY_INTEGRATION_PASS: saved scene, seeds0/7/51 and replay, valid 6+1+1 actors, generation cleanup/projectiles, real tracker across height, real PlayerCombat/projectiles, UI blocking, E-key chest inventory, real melee death, input lock and scene-reload retry
