@@ -147,6 +147,7 @@ namespace Nomad.Game.Editor
             Set(player.AddComponent<PlayerMovement>(), "viewCamera", camera);
             player.AddComponent<Health>();
             SetArray(player.AddComponent<PlayerInventory>(), "items", items);
+            player.AddComponent<Nomad.Shop.PlayerWallet>();
 
             // 기존 사격 컴포넌트는 장비 전투가 켜지면 스스로 꺼지며, 기존 참조 호환을 위해 둡니다.
             PlayerCombat legacy = player.AddComponent<PlayerCombat>();
