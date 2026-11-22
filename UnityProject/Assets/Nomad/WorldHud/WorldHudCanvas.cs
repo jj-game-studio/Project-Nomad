@@ -43,8 +43,10 @@ namespace Nomad.WorldHud
             if (screen.z <= camera.nearClipPlane || screen.x < 0 || screen.y < 0 ||
                 screen.x > Screen.width || screen.y > Screen.height) return false;
 
+            // 캡처 등으로 카메라 모드가 되면 그 카메라 기준으로 변환해야 위치가 맞습니다.
+            Camera eventCamera = canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
             RectTransformUtility.ScreenPointToLocalPointInRectangle((RectTransform)canvas.transform,
-                screen, null, out Vector2 local);
+                screen, eventCamera, out Vector2 local);
             rect.anchoredPosition = local + offset;
             return true;
         }

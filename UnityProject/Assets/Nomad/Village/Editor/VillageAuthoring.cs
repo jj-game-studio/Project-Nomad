@@ -36,6 +36,7 @@ namespace Nomad.Village.Editor
 
             CreateEntrance("Player Entrance", null, StartPosition, Quaternion.identity);
             Nomad.Shop.Editor.VillageShopAuthoring.ApplyToScene(scene);
+            PrayerTreeAuthoring.ApplyToScene(scene);
 
             Light sun = new GameObject("Sun").AddComponent<Light>();
             sun.type = LightType.Directional;

@@ -18675,6 +18675,9 @@ PrefabInstance:
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 1948078918282010, guid: 1847aa3ec5e8b29468675ceacfd7f8e6, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 599830792}
     - targetCorrespondingSourceObject: {fileID: 1137161954892954, guid: 1847aa3ec5e8b29468675ceacfd7f8e6, type: 3}
       insertIndex: -1
       addedObject: {fileID: 599830790}
@@ -18711,6 +18714,26 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 4300002, guid: 70e593a46123bc7418d8d68263bbdbbf, type: 3}
+--- !u!1 &599830791 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1948078918282010, guid: 1847aa3ec5e8b29468675ceacfd7f8e6, type: 3}
+  m_PrefabInstance: {fileID: 599830787}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &599830792
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 599830791}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d2591a48265d53d46b9c728d96c7ba3f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Nomad.Village.PrayerTree
+  interactionId: village-prayer-tree
+  trunkRadius: 2.4
+  pointHeight: 1
 --- !u!1001 &607311634
 PrefabInstance:
   m_ObjectHideFlags: 0

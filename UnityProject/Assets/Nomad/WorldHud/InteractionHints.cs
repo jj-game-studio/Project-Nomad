@@ -18,6 +18,8 @@ namespace Nomad.WorldHud
         [SerializeField] private Camera viewCamera;
         [SerializeField] private Vector2 markerOffset = new Vector2(0, 28);
         [SerializeField, Min(2f)] private float displayRadius = 5f;
+        private const string DefaultAction = "상호작용";
+        private static TMP_FontAsset labelFont;
         private readonly List<Marker> markers = new();
         private readonly HashSet<MonoBehaviour> seen = new();
         private readonly List<IInteractable> candidates = new();
@@ -36,6 +38,7 @@ namespace Nomad.WorldHud
             public RectTransform Root;
             public WorldHudGraphic Outer;
             public TMP_Text Key;
+            public IInteractable Target;
         }
 
         private void Awake()
@@ -81,6 +84,14 @@ namespace Nomad.WorldHud
                 marker.Outer.color = selected ? new Color32(255, 210, 138, 255) : Color.white;
                 marker.Root.localScale = Vector3.one * (selected ? 1.15f : 1);
                 marker.Key.gameObject.SetActive(selected);
+                if (selected && !ReferenceEquals(marker.Target, candidate))
+                {
+                    // 대상이 바뀔 때만 문구를 갱신해 매 프레임 텍스트 재구성을 피합니다.
+                    marker.Target = candidate;
+                    string action = (candidate as IInteractionAction)?.InteractionAction;
+                    marker.Key.text = $"<b>E</b>  {(string.IsNullOrWhiteSpace(action) ? DefaultAction : action)}";
+                }
+
                 VisibleCount++;
             }
 
@@ -134,16 +145,31 @@ namespace Nomad.WorldHud
             var keyObject = new GameObject("E Key", typeof(RectTransform));
             keyObject.transform.SetParent(outer.transform, false);
             var key = keyObject.AddComponent<TextMeshProUGUI>();
-            key.font = Resources.Load<TMP_FontAsset>("NomadHudFont");
-            key.text = "E";
-            key.fontSize = 19;
+
+            // 아이콘 위에 "E 행동"을 표시합니다. 행동 이름이 한글이라 한글 글꼴을 씁니다.
+            key.font = LabelFont();
+            key.text = "<b>E</b>  " + DefaultAction;
+            key.fontSize = 18;
             key.alignment = TextAlignmentOptions.Center;
+            key.textWrappingMode = TextWrappingModes.NoWrap;
             key.color = Color.white;
+            key.outlineWidth = 0.2f;
+            key.outlineColor = new Color32(0, 0, 0, 200);
             key.raycastTarget = false;
-            key.rectTransform.sizeDelta = new Vector2(32, 24);
-            key.rectTransform.anchoredPosition = new Vector2(0, -28);
+            key.rectTransform.sizeDelta = new Vector2(160, 26);
+            key.rectTransform.anchoredPosition = new Vector2(0, 34);
             outer.gameObject.SetActive(false);
             return new Marker { Root = outer.rectTransform, Outer = outer, Key = key };
+        }
+
+        private static TMP_FontAsset LabelFont()
+        {
+            if (labelFont != null)
+                return labelFont;
+
+            var font = Resources.Load<Font>("ShopFonts/NanumGothic-Regular");
+            labelFont = font != null ? TMP_FontAsset.CreateFontAsset(font) : null;
+            return labelFont != null ? labelFont : Resources.Load<TMP_FontAsset>("NomadHudFont");
         }
 
         private void LateUpdate() => Refresh();
