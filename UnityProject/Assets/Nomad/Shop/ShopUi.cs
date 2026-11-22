@@ -118,6 +118,32 @@ namespace Nomad.Shop
             return input;
         }
 
+        internal static Slider QuantitySlider(Transform parent, float x, float y, float width)
+        {
+            RectTransform rect = Rect(parent, "Quantity Slider", x, y, width, 32);
+            Rounded(rect, Color.clear, 0, 0);
+            Rounded(Rect(rect, "Track", 12, 12, width - 24, 8), Slot, 4, 0).raycastTarget = false;
+            RectTransform fillArea = Rect(rect, "Fill area", 12, 12, width - 24, 8);
+            RectTransform fill = Rect(fillArea, "Fill", 0, 0, width - 24, 8);
+            fill.anchorMin = Vector2.zero;
+            fill.anchorMax = Vector2.one;
+            fill.offsetMin = fill.offsetMax = Vector2.zero;
+            Rounded(fill, Forest, 4, 0).raycastTarget = false;
+            RectTransform handleArea = Rect(rect, "Handle area", 12, 0, width - 24, 32);
+            RectTransform handle = Rect(handleArea, "Handle", 0, 4, 24, 24);
+            handle.pivot = Vector2.one * 0.5f;
+            handle.sizeDelta = new Vector2(24, -8);
+            handle.anchoredPosition = Vector2.zero;
+            var grip = Rounded(handle, Surface, 12, 2, GoldInk);
+            var slider = rect.gameObject.AddComponent<Slider>();
+            slider.fillRect = fill;
+            slider.handleRect = handle;
+            slider.targetGraphic = grip;
+            slider.wholeNumbers = true;
+            slider.navigation = new Navigation { mode = Navigation.Mode.None };
+            return slider;
+        }
+
         internal static void Coin(Transform parent, float x, float y, float size)
         {
             RectTransform coin = Rect(parent, "Coin", x, y, size, size);
@@ -140,7 +166,7 @@ namespace Nomad.Shop
 
         internal static RectTransform Grid(Transform parent, string name, float x, bool merchant = false)
         {
-            RectTransform viewport = Rect(parent, name, x, 206, 530, 350);
+            RectTransform viewport = Rect(parent, name, x, 206, 530, 530);
             Rounded(viewport, merchant ? Canvas : Slot, 18, merchant ? 0 : 1, Border);
             viewport.gameObject.AddComponent<RectMask2D>();
             RectTransform content = Rect(viewport, "Content", 8, 8, 514, 334);
@@ -156,6 +182,7 @@ namespace Nomad.Shop
             scroll.content = content;
             scroll.horizontal = false;
             scroll.movementType = ScrollRect.MovementType.Clamped;
+            scroll.inertia = false;
             scroll.scrollSensitivity = 25;
             return content;
         }
