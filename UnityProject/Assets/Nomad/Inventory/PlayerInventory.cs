@@ -17,6 +17,17 @@ namespace Nomad.Inventory
 
         public int UsedSlots => stackOrder.Count;
         internal InventoryPanel Panel { get; set; }
+        internal bool HasOpenTrade { get; private set; }
+        private int tradeClosedFrame = -1;
+        internal bool BlocksTradeInput => HasOpenTrade || Time.frameCount == tradeClosedFrame;
+
+        internal void SetTrading(bool open)
+        {
+            HasOpenTrade = open;
+            if (!open)
+                tradeClosedFrame = Time.frameCount;
+        }
+
         public event Action Changed;
 
         private void Awake()

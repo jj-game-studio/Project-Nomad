@@ -144,6 +144,9 @@ namespace Nomad.Inventory
                 return;
             }
 
+            if (inventory.BlocksTradeInput)
+                return;
+
             if (splitDialog?.IsOpen == true)
             {
                 if (!panel.activeInHierarchy)
@@ -196,6 +199,15 @@ namespace Nomad.Inventory
             int index = FindPointerSlot(mouse);
             PlayerInventory.ItemStack stack = index >= 0 ? inventory.GetSlot(index) : default;
             tooltip.Show(stack.Item, stack.Count, mouse.position.ReadValue(), EventCamera);
+        }
+
+        internal void CloseForTrade()
+        {
+            splitDialog?.Close();
+            CloseChest();
+            CancelDrag();
+            tooltip.Hide();
+            panel.SetActive(false);
         }
 
         internal void ShowChest(LootChest chest, PlayerInteraction interaction)

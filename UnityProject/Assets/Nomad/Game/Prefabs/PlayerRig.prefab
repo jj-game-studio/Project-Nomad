@@ -224,6 +224,7 @@ GameObject:
   - component: {fileID: 6769945103758784551}
   - component: {fileID: 3340809101191599813}
   - component: {fileID: 1887090300961367808}
+  - component: {fileID: 974826207303630832}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -648,3 +649,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Player.TopDownCamera
   target: {fileID: 1411511560905740220}
+--- !u!114 &974826207303630832
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5530718413862153197}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 15f45f7d756c2c545b12b7c227ccd3f3, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::Nomad.Shop.PlayerWallet
+  startingGold: 1000
