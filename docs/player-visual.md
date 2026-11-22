@@ -23,3 +23,12 @@ Issue #134. 기존 Synty PolygonPrototype 남성 캐릭터를 사용합니다. �
 - 원본 캐릭터는 Animator와 Avatar가 있으나 Animator Controller가 없습니다. 이번 프리셋은 정적 기본 자세입니다. 이동·공격 애니메이션 및 무기 손 부착은 별도 후속입니다.
 - 기존 Game PlayerRig, GameConfig, TerrainIntegration과 지역 씬은 교체하지 않았습니다. 이 PR의 프리셋 외형 검토 후 실제 게임 연결 범위를 정합니다.
 - Windows 배포 빌드와 사람의 외형·크기·조작감 수용 판단은 별도입니다.
+
+## 검증 결과 (2026-11-23)
+
+Unity 6000.6.9f1에서 생성·에셋 검사가 통과했습니다. 저장된 검토 씬의 Play 158프레임에서 실제 WASD/Space/Shift 입력, 접지·이동·회전·점프/착지·구르기·벽 충돌을 확인했습니다. 정면·탑다운 캡처로 모델 표시와 방향을 확인했습니다. 단차는 수동 검토 대상으로 남습니다.
+
+- 생성: `unity run <UnityProject 절대 경로> -- -executeMethod Nomad.PlayerVisual.Editor.PlayerVisualAuthoring.Build`
+- Play 검사: `unity open <UnityProject 절대 경로> --batchmode --args "-executeMethod Nomad.PlayerVisual.Editor.PlayerVisualVerification.Run"` (검사 완료 후 Editor 종료)
+- 근거: 로컬 `Artifacts/player-visual-build.log`, `player-visual-play.log`, `player-visual-front.png`, `player-visual-top.png`.
+- 최초 Play에서 UnityEditor.Search.SearchDatabase 시작 인덱싱의 ArgumentOutOfRangeException이 1회 기록되었습니다. 프리셋 검사는 통과했으나 Editor 로그 전체가 무오류인 것으로 보고하지 않습니다.
