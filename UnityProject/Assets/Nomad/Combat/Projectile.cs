@@ -26,6 +26,14 @@ namespace Nomad.Combat
         public static bool TryLaunch(Projectile prefab, Transform owner, Vector3 origin, Vector3 aimPoint,
             LayerMask layers, float speed, float range, int damage, Action<Vector3> impact)
         {
+            return TryLaunch(prefab, owner, origin, aimPoint, layers, speed, range, damage, impact, out _);
+        }
+
+        // 발사된 인스턴스가 필요한 호출자(시각 효과 부착 등)를 위한 오버로드입니다.
+        public static bool TryLaunch(Projectile prefab, Transform owner, Vector3 origin, Vector3 aimPoint,
+            LayerMask layers, float speed, float range, int damage, Action<Vector3> impact, out Projectile launched)
+        {
+            launched = null;
             Vector3 path = aimPoint - origin;
             if (prefab == null || owner == null || speed <= 0f || range <= 0f || damage <= 0 || path.sqrMagnitude < 0.000001f)
                 return false;
@@ -47,6 +55,7 @@ namespace Nomad.Combat
             projectile.remainingDistance = range;
             projectile.damage = damage;
             projectile.impact = impact;
+            launched = projectile;
             return true;
         }
 

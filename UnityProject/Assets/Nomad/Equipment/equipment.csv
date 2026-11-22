@@ -1,15 +1,23 @@
-item_id,display_name,description,max_stack,equipment_type,attack_power,defense,attack_mode,attack_range,attack_interval
-demo-unarmed,맨손,맨손 공격 설정용 데이터,1,Weapon,5,0,Melee,1.5,0.5
-demo-sword,검,전방의 여러 대상을 타격하는 검,1,Weapon,25,0,Melee,2,0.6
-demo-bow,활,투사체 공격 검증용 활,1,Weapon,35,0,Ranged,200,0.8
-demo-helmet,투구,검증용 머리 방어구,1,Head,0,10,None,0,0
-demo-armor,갑옷,검증용 신체 방어구,1,Body,0,20,None,0,0
-demo-mask,가면,검증용 얼굴 장비,1,Face,0,5,None,0,0
-demo-charm,장신구,검증용 장신구,1,Accessory,0,5,None,0,0
-demo-ring,반지,검증용 반지,1,Ring,0,5,None,0,0
-demo-bag,가방,용량 확장 효과는 없는 검증용 장비,1,Bag,0,5,None,0,0
-demo-totem,토템,검증용 토템,1,Totem,0,5,None,0,0
-demo-armor-light,낡은 갑옷,감소 표시 비교용 방어력10 갑옷,1,Body,0,10,None,0,0
-demo-armor-heavy,튼튼한 갑옷,증가 표시 비교용 방어력30 갑옷,1,Body,0,30,None,0,0
-demo-helmet-light,낡은 투구,감소 표시 비교용 방어력5 투구,1,Head,0,5,None,0,0
-demo-helmet-heavy,튼튼한 투구,증가 표시 비교용 방어력15 투구,1,Head,0,15,None,0,0
+item_id,display_name,description,max_stack,equipment_type,attack_power,defense,attack_mode,attack_range,attack_interval,mana_cost
+demo-unarmed,맨손,맨손 공격 설정용 데이터,1,Weapon,5,0,Melee,1.5,0.5,0
+weapon-dagger,단검,사거리가 짧고 빠르게 휘두릅니다.,1,Weapon,20,0,Melee,1.25,0.3,0
+demo-sword,장검,전방의 여러 대상을 타격하는 검,1,Weapon,25,0,Melee,2,0.6,0
+weapon-greatsword,대검,넓은 범위를 강하게 베며 다음 공격까지 시간이 걸립니다.,1,Weapon,42,0,Melee,3.15,1.05,0
+weapon-shortbow,단궁,가방의 화살 1개를 소모하여 빠르게 쏩니다.,1,Weapon,23,0,Bow,16,0.45,0
+demo-bow,사냥활,가방의 화살 1개를 소모합니다.,1,Weapon,35,0,Bow,24,0.8,0
+weapon-longbow,장궁,가방의 화살 1개를 소모하여 먼 거리까지 쏩니다.,1,Weapon,50,0,Bow,34,1.15,0
+weapon-apprentice-staff,수련 지팡이,한 발에 마나 6을 소모합니다.,1,Weapon,16,0,Staff,16,0.28,6
+weapon-crystal-staff,수정 지팡이,한 발에 마나 10을 소모합니다.,1,Weapon,27,0,Staff,22,0.46,10
+weapon-archmage-staff,대마법사 지팡이,한 발에 마나 17을 소모합니다.,1,Weapon,44,0,Staff,28,0.75,17
+weapon-arrow,화살,활을 한 번 쏠 때 하나씩 소모합니다.,99,None,0,0,None,0,0,0
+demo-helmet,투구,검증용 머리 방어구,1,Head,0,10,None,0,0,0
+demo-armor,갑옷,검증용 신체 방어구,1,Body,0,20,None,0,0,0
+demo-mask,가면,검증용 얼굴 장비,1,Face,0,5,None,0,0,0
+demo-charm,장신구,검증용 장신구,1,Accessory,0,5,None,0,0,0
+demo-ring,반지,검증용 반지,1,Ring,0,5,None,0,0,0
+demo-bag,가방,용량 확장 효과는 없는 검증용 장비,1,Bag,0,5,None,0,0,0
+demo-totem,토템,검증용 토템,1,Totem,0,5,None,0,0,0
+demo-armor-light,낡은 갑옷,감소 표시 비교용 방어력10 갑옷,1,Body,0,10,None,0,0,0
+demo-armor-heavy,튼튼한 갑옷,증가 표시 비교용 방어력30 갑옷,1,Body,0,30,None,0,0,0
+demo-helmet-light,낡은 투구,감소 표시 비교용 방어력5 투구,1,Head,0,5,None,0,0,0
+demo-helmet-heavy,튼튼한 투구,증가 표시 비교용 방어력15 투구,1,Head,0,15,None,0,0,0

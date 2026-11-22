@@ -20,7 +20,7 @@ namespace Nomad.Equipment
             equipment.Changed += LogEquipment;
             foreach (ItemDefinition item in items)
                 if (item.ItemId != "demo-unarmed")
-                    inventory.Add(item.ItemId, 1);
+                    inventory.Add(item.ItemId, item.ItemId == PlayerEquipmentCombat.ArrowItemId ? 30 : 1);
 
             // 한 개를 장착한 뒤 남은 장비로 호버 비교를 바로 확인합니다.
             inventory.Add("demo-armor", 1);

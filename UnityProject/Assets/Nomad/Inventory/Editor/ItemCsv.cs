@@ -20,10 +20,12 @@ namespace Nomad.Inventory.Editor
             public readonly WeaponAttackMode AttackMode;
             public readonly float AttackRange;
             public readonly float AttackInterval;
+            public readonly int? ManaCost;
 
             public Row(string id, string name, string description, int maxStack,
                 EquipmentType? equipment = null, int attackPower = 0, int defense = 0,
-                WeaponAttackMode attackMode = WeaponAttackMode.None, float attackRange = 0, float attackInterval = 0)
+                WeaponAttackMode attackMode = WeaponAttackMode.None, float attackRange = 0, float attackInterval = 0,
+                int? manaCost = null)
             {
                 Id = id;
                 Name = name;
@@ -35,6 +37,7 @@ namespace Nomad.Inventory.Editor
                 AttackMode = attackMode;
                 AttackRange = attackRange;
                 AttackInterval = attackInterval;
+                ManaCost = manaCost;
             }
         }
 
@@ -43,16 +46,18 @@ namespace Nomad.Inventory.Editor
             var records = ReadRecords(text.TrimStart('\uFEFF'));
             string[] header = { "item_id", "display_name", "description", "max_stack" };
             string[] equipmentHeader = { "item_id", "display_name", "description", "max_stack", "equipment_type", "attack_power", "defense", "attack_mode", "attack_range", "attack_interval" };
-            bool extended = records.Count > 0 && EqualHeader(records[0], equipmentHeader);
+            var weaponHeader = new List<string>(equipmentHeader) { "mana_cost" };
+            bool hasManaCost = records.Count > 0 && EqualHeader(records[0], weaponHeader);
+            bool extended = hasManaCost || (records.Count > 0 && EqualHeader(records[0], equipmentHeader));
             if (records.Count < 2 || (!extended && !EqualHeader(records[0], header)))
-                throw new FormatException("기본4열 또는 장비10열 헤더와 데이터가 1행 이상 필요합니다.");
+                throw new FormatException("기본 4열, 장비 10열 또는 마나 비용을 포함한 11열 헤더와 데이터가 필요합니다.");
 
             var result = new List<Row>();
             var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             for (int index = 1; index < records.Count; index++)
             {
                 List<string> cells = records[index];
-                if (cells.Count != (extended ? 10 : 4))
+                if (cells.Count != records[0].Count)
                     throw new FormatException($"레코드 {index + 1}: 헤더와 열 수가 다릅니다.");
 
                 string id = cells[0];
@@ -69,6 +74,7 @@ namespace Nomad.Inventory.Editor
                 WeaponAttackMode mode = WeaponAttackMode.None;
                 float range = 0;
                 float interval = 0;
+                int? manaCost = null;
                 if (extended)
                 {
                     if (!Enum.TryParse(cells[4], false, out EquipmentType type) ||
@@ -89,20 +95,30 @@ namespace Nomad.Inventory.Editor
                         (type == EquipmentType.Weapon ? mode == WeaponAttackMode.None || range <= 0 || interval <= 0 :
                             mode != WeaponAttackMode.None || range != 0 || interval != 0))
                         throw new FormatException($"레코드 {index + 1}: 공격 방식/사거리/간격이 잘못되었습니다.");
+
+                    if (hasManaCost)
+                    {
+                        if (!int.TryParse(cells[10], NumberStyles.None, CultureInfo.InvariantCulture, out int cost) ||
+                            (mode == WeaponAttackMode.Staff ? cost <= 0 : cost != 0))
+                            throw new FormatException($"레코드 {index + 1}: 마법 지팡이만 양의 정수 mana_cost를 사용합니다.");
+                        manaCost = cost;
+                    }
+                    else if (mode == WeaponAttackMode.Staff)
+                        throw new FormatException($"레코드 {index + 1}: 마법 지팡이에 mana_cost 열이 필요합니다.");
                 }
 
-                result.Add(new Row(id, cells[1], cells[2], maxStack, equipment, attack, defense, mode, range, interval));
+                result.Add(new Row(id, cells[1], cells[2], maxStack, equipment, attack, defense, mode, range, interval, manaCost));
             }
 
             return result;
         }
 
-        private static bool EqualHeader(List<string> actual, string[] expected)
+        private static bool EqualHeader(List<string> actual, IReadOnlyList<string> expected)
         {
-            if (actual.Count != expected.Length)
+            if (actual.Count != expected.Count)
                 return false;
 
-            for (int index = 0; index < expected.Length; index++)
+            for (int index = 0; index < expected.Count; index++)
                 if (actual[index] != expected[index])
                     return false;
 

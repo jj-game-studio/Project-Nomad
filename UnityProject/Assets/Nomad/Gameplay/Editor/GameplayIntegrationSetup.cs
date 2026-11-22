@@ -1,5 +1,6 @@
 using System.IO;
 using Nomad.Combat;
+using Nomad.Equipment.Editor;
 using Nomad.Loot;
 using Nomad.Monsters;
 using Nomad.Monsters.Demo;
@@ -34,8 +35,8 @@ namespace Nomad.Gameplay.Editor
             GameObject player = controls.Player;
             if (player.GetComponent<Health>() == null) player.AddComponent<Health>();
             if (player.GetComponent<SegmentedHealthBar>() == null) player.AddComponent<SegmentedHealthBar>();
-            var shooting = player.GetComponent<PlayerCombat>();
-            if (shooting == null) shooting = player.AddComponent<PlayerCombat>();
+            var legacyCombat = player.GetComponent<PlayerCombat>();
+            if (legacyCombat != null) legacyCombat.enabled = false;
             Transform muzzle = player.transform.Find("Muzzle");
             if (muzzle == null)
             {
@@ -43,12 +44,9 @@ namespace Nomad.Gameplay.Editor
                 muzzle.SetParent(player.transform, false);
             }
             muzzle.localPosition = new Vector3(0f, 1.2f, 0.45f);
-            var combat = new SerializedObject(shooting);
-            combat.FindProperty("viewCamera").objectReferenceValue = Camera.main;
-            combat.FindProperty("muzzle").objectReferenceValue = muzzle;
-            combat.FindProperty("projectile").objectReferenceValue = AssetDatabase.LoadAssetAtPath<GameObject>(
+            var projectile = AssetDatabase.LoadAssetAtPath<GameObject>(
                 "Assets/Nomad/Combat/PlayerProjectile.prefab").GetComponent<Projectile>();
-            combat.ApplyModifiedPropertiesWithoutUndo();
+            WeaponContentAuthoring.Configure(player, Camera.main, muzzle, projectile);
             Renderer body = player.GetComponentInChildren<Renderer>(true);
             body.sharedMaterial = Material("Player");
 

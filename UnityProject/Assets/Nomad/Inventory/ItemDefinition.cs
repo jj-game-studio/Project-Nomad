@@ -7,7 +7,7 @@ namespace Nomad.Inventory
         None, Weapon, Head, Body, Face, Accessory, Ring, Bag, Totem
     }
 
-    public enum WeaponAttackMode { None, Ranged, Melee }
+    public enum WeaponAttackMode { None, Ranged, Melee, Bow, Staff }
 
     [CreateAssetMenu(menuName = "Nomad/Inventory/Item Definition")]
     public sealed class ItemDefinition : ScriptableObject
@@ -23,6 +23,8 @@ namespace Nomad.Inventory
         [SerializeField] private WeaponAttackMode attackMode;
         [SerializeField, Min(0)] private float attackRange;
         [SerializeField, Min(0)] private float attackInterval;
+        [SerializeField, Min(0)] private int manaCost;
+        [SerializeField] private GameObject equippedVisual;
 
         public string ItemId => itemId;
         public string DisplayName => displayName;
@@ -35,5 +37,7 @@ namespace Nomad.Inventory
         public WeaponAttackMode AttackMode => attackMode;
         public float AttackRange => attackRange;
         public float AttackInterval => attackInterval;
+        public int ManaCost => manaCost;
+        public GameObject EquippedVisual => equippedVisual;
     }
 }

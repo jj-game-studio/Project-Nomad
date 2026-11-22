@@ -90,15 +90,16 @@ namespace Nomad.Inventory.Editor
                     serialized.FindProperty("attackMode").enumValueIndex = (int)row.AttackMode;
                     serialized.FindProperty("attackRange").floatValue = row.AttackRange;
                     serialized.FindProperty("attackInterval").floatValue = row.AttackInterval;
+                    serialized.FindProperty("manaCost").intValue = row.ManaCost.GetValueOrDefault();
                 }
-                serialized.ApplyModifiedPropertiesWithoutUndo();
+                bool changed = serialized.ApplyModifiedPropertiesWithoutUndo();
 
                 if (created)
                 {
                     AssetDatabase.CreateAsset(item, $"{output}/{row.Id}.asset");
                     Undo.RegisterCreatedObjectUndo(item, "아이템 CSV");
                 }
-                else
+                else if (changed)
                     EditorUtility.SetDirty(item);
             }
 

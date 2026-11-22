@@ -247,6 +247,13 @@ GameObject:
   - component: {fileID: 451336763}
   - component: {fileID: 451336762}
   - component: {fileID: 451336761}
+  - component: {fileID: 451336770}
+  - component: {fileID: 451336769}
+  - component: {fileID: 451336768}
+  - component: {fileID: 451336767}
+  - component: {fileID: 451336766}
+  - component: {fileID: 451336765}
+  - component: {fileID: 451336764}
   m_Layer: 0
   m_Name: Integration Player
   m_TagString: Untagged
@@ -326,6 +333,28 @@ MonoBehaviour:
   - {fileID: 11400000, guid: c5909ea4a83cd9b4d8f3f6480f5a4271, type: 2}
   - {fileID: 11400000, guid: 5abb4f098a436704e9d2514c8e985475, type: 2}
   - {fileID: 11400000, guid: 448cc5b227491124d9fcf8b3af24c8c1, type: 2}
+  - {fileID: 11400000, guid: 3bc5ee3aa47bcb5419199fe0c678c793, type: 2}
+  - {fileID: 11400000, guid: 91bcb142c26e7a1409c2a2540242819f, type: 2}
+  - {fileID: 11400000, guid: 0665a2b2765b3864f9c1013078fcca6e, type: 2}
+  - {fileID: 11400000, guid: 742c2de271dd3e544aa09851eb69383a, type: 2}
+  - {fileID: 11400000, guid: 2fd922611dde74b42afdc04ec0edc323, type: 2}
+  - {fileID: 11400000, guid: 149f770f4d68c4b4c965c16a1d2cf4f3, type: 2}
+  - {fileID: 11400000, guid: ac569c023422c424c820c4419ec75c5e, type: 2}
+  - {fileID: 11400000, guid: 41af70b866070234bb765a441c7fa6b9, type: 2}
+  - {fileID: 11400000, guid: 7aca8cc904480a6468ae63996425734c, type: 2}
+  - {fileID: 11400000, guid: 66283d5a9c3d2e740accb3efa6487ef3, type: 2}
+  - {fileID: 11400000, guid: f26f2a5ac639f474bbe49b31cf21f24f, type: 2}
+  - {fileID: 11400000, guid: 6d4d13ace88e69f4692b95903876f8a4, type: 2}
+  - {fileID: 11400000, guid: d00b362630e382f4eac5c4603a0b0516, type: 2}
+  - {fileID: 11400000, guid: e907610ddd7ebde4e91a139ed2c789e5, type: 2}
+  - {fileID: 11400000, guid: ca38e1181ce0a63498c03747a544b514, type: 2}
+  - {fileID: 11400000, guid: c5862214309496d4f8c57e4231be513d, type: 2}
+  - {fileID: 11400000, guid: f8378015573b54e49bc98fa3876b463e, type: 2}
+  - {fileID: 11400000, guid: d6426022bc0c7424993c84a733fdc32a, type: 2}
+  - {fileID: 11400000, guid: 6cd253bc79234094eb91fa7f72ae01ac, type: 2}
+  - {fileID: 11400000, guid: 68caed9a62a821940adeed05bf96a232, type: 2}
+  - {fileID: 11400000, guid: 16cc907af324e8c469d03e651246ddcc, type: 2}
+  - {fileID: 11400000, guid: 8a7bb2fe30f5e274ead5f6ce39cd1902, type: 2}
 --- !u!114 &451336760
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -351,7 +380,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 451336755}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8f3073bbb94faea4d9fb1d618cb50a60, type: 3}
   m_Name:
@@ -391,6 +420,145 @@ MonoBehaviour:
   m_Name:
   m_EditorClassIdentifier: Nomad.Combat::Nomad.Combat.Health
   maxHealth: 100
+--- !u!114 &451336764
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 451336755}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 99dcb046f77574d41994ea9275948cc8, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::Nomad.Game.Modules.StarterKit
+  items:
+  - itemId: weapon-dagger
+    count: 1
+    equip: 0
+    slot: 0
+  - itemId: demo-sword
+    count: 1
+    equip: 1
+    slot: 0
+  - itemId: weapon-greatsword
+    count: 1
+    equip: 0
+    slot: 0
+  - itemId: weapon-shortbow
+    count: 1
+    equip: 0
+    slot: 0
+  - itemId: demo-bow
+    count: 1
+    equip: 1
+    slot: 1
+  - itemId: weapon-longbow
+    count: 1
+    equip: 0
+    slot: 0
+  - itemId: weapon-apprentice-staff
+    count: 1
+    equip: 0
+    slot: 0
+  - itemId: weapon-crystal-staff
+    count: 1
+    equip: 0
+    slot: 0
+  - itemId: weapon-archmage-staff
+    count: 1
+    equip: 0
+    slot: 0
+  - itemId: weapon-arrow
+    count: 30
+    equip: 0
+    slot: 0
+--- !u!114 &451336765
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 451336755}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 02ef3eecf2ba06745bf5e701e3d5f5a9, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::Nomad.Hud.PlayerHud
+  style: 1
+  health: {fileID: 0}
+  font: {fileID: 0}
+--- !u!114 &451336766
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 451336755}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0ed554056f644abfb744bb3838d8a177, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::Nomad.Equipment.EquipmentPanel
+--- !u!114 &451336767
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 451336755}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2653d231f1cf45aeaf283e40cb4ec902, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::Nomad.Equipment.EquipmentCombatVisuals
+--- !u!114 &451336768
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 451336755}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 51d64dfe8079b4b4794e33fd1e04248e, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::Nomad.Equipment.PlayerEquipmentCombat
+  viewCamera: {fileID: 654134747}
+  muzzle: {fileID: 1955340542}
+  projectile: {fileID: 5089398602212540021, guid: 2cc2ec9c69fa5404db88118fd98087d8, type: 3}
+  arrowProjectile: {fileID: 4067171791401039473, guid: af40170abcfb6064ab6eb2bbded3d7db, type: 3}
+  unarmedDefinition: {fileID: 11400000, guid: e907610ddd7ebde4e91a139ed2c789e5, type: 2}
+  collisionLayers:
+    serializedVersion: 2
+    m_Bits: 4294967291
+--- !u!114 &451336769
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 451336755}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 08348671e10dc104cb2ce10527808c20, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::Nomad.Player.PlayerMana
+  maximum: 100
+  recoveryPerSecond: 8
+  recoveryDelay: 2
+--- !u!114 &451336770
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 451336755}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1bc559f1224e45d78f50a79b37e7e63e, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::Nomad.Equipment.PlayerEquipment
 --- !u!1 &654134746
 GameObject:
   m_ObjectHideFlags: 0
@@ -1120,6 +1288,8 @@ MonoBehaviour:
   seed: 51
   width: 18
   height: 18
+  testControls: 1
+  newSeedOnStart: 0
   microSources:
   - {fileID: 2222155994254282205, guid: 347829489d082c345b791efc25001f29, type: 3}
   - {fileID: 8307354202130595620, guid: 24f0ebf0c5742de47b4e6b3321227a4e, type: 3}

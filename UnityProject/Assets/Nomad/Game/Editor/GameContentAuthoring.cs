@@ -1,7 +1,7 @@
 using System.IO;
 using System.Linq;
 using Nomad.Combat;
-using Nomad.Equipment;
+using Nomad.Equipment.Editor;
 using Nomad.Game.Modules;
 using Nomad.Hud;
 using Nomad.Interaction;
@@ -37,7 +37,7 @@ namespace Nomad.Game.Editor
         // 필드 원본: #73 TerrainTest(Terrain 지면·꾸밈·조명·Volume). 원본 씬은 수정하지 않고 복사합니다(#94).
         private const string FieldSourcePath = Nomad.Terrain.Editor.FieldDressingAuthoring.ScenePath;
         private const string ProjectilePath = "Assets/Nomad/Combat/PlayerProjectile.prefab";
-        private static readonly string[] ItemFolders = { "Assets/Nomad/Inventory/Demo", "Assets/Nomad/Equipment/Items" };
+        private static readonly string[] ItemFolders = { "Assets/Nomad/Inventory/Demo", WeaponContentAuthoring.ItemFolder };
 
         [MenuItem("Nomad/Game/Build Game Content")]
         public static void BuildAll()
@@ -146,7 +146,7 @@ namespace Nomad.Game.Editor
 
             Set(player.AddComponent<PlayerMovement>(), "viewCamera", camera);
             player.AddComponent<Health>();
-            SetArray(player.AddComponent<PlayerInventory>(), "items", items);
+            WeaponContentAuthoring.SetItems(new SerializedObject(player.AddComponent<PlayerInventory>()), "items", items);
             player.AddComponent<Nomad.Shop.PlayerWallet>();
 
             // 기존 사격 컴포넌트는 장비 전투가 켜지면 스스로 꺼지며, 기존 참조 호환을 위해 둡니다.
@@ -155,28 +155,11 @@ namespace Nomad.Game.Editor
             Set(legacy, "muzzle", muzzle);
             Set(legacy, "projectile", projectile);
 
-            player.AddComponent<PlayerEquipment>();
-            PlayerEquipmentCombat combat = player.AddComponent<PlayerEquipmentCombat>();
-            Set(combat, "viewCamera", camera);
-            Set(combat, "muzzle", muzzle);
-            Set(combat, "projectile", projectile);
-            Set(combat, "unarmedDefinition", items.Single(item => item.ItemId == "demo-unarmed"));
-            player.AddComponent<EquipmentCombatVisuals>();
-            player.AddComponent<EquipmentPanel>();
-
             player.AddComponent<PlayerQuickSlots>();
-            player.AddComponent<PlayerHud>();
+            WeaponContentAuthoring.Configure(player, camera, muzzle, projectile);
             player.AddComponent<PlayerInteraction>();
             Set(player.AddComponent<CharacterStaminaHud>(), "viewCamera", camera);
             Set(player.AddComponent<InteractionHints>(), "viewCamera", camera);
-
-            // 임시 시작 장비: 검·활을 지급해 무기 1·2칸에 장착합니다(#89 판단 필요).
-            var kit = new SerializedObject(player.AddComponent<StarterKit>());
-            SerializedProperty entries = kit.FindProperty("items");
-            entries.arraySize = 2;
-            SetEntry(entries.GetArrayElementAtIndex(0), "demo-sword", EquipmentSlot.Weapon1);
-            SetEntry(entries.GetArrayElementAtIndex(1), "demo-bow", EquipmentSlot.Weapon2);
-            kit.ApplyModifiedPropertiesWithoutUndo();
         }
 
         // TerrainTest 씬을 복사해 검토용 Player·카메라·상태 UI·디버그 키만 빼고 메인 게임 Player에 연결합니다.
@@ -332,14 +315,6 @@ namespace Nomad.Game.Editor
                 Object.DestroyImmediate(target.transform.root.gameObject);
         }
 
-        private static void SetEntry(SerializedProperty entry, string itemId, EquipmentSlot slot)
-        {
-            entry.FindPropertyRelative("itemId").stringValue = itemId;
-            entry.FindPropertyRelative("count").intValue = 1;
-            entry.FindPropertyRelative("equip").boolValue = true;
-            entry.FindPropertyRelative("slot").enumValueIndex = (int)slot;
-        }
-
         private static void Set(Object target, string field, Object value)
         {
             var serialized = new SerializedObject(target);
@@ -347,14 +322,5 @@ namespace Nomad.Game.Editor
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        private static void SetArray(Object target, string field, Object[] values)
-        {
-            var serialized = new SerializedObject(target);
-            SerializedProperty array = serialized.FindProperty(field);
-            array.arraySize = values.Length;
-            for (int index = 0; index < values.Length; index++)
-                array.GetArrayElementAtIndex(index).objectReferenceValue = values[index];
-            serialized.ApplyModifiedPropertiesWithoutUndo();
-        }
     }
 }

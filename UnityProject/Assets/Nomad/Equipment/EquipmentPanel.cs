@@ -107,6 +107,8 @@ namespace Nomad.Equipment
             toolbar.anchoredPosition = new Vector2(18, -18);
             var background = toolbar.gameObject.AddComponent<UnityEngine.UI.Image>();
             background.color = new Color32(16, 29, 43, 240);
+            // 클릭은 위치 검사로 처리하므로 카메라가 열린 창으로 인식하지 않게 합니다.
+            background.raycastTarget = false;
             rangeLabel = Text("RangeToggle", toolbar, "", new Vector2(310, 32), new Vector2(165, -21), 16);
             rangeLabel.rectTransform.anchorMin = rangeLabel.rectTransform.anchorMax = new Vector2(0, 1);
             equipmentDragPreview = CreatePreview("EquipmentDragPreview", out equipmentDragName, out equipmentDragIcon);

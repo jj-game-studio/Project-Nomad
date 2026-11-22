@@ -225,6 +225,7 @@ GameObject:
   - component: {fileID: 3340809101191599813}
   - component: {fileID: 1887090300961367808}
   - component: {fileID: 974826207303630832}
+  - component: {fileID: 8847001433168899962}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -331,6 +332,14 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 5abb4f098a436704e9d2514c8e985475, type: 2}
   - {fileID: 11400000, guid: 448cc5b227491124d9fcf8b3af24c8c1, type: 2}
   - {fileID: 11400000, guid: c5909ea4a83cd9b4d8f3f6480f5a4271, type: 2}
+  - {fileID: 11400000, guid: ca38e1181ce0a63498c03747a544b514, type: 2}
+  - {fileID: 11400000, guid: c5862214309496d4f8c57e4231be513d, type: 2}
+  - {fileID: 11400000, guid: f8378015573b54e49bc98fa3876b463e, type: 2}
+  - {fileID: 11400000, guid: d6426022bc0c7424993c84a733fdc32a, type: 2}
+  - {fileID: 11400000, guid: 6cd253bc79234094eb91fa7f72ae01ac, type: 2}
+  - {fileID: 11400000, guid: 68caed9a62a821940adeed05bf96a232, type: 2}
+  - {fileID: 11400000, guid: 16cc907af324e8c469d03e651246ddcc, type: 2}
+  - {fileID: 11400000, guid: 8a7bb2fe30f5e274ead5f6ce39cd1902, type: 2}
 --- !u!114 &4220240870187981097
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -378,6 +387,7 @@ MonoBehaviour:
   viewCamera: {fileID: 5698022007323104210}
   muzzle: {fileID: 7214392615756625296}
   projectile: {fileID: 5089398602212540021, guid: 2cc2ec9c69fa5404db88118fd98087d8, type: 3}
+  arrowProjectile: {fileID: 4067171791401039473, guid: af40170abcfb6064ab6eb2bbded3d7db, type: 3}
   unarmedDefinition: {fileID: 11400000, guid: e907610ddd7ebde4e91a139ed2c789e5, type: 2}
   collisionLayers:
     serializedVersion: 2
@@ -501,14 +511,74 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Game.Modules.StarterKit
   items:
+  - itemId: weapon-dagger
+    count: 1
+    equip: 0
+    slot: 0
   - itemId: demo-sword
     count: 1
     equip: 1
+    slot: 0
+  - itemId: weapon-greatsword
+    count: 1
+    equip: 0
+    slot: 0
+  - itemId: weapon-shortbow
+    count: 1
+    equip: 0
     slot: 0
   - itemId: demo-bow
     count: 1
     equip: 1
     slot: 1
+  - itemId: weapon-longbow
+    count: 1
+    equip: 0
+    slot: 0
+  - itemId: weapon-apprentice-staff
+    count: 1
+    equip: 0
+    slot: 0
+  - itemId: weapon-crystal-staff
+    count: 1
+    equip: 0
+    slot: 0
+  - itemId: weapon-archmage-staff
+    count: 1
+    equip: 0
+    slot: 0
+  - itemId: weapon-arrow
+    count: 30
+    equip: 0
+    slot: 0
+--- !u!114 &974826207303630832
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5530718413862153197}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 15f45f7d756c2c545b12b7c227ccd3f3, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::Nomad.Shop.PlayerWallet
+  startingGold: 1000
+--- !u!114 &8847001433168899962
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5530718413862153197}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 08348671e10dc104cb2ce10527808c20, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::Nomad.Player.PlayerMana
+  maximum: 100
+  recoveryPerSecond: 8
+  recoveryDelay: 2
 --- !u!1 &7897914465955937552
 GameObject:
   m_ObjectHideFlags: 0
@@ -649,16 +719,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Player.TopDownCamera
   target: {fileID: 1411511560905740220}
---- !u!114 &974826207303630832
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5530718413862153197}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 15f45f7d756c2c545b12b7c227ccd3f3, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Assembly-CSharp::Nomad.Shop.PlayerWallet
-  startingGold: 1000
+  maxLookAhead: 2
+  smoothTime: 0.15
+  deadZone: 0.1

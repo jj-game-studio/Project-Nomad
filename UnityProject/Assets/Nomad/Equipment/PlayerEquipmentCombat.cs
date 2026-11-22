@@ -14,9 +14,13 @@ namespace Nomad.Equipment
     [DefaultExecutionOrder(100)]
     public sealed class PlayerEquipmentCombat : MonoBehaviour
     {
+        public const string ArrowItemId = "weapon-arrow";
+        public const float MeleeHalfAngle = 60f;
+
         [SerializeField] private Camera viewCamera;
         [SerializeField] private Transform muzzle;
         [SerializeField] private Projectile projectile;
+        [SerializeField] private Projectile arrowProjectile;
         [SerializeField] private ItemDefinition unarmedDefinition;
         [SerializeField] private LayerMask collisionLayers = Physics.DefaultRaycastLayers;
 
@@ -25,20 +29,25 @@ namespace Nomad.Equipment
         private PlayerMovement movement;
         private PlayerInventory inventory;
         private Health health;
+        private PlayerMana mana;
         private PlayerCombat legacyCombat;
         private bool restoreLegacy;
         private float nextAttackTime;
+        private float walkableNormalY = Mathf.Cos(50f * Mathf.Deg2Rad);
 
         public event Action<WeaponAttackMode> Attacked;
         public event Action<Vector3> Impacted;
+        // 시각 효과가 무기별 연출을 고를 수 있도록 발사체와 명중 지점을 무기와 함께 알립니다.
+        public event Action<Projectile, ItemDefinition> Fired;
+        public event Action<Vector3, ItemDefinition> WeaponImpacted;
         public Vector3? AimPoint { get; private set; }
         public bool InputBlocked { get; set; }
         public bool EquipmentUiOpen { get; internal set; }
-        public const float MeleeHalfAngle = 60f;
         public Vector3 AttackOrigin => transform.position + Vector3.up;
         public Vector3 ProjectileOrigin => muzzle != null ? muzzle.position : AttackOrigin;
         public LayerMask CollisionLayers => collisionLayers;
         public ItemDefinition CurrentWeapon => equipment.ActiveWeapon != null ? equipment.ActiveWeapon : unarmedDefinition;
+        public int ArrowCount => inventory != null ? inventory.GetCount(ArrowItemId) : 0;
 
         private void Awake()
         {
@@ -46,7 +55,10 @@ namespace Nomad.Equipment
             movement = GetComponent<PlayerMovement>();
             TryGetComponent(out inventory);
             health = GetComponent<Health>();
+            mana = GetComponent<PlayerMana>();
             legacyCombat = GetComponent<PlayerCombat>();
+            if (TryGetComponent(out CharacterController controller))
+                walkableNormalY = Mathf.Cos(controller.slopeLimit * Mathf.Deg2Rad);
         }
 
         private void OnEnable()
@@ -65,8 +77,10 @@ namespace Nomad.Equipment
 
         private void LateUpdate()
         {
-            if (Mouse.current?.leftButton.wasPressedThisFrame == true)
-                TryAttack(Mouse.current.position.ReadValue());
+            Mouse mouse = Mouse.current;
+            if (mouse != null && (mouse.leftButton.wasPressedThisFrame ||
+                (CurrentWeapon?.AttackMode == WeaponAttackMode.Staff && mouse.leftButton.isPressed)))
+                TryAttack(mouse.position.ReadValue());
         }
 
         public bool TryAttack(Vector2 pointer)
@@ -82,29 +96,47 @@ namespace Nomad.Equipment
             if (IsOverUi(pointer) || !TryGetAim(pointer, out Vector3 aim))
                 return false;
 
-            Vector3 origin = AttackOrigin;
-            bool launched;
-            if (weapon.AttackMode == WeaponAttackMode.Ranged)
-                launched = muzzle != null && Projectile.TryLaunch(projectile, transform, muzzle.position, aim,
-                    collisionLayers, 45f, weapon.AttackRange, weapon.AttackPower, NotifyImpact);
-            else if (weapon.AttackMode == WeaponAttackMode.Melee)
+            WeaponAttackMode mode = weapon.AttackMode;
+            if (mode == WeaponAttackMode.Melee)
             {
+                Vector3 origin = AttackOrigin;
                 Vector3 direction = Vector3.ProjectOnPlane(aim - origin, Vector3.up).normalized;
                 if (direction.sqrMagnitude < 0.001f)
                     return false;
+
                 nextAttackTime = Time.time + weapon.AttackInterval;
                 Melee(origin, direction, weapon);
-                launched = true;
             }
-            else
-                return false;
-
-            if (!launched)
+            else if (!TryFire(weapon, aim))
                 return false;
 
             AimPoint = aim;
+            Attacked?.Invoke(mode);
+            return true;
+        }
+
+        private bool TryFire(ItemDefinition weapon, Vector3 aim)
+        {
+            WeaponAttackMode mode = weapon.AttackMode;
+            bool bow = mode == WeaponAttackMode.Bow;
+            bool staff = mode == WeaponAttackMode.Staff;
+            if (muzzle == null || (!bow && !staff && mode != WeaponAttackMode.Ranged) ||
+                (bow && ArrowCount == 0) || (staff && (mana == null || !mana.CanSpend(weapon.ManaCost))))
+                return false;
+
+            Projectile shot = bow ? arrowProjectile : projectile;
+            if (!Projectile.TryLaunch(shot, transform, muzzle.position, aim, collisionLayers, 45f,
+                    weapon.AttackRange, weapon.AttackPower, point => NotifyImpact(point, weapon), out Projectile launched))
+                return false;
+
+            // 막힌 발사구나 유효하지 않은 조준에는 재화나 공격 간격을 적용하지 않습니다.
             nextAttackTime = Time.time + weapon.AttackInterval;
-            Attacked?.Invoke(weapon.AttackMode);
+            if (bow)
+                inventory.Remove(ArrowItemId, 1);
+            else if (staff)
+                mana.TrySpend(weapon.ManaCost);
+
+            Fired?.Invoke(launched, weapon);
             return true;
         }
 
@@ -125,10 +157,13 @@ namespace Nomad.Equipment
             return true;
         }
 
-        private void NotifyImpact(Vector3 point)
+        private void NotifyImpact(Vector3 point, ItemDefinition weapon)
         {
-            if (this != null)
-                Impacted?.Invoke(point);
+            if (this == null)
+                return;
+
+            Impacted?.Invoke(point);
+            WeaponImpacted?.Invoke(point, weapon);
         }
 
         private void Melee(Vector3 origin, Vector3 direction, ItemDefinition weapon)
@@ -161,7 +196,7 @@ namespace Nomad.Equipment
                     Collider collider = target.GetComponentInChildren<Collider>();
                     Vector3 point = collider != null ? collider.bounds.center + Vector3.up * (collider.bounds.extents.y + 0.08f)
                         : target.transform.position + Vector3.up;
-                    if (target.TryApplyDamage(weapon.AttackPower)) NotifyImpact(point);
+                    if (target.TryApplyDamage(weapon.AttackPower)) NotifyImpact(point, weapon);
                 }
         }
 
@@ -169,7 +204,7 @@ namespace Nomad.Equipment
         {
             float reach = range;
             foreach (RaycastHit hit in Physics.RaycastAll(AttackOrigin, direction, range, collisionLayers, QueryTriggerInteraction.Ignore))
-                if (!hit.transform.IsChildOf(transform) && hit.collider.GetComponentInParent<Health>() == null)
+                if (BlocksMelee(hit))
                     reach = Mathf.Min(reach, hit.distance);
             return reach;
         }
@@ -181,10 +216,15 @@ namespace Nomad.Equipment
 
             foreach (RaycastHit hit in Physics.RaycastAll(origin, path.normalized, path.magnitude,
                          collisionLayers, QueryTriggerInteraction.Ignore))
-                if (!hit.transform.IsChildOf(transform) && hit.collider.GetComponentInParent<Health>() == null)
+                if (BlocksMelee(hit))
                     return true;
             return false;
         }
+
+        // 플레이어가 오를 수 있는 경사면은 벽이 아니라 지면이므로 근접 범위를 자르지 않습니다.
+        private bool BlocksMelee(RaycastHit hit) =>
+            hit.normal.y < walkableNormalY && !hit.transform.IsChildOf(transform) &&
+            hit.collider.GetComponentInParent<Health>() == null;
 
         private bool IsOverUi(Vector2 pointer)
         {
