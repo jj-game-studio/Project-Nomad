@@ -135,11 +135,9 @@ namespace Nomad.Game.Tests
             Camera camera = manager.GetComponentInChildren<Camera>();
             CameraClearFlags villageClear = camera.clearFlags;
 
-            // 필드: 지형·경로 준비 후 Field가 플레이어를 배치합니다.
-            Assert.That(manager.LoadRegion("Field"), Is.True);
-            yield return WaitForRegion(manager);
-            Assert.That(manager.CurrentRegion.path, Is.EqualTo(FieldPath));
-            yield return WaitForActive(player);
+            // 마을 출구에서 전환하고, 필드의 지형과 플레이어 배치가 준비된 뒤 화면이 열리는지 확인합니다.
+            yield return EnterExit(manager, FindInRegion(manager, "Field Exit Trigger"));
+            yield return AssertRegionTransition(manager, FieldPath);
             Assert.That(manager.Player, Is.SameAs(player), "같은 Player 유지");
             AssertUiKept(player);
             Assert.That(Terrain.activeTerrain != null && Terrain.activeTerrain.gameObject.scene == manager.CurrentRegion, Is.True, "TerrainTest 지면(#94)");
@@ -147,17 +145,8 @@ namespace Nomad.Game.Tests
             yield return AssertFieldMonsters(manager);
 
             // 필드 출구에 들어가면 마을의 필드 쪽 입구로 돌아옵니다.
-            Transform exit = FindInRegion(manager, "FieldExit_");
-            Assert.That(exit, Is.Not.Null, "필드 출구");
-            manager.PlacePlayer(exit.position + Vector3.up * 0.1f, Quaternion.identity);
-            float end = Time.realtimeSinceStartup + Timeout;
-            while (manager.CurrentRegion.path != VillagePath || manager.IsLoading)
-            {
-                Assert.That(Time.realtimeSinceStartup, Is.LessThan(end), "출구로 마을 전환 시간 초과");
-                if (player.activeInHierarchy)
-                    player.GetComponent<CharacterController>().Move(Vector3.down * 0.01f);
-                yield return new WaitForFixedUpdate();
-            }
+            yield return EnterExit(manager, FindInRegion(manager, "FieldExit_"));
+            yield return AssertRegionTransition(manager, VillagePath);
 
             AssertAtEntrance(manager, "Field");
             AssertUiKept(player);
@@ -360,6 +349,60 @@ namespace Nomad.Game.Tests
                 Assert.That(Time.realtimeSinceStartup, Is.LessThan(end), "지역 로드 시간 초과");
                 yield return null;
             }
+        }
+
+        private static IEnumerator EnterExit(GameManager manager, Transform exit)
+        {
+            Assert.That(exit, Is.Not.Null, "지역 출구");
+            GameObject player = manager.Player;
+            manager.PlacePlayer(exit.position + Vector3.up * 0.1f, Quaternion.identity);
+            float end = Time.realtimeSinceStartup + Timeout;
+
+            while (!manager.IsLoading)
+            {
+                Assert.That(Time.realtimeSinceStartup, Is.LessThan(end), "출구 트리거로 전환이 시작되어야 합니다.");
+                player.GetComponent<CharacterController>().Move(Vector3.down * 0.01f);
+                yield return new WaitForFixedUpdate();
+            }
+        }
+
+        private static IEnumerator AssertRegionTransition(GameManager manager, string destination)
+        {
+            float end = Time.realtimeSinceStartup + FieldTimeout;
+            CanvasGroup overlay = null;
+            bool fadedOut = false;
+            bool showedLoading = false;
+            bool fadedIn = false;
+
+            while (manager.IsLoading)
+            {
+                Assert.That(Time.realtimeSinceStartup, Is.LessThan(end), "지역 전환 시간 초과");
+                overlay ??= manager.transform.Find("RegionTransition")?.GetComponent<CanvasGroup>();
+
+                if (overlay != null && overlay.gameObject.activeSelf)
+                {
+                    bool arrived = manager.CurrentRegion.path == destination;
+                    bool fading = overlay.alpha > 0f && overlay.alpha < 1f;
+                    if (overlay.transform.Find("Message").gameObject.activeSelf)
+                    {
+                        Assert.That(overlay.alpha, Is.EqualTo(1f), "로딩 안내는 화면을 완전히 덮은 뒤 표시");
+                        showedLoading = true;
+                    }
+
+                    fadedOut |= !arrived && fading;
+                    if (arrived && fading)
+                    {
+                        Assert.That(manager.Player.activeInHierarchy, Is.True, "목적지 플레이어 배치 후 페이드 인");
+                        fadedIn = true;
+                    }
+                }
+
+                yield return null;
+            }
+
+            Assert.That(manager.CurrentRegion.path, Is.EqualTo(destination));
+            Assert.That(fadedOut && showedLoading && fadedIn, Is.True, "페이드 아웃 → 로딩 안내 → 페이드 인");
+            Assert.That(overlay.gameObject.activeSelf, Is.False, "전환 화면 정리");
         }
 
         private static void AssertAtEntrance(GameManager manager, string fromRegion)

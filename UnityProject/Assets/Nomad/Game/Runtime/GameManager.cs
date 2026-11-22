@@ -11,6 +11,13 @@ namespace Nomad.Game
     {
         public const string PlayerTag = "Player";
 
+        private const float FadeOutSeconds = 0.25f;
+        private const float FadeInSeconds = 0.35f;
+        private const float MinimumLoadingSeconds = 0.25f;
+
+        private RegionTransitionView transitionView;
+        private bool regionEntryFailed;
+
         // 처음부터 다시 시작할 때 불러오는 부트스트랩 씬입니다(Build Settings 첫 씬).
         public const string GameSceneName = "Game";
 
@@ -97,6 +104,7 @@ namespace Nomad.Game
 
         private void OnDestroy()
         {
+            transitionView?.ReleaseFont();
             if (Instance == this)
                 Instance = null;
         }
@@ -104,11 +112,18 @@ namespace Nomad.Game
         // 지역 씬을 전환합니다. 전환 중이면 false를 반환하고 무시합니다.
         public bool LoadRegion(string sceneName)
         {
-            if (IsLoading || string.IsNullOrEmpty(sceneName))
+            if (IsLoading || IsRestarting || string.IsNullOrEmpty(sceneName) ||
+                !Application.CanStreamedLevelBeLoaded(sceneName))
                 return false;
 
             StartCoroutine(LoadRegionRoutine(sceneName));
             return true;
+        }
+
+        public void ReportRegionEntryFailure(Scene region)
+        {
+            if (IsLoading && CurrentRegion == region)
+                regionEntryFailed = true;
         }
 
         // 영속 모듈(Player·가방·장비 포함)과 현재 지역을 모두 버리고 Game 씬부터 새로 시작합니다.
@@ -142,21 +157,66 @@ namespace Nomad.Game
         private IEnumerator LoadRegionRoutine(string sceneName)
         {
             IsLoading = true;
-            Scene previous = CurrentRegion;
+            regionEntryFailed = false;
+            string departure = CurrentRegion.IsValid() ? CurrentRegion.name : null;
+            bool showTransition = departure != null && departure != sceneName &&
+                Config.IsRegion(departure) && Config.IsRegion(sceneName);
 
+            if (showTransition)
+                yield return LoadWithTransition(sceneName, departure);
+            else
+                yield return SwitchRegion(sceneName);
+
+            IsLoading = false;
+        }
+
+        private IEnumerator LoadWithTransition(string sceneName, string departure)
+        {
+            transitionView ??= new RegionTransitionView(transform);
+            transitionView.Show();
+            yield return transitionView.FadeTo(1f, FadeOutSeconds);
+            transitionView.ShowDestination(sceneName);
+            float loadingStarted = Time.realtimeSinceStartup;
+            yield return null;
+
+            yield return SwitchRegion(sceneName);
+
+            // 필드는 씬 로드 후 지형·경로 생성까지 마쳐야 플레이어를 배치할 수 있습니다.
+            while (Player != null && !Player.activeInHierarchy && !regionEntryFailed)
+                yield return null;
+
+            if (regionEntryFailed)
+            {
+                transitionView.ShowFieldFailure();
+                yield return new WaitForSecondsRealtime(1.25f);
+                yield return SwitchRegion(departure);
+            }
+
+            float remaining = MinimumLoadingSeconds - (Time.realtimeSinceStartup - loadingStarted);
+            if (remaining > 0f)
+                yield return new WaitForSecondsRealtime(remaining);
+
+            transitionView.HideMessage();
+            yield return transitionView.FadeTo(0f, FadeInSeconds);
+            transitionView.Hide();
+        }
+
+        private IEnumerator SwitchRegion(string sceneName)
+        {
+            Scene previous = CurrentRegion;
             // 언로드 후에는 Scene 핸들이 무효가 되어 이름을 읽을 수 없으므로 먼저 기억합니다.
             string previousName = previous.IsValid() ? previous.name : null;
-            if (Player != null)
-                Player.SetActive(false);
 
             // 씬이 하나만 남으면 언로드할 수 없으므로 새 지역을 먼저 불러온 뒤 이전 지역을 내립니다.
             AsyncOperation load = SceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Additive);
             if (load == null)
             {
                 Debug.LogError($"지역 씬 {sceneName}을 불러오지 못했습니다. Build Settings 등록을 확인해 주세요.", this);
-                IsLoading = false;
                 yield break;
             }
+
+            if (Player != null)
+                Player.SetActive(false);
 
             yield return load;
 
@@ -171,7 +231,6 @@ namespace Nomad.Game
 
             PreviousRegion = previousName;
             CurrentRegion = next;
-            IsLoading = false;
             EnterRegion(next);
         }
 

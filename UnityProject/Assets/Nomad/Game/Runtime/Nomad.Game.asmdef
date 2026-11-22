@@ -1,3 +1,7 @@
 {
-    "name": "Nomad.Game"
+    "name": "Nomad.Game",
+    "references": [
+        "UnityEngine.UI",
+        "Unity.TextMeshPro"
+    ]
 }

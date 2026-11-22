@@ -48,7 +48,7 @@ namespace Nomad.Game.Modules
 
             // 이전 지역(마을)이 아직 언로드되지 않았으면 그 충돌체가 지형 바닥·경로 판정에 섞입니다.
             // 꺼 둔 컴포넌트는 Start가 미뤄지므로, 지역 전환이 끝난 뒤 켜서 생성을 시작합니다.
-            if (manager.IsLoading)
+            if (manager.CurrentRegion != gameObject.scene)
             {
                 controls.enabled = false;
                 manager.RegionLoaded += OnRegionLoaded;
@@ -68,8 +68,13 @@ namespace Nomad.Game.Modules
         // 생성 도중 호출되는 이벤트 안에서 재생성하면 바깥 생성 흐름과 겹치므로 다음 프레임에 처리합니다.
         private void OnGenerationCompleted(FieldGenerationResult result)
         {
-            if (!result.Success && retries < maxRetries)
+            if (result.Success)
+                return;
+
+            if (retries < maxRetries)
                 retryPending = true;
+            else
+                GameManager.Instance?.ReportRegionEntryFailure(gameObject.scene);
         }
 
         private void Update()
