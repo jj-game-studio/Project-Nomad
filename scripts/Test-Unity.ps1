@@ -126,7 +126,7 @@ function Write-HumanSummary($Runs, [bool] $AllPassed) {
         $color = if ($run.success) { 'Green' } else { 'Red' }
         $line = '  {0,-9} {1}' -f $run.platform, $status
         if ($null -ne $run.total) {
-            $line += "  $($run.passed)/$($run.total)"
+            $line += "  $($run.passed)/$($run.total) 통과"
             if ($run.failed -gt 0) { $line += ", 실패 $($run.failed)" }
             if ($run.skipped -gt 0) { $line += ", 건너뜀 $($run.skipped)" }
             $line += "  ($($run.seconds)초)"
