@@ -28,9 +28,9 @@ namespace Nomad.PlayerVisual.Editor
             foreach (var child in machine.states) machine.RemoveState(child.state);
             AddState(machine, "Idle", idle, 1f);
             AddState(machine, "Run", run, 1f);
-            AddState(machine, "Jump", jump, jump.length / 0.7f);
+            AddState(machine, "Jump", jump, jump.length / PlayerAnimation.JumpMotionDuration);
             AddState(machine, "Fall", fall, 1f);
-            AddState(machine, "Roll", roll, roll.length / 0.3f);
+            AddState(machine, "Roll", roll, roll.length / PlayerAnimation.RollMotionDuration);
             EditorUtility.SetDirty(controller);
             AssetDatabase.SaveAssets();
             return controller;

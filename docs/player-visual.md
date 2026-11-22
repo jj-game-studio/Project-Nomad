@@ -39,13 +39,13 @@ Unity 6000.6.9f1에서 생성·에셋 검사가 통과했습니다. 저장된 �
 
 - Idle: ARPG Warrior `Idle_no_weapon`.
 - Run: ARPG Warrior `Run_no_weapon_IPC`. 실제 수평 속도에 따라 재생 속도를 조절합니다.
-- Jump: Mixamo `StandingJump`. 상승 중 재생합니다.
+- Jump: Mixamo `StandingJump`. 외형을 1.1초 동안 재생하며 착지 뒤에도 마무리 자세를 이어갑니다.
 - Fall: ARPG Warrior `Airborne`. 낙하 중 재생합니다.
-- Roll: Mixamo `StandToRoll`. 기존 0.3초 구르기에 맞춰 재생합니다.
+- Roll: Mixamo `StandToRoll`. 외형을 0.8초 동안 재생합니다. 실제 구르기의 이동·무적·공격 제한은 기존 0.3초를 유지합니다.
 
 원본은 #136에서 공유된 ThirdParty 커밋을 참조하며 수정하지 않습니다. 프로젝트 소유 Animations 폴더에 클립 복사본과 PlayerLocomotion Controller를 생성해 반복·루트 이동 설정을 조정합니다. 캐릭터 이동은 기존 코드가 담당하므로 Apply Root Motion은 끄고, 일회 클립의 루트 위치 이동은 적용하지 않습니다.
 
-Build Preview로 Controller·클립·프리셋·씬을 함께 다시 생성할 수 있습니다. 자세와 전환, 특히 짧은 구르기의 재생 속도는 사람 검토 대상입니다. 정식 Game PlayerRig에는 아직 연결하지 않았습니다.
+Build Preview로 Controller·클립·프리셋·씬을 함께 다시 생성할 수 있습니다. 자세와 전환, 특히 실제 행동이 끝난 뒤 이어지는 시각적 마무리는 사람 검토 대상입니다. 정식 Game PlayerRig에는 아직 연결하지 않았습니다.
 
 원본 Avatar의 골반 매핑(Root)을 실제 Hips로 수정한 KingdomPlayerAvatar를 생성합니다. 클립의 원본 기준 높이를 유지하고, 원본 모델의 루트 높이를 보존해 바닥 잠김과 떠 있는 발을 방지합니다. Play 검증은 실제 변형 메시의 최저점으로 대기 자세의 접지를 확인합니다.
 
@@ -54,3 +54,12 @@ Build Preview로 Controller·클립·프리셋·씬을 함께 다시 생성할 �
 최신 main의 공유 에셋 7e3cbab을 결합했습니다. Unity 6000.6.9f1 생성·컴파일·Avatar/클립 Humanoid 검사와 저장 씬 Play 214프레임 검증이 통과했습니다. 대기 반복, 실제 변형 메시의 발 접지, 달리기 다리 뼈대 변화, Jump/Fall/Roll 전환, 기존 점프 높이·구르기·벽 충돌을 확인했습니다. 동작별 캡처도 확인했습니다.
 
 캡처: Artifacts/player-visual-front.png, player-visual-top.png, player-animation-run.png, player-animation-jump.png, player-animation-roll.png. Play 로그의 Unity Search 시작 색인 예외는 여전히 기록되며 애니메이션 코드 경로의 예외와 구분합니다. Windows 빌드·공격 동작·사람의 전환/구르기 속도 수용·정식 지역 전환 검증은 포함하지 않습니다.
+
+
+## 모션 감속 요청
+
+사용자 요청에 따라 애니메이션만 늦췄습니다. 이전 Jump 0.7초 → 1.1초, Roll 0.3초 → 0.8초입니다. `PlayerAnimation.JumpMotionDuration`·`RollMotionDuration`이 Controller 속도와 시각적 마무리 시간을 함께 결정합니다. 새 점프·구르기는 진행 중인 마무리를 즉시 중단하고 새 동작을 시작합니다.
+
+실제 점프 궤적·구르기 3m/0.3초·무적·쿨다운·입력은 변경하지 않았습니다. 따라서 착지나 실제 구르기가 끝나도 외형 동작이 잠시 이어지고, 그동안 기존 규칙대로 이동·공격할 수 있습니다.
+
+감속 후 저장 씬 261프레임 검증에서 모션 진행률·착지/실제 구르기 종료 뒤 마무리 유지·이후 대기 복귀를 확인했습니다. 기존 점프 높이와 구르기 3m 이동·벽 충돌도 재검증했습니다. Windows 빌드와 사람의 모션 속도 수용은 별도입니다.

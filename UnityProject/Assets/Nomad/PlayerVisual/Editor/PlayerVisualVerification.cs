@@ -17,7 +17,7 @@ namespace Nomad.PlayerVisual.Editor
         private static Keyboard keyboard;
         private static PlayerAnimation animation;
         private static Quaternion idleLeg;
-        private static bool sawRun, sawJump, sawFall, sawRoll;
+        private static bool sawRun, sawJump, sawJumpRecovery, sawRoll, sawRollRecovery, rollReleased;
         private static int stage;
         private static float start;
         private static float peak;
@@ -79,16 +79,31 @@ namespace Nomad.PlayerVisual.Editor
                     CaptureFront("player-animation-jump.png");
                     sawJump = true;
                 }
-                if (stage == 3 && elapsed > 0.45f && !sawFall)
+                if (stage == 3 && elapsed > 0.85f && !sawJumpRecovery)
                 {
-                    Check(animation.CurrentState == "Fall", "Fall state missing");
-                    sawFall = true;
+                    Check(animation.CurrentState == "Jump" && player.GetComponent<CharacterController>().isGrounded,
+                        "Jump visual recovery was cut on landing");
+                    Check(animation.Animator.GetCurrentAnimatorStateInfo(0).normalizedTime < 0.9f, "Jump animation still plays too fast");
+                    CaptureFront("player-animation-jump-recovery.png");
+                    sawJumpRecovery = true;
                 }
                 if (stage == 4 && elapsed > 0.12f && !sawRoll)
                 {
                     Check(animation.CurrentState == "Roll", "Roll state missing");
                     CaptureFront("player-animation-roll.png");
                     sawRoll = true;
+                }
+                if (stage == 4 && elapsed > 0.25f && !rollReleased)
+                {
+                    InputSystem.QueueStateEvent(keyboard, new KeyboardState());
+                    rollReleased = true;
+                }
+                if (stage == 4 && elapsed > 0.4f && !sawRollRecovery)
+                {
+                    Check(!player.IsRolling && animation.CurrentState == "Roll", "Roll visual recovery changed physical timing or was cut");
+                    Check(animation.Animator.GetCurrentAnimatorStateInfo(0).normalizedTime < 0.7f, "Roll animation still plays too fast");
+                    CaptureFront("player-animation-roll-recovery.png");
+                    sawRollRecovery = true;
                 }
                 switch (stage)
                 {
@@ -114,24 +129,26 @@ namespace Nomad.PlayerVisual.Editor
                         break;
                     case 3:
                         peak = Mathf.Max(peak, position.y);
-                        if (elapsed > 1f)
+                        if (elapsed > 1.25f)
                         {
                             Check(peak > 1.1f && peak < 1.3f && Mathf.Abs(position.y) < 0.1f, $"Jump/land {peak}, {position}");
+                            Check(animation.CurrentState == "Idle", "Jump recovery did not finish");
                             MoveTo(Vector3.zero);
                             origin = player.transform.position;
                             Advance(Key.LeftShift, Key.W);
                         }
                         break;
-                    case 4 when elapsed > 0.35f:
-                        Check(!player.IsRolling && Vector3.Distance(origin, position) > 2.9f, "Roll regression");
+                    case 4 when elapsed > 0.9f:
+                        Check(!player.IsRolling && Vector3.Distance(origin, position) > 2.9f && Vector3.Distance(origin, position) < 3.1f, "Roll distance regression");
+                        Check(animation.CurrentState == "Idle" && sawRollRecovery, "Roll recovery did not finish");
                         MoveTo(new Vector3(0f, 0f, 3f));
                         Advance(Key.W);
                         break;
                     case 5 when elapsed > 0.6f:
                         Check(player.transform.position.z < 3.5f, "Wall collision regression");
                         InputSystem.QueueStateEvent(keyboard, new KeyboardState());
-                        Check(sawRun && sawJump && sawFall && sawRoll, "Missing animation state evidence");
-                        Debug.Log($"PLAYER_VISUAL_PLAY_PASS: frame={Time.frameCount}, model, animated feet, idle loop, run leg motion, jump/fall/roll states, movement, facing, jump, roll, wall");
+                        Check(sawRun && sawJump && sawJumpRecovery && sawRoll, "Missing animation state evidence");
+                        Debug.Log($"PLAYER_VISUAL_PLAY_PASS: frame={Time.frameCount}, model, animated feet, idle loop, run leg motion, slower jump/roll recovery without physical timing changes, movement, facing, jump, roll, wall");
                         Finish(0);
                         break;
                 }
@@ -179,7 +196,8 @@ namespace Nomad.PlayerVisual.Editor
             Debug.Log($"ANIMATED_POSE {filename} avatar={a.avatar.name} root={a.transform.position} body={a.bodyPosition} hips={a.GetBoneTransform(HumanBodyBones.Hips).position} foot={a.GetBoneTransform(HumanBodyBones.LeftFoot).position}");
             var cameraObject = new GameObject("Capture Camera");
             var camera = cameraObject.AddComponent<Camera>();
-            camera.transform.position = player.transform.position + new Vector3(0f, 1.2f, 3f);
+            Vector3 offset = filename.Contains("recovery") ? new Vector3(3f, 1.2f, 0f) : new Vector3(0f, 1.2f, 3f);
+            camera.transform.position = player.transform.position + offset;
             camera.transform.LookAt(player.transform.position + Vector3.up * 0.9f);
             camera.orthographic = true;
             camera.orthographicSize = 1.2f;
