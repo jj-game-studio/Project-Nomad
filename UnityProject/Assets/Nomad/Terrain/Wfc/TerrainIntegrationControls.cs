@@ -89,7 +89,9 @@ namespace Nomad.Terrain
         {
             if (player != null) player.SetActive(false);
             ClearExits();
-            GetComponent<TerrainLootIntegration>()?.Refresh(null);
+            var loot = GetComponent<TerrainLootIntegration>();
+            loot?.Refresh(null);
+            bool replaceCrates = loot != null && loot.UseScatteredCrateSlots;
             if (Navigation == null) gameObject.AddComponent<FieldNavigation>();
             Navigation.Configure(generator);
             bool micro = !legacy && catalog.microTiles;
@@ -125,9 +127,16 @@ namespace Nomad.Terrain
                 scatter.Configure(generator, propTemplate, 0, crateSize * 0.5f, crateSize);
                 navigation = CheckNavigation();
             }
-            FieldGenerationResult field = Navigation.Prepare(result, scatter.gameObject);
+            FieldGenerationResult field = Navigation.Prepare(result, scatter.gameObject,
+                replaceCrates ? scatter.Positions : null);
             NavigationFailure = field.FailureReason;
             bool safe = field.Success;
+
+            // 배치와 경로 검사에 쓰인 구형 큐브를 끄고 같은 자리에 신규 상자를 배치합니다.
+            if (replaceCrates && scatter.GeneratedRoot != null)
+                scatter.GeneratedRoot.gameObject.SetActive(false);
+            loot?.Refresh(safe ? field : null);
+
             spawn = field.PlayerPosition + Vector3.up * 0.05f;
             if (safe) CreateExits(field);
             if (safe) PlacePlayer();
@@ -140,8 +149,6 @@ namespace Nomad.Terrain
                 + "O Field overview/player | G 3m tile gallery/player\n"
                 + "WASD Move | Space Jump | Left Shift Roll | Fall: respawn\n"
                 + $"Levels 0/1/2m | Reachable samples {generator.ReachableSamples} | {NavigationFailure}{generator.WalkabilityFailure}";
-            // 상자는 Ready 결과의 상자 지점에만 배치합니다. 실패하면 상자를 만들지 않습니다.
-            GetComponent<TerrainLootIntegration>()?.Refresh(safe ? field : null);
             return result;
         }
 

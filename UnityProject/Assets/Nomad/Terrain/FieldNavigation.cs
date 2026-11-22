@@ -46,7 +46,8 @@ namespace Nomad.Terrain
         }
 
         // 호출 측은 소품 배치와 경로 복구를 마친 뒤 최종 결과를 준비합니다.
-        public FieldGenerationResult Prepare(TerrainGenerationResult terrain, GameObject obstacles)
+        public FieldGenerationResult Prepare(TerrainGenerationResult terrain, GameObject obstacles,
+            IReadOnlyList<Vector3> scatteredChestPositions = null)
         {
             if (preparing) throw new InvalidOperationException("경로 준비에 재진입할 수 없습니다.");
             if (!isActiveAndEnabled) throw new InvalidOperationException("비활성 경로 제공자는 준비할 수 없습니다.");
@@ -59,7 +60,7 @@ namespace Nomad.Terrain
             preparing = true;
             try
             {
-                return PrepareCurrent(terrain, obstacles);
+                return PrepareCurrent(terrain, obstacles, scatteredChestPositions);
             }
             finally
             {
@@ -67,7 +68,8 @@ namespace Nomad.Terrain
             }
         }
 
-        private FieldGenerationResult PrepareCurrent(TerrainGenerationResult terrain, GameObject obstacles)
+        private FieldGenerationResult PrepareCurrent(TerrainGenerationResult terrain, GameObject obstacles,
+            IReadOnlyList<Vector3> scatteredChestPositions)
         {
             ReleaseMesh();
             var enemies = new List<FieldSpawnPoint>();
@@ -85,28 +87,16 @@ namespace Nomad.Terrain
                 reason = success ? string.Empty : "안전한 플레이어 시작점 또는 NavMesh가 없습니다.";
             }
             if (success) success = ValidateRoutes(terrain, start, obstacles, chests, out reason);
+            if (success && scatteredChestPositions == null)
+                success = ReserveChestPoints(terrain, obstacles, start, chests, out reason);
+            else if (success)
+                AddScatteredChestPoints(start, scatteredChestPositions, chests);
+
             if (success)
             {
-                SelectPoints(terrain, start, chests, true);
-                while (chests.Count > 0)
-                {
-                    // 상자를 모두 놓아도 필수 경로가 유지되는 예약 영역만 공개합니다.
-                    Bake(terrain, obstacles, chests);
-                    if (ValidateRoutes(terrain, start, obstacles, chests, out _) && ReachAll(start, chests)) break;
-                    int nearest = 0;
-                    for (int index = 1; index < chests.Count; index++)
-                        if (Vector3.Distance(chests[index].Position, MicroTerrainWalkability.BlockedPoint)
-                            < Vector3.Distance(chests[nearest].Position, MicroTerrainWalkability.BlockedPoint)) nearest = index;
-                    chests.RemoveAt(nearest);
-                }
-                if (chests.Count == 0) Bake(terrain, obstacles, chests);
-                success = HasNavigation && ValidateRoutes(terrain, start, obstacles, chests, out reason);
-                if (success)
-                {
-                    // 출구를 먼저 정하고 적 지점이 출구·상자 자리를 피하도록 합니다.
-                    SelectExits(terrain, start, exits, chests);
-                    SelectPoints(terrain, start, enemies, false, new List<FieldSpawnPoint>(chests.Concat(exits)));
-                }
+                // 출구를 먼저 정하고 적 지점이 출구·상자 자리를 피하도록 합니다.
+                SelectExits(terrain, start, exits, chests);
+                SelectPoints(terrain, start, enemies, false, new List<FieldSpawnPoint>(chests.Concat(exits)));
             }
             if (!success)
             {
@@ -120,6 +110,45 @@ namespace Nomad.Terrain
             State = success ? FieldGenerationState.Ready : FieldGenerationState.Failed;
             GenerationCompleted?.Invoke(LastResult);
             return LastResult;
+        }
+
+        private bool ReserveChestPoints(TerrainGenerationResult terrain, GameObject obstacles, Vector3 start,
+            List<FieldSpawnPoint> chests, out string reason)
+        {
+            SelectPoints(terrain, start, chests, true);
+            while (chests.Count > 0)
+            {
+                // 상자를 모두 놓아도 필수 경로가 유지되는 예약 영역만 공개합니다.
+                Bake(terrain, obstacles, chests);
+                if (ValidateRoutes(terrain, start, obstacles, chests, out _) && ReachAll(start, chests)) break;
+                int nearest = 0;
+                for (int index = 1; index < chests.Count; index++)
+                    if (Vector3.Distance(chests[index].Position, MicroTerrainWalkability.BlockedPoint)
+                        < Vector3.Distance(chests[nearest].Position, MicroTerrainWalkability.BlockedPoint)) nearest = index;
+                chests.RemoveAt(nearest);
+            }
+
+            if (chests.Count == 0) Bake(terrain, obstacles, chests);
+            return ValidateRoutes(terrain, start, obstacles, chests, out reason);
+        }
+
+        private void AddScatteredChestPoints(Vector3 start, IReadOnlyList<Vector3> positions, List<FieldSpawnPoint> chests)
+        {
+            // 경로에 포함해 검사한 큐브 자리를 사용합니다. 주위에서 상자를 열 수 있는 곳도 확인합니다.
+            for (int index = 0; index < positions.Count; index++)
+            {
+                Vector3 position = positions[index];
+                for (int side = 0; side < 8; side++)
+                {
+                    Vector3 offset = Quaternion.Euler(0f, 45f * side, 0f) * (Vector3.forward * 1.3f);
+                    if (!Sample(position + offset, out Vector3 approach) ||
+                        Vector3.Distance(approach, position) > 1.85f || !Reachable(start, approach))
+                        continue;
+
+                    chests.Add(new FieldSpawnPoint("chest-prop-" + index, position, Quaternion.identity, 0.6f, approach));
+                    break;
+                }
+            }
         }
 
         private void Bake(TerrainGenerationResult terrain, GameObject obstacles, List<FieldSpawnPoint> chests)

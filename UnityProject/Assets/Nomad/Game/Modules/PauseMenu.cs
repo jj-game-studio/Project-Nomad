@@ -42,7 +42,7 @@ namespace Nomad.Game.Modules
                 ShowMenu();
             else if (IsOpen)
                 Resume();
-            else
+            else if (manager.Player.GetComponent<PlayerInventory>()?.BlocksTradeInput != true)
                 Open();
         }
 

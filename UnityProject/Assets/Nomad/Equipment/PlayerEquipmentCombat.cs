@@ -23,6 +23,7 @@ namespace Nomad.Equipment
         private readonly List<RaycastResult> uiHits = new();
         private PlayerEquipment equipment;
         private PlayerMovement movement;
+        private PlayerInventory inventory;
         private Health health;
         private PlayerCombat legacyCombat;
         private bool restoreLegacy;
@@ -43,6 +44,7 @@ namespace Nomad.Equipment
         {
             equipment = GetComponent<PlayerEquipment>();
             movement = GetComponent<PlayerMovement>();
+            TryGetComponent(out inventory);
             health = GetComponent<Health>();
             legacyCombat = GetComponent<PlayerCombat>();
         }
@@ -72,7 +74,7 @@ namespace Nomad.Equipment
             AimPoint = null;
             ItemDefinition weapon = CurrentWeapon;
             if (!isActiveAndEnabled || !equipment.isActiveAndEnabled || InputBlocked || EquipmentUiOpen ||
-                Time.timeScale <= 0 || health.IsDead || movement.BlocksAttack || Time.time < nextAttackTime ||
+                inventory?.BlocksTradeInput == true || Time.timeScale <= 0 || health.IsDead || movement.BlocksAttack || Time.time < nextAttackTime ||
                 weapon == null || weapon.EquipmentType != EquipmentType.Weapon || weapon.AttackPower <= 0 ||
                 weapon.AttackRange <= 0 || weapon.AttackInterval <= 0)
                 return false;

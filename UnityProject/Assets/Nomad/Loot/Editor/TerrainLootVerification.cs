@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using Nomad.Interaction;
 using Nomad.Inventory;
+using Nomad.Props;
 using Nomad.Terrain;
 using Nomad.Terrain.Editor;
 using UnityEditor;
@@ -163,6 +164,7 @@ namespace Nomad.Loot.Editor
             int total = 0;
             int points = 0;
             int empty = 0;
+            int spread = 0;
             for (int i = 0; i < SweepSeeds; i++)
             {
                 controls.Regenerate(true);
@@ -176,6 +178,9 @@ namespace Nomad.Loot.Editor
                     $"seed {controls.Seed}: same generationId is not placed twice");
                 total += placed.Length;
                 if (placed.Length == 0) empty++;
+                if (placed.Any(chest => placed.Any(other =>
+                        Vector3.Distance(chest.transform.position, other.transform.position) >= 9f)))
+                    spread++;
                 points += controls.Navigation.LastResult.ChestPoints.Count;
 
                 controls.Regenerate(false);
@@ -188,16 +193,21 @@ namespace Nomad.Loot.Editor
             Require(spawner.Spawn(null).Count == 0 && Chests().Length == 0, "missing or failed result spawns nothing");
             controls.Regenerate(false);
             RequirePlacement("restored after zero points");
-            return $"sweep seeds={SweepSeeds} chests={total}/{points} points, seeds without chest={empty}";
+            Require(spread >= 2, "multiple seeds have chests in separated parts of the field");
+            return $"sweep seeds={SweepSeeds} chests={total}/{points} points, spread seeds={spread}, seeds without chest={empty}";
         }
 
         private static void RequirePlacement(string label)
         {
             FieldGenerationResult field = controls.Navigation.LastResult;
             LootChest[] chests = Chests();
-            int points = field.ChestPoints.Count;
-            Require(points == 0 || chests.Length >= Mathf.CeilToInt(points * 0.5f), $"{label}: at least half of {points} points used ({chests.Length})");
-            Require(chests.Length <= points, $"{label}: no more chests than points");
+            var scatter = Object.FindAnyObjectByType<PropScatter>();
+            Require(scatter.GeneratedRoot == null || !scatter.GeneratedRoot.gameObject.activeInHierarchy,
+                $"{label}: old crate objects are disabled");
+            Require(chests.Length == field.ChestPoints.Count && chests.Length == scatter.Positions.Count,
+                $"{label}: all {scatter.Positions.Count} former crate positions replaced ({chests.Length})");
+            Require(scatter.Positions.All(position => chests.Any(c => Vector3.Distance(position, c.transform.position) < 0.01f)),
+                $"{label}: replacement chest at each former crate position");
             Require(chests.Select(c => c.InteractionId).Distinct().Count() == chests.Length
                     && chests.All(c => c.InteractionId.StartsWith(field.GenerationId + "/")), $"{label}: unique IDs of this generation");
             Require(chests.All(c => field.ChestPoints.Any(p => Vector3.Distance(p.Position, c.transform.position) < 0.01f)),

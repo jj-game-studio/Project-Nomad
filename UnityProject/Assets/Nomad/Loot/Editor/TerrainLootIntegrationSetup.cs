@@ -67,6 +67,7 @@ namespace Nomad.Loot.Editor
             var settings = new SerializedObject(loot);
             settings.FindProperty("inventory").objectReferenceValue = inventory;
             settings.FindProperty("status").objectReferenceValue = panel.GetComponentInChildren<UnityEngine.UI.Text>();
+            settings.FindProperty("useScatteredCrateSlots").boolValue = true;
             settings.ApplyModifiedPropertiesWithoutUndo();
         }
     }

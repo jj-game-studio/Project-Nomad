@@ -127,7 +127,7 @@ namespace Nomad.Equipment
             Mouse mouse = Mouse.current;
             if (combat != null) combat.EquipmentUiOpen = IsOpen ||
                 (mouse != null && Contains(toolbar, mouse.position.ReadValue()));
-            if (inventoryView != null && inventoryView.BlocksSplitInput)
+            if (inventory?.BlocksTradeInput == true || inventoryView?.BlocksSplitInput == true)
             {
                 CancelSelection();
                 return;

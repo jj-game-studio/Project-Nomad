@@ -32,3 +32,6 @@ Thumbs.db
 
 # 로컬 작업 사본(git worktree 등). 저장소에 커밋하지 않음
 /.worktrees/
+# 상점 검증 메뉴가 필요할 때 생성하는 씬·재질
+/UnityProject/Assets/Nomad/Shop/Editor/Generated/
+/UnityProject/Assets/Nomad/Shop/Editor/Generated.meta

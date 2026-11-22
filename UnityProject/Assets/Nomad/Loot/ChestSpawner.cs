@@ -46,7 +46,7 @@ namespace Nomad.Loot
         public IReadOnlyList<LootChest> Chests => chests;
         public string GenerationId { get; private set; }
 
-        public IReadOnlyList<LootChest> Spawn(FieldGenerationResult field)
+        public IReadOnlyList<LootChest> Spawn(FieldGenerationResult field, bool fillAllPoints = false)
         {
             if (field == null || !field.Success)
             {
@@ -54,11 +54,12 @@ namespace Nomad.Loot
                 return chests;
             }
 
-            return Spawn(field.GenerationId, field.Seed, field.ChestPoints);
+            return Spawn(field.GenerationId, field.Seed, field.ChestPoints, fillAllPoints);
         }
 
         // 같은 세대에는 한 번만 배치하고, 지점이 없거나 부족하면 가능한 수만큼만 만듭니다.
-        public IReadOnlyList<LootChest> Spawn(string generationId, int seed, IReadOnlyList<FieldSpawnPoint> points)
+        public IReadOnlyList<LootChest> Spawn(string generationId, int seed, IReadOnlyList<FieldSpawnPoint> points,
+            bool fillAllPoints = false)
         {
             if (generationId == GenerationId && root != null)
                 return chests;
@@ -70,7 +71,8 @@ namespace Nomad.Loot
 
             var random = new System.Random(unchecked(seed * 7919 + 20));
             int[] order = Shuffle(points.Count, random);
-            int count = random.Next(Mathf.CeilToInt(points.Count * minimumFill), points.Count + 1);
+            int count = fillAllPoints ? points.Count
+                : random.Next(Mathf.CeilToInt(points.Count * minimumFill), points.Count + 1);
 
             root = new GameObject("FieldChests");
             root.transform.SetParent(transform, false);

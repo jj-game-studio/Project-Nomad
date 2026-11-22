@@ -55,4 +55,4 @@ Unity CLI의 `run`은 자동으로 -quit를 붙여 비동기 Play Mode 검증 �
 
 ## 저장 지형 통합 씬 연결
 
-`Nomad > Terrain > Open Integration Test Scene`에서 상자를 E키로 루팅합니다. #20부터 상자는 소품 큐브가 아니라 `ChestSpawner`가 Ready 결과의 `ChestPoints`에만 seed 기반으로 배치합니다(지점 중 절반 이상~전부, 임시 내용물 Scrap·칼·조끼). 재생성 시작 시 이전 상자를 정리하고 Failed면 만들지 않으며, 같은 세대에는 한 번만 배치합니다. 통합 씬에서는 **G가 갤러리**이므로 가방 비우기는 **V**, 가득 채우기는 F입니다. 상세 절차와 검증은 `docs/terrain-integration.md`를 참조합니다.
+`Nomad > Terrain > Open Integration Test Scene`에서 상자를 E키로 루팅합니다. #124의 필드 및 검토 씬은 기존 소품 큐브 위치에서 접근 가능한 곳을 `ChestPoints`로 사용합니다. 경로 검사가 끝나면 큐브를 끄고, `ChestSpawner`가 확인된 위치마다 신규 상자 하나를 배치합니다. 재생성 시작에 이전 상자를 정리하고, 같은 세대는 한 번만 배치합니다. 통합 씬에서 **G**는 갤러리, **V**는 가방 비우기, **F**는 가방 채우기입니다. [상세 검증](terrain-integration.md)
