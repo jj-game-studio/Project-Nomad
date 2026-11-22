@@ -123,10 +123,11 @@ namespace Nomad.Shop.Editor
                         RequireVisible("Stock/Content/Slot 0/Count");
                         RequireVisible("Backpack/Content/Slot 0/Name");
                         RequireVisible("Stock/Content/Slot 0/Price");
-                        Font font = Resources.Load<Font>("ShopFonts/NanumGothic-Regular");
+                        Font font = Resources.Load<Font>("ShopFonts/Pretendard-Regular");
+                        Font heading = Resources.Load<Font>("ShopFonts/Pretendard-SemiBold");
                         Text title = Node("Title").GetComponent<Text>();
                         Require(font != null && font.HasCharacter('상') && font.HasCharacter('점') &&
-                            title.font == font && title.text == "마을 상점" && Quantity.textComponent.font == font,
+                            title.font == heading && title.text == "마을 상점" && Quantity.textComponent.font == font,
                             "제목·수량 글꼴과 한글 글리프 확인");
                         Require(Node("Stock/Content/Slot 0").GetComponent<ShopRoundedRect>().Radius >= 10 &&
                             Node("Quantity").GetComponent<ShopRoundedRect>() != null, "둥근 카드·입력 칸 연결");
@@ -380,15 +381,51 @@ namespace Nomad.Shop.Editor
                     case 72:
                         Require(!wallet.IsSaleProtected(inventory.GetSlot(0).Item) && Node("Sell").GetComponent<Button>().interactable &&
                             Read("Balance") == "거래 후 잔액 798 골드", "버튼 잠금 해제·판매 후 예상 잔액");
+                        Queue();
+                        Pointer("Stock/Content/Slot 0", true, MouseButton.Right);
+                        break;
+                    case 73: Pointer("Stock/Content/Slot 0", false, MouseButton.Right); break;
+                    case 74:
+                        Require(wallet.Gold == 791 && inventory.GetSlot(0).Count == 9, "다른 상품 우클릭은 1개 구매");
+                        Queue(Key.Q);
+                        break;
+                    case 75:
+                        Require(Quantity.isFocused, "Q 수량 입력 포커스");
+                        Quantity.text = "2";
+                        Queue(Key.Enter);
+                        break;
+                    case 76:
+                        Require(wallet.Gold == 791 && Quantity.text == "2", "수량 확정 Enter는 거래하지 않음");
+                        Queue();
+                        Pointer("Stock/Content/Slot 0", true, MouseButton.Right);
+                        break;
+                    case 77: Pointer("Stock/Content/Slot 0", false, MouseButton.Right); break;
+                    case 78:
+                        Require(wallet.Gold == 781 && inventory.GetSlot(0).Count == 11, "선택 상품 우클릭은 입력 수량 구매");
+                        Pointer("Backpack/Content/Slot 0", true, MouseButton.Right);
+                        break;
+                    case 79: Pointer("Backpack/Content/Slot 0", false, MouseButton.Right); break;
+                    case 80:
+                        Require(wallet.Gold == 783 && inventory.GetSlot(0).Count == 10, "가방 우클릭은 판매");
+                        Queue(Key.L);
+                        break;
+                    case 81:
+                        Queue();
+                        Pointer("Backpack/Content/Slot 0", true, MouseButton.Right);
+                        break;
+                    case 82: Pointer("Backpack/Content/Slot 0", false, MouseButton.Right); break;
+                    case 83:
+                        Require(wallet.Gold == 783 && inventory.GetSlot(0).Count == 10, "판매 잠금은 우클릭 판매도 차단");
+                        Capture("shop-ui-final.png");
                         inventory.GetComponent<Health>().TryApplyDamage(1000);
                         Queue();
                         break;
-                    case 73:
+                    case 84:
                         Require(Object.FindAnyObjectByType<ShopPanel>() == null &&
                             !shop.TryBuy(inventory, 0, 1, out _), "사망 시 닫기·거래 금지");
                         Require(File.Exists(Path.Combine(Application.dataPath, "../Artifacts/shop-ui.png")), "화면 캡처 생성");
                         break;
-                    case 74:
+                    case 85:
                         if (!ShopRestockChecks.Step())
                         {
                             stage--;
@@ -423,7 +460,7 @@ namespace Nomad.Shop.Editor
                 Quantity.ProcessEvent(new Event { type = EventType.KeyDown, character = character });
         }
 
-        private static void Pointer(string path, bool held)
+        private static void Pointer(string path, bool held, MouseButton button = MouseButton.Left)
         {
             Canvas.ForceUpdateCanvases();
             RectTransform rect = (RectTransform)Node(path);
@@ -438,7 +475,7 @@ namespace Nomad.Shop.Editor
                 Canvas.ForceUpdateCanvases();
             }
             Vector2 point = RectTransformUtility.WorldToScreenPoint(null, rect.TransformPoint(rect.rect.center));
-            InputSystem.QueueStateEvent(mouse, new MouseState { position = point }.WithButton(MouseButton.Left, held));
+            InputSystem.QueueStateEvent(mouse, new MouseState { position = point }.WithButton(button, held));
         }
 
         private static void Queue(params Key[] keys) => InputSystem.QueueStateEvent(keyboard, new KeyboardState(keys));

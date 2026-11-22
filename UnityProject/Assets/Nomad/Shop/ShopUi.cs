@@ -5,18 +5,20 @@ namespace Nomad.Shop
 {
     internal static class ShopUi
     {
-        internal static readonly Color Cream = new Color(0.96f, 0.93f, 0.85f);
-        internal static readonly Color Surface = new Color(0.99f, 0.97f, 0.91f);
-        internal static readonly Color Slot = new Color(0.88f, 0.86f, 0.79f);
-        internal static readonly Color Ink = new Color(0.20f, 0.27f, 0.23f);
-        internal static readonly Color Muted = new Color(0.46f, 0.51f, 0.44f);
-        internal static readonly Color Gold = new Color(0.85f, 0.69f, 0.36f);
-        internal static readonly Color GoldInk = new Color(0.51f, 0.37f, 0.14f);
-        internal static readonly Color Forest = new Color(0.19f, 0.32f, 0.27f);
-        internal static readonly Color Border = new Color(0.69f, 0.72f, 0.62f);
+        internal static readonly Color Canvas = new Color(0.975f, 0.947f, 0.88f);
+        internal static readonly Color Surface = new Color(1f, 0.98f, 0.93f);
+        internal static readonly Color Slot = new Color(0.91f, 0.87f, 0.77f);
+        internal static readonly Color Ink = new Color(0.23f, 0.22f, 0.15f);
+        internal static readonly Color Muted = new Color(0.49f, 0.46f, 0.36f);
+        internal static readonly Color Accent = new Color(0.95f, 0.69f, 0.22f);
+        internal static readonly Color Selected = new Color(1f, 0.94f, 0.79f);
+        internal static readonly Color GoldInk = new Color(0.50f, 0.35f, 0.13f);
+        internal static readonly Color Forest = new Color(0.14f, 0.25f, 0.17f);
+        internal static readonly Color Border = new Color(0.75f, 0.68f, 0.52f);
         internal const float CellSize = 96;
         internal const float CellHeight = 76;
         private static Font bodyFont;
+        private static Font headingFont;
 
         internal static RectTransform Rect(Transform parent, string name, float x, float y, float width, float height)
         {
@@ -55,7 +57,7 @@ namespace Nomad.Shop
             float width, float height, int size = 18, Color? color = null)
         {
             Text text = Rect(parent, name, x, y, width, height).gameObject.AddComponent<Text>();
-            bodyFont = bodyFont != null ? bodyFont : Resources.Load<Font>("ShopFonts/NanumGothic-Regular");
+            bodyFont = bodyFont != null ? bodyFont : Resources.Load<Font>("ShopFonts/Pretendard-Regular");
             text.font = bodyFont;
             text.fontSize = size;
             text.text = value;
@@ -69,7 +71,8 @@ namespace Nomad.Shop
             float width, float height, int size, Color? color = null)
         {
             Text text = Label(parent, name, value, x, y, width, height, size, color);
-            text.fontStyle = FontStyle.Bold;
+            headingFont = headingFont != null ? headingFont : Resources.Load<Font>("ShopFonts/Pretendard-SemiBold");
+            text.font = headingFont;
             return text;
         }
 
@@ -77,13 +80,18 @@ namespace Nomad.Shop
             float width, float height, UnityEngine.Events.UnityAction action)
         {
             RectTransform rect = Rect(parent, name, x, y, width, height);
-            ShopRoundedRect frame = Rounded(rect, Surface, 10);
-            Shadow(frame, 3);
+            ShopRoundedRect frame = Rounded(rect, Surface, 14, 1);
+            Shadow(frame, 2, 0.12f);
             Button button = rect.gameObject.AddComponent<Button>();
             button.targetGraphic = frame;
+            ColorBlock colors = button.colors;
+            colors.highlightedColor = new Color(1.18f, 1.18f, 1.18f);
+            colors.pressedColor = new Color(0.8f, 0.8f, 0.8f);
+            colors.disabledColor = new Color(0.65f, 0.65f, 0.65f, 1);
+            button.colors = colors;
             button.navigation = new Navigation { mode = Navigation.Mode.None };
             button.onClick.AddListener(action);
-            Text text = Label(rect, "Label", label, 4, 0, width - 8, height);
+            Text text = Heading(rect, "Label", label, 4, 0, width - 8, height, 16);
             text.alignment = TextAnchor.MiddleCenter;
             return button;
         }
@@ -91,7 +99,7 @@ namespace Nomad.Shop
         internal static InputField QuantityInput(Transform parent, float x, float y)
         {
             RectTransform rect = Rect(parent, "Quantity", x, y, 112, 40);
-            Rounded(rect, Surface, 10, 1.5f, Forest);
+            Rounded(rect, Surface, 12, 1, Border);
             Text text = Label(rect, "Value", "1", 8, 0, 96, 40, 20);
             text.alignment = TextAnchor.MiddleCenter;
 
@@ -103,33 +111,43 @@ namespace Nomad.Shop
             input.onValidateInput = (_, _, character) => character >= '0' && character <= '9' ? character : '\0';
             input.characterLimit = 10;
             input.navigation = new Navigation { mode = Navigation.Mode.None };
-            input.selectionColor = new Color(Gold.r, Gold.g, Gold.b, 0.35f);
+            input.selectionColor = new Color(Accent.r, Accent.g, Accent.b, 0.35f);
             input.customCaretColor = true;
             input.caretColor = Ink;
             return input;
         }
 
-        internal static void Purse(Transform parent, float x, float y)
+        internal static void Coin(Transform parent, float x, float y, float size)
         {
-            RectTransform emblem = Rect(parent, "Merchant emblem", x, y, 56, 56);
-            Rounded(emblem, Cream, 16, 2, Gold);
-            Rounded(Rect(emblem, "Handle", 19, 10, 18, 22), Color.clear, 9, 3, Forest).raycastTarget = false;
-            Rounded(Rect(emblem, "Bag", 12, 23, 32, 25), Gold, 9, 2, GoldInk).raycastTarget = false;
-            Text coin = Heading(emblem, "Coin", "G", 12, 24, 32, 22, 17, GoldInk);
-            coin.alignment = TextAnchor.MiddleCenter;
+            RectTransform coin = Rect(parent, "Coin", x, y, size, size);
+            Rounded(coin, Accent, size / 2, 1, GoldInk).raycastTarget = false;
+            Rounded(Rect(coin, "Inset", 3, 3, size - 6, size - 6), Color.clear, size / 2, 1, Canvas).raycastTarget = false;
+            Text mark = Heading(coin, "Mark", "G", 0, 0, size, size, (int)(size * 0.6f), GoldInk);
+            mark.alignment = TextAnchor.MiddleCenter;
         }
 
-        internal static RectTransform Grid(Transform parent, string name, float x)
+        internal static void ShopSign(Transform parent, float x, float y)
+        {
+            RectTransform sign = Rect(parent, "Merchant emblem", x, y, 58, 54);
+            Rounded(Rect(sign, "Stall", 5, 17, 48, 36), Border, 5, 1, Accent).raycastTarget = false;
+            Rounded(Rect(sign, "Window", 13, 25, 32, 20), Forest, 3, 0).raycastTarget = false;
+            for (int index = 0; index < 5; index++)
+                Rounded(Rect(sign, "Awning " + index, index * 11, 0, 12, 24),
+                    index % 2 == 0 ? Canvas : Accent, 5, 0).raycastTarget = false;
+            Rounded(Rect(parent, "Title divider", x + 75, y + 3, 1, 48), Border, 0, 0).raycastTarget = false;
+        }
+
+        internal static RectTransform Grid(Transform parent, string name, float x, bool merchant = false)
         {
             RectTransform viewport = Rect(parent, name, x, 206, 530, 350);
-            Rounded(viewport, Slot, 16, 1, Border);
+            Rounded(viewport, merchant ? Canvas : Slot, 18, merchant ? 0 : 1, Border);
             viewport.gameObject.AddComponent<RectMask2D>();
             RectTransform content = Rect(viewport, "Content", 8, 8, 514, 334);
             var layout = content.gameObject.AddComponent<GridLayoutGroup>();
-            layout.cellSize = new Vector2(CellSize, CellHeight);
+            layout.cellSize = merchant ? new Vector2(164, 196) : new Vector2(CellSize, CellHeight);
             layout.spacing = new Vector2(8, 8);
             layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            layout.constraintCount = 5;
+            layout.constraintCount = merchant ? 3 : 5;
             content.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
             ScrollRect scroll = viewport.gameObject.AddComponent<ScrollRect>();
