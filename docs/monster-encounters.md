@@ -15,6 +15,7 @@
 
 ## 검증
 
+- `Nomad > Monsters > Open Field Encounter Preview` → Play로 현재 메인 필드의 배치 흐름을 검토합니다.
 - `scripts/Test-Unity.ps1 -Platform All -Json`: EditMode·PlayMode 회귀 검사.
 - `Nomad.Gameplay.Editor.EncounterLayoutVerification.Run`: 저장된 Field.unity를 Play하여 seed0·7·51의 일반12/엘리트1/보스1, 실제 경로 순서·도달성·구역 수명과 전경 렌더를 검사합니다.
 - 보스 구역은 NavMesh 연결뿐 아니라 CharacterController가 기존 벽을 넘어 경사로로 걸어 들어가는 물리 검사도 포함합니다.

@@ -20,6 +20,13 @@ namespace Nomad.Gameplay.Editor
         private static int frame;
         private static double deadline;
 
+        [MenuItem("Nomad/Monsters/Open Field Encounter Preview")]
+        public static void OpenPreview()
+        {
+            if (EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+                EditorSceneManager.OpenScene("Assets/Nomad/Game/Field.unity");
+        }
+
         public static void Run()
         {
             EditorSceneManager.OpenScene("Assets/Nomad/Game/Field.unity");
