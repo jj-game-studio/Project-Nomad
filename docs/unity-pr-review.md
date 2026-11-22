@@ -36,6 +36,8 @@ PR의 최신 HEAD와 서브모듈을 준비하고 프로젝트 버전에 맞는 
 - clone이나 submodule 준비 실패 시 폴더를 보존합니다. GitHub 인증·애셋 권한을 확인합니다. 불완전한 checkout은 수동 확인이 필요하며 자동 재생성하지 않습니다.
 - 다른 실행이 준비 중이면 완료 후 다시 시도합니다. 대상 폴더가 다른 저장소이면 사용하지 않습니다.
 
-## Codex 스킬
+## Codex·Claude Code 스킬
 
 이 저장소의 `.agents/skills/unity-pr-review/SKILL.md`가 팀 공유 스킬입니다. 해당 checkout을 작업 공간으로 연 Codex에서 스킬 목록을 갱신한 뒤 `$unity-pr-review`와 PR 번호를 전달합니다. 스킬은 이 저장소의 `scripts/Open-PrInUnity.ps1`을 호출하므로 스킬 폴더만 개인 스킬 경로에 복사하지 않습니다.
+
+Claude Code에서는 같은 checkout을 연 뒤 `/unity-pr-review`와 PR 번호를 전달합니다. `.claude/skills/unity-pr-review/SKILL.md`는 공유 스킬을 읽도록 연결만 하므로 절차는 `.agents` 쪽 파일 한 곳에서 수정합니다.
