@@ -15,12 +15,16 @@ namespace Nomad.Visibility
         [SerializeField, Min(0.1f)] private float eyeHeight = 1.2f;
         [SerializeField] private LayerMask blockers = Physics.DefaultRaycastLayers;
         [SerializeField, Range(0.02f, 0.2f)] private float interval = 0.08f;
+        [Header("디버그")]
+        [Tooltip("F3으로도 전환합니다. 청록색은 최대 범위, 노란색은 장애물에 막히는 눈높이 경계입니다.")]
+        [SerializeField] private bool showDebugRange;
 
         private readonly RaycastHit[] hits = new RaycastHit[64];
         private float nextSample;
         private Vector3 forward = Vector3.forward;
         private Transform previousObserver;
         private Vector3 previousPosition;
+        private VisibilityDebugRange debugRange;
 
         public Transform Observer => observer;
         public Vector3 Eye => observer.position + Vector3.up * eyeHeight;
@@ -29,6 +33,7 @@ namespace Nomad.Visibility
         public float Angle => angle;
         public bool Available => isActiveAndEnabled && observer != null && observer.gameObject.activeInHierarchy;
         public int Revision { get; private set; }
+        public bool ShowDebugRange { get => showDebugRange; set => showDebugRange = value; }
 
         public void Configure(Transform source, Camera camera, float range = 24f, float degrees = 120f)
         {
@@ -42,12 +47,18 @@ namespace Nomad.Visibility
 
         private void LateUpdate()
         {
+            if (Keyboard.current?.f3Key.wasPressedThisFrame == true) showDebugRange = !showDebugRange;
             if (!Available)
             {
                 foreach (VisibilityTarget target in VisibilityTarget.Active) target.Release();
                 return;
             }
             UpdateDirection();
+            if (showDebugRange && debugRange == null)
+            {
+                debugRange = gameObject.AddComponent<VisibilityDebugRange>();
+                debugRange.Configure(this);
+            }
 
             // 순간이동/대상 교체는 표시 유예를 초기화합니다.
             if (previousObserver != observer || Vector3.Distance(previousPosition, observer.position) > 3f)
@@ -122,7 +133,13 @@ namespace Nomad.Visibility
 
         private void OnDisable()
         {
+            if (debugRange != null) debugRange.Hide();
             foreach (VisibilityTarget target in VisibilityTarget.Active) target.Release();
+        }
+
+        private void OnDestroy()
+        {
+            if (debugRange != null) Destroy(debugRange);
         }
     }
 }

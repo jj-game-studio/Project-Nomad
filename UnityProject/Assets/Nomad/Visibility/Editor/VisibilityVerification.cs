@@ -22,6 +22,7 @@ namespace Nomad.Visibility.Editor
         private static VisibilityTarget behind;
         private static VisibilityTarget rear;
         private static Mouse mouse;
+        private static Keyboard keyboard;
         private static double deadline;
         private static float started;
         private static int stage;
@@ -81,6 +82,7 @@ namespace Nomad.Visibility.Editor
             foreach (VisibilityTarget target in Object.FindObjectsByType<VisibilityTarget>(FindObjectsSortMode.None))
                 JsonUtility.FromJsonOverwrite("{\"hideDelay\":0}", target);
             mouse = InputSystem.AddDevice<Mouse>();
+            keyboard = InputSystem.AddDevice<Keyboard>();
             Point(Vector3.forward);
             started = Time.time;
         }
@@ -105,6 +107,7 @@ namespace Nomad.Visibility.Editor
             switch (stage++)
             {
                 case 0:
+                    Check(!sight.ShowDebugRange && sight.GetComponent<VisibilityDebugRange>() == null, "debug off by default without renderers");
                     Check(Vector3.Dot(sight.Forward, Vector3.forward) > 0.99f, "actual mouse controls sight direction");
                     Evaluate();
                     Check(front.IsVisible && !behind.IsVisible && !rear.IsVisible, "front / wall / rear");
@@ -124,8 +127,20 @@ namespace Nomad.Visibility.Editor
                     Check(closed.green > open.green + 50, "rendered foliage opens only with visibility mask");
                     Check(open.red > closed.red + 20, "rendered enemy inside foliage is revealed");
                     Point(Vector3.back);
+                    InputSystem.QueueStateEvent(keyboard, new KeyboardState(UnityEngine.InputSystem.Key.F3));
                     break;
                 case 1:
+                    Check(sight.ShowDebugRange, "F3 enables debug range");
+                    Transform debug = sight.transform.Find("Visibility Debug Range");
+                    Check(debug != null && debug.gameObject.activeSelf,
+                        "debug visible in Game view; component=" + (sight.GetComponent<VisibilityDebugRange>() != null) +
+                        " children=" + sight.transform.childCount);
+                    LineRenderer maximum = debug.Find("Maximum Cone").GetComponent<LineRenderer>();
+                    Check(Mathf.Abs(Vector3.Distance(maximum.GetPosition(1), sight.Eye) - sight.Distance) < 0.01f, "debug uses configured distance");
+                    Vector3 edge = (maximum.GetPosition(1) - sight.Eye).normalized;
+                    Check(Mathf.Abs(Vector3.Angle(edge, sight.Forward) - sight.Angle * 0.5f) < 0.1f, "debug follows aim and configured angle");
+                    Check(maximum.shadowCastingMode == UnityEngine.Rendering.ShadowCastingMode.Off, "debug casts no shadow");
+                    InputSystem.QueueStateEvent(keyboard, new KeyboardState());
                     Check(Vector3.Dot(sight.Forward, Vector3.back) > 0.99f, "mouse reversal independent of player movement");
                     rear.Evaluate(sight);
                     Check(rear.IsVisible, "rear revealed after aiming");
@@ -147,6 +162,13 @@ namespace Nomad.Visibility.Editor
                 case 3:
                     Evaluate();
                     Check(!front.IsVisible, "new wall hides existing target");
+                    LineRenderer blocked = sight.transform.Find("Visibility Debug Range/Occluded Boundary").GetComponent<LineRenderer>();
+                    bool clipped = false;
+                    for (int index = 1; index < blocked.positionCount - 1; index++)
+                        clipped |= Vector3.Distance(blocked.GetPosition(index), sight.Eye) < sight.Distance - 1f;
+                    Check(clipped, "debug boundary stops at wall");
+                    Capture("visibility-debug-range.png");
+                    InputSystem.QueueStateEvent(keyboard, new KeyboardState(UnityEngine.InputSystem.Key.F3));
                     front.GetComponent<Health>().TryApplyDamage(2);
                     Check(front.GetComponent<Health>().CurrentHealth < front.GetComponent<Health>().MaxHealth, "hidden target still takes damage");
 
@@ -156,6 +178,9 @@ namespace Nomad.Visibility.Editor
                     Object.Destroy(effect.GetComponent<Collider>());
                     break;
                 case 4:
+                    Check(!sight.ShowDebugRange && !sight.transform.Find("Visibility Debug Range").gameObject.activeSelf, "F3 hides debug range");
+                    InputSystem.QueueStateEvent(keyboard, new KeyboardState());
+                    sight.ShowDebugRange = true;
                     Check(GameObject.Find("Late hidden effect").GetComponent<Renderer>().forceRenderingOff, "dynamic hidden renderer before draw");
                     Check(!front.GetComponent<SegmentedHealthBar>().enabled, "hidden HUD stays off");
 
@@ -169,6 +194,7 @@ namespace Nomad.Visibility.Editor
 
                     field.enabled = false;
                     sight.enabled = false;
+                    Check(!sight.transform.Find("Visibility Debug Range").gameObject.activeSelf, "disabled sight hides debug immediately");
                     Check(!front.GetComponentInChildren<Renderer>().forceRenderingOff, "module removal restores renderer");
                     Check(front.GetComponent<SegmentedHealthBar>().enabled, "module removal restores HUD");
                     Check(Shader.GetGlobalFloat("_NomadVisibilityActive") == 0f, "module removal disables cutaway");
@@ -176,6 +202,7 @@ namespace Nomad.Visibility.Editor
                     field.enabled = true;
                     break;
                 case 5:
+                    Check(sight.transform.Find("Visibility Debug Range").gameObject.activeSelf, "Inspector toggle and reenable restore debug");
                     Evaluate();
                     Check(!front.IsVisible, "module restart reapplies occlusion");
                     var foliage = GameObject.Find("Bush cutaway sample").GetComponent<VisibilityFoliage>();
@@ -193,6 +220,7 @@ namespace Nomad.Visibility.Editor
                     player.gameObject.SetActive(false);
                     break;
                 case 6:
+                    Check(!sight.transform.Find("Visibility Debug Range").gameObject.activeSelf, "inactive observer hides debug");
                     Check(!front.Controlled && !front.GetComponentInChildren<Renderer>().forceRenderingOff, "inactive observer releases targets");
                     player.gameObject.SetActive(true);
                     player.position = new Vector3(0f, 0.1f, 0f);
@@ -262,6 +290,7 @@ namespace Nomad.Visibility.Editor
             SessionState.SetBool(Key, false);
             EditorApplication.update -= Tick;
             if (mouse != null) InputSystem.RemoveDevice(mouse);
+            if (keyboard != null) InputSystem.RemoveDevice(keyboard);
             if (Application.isBatchMode) EditorApplication.Exit(code);
             else EditorApplication.ExitPlaymode();
         }

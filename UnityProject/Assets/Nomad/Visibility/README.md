@@ -5,6 +5,14 @@ Unity 메뉴 `Nomad > Visibility > Open Visibility Demo` → Play. WASD 이동, 
 `Build Field Preview`는 최신 TerrainIntegration을 VisibilityField.unity로 복사합니다. 원본 씬/생성기/몬스터 AI/구매 프리팹은 변경하지 않습니다.
 정식 Game/PlayerRig 연결은 #89/PR95 담당자와 조율 후 진행합니다. 모든 게임 씬에 자동 적용하지 않습니다.
 
+## 시야 범위 디버그
+
+Play 중 Game 화면을 클릭하고 **F3**을 누르면 범위 표시를 켜고 끕니다. 기본값은 꺼짐입니다.
+Hierarchy의 **Player Visibility**(모듈은 PlayerVisibilityModule) → Player Visibility 컴포넌트 → **디버그 > Show Debug Range**로도 전환합니다.
+청록색은 설정된 거리·각도의 최대 부채꼴, 노란색은 장애물에 막히는 눈높이 경계입니다. Game/Scene 뷰 모두 표시되며 Gizmos 토글이 필요하지 않습니다.
+선은 플레이어 눈높이에 그립니다. 지형 바닥의 영역이나 적의 머리/몸통 등 여러 3D 표본을 완전히 나타내는 표시는 아닙니다. 실제 적 판정과 비교하며 사용합니다.
+표시를 끄면 디버그 선의 추가 충돌 검사는 실행하지 않습니다. 디버그 선은 충돌체/그림자를 만들지 않습니다.
+
 ## 표시 규칙
 
 적 몸통/머리/양옆 중 하나라도 거리·각도·장애물 검사를 통과하면 표시합니다. 근접 후방 감지는 없습니다.
