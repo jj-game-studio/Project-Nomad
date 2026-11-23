@@ -140,7 +140,10 @@ namespace Nomad.Terrain
             spawn = field.PlayerPosition + Vector3.up * 0.05f;
             if (safe) CreateExits(field);
             if (safe) PlacePlayer();
+            // 실패 시 조망은 임시로만 보여 주고, 재시도가 성공하면 원래 시점으로 돌아가도록 선택값을 유지합니다.
+            int requestedView = view;
             SetView(safe ? view : 1);
+            view = requestedView;
             if (status != null) status.text = $"TERRAIN INTEGRATION | {(legacy ? "Legacy" : "WFC")} | Seed {seed}\n"
                 + $"{Navigation.State} | Tiles {result.Pieces.Count} | Props {scatter.Positions.Count} | Enemy slots {field.EnemyPoints.Count} | Chest slots {field.ChestPoints.Count}"
                 + $" | Exits {field.ExitPoints.Count} ({string.Join("/", field.ExitPoints.Select(point => point.Id.Replace("exit-", "")))})\n"
