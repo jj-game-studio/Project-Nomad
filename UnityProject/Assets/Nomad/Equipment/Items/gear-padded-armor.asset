@@ -10,16 +10,21 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d9209f1a45eeaf4458396815df6300a9, type: 3}
-  m_Name: demo-totem
+  m_Name: gear-padded-armor
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Inventory.ItemDefinition
-  itemId: demo-totem
-  displayName: "\uD1A0\uD15C"
-  description: "\uAC80\uC99D\uC6A9 \uD1A0\uD15C"
-  icon: {fileID: 0}
+  itemId: gear-padded-armor
+  displayName: "\uB204\uBE44 \uAC11\uC637"
+  description: "\uC19C\uC744 \uB367\uB304 \uAC00\uBCBC\uC6B4 \uAC11\uC637\uC785\uB2C8\uB2E4."
+  icon: {fileID: 21300000, guid: e63890f4df82e2446aa57b9da413a3ba, type: 3}
   maxStack: 1
-  equipmentType: 8
+  equipmentType: 3
   attackPower: 0
-  defense: 5
+  defense: 2
   attackMode: 0
   attackRange: 0
   attackInterval: 0
+  manaCost: 0
+  stats:
+  - Stat: 4
+    Value: 15
+  equippedVisual: {fileID: 0}

@@ -21,7 +21,7 @@ namespace Nomad.Inventory
         [SerializeField] private RectTransform grid;
         [SerializeField] private GameObject slotTemplate;
 
-        private readonly SlotView[] slots = new SlotView[PlayerInventory.Capacity];
+        private readonly SlotView[] slots = new SlotView[PlayerInventory.MaxCapacity];
         private Canvas canvas;
         private InventoryTooltip tooltip;
         private InventorySplitDialog splitDialog;
@@ -269,9 +269,13 @@ namespace Nomad.Inventory
 
             // 획득이나 제거로 내용이 바뀌면 기존 드래그를 취소합니다.
             CancelDrag();
-            capacity.text = $"{inventory.UsedSlots} / {PlayerInventory.Capacity} slots";
+            capacity.text = $"{inventory.UsedSlots} / {inventory.SlotCount} slots";
             for (int index = 0; index < slots.Length; index++)
+            {
+                // 가방 장비로 열리지 않은 칸은 숨겨 드래그·툴팁 대상에서도 빠집니다.
+                slots[index].Rect.gameObject.SetActive(index < inventory.SlotCount);
                 slots[index].Bind(inventory.GetSlot(index), index == hoveredIndex);
+            }
 
             UpdateHover(FindPointerSlot(Mouse.current), refreshDetails: true);
         }
@@ -542,7 +546,8 @@ namespace Nomad.Inventory
             Camera eventCamera = EventCamera;
             for (int index = 0; index < slots.Length; index++)
             {
-                if (RectTransformUtility.RectangleContainsScreenPoint(slots[index].Rect, position, eventCamera))
+                if (slots[index].Rect.gameObject.activeSelf &&
+                    RectTransformUtility.RectangleContainsScreenPoint(slots[index].Rect, position, eventCamera))
                     return index;
             }
 

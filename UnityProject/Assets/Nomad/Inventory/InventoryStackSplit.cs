@@ -8,7 +8,7 @@ namespace Nomad.Inventory
         {
             destination = -1;
             error = string.Empty;
-            if (inventory == null || (uint)source >= PlayerInventory.Capacity)
+            if (inventory == null || (uint)source >= PlayerInventory.MaxCapacity)
             {
                 error = "분할할 아이템이 없습니다.";
                 return false;
@@ -27,7 +27,7 @@ namespace Nomad.Inventory
                 return false;
             }
 
-            for (int index = 0; index < PlayerInventory.Capacity; index++)
+            for (int index = 0; index < inventory.SlotCount; index++)
             {
                 if (inventory.GetSlot(index).Item != null)
                     continue;

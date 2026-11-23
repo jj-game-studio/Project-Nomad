@@ -176,6 +176,9 @@ namespace Nomad.Equipment.Editor
             inventory = equipment.GetComponent<PlayerInventory>();
             combat = equipment.GetComponent<PlayerEquipmentCombat>();
             health = equipment.GetComponent<Health>();
+            // 고정 피해 검사를 위해 치명타·회피 난수를 항상 실패로 고정합니다.
+            if (equipment.TryGetComponent(out PlayerStats stats))
+                stats.RandomSource = () => 1f;
             near = UnityEngine.Object.FindObjectsByType<Health>().Where(target => target.name.StartsWith("Melee Target")).ToArray();
             far = GameObject.Find("Low Target").GetComponent<Health>();
             var extra = new GameObject("Extra Hurtbox");
@@ -190,7 +193,7 @@ namespace Nomad.Equipment.Editor
             Check(PlayerEquipment.Capacity == 10 && equipment.ActiveWeapon.AttackPower == 25, "10칸/CSV 검 장착");
             int original = inventory.UsedSlots;
             int armorCount = inventory.GetCount("demo-armor");
-            int totemCount = inventory.GetCount("demo-totem");
+            int charmCount = inventory.GetCount("demo-charm");
             Check(!equipment.TryEquip(Find("demo-armor"), EquipmentSlot.Weapon1) && inventory.UsedSlots == original, "잘못된 부위 무변경");
             bool completeState = false;
             Action listener = () => completeState = equipment.GetItem(EquipmentSlot.Body)?.ItemId == "demo-armor" &&
@@ -204,13 +207,13 @@ namespace Nomad.Equipment.Editor
             Check(equipment.ModifyCombatDamage(1) == 1 && equipment.ModifyCombatDamage(2) == 1 &&
                 equipment.ModifyCombatDamage(200) == 180, "고정 차감/최소1");
 
-            foreach (var pair in new[] { ("demo-helmet", EquipmentSlot.Head), ("demo-mask", EquipmentSlot.Face),
-                         ("demo-charm", EquipmentSlot.Accessory), ("demo-ring", EquipmentSlot.Ring),
-                         ("demo-bag", EquipmentSlot.Bag), ("demo-totem", EquipmentSlot.Totem1) })
+            foreach (var pair in new[] { ("demo-helmet", EquipmentSlot.Head), ("demo-charm", EquipmentSlot.Accessory1),
+                         ("demo-bag", EquipmentSlot.Bag) })
                 Check(equipment.TryEquip(Find(pair.Item1), pair.Item2), "각 분류 장착");
-            inventory.Add("demo-totem", 1);
-            Check(equipment.TryEquip(Find("demo-totem"), EquipmentSlot.Totem2), "토템2 장착");
-            Check(equipment.TotalDefense == 60, "방어력 합산");
+            inventory.Add("demo-charm", 2);
+            Check(equipment.TryEquip(Find("demo-charm"), EquipmentSlot.Accessory2) &&
+                equipment.TryEquip(Find("demo-charm"), EquipmentSlot.Accessory3), "장신구 2·3 장착");
+            Check(equipment.TotalDefense == 50, "방어력 합산");
 
             inventory.Add("demo-bow", PlayerInventory.Capacity);
             Check(inventory.UsedSlots == PlayerInventory.Capacity && !equipment.TryUnequip(EquipmentSlot.Body), "가방 만석 해제 실패");
@@ -222,7 +225,7 @@ namespace Nomad.Equipment.Editor
                 if (slot != EquipmentSlot.Weapon1 && slot != EquipmentSlot.Weapon2 && slot != EquipmentSlot.Body)
                     Check(equipment.TryUnequip(slot), "분류 해제/가방 복귀");
             Check(equipment.TotalDefense == 20 && inventory.UsedSlots == original &&
-                inventory.GetCount("demo-armor") == armorCount - 1 && inventory.GetCount("demo-totem") == totemCount + 1,
+                inventory.GetCount("demo-armor") == armorCount - 1 && inventory.GetCount("demo-charm") == charmCount + 2,
                 "보유 수량 보존");
             Check(!equipment.TryEquip(-1, EquipmentSlot.Body) && !equipment.TryUnequip((EquipmentSlot)100), "잘못된 인덱스");
 

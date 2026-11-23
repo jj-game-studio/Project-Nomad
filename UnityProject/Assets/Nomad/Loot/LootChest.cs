@@ -127,7 +127,7 @@ namespace Nomad.Loot
         public int TryLootStackToSlot(PlayerInventory inventory, int index, int slotIndex)
         {
             if (!CanTransfer(inventory) || (uint)index >= (uint)contents.Length ||
-                (uint)slotIndex >= PlayerInventory.Capacity)
+                (uint)slotIndex >= PlayerInventory.MaxCapacity)
                 return 0;
 
             LootStack stack = contents[index];
@@ -153,7 +153,7 @@ namespace Nomad.Loot
 
         public int TryStoreStack(PlayerInventory inventory, int slotIndex, int requestedCount = int.MaxValue)
         {
-            if (!CanTransfer(inventory) || (uint)slotIndex >= PlayerInventory.Capacity || requestedCount <= 0)
+            if (!CanTransfer(inventory) || (uint)slotIndex >= PlayerInventory.MaxCapacity || requestedCount <= 0)
                 return 0;
 
             PlayerInventory.ItemStack stack = inventory.GetSlot(slotIndex);

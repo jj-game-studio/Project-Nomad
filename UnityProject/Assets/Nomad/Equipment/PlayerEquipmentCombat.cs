@@ -30,6 +30,7 @@ namespace Nomad.Equipment
         private PlayerInventory inventory;
         private Health health;
         private PlayerMana mana;
+        private PlayerStats stats;
         private PlayerCombat legacyCombat;
         private bool restoreLegacy;
         private bool holdingAttack;
@@ -57,6 +58,7 @@ namespace Nomad.Equipment
             TryGetComponent(out inventory);
             health = GetComponent<Health>();
             mana = GetComponent<PlayerMana>();
+            TryGetComponent(out stats);
             legacyCombat = GetComponent<PlayerCombat>();
             if (TryGetComponent(out CharacterController controller))
                 walkableNormalY = Mathf.Cos(controller.slopeLimit * Mathf.Deg2Rad);
@@ -138,7 +140,7 @@ namespace Nomad.Equipment
 
             Projectile shot = bow ? arrowProjectile : projectile;
             if (!Projectile.TryLaunch(shot, transform, muzzle.position, aim, collisionLayers, 45f,
-                    weapon.AttackRange, weapon.AttackPower, point => NotifyImpact(point, weapon), out Projectile launched))
+                    weapon.AttackRange, Damage(weapon), point => NotifyImpact(point, weapon), out Projectile launched))
                 return false;
 
             // 막힌 발사구나 유효하지 않은 조준에는 재화나 공격 간격을 적용하지 않습니다.
@@ -208,8 +210,17 @@ namespace Nomad.Equipment
                     Collider collider = target.GetComponentInChildren<Collider>();
                     Vector3 point = collider != null ? collider.bounds.center + Vector3.up * (collider.bounds.extents.y + 0.08f)
                         : target.transform.position + Vector3.up;
-                    if (target.TryApplyDamage(weapon.AttackPower)) NotifyImpact(point, weapon);
+                    if (target.TryApplyDamage(Damage(weapon))) NotifyImpact(point, weapon);
                 }
+        }
+
+        // 스탯이 있으면 장비 공격력과 치명타를 반영합니다. 근접은 대상마다 따로 판정합니다.
+        private int Damage(ItemDefinition weapon)
+        {
+            if (stats == null || !stats.isActiveAndEnabled)
+                return weapon.AttackPower;
+
+            return stats.RollOutgoingDamage(weapon, out _);
         }
 
         public float MeleeReach(Vector3 direction, float range)

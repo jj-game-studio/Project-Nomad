@@ -120,5 +120,34 @@ namespace Nomad.Tests
             Assert.That(melee.Select(row => row.AttackPower), Is.Ordered);
             Assert.That(melee.Select(row => row.AttackInterval), Is.Ordered);
         }
+
+        [Test]
+        public void GearRowsCoverEverySlotAndMatchTheirAssets()
+        {
+            var gear = ItemCsv.Parse(File.ReadAllText(EquipmentAuthoring.CsvPath))
+                .Where(row => row.Id.StartsWith("gear-", StringComparison.Ordinal)).ToArray();
+            foreach (EquipmentType type in new[] { EquipmentType.Head, EquipmentType.Body, EquipmentType.Legs,
+                         EquipmentType.Feet, EquipmentType.Bag, EquipmentType.Accessory })
+                Assert.That(gear.Any(row => row.Equipment == type), Is.True, type.ToString());
+
+            foreach (ItemCsv.Row row in gear)
+            {
+                var asset = AssetDatabase.LoadAssetAtPath<ItemDefinition>($"{WeaponContentAuthoring.ItemFolder}/{row.Id}.asset");
+                Assert.That(asset, Is.Not.Null, row.Id);
+                Assert.That(asset.Icon, Is.Not.Null, row.Id);
+                Assert.That(asset.Stats, Is.EqualTo(row.Stats), row.Id);
+            }
+        }
+
+        [Test]
+        public void StatsColumnRejectsUnknownOrDuplicateStats()
+        {
+            const string header = "item_id,display_name,description,max_stack,equipment_type,attack_power,defense,attack_mode,attack_range,attack_interval,mana_cost,stats\n";
+            var row = ItemCsv.Parse(header + "ring,반지,,1,Accessory,0,0,None,0,0,0,CritChance=8;MaxMana=20")[0];
+            Assert.That(row.Stats, Is.EqualTo(new[] { new StatModifier(StatType.CritChance, 8), new StatModifier(StatType.MaxMana, 20) }));
+
+            foreach (string stats in new[] { "Luck=1", "CritChance=8;CritChance=1", "Attack=3", "CritChance" })
+                Assert.Throws<FormatException>(() => ItemCsv.Parse(header + "ring,반지,,1,Accessory,0,0,None,0,0,0," + stats), stats);
+        }
     }
 }

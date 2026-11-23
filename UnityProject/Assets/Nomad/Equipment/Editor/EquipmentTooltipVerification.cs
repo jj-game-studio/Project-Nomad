@@ -181,12 +181,12 @@ namespace Nomad.Equipment.Editor
                     case 16:
                         Check(!Card(0).gameObject.activeSelf && !canvas.Find("InventoryTooltip").gameObject.activeSelf,
                             "removed candidate hides without moving pointer");
-                        SetupTotems();
+                        SetupAccessories();
                         Pointer(Bag(19));
                         break;
                     case 17:
-                        Check(Card(0).gameObject.activeSelf && Stats.Contains("토템 1") && Stats.Contains("토템 2"),
-                            "two totem comparisons inside one tooltip");
+                        Check(Card(0).gameObject.activeSelf && Stats.Contains("장착 1") && Stats.Contains("장착 2"),
+                            "two accessory comparisons inside one tooltip");
                         Keys(Key.Tab);
                         break;
                     case 18:
@@ -242,15 +242,15 @@ namespace Nomad.Equipment.Editor
             bagView.SendMessage("OnApplicationFocus", true);
         }
 
-        private static void SetupTotems()
+        private static void SetupAccessories()
         {
-            candidate = UnityEngine.Object.Instantiate(inventory.GetSlot(Find("demo-totem")).Item);
-            Set(candidate, "displayName", "비교용 토템");
+            candidate = UnityEngine.Object.Instantiate(inventory.GetSlot(Find("demo-charm")).Item);
+            Set(candidate, "displayName", "비교용 장신구");
             Transfer(19, candidate);
             Transfer(18, candidate);
-            Check(equipment.TryEquip(18, EquipmentSlot.Totem1), "first totem fixture");
+            Check(equipment.TryEquip(18, EquipmentSlot.Accessory1), "first accessory fixture");
             Transfer(18, candidate);
-            Check(equipment.TryEquip(18, EquipmentSlot.Totem2), "second totem fixture");
+            Check(equipment.TryEquip(18, EquipmentSlot.Accessory2), "second accessory fixture");
         }
 
         private static void Transfer(int slot, ItemDefinition item)

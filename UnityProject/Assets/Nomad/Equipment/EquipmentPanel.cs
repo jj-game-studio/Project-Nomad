@@ -8,7 +8,7 @@ namespace Nomad.Equipment
     [RequireComponent(typeof(PlayerEquipment))]
     public sealed class EquipmentPanel : MonoBehaviour
     {
-        private static readonly string[] Labels = { "무기 1", "무기 2", "머리", "신체", "가방", "얼굴", "장신구", "반지", "토템 1", "토템 2" };
+        private static readonly string[] Labels = { "무기 1", "무기 2", "투구", "갑옷", "바지", "신발", "가방", "장신구 1", "장신구 2", "장신구 3" };
         private readonly UnityEngine.UI.Text[] names = new UnityEngine.UI.Text[10];
         private readonly UnityEngine.UI.Image[] icons = new UnityEngine.UI.Image[10];
         private readonly UnityEngine.UI.Outline[] borders = new UnityEngine.UI.Outline[10];
@@ -46,7 +46,16 @@ namespace Nomad.Equipment
         private RectTransform bagTooltip;
         private RectTransform tooltipCanvas;
         private InventoryTooltip hoverTooltip;
-        private readonly ItemDefinition[] comparisonItems = new ItemDefinition[2];
+        private readonly ItemDefinition[] comparisonItems = new ItemDefinition[3];
+        private const int StatCount = (int)StatType.InventorySlots + 1;
+        private const float PanelWidth = 484f;
+        private const float StatsWidth = 260f;
+        private const float StatsGap = 12f;
+        private readonly UnityEngine.UI.Text[] statValues = new UnityEngine.UI.Text[StatCount];
+        private PlayerStats stats;
+        private RectTransform statsPanel;
+        private UnityEngine.UI.Text details;
+        private int laidOutSlots = -1;
 
         public bool IsOpen => panel != null && panel.gameObject.activeInHierarchy;
         public RectTransform EquipmentGrid => equipmentGrid;
@@ -58,6 +67,8 @@ namespace Nomad.Equipment
         public RectTransform DragPreview => inventoryDragPreview;
         public RectTransform EquipmentDragPreview => equipmentDragPreview;
         public RectTransform BagDropPreview => bagDropPreview;
+        public RectTransform StatsPanel => statsPanel;
+        public string StatText(StatType stat) => statValues[(int)stat] != null ? statValues[(int)stat].text : string.Empty;
         public int BagPreviewSlot { get; private set; } = -1;
         public bool CanDropToBag { get; private set; }
 
@@ -67,6 +78,7 @@ namespace Nomad.Equipment
             inventory = GetComponent<PlayerInventory>();
             combat = GetComponent<PlayerEquipmentCombat>();
             visuals = GetComponent<EquipmentCombatVisuals>();
+            stats = GetComponent<PlayerStats>();
             var view = InventoryPanel.GetOrCreate(inventory);
             inventoryView = view;
             tooltipCanvas = (RectTransform)view.GetComponent<Canvas>().transform;
@@ -79,7 +91,7 @@ namespace Nomad.Equipment
 
             hoverTooltip = new InventoryTooltip(tooltipCanvas, font, "EquipmentTooltip");
 
-            panel.sizeDelta = new Vector2(484, 752);
+            panel.sizeDelta = new Vector2(PanelWidth, 752);
             panel.anchoredPosition = Vector2.zero;
             Place((RectTransform)panel.Find("Title"), new Vector2(432, 32), new Vector2(0, -26));
             var title = panel.Find("Title").GetComponent<UnityEngine.UI.Text>();
@@ -88,9 +100,7 @@ namespace Nomad.Equipment
             title.fontSize = 23;
             Place(capacity.rectTransform, new Vector2(432, 30), new Vector2(0, -264));
             capacity.font = font;
-            Place(bag, new Vector2(432, 344), new Vector2(0, -286), new Vector2(0.5f, 1));
-            var details = panel.Find("ItemDetails").GetComponent<UnityEngine.UI.Text>();
-            Place(details.rectTransform, new Vector2(432, 30), new Vector2(0, -652));
+            details = panel.Find("ItemDetails").GetComponent<UnityEngine.UI.Text>();
             details.font = font;
 
             equipmentGrid = Rect("EquipmentSlots", panel, new Vector2(432, 184), new Vector2(0, -52), new Vector2(0.5f, 1));
@@ -101,7 +111,11 @@ namespace Nomad.Equipment
             layout.constraintCount = 5;
             for (int index = 0; index < 10; index++) CreateSlot(index);
 
-            notice = Text("EquipmentHelp", panel, "가방 → 장비 드래그 / 선택 후 장비 클릭\n장비 우클릭: 해제 · 무기 클릭: 선택", new Vector2(440, 44), new Vector2(0, -704), 13);
+            // 결과 문구는 검증용으로 유지하되, 화면 하단 HUD와 겹치므로 표시하지 않습니다.
+            notice = Text("EquipmentHelp", panel, "", new Vector2(440, 44), Vector2.zero, 13);
+            notice.gameObject.SetActive(false);
+            CreateStatsPanel();
+            LayoutBag();
             toolbar = Rect("EquipmentDebugToolbar", view.transform, new Vector2(330, 42), Vector2.zero);
             toolbar.anchorMin = toolbar.anchorMax = toolbar.pivot = new Vector2(0, 1);
             toolbar.anchoredPosition = new Vector2(18, -18);
@@ -125,6 +139,9 @@ namespace Nomad.Equipment
                 return;
 
             FitToCanvas();
+            // 장비 창과 오른쪽 스탯 창을 합친 영역이 화면 가운데 오도록 옮깁니다. 상자 창이 열리면 가방 UI 배치를 따릅니다.
+            if (inventoryView != null && !inventoryView.HasOpenChest)
+                panel.anchoredPosition = new Vector2(-(StatsGap + StatsWidth) / 2f, 0);
 
             Mouse mouse = Mouse.current;
             if (combat != null) combat.EquipmentUiOpen = IsOpen ||
@@ -210,7 +227,9 @@ namespace Nomad.Equipment
             Canvas canvas = panel.GetComponentInParent<Canvas>();
             float height = canvas.pixelRect.height / canvas.scaleFactor;
             float width = canvas.pixelRect.width / canvas.scaleFactor;
-            float scale = Mathf.Min(1f, (height - 48f) / 752f, (width - 32f) / 484f);
+            // 오른쪽 스탯 창까지 화면 안에 들어오도록 전체 너비로 배율을 정합니다.
+            float total = PanelWidth + StatsGap + StatsWidth;
+            float scale = Mathf.Min(1f, (height - 48f) / panel.sizeDelta.y, (width - 32f) / total);
             panel.localScale = Vector3.one * Mathf.Max(0.1f, scale);
         }
 
@@ -348,7 +367,9 @@ namespace Nomad.Equipment
         {
             PreviewSlot = -1;
             CanDrop = false;
-            capacity.text = $"가방 ({inventory.UsedSlots} / {PlayerInventory.Capacity})";
+            capacity.text = $"가방 ({inventory.UsedSlots} / {inventory.SlotCount})";
+            LayoutBag();
+            RefreshStats();
             for (int index = 0; index < 10; index++)
             {
                 ItemDefinition item = equipment.GetItem((EquipmentSlot)index);
@@ -360,6 +381,71 @@ namespace Nomad.Equipment
                 backgrounds[index].color = new Color32(37, 55, 74, 255);
                 borders[index].effectColor = (int)equipment.ActiveWeaponSlot == index
                     ? new Color32(238, 186, 88, 255) : new Color32(108, 128, 148, 255);
+            }
+        }
+
+        // 가방 장비로 칸 수가 바뀌면 가방 영역과 창 높이를 행 수에 맞춥니다.
+        private void LayoutBag()
+        {
+            if (details == null || laidOutSlots == inventory.SlotCount)
+                return;
+
+            laidOutSlots = inventory.SlotCount;
+            int rows = Mathf.CeilToInt(laidOutSlots / 5f);
+            float bagHeight = rows * 88f - 8f;
+            Place(bag, new Vector2(432, bagHeight), new Vector2(0, -286), new Vector2(0.5f, 1));
+            Place(details.rectTransform, new Vector2(432, 30), new Vector2(0, -286 - bagHeight - 22));
+            panel.sizeDelta = new Vector2(PanelWidth, 286 + bagHeight + 52);
+
+            if (statsPanel != null)
+                statsPanel.sizeDelta = new Vector2(StatsWidth, panel.sizeDelta.y);
+            FitToCanvas();
+        }
+
+        // 장비 창 오른쪽에 붙은 스탯 창입니다. 장비 창과 함께 열리고 배율도 함께 바뀝니다.
+        private void CreateStatsPanel()
+        {
+            statsPanel = Rect("StatsPanel", panel, new Vector2(StatsWidth, panel.sizeDelta.y), Vector2.zero, new Vector2(0, 1));
+            statsPanel.anchorMin = statsPanel.anchorMax = new Vector2(1, 1);
+            statsPanel.anchoredPosition = new Vector2(StatsGap, 0);
+            var background = statsPanel.gameObject.AddComponent<UnityEngine.UI.Image>();
+            background.color = panel.TryGetComponent(out UnityEngine.UI.Image source) ? source.color : new Color32(24, 26, 28, 245);
+            background.raycastTarget = false;
+
+            var title = Text("Title", statsPanel, "스탯", new Vector2(220, 32), new Vector2(0, -26), 23);
+            title.alignment = TextAnchor.MiddleLeft;
+            for (int index = 0; index < StatCount; index++)
+            {
+                var label = Text("Stat" + (StatType)index, statsPanel, StatFormat.Name((StatType)index),
+                    new Vector2(220, 26), new Vector2(0, -66 - index * 30), 15);
+                label.alignment = TextAnchor.MiddleLeft;
+                statValues[index] = Text("Value", label.transform, "", new Vector2(220, 26), Vector2.zero, 15);
+                statValues[index].rectTransform.anchorMin = statValues[index].rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+                statValues[index].alignment = TextAnchor.MiddleRight;
+                statValues[index].supportRichText = true;
+            }
+        }
+
+        private void RefreshStats()
+        {
+            // 상자 창이 오른쪽에 열리면 겹치지 않게 스탯 창을 숨깁니다.
+            if (statsPanel == null)
+                return;
+
+            statsPanel.gameObject.SetActive(stats != null && !inventoryView.HasOpenChest);
+            if (stats == null)
+                return;
+
+            for (int index = 0; index < StatCount; index++)
+            {
+                var stat = (StatType)index;
+                float bonus = stat == StatType.Attack || stat == StatType.InventorySlots ? 0 : equipment.Sum(stat);
+                string text = StatFormat.Value(stat, stats.Get(stat));
+
+                // 장비로 오른 수치는 괄호 안에 초록색으로 함께 보여 줍니다. 방어력은 전부 장비 수치입니다.
+                if (Mathf.Abs(bonus) >= 0.05f && stat != StatType.Defense)
+                    text += $" <color=#80D99A>({StatFormat.Bonus(stat, bonus)})</color>";
+                statValues[index].text = text;
             }
         }
 

@@ -17,7 +17,13 @@ namespace Nomad.Player
         private float recoveryTime;
 
         public float Current { get; private set; }
-        public int Maximum => maximum;
+        private int maximumBonus;
+        private float recoveryBonus;
+
+        public int BaseMaximum => maximum;
+        public float BaseRecoveryPerSecond => recoveryPerSecond;
+        public int Maximum => Mathf.Max(1, maximum + maximumBonus);
+        public float RecoveryPerSecond => Mathf.Max(0, recoveryPerSecond + recoveryBonus);
         public int RollCost => rollCost;
 
         // 스태미나 부족으로 행동이 거절되었을 때 HUD 알림용으로 호출됩니다.
@@ -26,13 +32,21 @@ namespace Nomad.Player
         private void Awake()
         {
             TryGetComponent(out health);
-            Current = maximum;
+            Current = Maximum;
+        }
+
+        // 장비 보너스입니다. 최대치가 줄면 현재 값을 새 최대치로 맞춥니다.
+        public void SetBonus(int maximumAmount, float recoveryAmount)
+        {
+            maximumBonus = maximumAmount;
+            recoveryBonus = recoveryAmount;
+            Current = Mathf.Min(Current, Maximum);
         }
 
         private void Update()
         {
             if ((health == null || !health.IsDead) && Time.time >= recoveryTime)
-                Current = Mathf.Min(maximum, Current + recoveryPerSecond * Time.deltaTime);
+                Current = Mathf.Min(Maximum, Current + RecoveryPerSecond * Time.deltaTime);
         }
 
         public bool TrySpend(int amount)
