@@ -1,35 +1,40 @@
-# 장검 손 부착·공격 모션 검토본
+# 장검 손 부착·공격 모션
 
-Issue #168 / PR #169. 기존 Kingdom 외형과 ARPG Warrior `Attack_Combo1`을 사용합니다.
+Issue #168 / PR #169. Kingdom 외형과 ARPG Warrior `Attack_Combo1`을 사용합니다.
 
 ## 실행
 
 Unity 6000.6.9f1에서 `Nomad > Player Visual > Open Sword Preview` → Play.
-장검을 든 플레이어로 WASD 이동, 좌클릭 공격, Tab 장비 변경, Space 점프, Shift 구르기를 확인합니다.
+WASD 이동, 좌클릭 장검 공격, Tab 장비 변경, Space 점프, Shift 구르기입니다.
 표적은 체력 100이며 장검 한 번에 25 피해를 받습니다. 표적이 죽으면 Play를 다시 시작합니다.
 `Build Sword Preview`는 독립 SwordPlayerRig/PlayerSword Controller/검토 씬을 다시 만듭니다.
 정식 GameConfig·마을·필드에 이 프리셋을 등록하지 않습니다.
 
-## 구현
+## 모션과 무기
 
-- 오른손 뼈 아래 WeaponSocket을 만들고 장검(`demo-sword`)만 부착합니다. 다른 무기와 기존 캡슐 플레이어는 기존 배치를 유지합니다. 장착 모델의 Collider는 비활성입니다.
-- 별도 상체 레이어/AvatarMask로 ARPG 공격을 재생합니다. 하체는 기존 이동 모션을 따릅니다. 루트 모션은 사용하지 않습니다.
-- 새 Controller의 Run 속도는 LocomotionSpeed 파라미터로 조정하여 공격 속도와 분리합니다. 기존 Controller의 동작은 유지합니다.
-- 무기 교체·공중/구르기·입력 차단·사망·비활성화 시 공격 자세를 해제합니다. 모듈 해제 시 손 부착도 기존 방식으로 돌아갑니다.
+- 오른손 뼈 아래 WeaponSocket에 장검(`demo-sword`)만 부착합니다. 다른 무기와 기존 캡슐 플레이어는 기존 배치를 유지합니다. 장착 모델의 Collider는 비활성입니다.
+- 상체 레이어/AvatarMask로 공격을 재생하고 하체는 기존 이동·점프를 따릅니다. 루트 모션은 사용하지 않습니다.
+- LocomotionSpeed와 SwordSpeed 파라미터로 이동 속도·공격 속도를 분리합니다. 공격 전체 길이는 장검의 기존 공격 간격(0.6초)을 따릅니다.
+- 모션이 처음부터 재생되고 정규화 시간 0.32에 맞춘 준비 시간(0.192초) 뒤 기존 근접 판정과 베기 VFX를 한 번 실행합니다. 60fps에서는 약 0.20초입니다.
+- 조준 방향은 공격 시작 시 고정하고, 타격 순간의 플레이어 위치에서 거리·벽·대상을 다시 검사합니다.
+- 무기/선택 슬롯 변경, 구르기, 입력 차단·장비 UI·거래, 사망, 전투/모션 컴포넌트 비활성화 시 준비 중인 타격을 취소합니다. 취소해도 기존 공격 간격은 유지합니다. 일시정지 중에는 준비 시간도 멈춥니다.
+- 모션 컴포넌트가 없거나 지원하지 않는 무기는 기존 즉시 타격/발사를 유지합니다. 무기 피해·사거리·간격·재화 수치는 바꾸지 않습니다.
 
-## 남은 연결
+## 선택적 연결 API
 
-현재 전투의 즉시 피해/VFX 규칙은 그대로입니다. 모션은 접촉 구간(정규화 시간 0.32)부터 재생하는 임시 검토본이며 준비 동작과 지연 피해가 연결된 완성본이 아닙니다.
-PlayerEquipmentCombat.cs를 선점한 #160 담당자에게 파일 분할·병합 순서를 조율 요청했습니다.
-사용자는 2026-11-23 채팅에서 선점 예외를 적용하지 않고 답변을 기다리도록 지시했습니다.
-합의 후 준비 동작 → 한 번의 타격/VFX → 마무리를 연결하고 취소/교체 검사를 다시 해야 합니다.
-손 자세와 모션 느낌의 사람 검토, 정식 게임 연결, 활/지팡이 모션은 별도입니다.
+`IMeleeAttackTiming.GetWindup`이 준비 시간을 제공합니다. PlayerSwordAnimation이 장검에만 양수를 반환합니다.
+`TryAttack`은 공격 준비가 시작되면 true를 반환하고, `MeleeStarted`로 모션을 시작합니다.
+기존 `Attacked`는 실제 타격 시점에 발생하여 베기 VFX가 피해와 함께 시작됩니다. 준비 취소는 `MeleeCancelled`, 현재 준비 여부는 `IsMeleePending`으로 확인합니다.
 
-## 검증
+## 범위와 남은 검토
 
-- PlayerSwordVerification.Run: 실제 Humanoid 손 움직임·모델 손 부착·Collider 비활성, 즉시 피해 1회·중복/쿨다운 차단, 입력 차단, 공격 중 이동/하체 Run·일정 공격 재생 속도, 무기 교체, 비활성/재활성, 사망 취소.
-- PlayerVisualVerification.Run: 기존 271프레임 이동·점프/낙하/착지·구르기·벽 충돌 회귀.
-- 배치 실행: `unity open <UnityProject 절대 경로> --batchmode --args "-executeMethod Nomad.PlayerVisual.Editor.PlayerSwordVerification.Run -logFile <로그 절대 경로>"`. 검사 후 Editor가 직접 종료합니다.
-- 로컬 렌더 근거: Artifacts/sword/sword-idle.png, sword-attack.png, sword-moving.png. 자동 검증과 사람 플레이 수용은 구분합니다.
+사용자는 2026-11-23 채팅에서 #160 선점 PlayerEquipmentCombat.cs를 장검 타격 시점 연결에 한해 예외로 수정하도록 허용했습니다. 스탯·아이템 수치·타 작업본은 수정하지 않습니다.
+손 자세와 공격 느낌·타격 시점의 사람 검토, 정식 게임 연결, 활/지팡이 모션·콤보·점프 모션 교체는 별도입니다.
 
-전체 회귀: EditMode 105/105, PlayMode 89/89, 실패·건너뜀 0. Windows 빌드와 사람 직접 플레이 검토는 미실행입니다.
+## 검증 실행
+
+`unity open <UnityProject 절대 경로> --batchmode --args "-executeMethod Nomad.PlayerVisual.Editor.PlayerSwordVerification.Run -logFile <로그 절대 경로>"`
+
+검사는 저장된 검토 씬에서 실제 플레이 프레임으로 지연 피해/VFX·모션 시점·취소·일시정지·이동·벽과 거리 재판정·기존 무기 동작을 확인하고 Editor를 종료합니다. 검증 루프는 UNITY_EDITOR에서만 컴파일하며 저장 프리팹/씬에 포함하지 않습니다.
+기존 이동·점프·구르기는 PlayerVisualVerification.Run으로 확인합니다. 렌더는 로컬 Artifacts/sword에 보관합니다.
+사람 직접 플레이와 Windows 빌드는 자동 Play 검증과 구분합니다.

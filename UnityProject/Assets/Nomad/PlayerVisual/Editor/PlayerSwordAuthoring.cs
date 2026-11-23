@@ -25,6 +25,8 @@ namespace Nomad.PlayerVisual.Editor
             while (controller.layers.Length > 1) controller.RemoveLayer(controller.layers.Length - 1);
             if (!Array.Exists(controller.parameters, p => p.name == "LocomotionSpeed"))
                 controller.AddParameter("LocomotionSpeed", AnimatorControllerParameterType.Float);
+            if (!Array.Exists(controller.parameters, p => p.name == "SwordSpeed"))
+                controller.AddParameter("SwordSpeed", AnimatorControllerParameterType.Float);
             foreach (var state in controller.layers[0].stateMachine.states)
                 if (state.state.name == "Run")
                 {
@@ -71,6 +73,8 @@ namespace Nomad.PlayerVisual.Editor
             var attack = attackLayer.stateMachine.AddState("SwordAttack");
             attack.motion = clip;
             attack.speed = clip.length / 0.6f;
+            attack.speedParameter = "SwordSpeed";
+            attack.speedParameterActive = true;
             attackLayer.stateMachine.defaultState = attack;
             controller.layers = layers;
             EditorUtility.SetDirty(controller);
