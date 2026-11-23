@@ -149,7 +149,7 @@ namespace Nomad.Shop
                     602 + index * 134, 166, 128, 30, () => Filter(captured));
             }
 
-            playerSlots = BuildSlots(ShopUi.Grid(panel, "Backpack", 28), PlayerInventory.Capacity, false);
+            playerSlots = BuildSlots(ShopUi.Grid(panel, "Backpack", 28), PlayerInventory.MaxCapacity, false);
             merchantSlots = BuildSlots(ShopUi.Grid(panel, "Stock", 602, true, shop.Catalog.Count), shop.Catalog.Count, true);
             BuildTradePopup(panel);
             BuildHelp(panel);
@@ -346,9 +346,11 @@ namespace Nomad.Shop
                 filters[index].colors = colors;
             }
             gold.text = $"{wallet.Gold:N0}";
-            capacity.text = $"{inventory.UsedSlots} / {PlayerInventory.Capacity}칸";
+            capacity.text = $"{inventory.UsedSlots} / {inventory.SlotCount}칸";
             for (int index = 0; index < playerSlots.Length; index++)
             {
+                // 가방 장비로 열리지 않은 칸은 표시하지 않습니다.
+                playerSlots[index].Button.gameObject.SetActive(index < inventory.SlotCount);
                 PlayerInventory.ItemStack stack = inventory.GetSlot(index);
                 int offer = shop.FindOffer(stack.Item);
                 int price = offer >= 0 ? shop.Catalog.GetOffer(offer).SellPrice : 0;
@@ -715,7 +717,7 @@ namespace Nomad.Shop
                         Select(true, visible[Mathf.Clamp(visible.IndexOf(merchantIndex) + delta, 0, visible.Count - 1)], reveal: true);
                 }
                 else
-                    Select(false, Mathf.Clamp(playerIndex + delta, 0, playerSlots.Length - 1), reveal: true);
+                    Select(false, Mathf.Clamp(playerIndex + delta, 0, inventory.SlotCount - 1), reveal: true);
             }
             if (keys.enterKey.wasPressedThisFrame || keys.numpadEnterKey.wasPressedThisFrame ||
                 (merchantSelected ? keys.bKey.wasPressedThisFrame : keys.vKey.wasPressedThisFrame))

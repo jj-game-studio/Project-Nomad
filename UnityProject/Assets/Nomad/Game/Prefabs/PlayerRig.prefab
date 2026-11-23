@@ -227,6 +227,7 @@ GameObject:
   - component: {fileID: 1887090300961367808}
   - component: {fileID: 974826207303630832}
   - component: {fileID: 8847001433168899962}
+  - component: {fileID: 1507337849432345665}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -316,23 +317,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Inventory.PlayerInventory
   items:
-  - {fileID: 11400000, guid: 3bc5ee3aa47bcb5419199fe0c678c793, type: 2}
-  - {fileID: 11400000, guid: 91bcb142c26e7a1409c2a2540242819f, type: 2}
-  - {fileID: 11400000, guid: 0665a2b2765b3864f9c1013078fcca6e, type: 2}
-  - {fileID: 11400000, guid: 742c2de271dd3e544aa09851eb69383a, type: 2}
   - {fileID: 11400000, guid: 2fd922611dde74b42afdc04ec0edc323, type: 2}
-  - {fileID: 11400000, guid: 149f770f4d68c4b4c965c16a1d2cf4f3, type: 2}
-  - {fileID: 11400000, guid: ac569c023422c424c820c4419ec75c5e, type: 2}
-  - {fileID: 11400000, guid: 41af70b866070234bb765a441c7fa6b9, type: 2}
-  - {fileID: 11400000, guid: 7aca8cc904480a6468ae63996425734c, type: 2}
-  - {fileID: 11400000, guid: 66283d5a9c3d2e740accb3efa6487ef3, type: 2}
-  - {fileID: 11400000, guid: f26f2a5ac639f474bbe49b31cf21f24f, type: 2}
   - {fileID: 11400000, guid: 6d4d13ace88e69f4692b95903876f8a4, type: 2}
-  - {fileID: 11400000, guid: d00b362630e382f4eac5c4603a0b0516, type: 2}
   - {fileID: 11400000, guid: e907610ddd7ebde4e91a139ed2c789e5, type: 2}
-  - {fileID: 11400000, guid: 5abb4f098a436704e9d2514c8e985475, type: 2}
-  - {fileID: 11400000, guid: 448cc5b227491124d9fcf8b3af24c8c1, type: 2}
   - {fileID: 11400000, guid: c5909ea4a83cd9b4d8f3f6480f5a4271, type: 2}
+  - {fileID: 11400000, guid: 28a6ca536ce89e142a52315671a1d4e9, type: 2}
+  - {fileID: 11400000, guid: 9c04cf4dc6ba5cb408cd43156a3e63aa, type: 2}
+  - {fileID: 11400000, guid: fc92d50f0b2ea1941a895ecca90a199e, type: 2}
+  - {fileID: 11400000, guid: 192ab8d28fe92f74a9e86b2e6d8dca88, type: 2}
+  - {fileID: 11400000, guid: ca45c99ac0491b84fba08d5281f2914b, type: 2}
   - {fileID: 11400000, guid: ca38e1181ce0a63498c03747a544b514, type: 2}
   - {fileID: 11400000, guid: c5862214309496d4f8c57e4231be513d, type: 2}
   - {fileID: 11400000, guid: f8378015573b54e49bc98fa3876b463e, type: 2}
@@ -341,6 +334,61 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 68caed9a62a821940adeed05bf96a232, type: 2}
   - {fileID: 11400000, guid: 16cc907af324e8c469d03e651246ddcc, type: 2}
   - {fileID: 11400000, guid: 8a7bb2fe30f5e274ead5f6ce39cd1902, type: 2}
+  - {fileID: 11400000, guid: a220abd1709fec142860470d172d0d65, type: 2}
+  - {fileID: 11400000, guid: d58ce83489309594895fb08c5aa37f58, type: 2}
+  - {fileID: 11400000, guid: 284a0512d5f664240b39cdcddabfeefa, type: 2}
+  - {fileID: 11400000, guid: 5f8c6e8a9a148b54d926a4c761e7fbb2, type: 2}
+  - {fileID: 11400000, guid: 03b460568d55ef94c8caa90615e59c85, type: 2}
+  - {fileID: 11400000, guid: c05814cde96c51142a7f2f1fd523e7e2, type: 2}
+  - {fileID: 11400000, guid: ad1ea8cdc94fd6145878ed806cf093b4, type: 2}
+  - {fileID: 11400000, guid: 4b7aee3a27162244bb24b2ec8ca86b33, type: 2}
+  - {fileID: 11400000, guid: 05b043fc06c136d43881e64164cecbef, type: 2}
+  - {fileID: 11400000, guid: 7b15c526b2a12614b8634c5c0cbd02b1, type: 2}
+  - {fileID: 11400000, guid: cf7f65903093ca54193912efe67ee3ca, type: 2}
+  - {fileID: 11400000, guid: bbbbfc3a33e028c4fb35159c9c628364, type: 2}
+  - {fileID: 11400000, guid: e68c2616dd92e6644a75d8f78cb1d75f, type: 2}
+  - {fileID: 11400000, guid: 6d16e61a3dfb0be4b81ef35c9966e93f, type: 2}
+  - {fileID: 11400000, guid: 1e0502df46db3ae4eaccc841100400f9, type: 2}
+  - {fileID: 11400000, guid: 6fbc88357cb94e54ab1b500811e1663d, type: 2}
+  - {fileID: 11400000, guid: 865735eaa8e30a84e8abdf6b462ea5d6, type: 2}
+  - {fileID: 11400000, guid: e3000bfa6027b1845be64876bca1dc1c, type: 2}
+  - {fileID: 11400000, guid: 16ef8861f503c0145a1f91f9fe19443e, type: 2}
+  - {fileID: 11400000, guid: 59d61be975c9b1745b0dfd8f7fa9c54e, type: 2}
+  - {fileID: 11400000, guid: ee127a2d1d3b136438d331b58d108450, type: 2}
+  - {fileID: 11400000, guid: 104ac575d609fdd449bab09cb461e963, type: 2}
+  - {fileID: 11400000, guid: cfbfe1b43c08bfc449f68a7c9fa2f95e, type: 2}
+  - {fileID: 11400000, guid: b31f51734d48e6c449d133b0d8a53f4d, type: 2}
+  - {fileID: 11400000, guid: 4c91406c05322a544be1e07a73223e4b, type: 2}
+  - {fileID: 11400000, guid: cc1494010c02752428ff76fb14b46f36, type: 2}
+  - {fileID: 11400000, guid: d0dccdc58e27f87468ee936b23b2c4da, type: 2}
+  - {fileID: 11400000, guid: f099f93255df3a645be097168dd7da83, type: 2}
+  - {fileID: 11400000, guid: 9a0270c1b620fd142be133e2b613f61d, type: 2}
+  - {fileID: 11400000, guid: 0685f144d7c7d4b4fb45d1e288972187, type: 2}
+  - {fileID: 11400000, guid: ecb5ba8eb47b38744900ac71119e5087, type: 2}
+  - {fileID: 11400000, guid: dade29f4091a2ab4098640d49450c403, type: 2}
+  - {fileID: 11400000, guid: 003ac0a1123e0114a941cba76575bbba, type: 2}
+  - {fileID: 11400000, guid: 97fe7523083607543b58c2d3de4b3872, type: 2}
+  - {fileID: 11400000, guid: cce94ea6d78e85946a15f7e2bb009032, type: 2}
+  - {fileID: 11400000, guid: ff031e1b0934e814491c020b3c3ecbe6, type: 2}
+  - {fileID: 11400000, guid: 03343d0c88db0f841a3275af99456a7a, type: 2}
+  - {fileID: 11400000, guid: 1c13c4bc151e6304197e316bfafbcf54, type: 2}
+  - {fileID: 11400000, guid: 71b6c28a5d7544a4e92a5ed61e8bb693, type: 2}
+  - {fileID: 11400000, guid: abd64fb44fd206646a24bf24239c39a6, type: 2}
+  - {fileID: 11400000, guid: 5fbffded440bf8c4cacf233daef7e729, type: 2}
+  - {fileID: 11400000, guid: 9faf1d1abdef73e43abd8ac4e56737b8, type: 2}
+  - {fileID: 11400000, guid: 71fafed826b049c47985cd06a4b1ed7a, type: 2}
+  - {fileID: 11400000, guid: 468fb019f7f209740ae15bf19439d579, type: 2}
+  - {fileID: 11400000, guid: 186c85b0857d6bc41b9951eae073f854, type: 2}
+  - {fileID: 11400000, guid: c504aea44f584384a92a18ca7fde5ad0, type: 2}
+  - {fileID: 11400000, guid: 1db2dcc98d2769b40b75a56a0bc751a7, type: 2}
+  - {fileID: 11400000, guid: be06decfd07fcb9478485068a2a7869b, type: 2}
+  - {fileID: 11400000, guid: 273ec8ad3273af34ea9e12e1105b0f41, type: 2}
+  - {fileID: 11400000, guid: e06f56a034ad1334c8b1e09442b1cbb4, type: 2}
+  - {fileID: 11400000, guid: 58f6670530703614995e386d8799196e, type: 2}
+  - {fileID: 11400000, guid: dca48090b16db0d42b6e9c5395ab8398, type: 2}
+  - {fileID: 11400000, guid: 37dc992ddaa8db546b23add71ec45427, type: 2}
+  - {fileID: 11400000, guid: f1d57a9837fdcb0488fc2e51f4489b6d, type: 2}
+  - {fileID: 11400000, guid: 22b6ab086a349a34a8cee1a4d23ae45f, type: 2}
 --- !u!114 &4220240870187981097
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -568,6 +616,34 @@ MonoBehaviour:
     count: 30
     equip: 0
     slot: 0
+  - itemId: gear-leather-cap
+    count: 1
+    equip: 0
+    slot: 0
+  - itemId: gear-padded-armor
+    count: 1
+    equip: 0
+    slot: 0
+  - itemId: gear-cloth-pants
+    count: 1
+    equip: 0
+    slot: 0
+  - itemId: gear-leather-shoes
+    count: 1
+    equip: 0
+    slot: 0
+  - itemId: gear-belt-pouch
+    count: 1
+    equip: 0
+    slot: 0
+  - itemId: gear-copper-ring
+    count: 1
+    equip: 0
+    slot: 0
+  - itemId: gear-lucky-stone
+    count: 1
+    equip: 0
+    slot: 0
 --- !u!114 &974826207303630832
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -578,7 +654,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 15f45f7d756c2c545b12b7c227ccd3f3, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Shop.PlayerWallet
   startingGold: 1000
 --- !u!114 &8847001433168899962
@@ -591,11 +667,28 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 08348671e10dc104cb2ce10527808c20, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Player.PlayerMana
   maximum: 100
   recoveryPerSecond: 8
   recoveryDelay: 2
+--- !u!114 &1507337849432345665
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5530718413862153197}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3f0627ce22a2f59418f5b9e701139a38, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Nomad.Equipment.PlayerStats
+  baseEvasion: 0
+  baseCritChance: 5
+  baseCritEvasion: 0
+  baseHealthRegen: 0
+  incomingCritChance: 10
 --- !u!1 &7897914465955937552
 GameObject:
   m_ObjectHideFlags: 0

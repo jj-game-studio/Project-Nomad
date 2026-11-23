@@ -21,11 +21,13 @@ namespace Nomad.Inventory.Editor
             public readonly float AttackRange;
             public readonly float AttackInterval;
             public readonly int? ManaCost;
+            public readonly StatModifier[] Stats;
+            public readonly ItemTier? Tier;
 
             public Row(string id, string name, string description, int maxStack,
                 EquipmentType? equipment = null, int attackPower = 0, int defense = 0,
                 WeaponAttackMode attackMode = WeaponAttackMode.None, float attackRange = 0, float attackInterval = 0,
-                int? manaCost = null)
+                int? manaCost = null, StatModifier[] stats = null, ItemTier? tier = null)
             {
                 Id = id;
                 Name = name;
@@ -38,6 +40,8 @@ namespace Nomad.Inventory.Editor
                 AttackRange = attackRange;
                 AttackInterval = attackInterval;
                 ManaCost = manaCost;
+                Stats = stats;
+                Tier = tier;
             }
         }
 
@@ -47,10 +51,14 @@ namespace Nomad.Inventory.Editor
             string[] header = { "item_id", "display_name", "description", "max_stack" };
             string[] equipmentHeader = { "item_id", "display_name", "description", "max_stack", "equipment_type", "attack_power", "defense", "attack_mode", "attack_range", "attack_interval" };
             var weaponHeader = new List<string>(equipmentHeader) { "mana_cost" };
-            bool hasManaCost = records.Count > 0 && EqualHeader(records[0], weaponHeader);
+            var statHeader = new List<string>(weaponHeader) { "stats" };
+            var tierHeader = new List<string>(statHeader) { "tier" };
+            bool hasTier = records.Count > 0 && EqualHeader(records[0], tierHeader);
+            bool hasStats = hasTier || (records.Count > 0 && EqualHeader(records[0], statHeader));
+            bool hasManaCost = hasStats || (records.Count > 0 && EqualHeader(records[0], weaponHeader));
             bool extended = hasManaCost || (records.Count > 0 && EqualHeader(records[0], equipmentHeader));
             if (records.Count < 2 || (!extended && !EqualHeader(records[0], header)))
-                throw new FormatException("기본 4열, 장비 10열 또는 마나 비용을 포함한 11열 헤더와 데이터가 필요합니다.");
+                throw new FormatException("기본 4열, 장비 10열, 마나 비용 11열, 추가 스탯 12열 또는 등급 13열 헤더와 데이터가 필요합니다.");
 
             var result = new List<Row>();
             var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -75,6 +83,8 @@ namespace Nomad.Inventory.Editor
                 float range = 0;
                 float interval = 0;
                 int? manaCost = null;
+                StatModifier[] stats = null;
+                ItemTier? tier = null;
                 if (extended)
                 {
                     if (!Enum.TryParse(cells[4], false, out EquipmentType type) ||
@@ -105,12 +115,55 @@ namespace Nomad.Inventory.Editor
                     }
                     else if (mode == WeaponAttackMode.Staff)
                         throw new FormatException($"레코드 {index + 1}: 마법 지팡이에 mana_cost 열이 필요합니다.");
+
+                    if (hasStats)
+                    {
+                        stats = ParseStats(cells[11]);
+                        if (stats == null || (type == EquipmentType.None && stats.Length > 0))
+                            throw new FormatException($"레코드 {index + 1}: stats는 장비에만 '스탯=수치;스탯=수치' 형식으로 적습니다.");
+                    }
+
+                    // 빈 칸은 등급 없음입니다. C, B, A, S, SS, SSS만 받습니다.
+                    if (hasTier)
+                    {
+                        if (cells[12].Length == 0)
+                            tier = ItemTier.None;
+                        else if (Enum.TryParse(cells[12], false, out ItemTier parsed) && parsed != ItemTier.None &&
+                                 Enum.IsDefined(typeof(ItemTier), parsed) && parsed.ToString() == cells[12])
+                            tier = parsed;
+                        else
+                            throw new FormatException($"레코드 {index + 1}: tier는 비우거나 C, B, A, S, SS, SSS 중 하나입니다.");
+                    }
                 }
 
-                result.Add(new Row(id, cells[1], cells[2], maxStack, equipment, attack, defense, mode, range, interval, manaCost));
+                result.Add(new Row(id, cells[1], cells[2], maxStack, equipment, attack, defense, mode, range, interval, manaCost, stats, tier));
             }
 
             return result;
+        }
+
+        // 예: "MaxHealth=20;CritEvasion=5". 공격력·방어력은 기존 열을 사용하므로 여기서 받지 않습니다.
+        private static StatModifier[] ParseStats(string text)
+        {
+            var stats = new List<StatModifier>();
+            if (string.IsNullOrWhiteSpace(text))
+                return stats.ToArray();
+
+            foreach (string entry in text.Split(';'))
+            {
+                string[] pair = entry.Split('=');
+                if (pair.Length != 2 || !Enum.TryParse(pair[0].Trim(), false, out StatType stat) ||
+                    !Enum.IsDefined(typeof(StatType), stat) || stat.ToString() != pair[0].Trim() ||
+                    stat == StatType.Attack || stat == StatType.Defense ||
+                    !float.TryParse(pair[1].Trim(), NumberStyles.AllowDecimalPoint | NumberStyles.AllowLeadingSign,
+                        CultureInfo.InvariantCulture, out float value) || float.IsNaN(value) || float.IsInfinity(value) ||
+                    stats.Exists(modifier => modifier.Stat == stat))
+                    return null;
+
+                stats.Add(new StatModifier(stat, value));
+            }
+
+            return stats.ToArray();
         }
 
         private static bool EqualHeader(List<string> actual, IReadOnlyList<string> expected)

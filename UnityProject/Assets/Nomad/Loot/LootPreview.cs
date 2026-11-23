@@ -34,10 +34,10 @@ namespace Nomad.Loot
         {
             if (!Application.isPlaying) return;
             inventory.Remove("scrap", int.MaxValue);
-            inventory.Remove("field-knife", int.MaxValue);
-            inventory.Remove("field-vest", int.MaxValue);
+            inventory.Remove("weapon-dagger", int.MaxValue);
+            inventory.Remove("gear-padded-armor", int.MaxValue);
             inventory.Add("scrap", 96);
-            inventory.Add("field-knife", 19);
+            inventory.Add("weapon-dagger", 19);
             Debug.Log("B REVIEW: 20 slots, scrap 96/99. Chest has 10; loot must leave 7.");
         }
 

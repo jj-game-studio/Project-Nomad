@@ -41,6 +41,7 @@ namespace Nomad.Inventory
 
             title = CreateText("Title", font, 20, new Color32(224, 182, 104, 255));
             title.fontStyle = FontStyle.Bold;
+            title.supportRichText = true;
             description = CreateText("Description", font, 16, new Color32(233, 234, 228, 255));
             comparisonStats = CreateText("ComparisonStats", font, 16, new Color32(233, 234, 228, 255));
             // 색상 태그는 숫자로 만든 비교 문구에만 사용하고 아이템 문구는 평문으로 유지합니다.
@@ -71,21 +72,33 @@ namespace Nomad.Inventory
 
         public void ShowCompared(ItemDefinition item, Vector2 position, Camera camera, ItemDefinition[] equipped, int count)
         {
+            // 후보와 장착 장비 중 한쪽에라도 있는 스탯을 장착 장비별로 비교합니다.
             string stats = string.Empty;
             for (int index = 0; index < count; index++)
             {
-                if (index > 0) stats += "\n";
-                string label = count > 1 ? $"방어력 · 토템 {index + 1}" : "방어력";
-                stats += $"{label} {item.Defense} ({Difference(item.Defense, equipped[index].Defense)})";
+                if (count > 1)
+                    stats += (stats.Length > 0 ? "\n" : string.Empty) + $"장착 {index + 1} ({equipped[index].DisplayName}) 대비";
+
+                for (int stat = 0; stat <= (int)StatType.InventorySlots; stat++)
+                {
+                    var type = (StatType)stat;
+                    float value = item.GetStat(type);
+                    float current = equipped[index].GetStat(type);
+                    if (value == 0 && current == 0)
+                        continue;
+
+                    if (stats.Length > 0) stats += "\n";
+                    stats += $"{StatFormat.Name(type)} {StatFormat.Value(type, value)} ({Difference(type, value, current)})";
+                }
             }
             Present(item, 1, position, camera, 320f, null, stats);
         }
 
-        private static string Difference(int value, int current)
+        private static string Difference(StatType stat, float value, float current)
         {
-            long difference = (long)value - current;
-            if (difference > 0) return $"<color=#80D99A>▲{difference}</color>";
-            if (difference < 0) return $"<color=#F08383>▼{-difference}</color>";
+            float difference = value - current;
+            if (difference > 0.001f) return $"<color=#80D99A>▲{StatFormat.Value(stat, difference)}</color>";
+            if (difference < -0.001f) return $"<color=#F08383>▼{StatFormat.Value(stat, -difference)}</color>";
             return "-";
         }
 
@@ -142,6 +155,9 @@ namespace Nomad.Inventory
             float width = Mathf.Min(cardWidth, Mathf.Max(1f, canvasSize.x - Margin * 2));
             float textWidth = Mathf.Max(1f, width - Padding * 2);
             title.text = count > 1 ? $"{item.DisplayName}  ×{count}" : item.DisplayName;
+            // 등급이 있으면 이름 앞에 등급 색 글자를 붙입니다.
+            if (item.Tier != ItemTier.None)
+                title.text = $"<color=#{TierStyle.Hex(item.Tier)}>[{TierStyle.Label(item.Tier)}]</color> " + title.text;
             if (!string.IsNullOrEmpty(shownHeading)) title.text = shownHeading + "\n" + title.text;
             description.text = shownComparison == null ? BuildDescription(item) : item.Description ?? string.Empty;
             comparisonStats.text = shownComparison ?? string.Empty;
@@ -183,6 +199,8 @@ namespace Nomad.Inventory
 
             if (item.Defense > 0)
                 stats += (stats.Length > 0 ? "\n" : string.Empty) + $"방어력 {item.Defense}";
+            foreach (StatModifier modifier in item.Stats)
+                stats += (stats.Length > 0 ? "\n" : string.Empty) + $"{StatFormat.Name(modifier.Stat)} {StatFormat.Bonus(modifier.Stat, modifier.Value)}";
 
             if (stats.Length == 0)
                 return body;

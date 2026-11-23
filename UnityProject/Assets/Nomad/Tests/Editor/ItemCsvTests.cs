@@ -100,7 +100,7 @@ namespace Nomad.Tests
             var rows = ItemCsv.Parse(File.ReadAllText(EquipmentAuthoring.CsvPath));
             var weapons = rows.Where(row => row.Equipment == EquipmentType.Weapon && row.Id != "demo-unarmed").ToArray();
             foreach (WeaponAttackMode mode in new[] { WeaponAttackMode.Melee, WeaponAttackMode.Bow, WeaponAttackMode.Staff })
-                Assert.That(weapons.Count(row => row.AttackMode == mode), Is.EqualTo(3), mode.ToString());
+                Assert.That(weapons.Count(row => row.AttackMode == mode), Is.EqualTo(6), mode.ToString());
 
             foreach (ItemCsv.Row weapon in weapons)
             {
@@ -115,10 +115,73 @@ namespace Nomad.Tests
                 Assert.That(asset.EquippedVisual.GetComponentsInChildren<Renderer>(true), Is.Not.Empty);
             }
 
-            var melee = weapons.Where(row => row.AttackMode == WeaponAttackMode.Melee).OrderBy(row => row.AttackRange).ToArray();
+            // 기본 근접 3종(C~A)은 사거리·공격력·간격이 함께 커집니다.
+            var melee = weapons.Where(row => row.AttackMode == WeaponAttackMode.Melee && row.Tier <= ItemTier.A)
+                .OrderBy(row => row.AttackRange).ToArray();
             Assert.That(melee.Select(row => row.Id), Is.EqualTo(new[] { "weapon-dagger", "demo-sword", "weapon-greatsword" }));
             Assert.That(melee.Select(row => row.AttackPower), Is.Ordered);
             Assert.That(melee.Select(row => row.AttackInterval), Is.Ordered);
+        }
+
+        [Test]
+        public void GearRowsCoverEverySlotAndMatchTheirAssets()
+        {
+            var gear = ItemCsv.Parse(File.ReadAllText(EquipmentAuthoring.CsvPath))
+                .Where(row => row.Id.StartsWith("gear-", StringComparison.Ordinal)).ToArray();
+            foreach (EquipmentType type in new[] { EquipmentType.Head, EquipmentType.Body, EquipmentType.Legs,
+                         EquipmentType.Feet, EquipmentType.Bag, EquipmentType.Accessory })
+                Assert.That(gear.Any(row => row.Equipment == type), Is.True, type.ToString());
+
+            foreach (ItemCsv.Row row in gear)
+            {
+                var asset = AssetDatabase.LoadAssetAtPath<ItemDefinition>($"{WeaponContentAuthoring.ItemFolder}/{row.Id}.asset");
+                Assert.That(asset, Is.Not.Null, row.Id);
+                Assert.That(asset.Icon, Is.Not.Null, row.Id);
+                Assert.That(asset.Stats, Is.EqualTo(row.Stats), row.Id);
+                Assert.That(asset.Tier, Is.EqualTo(row.Tier), row.Id);
+            }
+        }
+
+        [Test]
+        public void WeaponsAndGearHaveTiersAndArmorStatsGrowWithTier()
+        {
+            var rows = ItemCsv.Parse(File.ReadAllText(EquipmentAuthoring.CsvPath))
+                .Where(row => row.Equipment.HasValue && row.Equipment != EquipmentType.None && row.Id != "demo-unarmed").ToArray();
+            foreach (ItemCsv.Row row in rows)
+                Assert.That(row.Tier, Is.Not.Null.And.Not.EqualTo(ItemTier.None), row.Id);
+
+            // 같은 부위 방어구는 등급마다 하나씩 있고, 등급이 높을수록 주 스탯이 큽니다.
+            foreach (EquipmentType type in new[] { EquipmentType.Head, EquipmentType.Body, EquipmentType.Legs, EquipmentType.Feet })
+            {
+                var slot = rows.Where(row => row.Equipment == type).OrderBy(row => row.Tier).ToArray();
+                Assert.That(slot.Select(row => row.Tier), Is.EquivalentTo(Enum.GetValues(typeof(ItemTier)).Cast<ItemTier?>().Skip(1)), type.ToString());
+                Assert.That(slot.Select(row => row.Stats[0].Value), Is.Ordered.Ascending, type.ToString());
+                Assert.That(slot.Select(row => row.Defense), Is.Ordered.Ascending, type.ToString());
+            }
+
+            Assert.That(rows.Count(row => row.Equipment == EquipmentType.Bag), Is.GreaterThanOrEqualTo(3));
+            Assert.That(rows.Count(row => row.Equipment == EquipmentType.Accessory), Is.InRange(10, 20));
+        }
+
+        [Test]
+        public void TierColumnAcceptsOnlyKnownTiers()
+        {
+            const string header = "item_id,display_name,description,max_stack,equipment_type,attack_power,defense,attack_mode,attack_range,attack_interval,mana_cost,stats,tier\n";
+            Assert.That(ItemCsv.Parse(header + "ring,반지,,1,Accessory,0,0,None,0,0,0,,SS")[0].Tier, Is.EqualTo(ItemTier.SS));
+            Assert.That(ItemCsv.Parse(header + "ore,광석,,99,None,0,0,None,0,0,0,,")[0].Tier, Is.EqualTo(ItemTier.None));
+            foreach (string tier in new[] { "None", "D", "s", "SSSS" })
+                Assert.Throws<FormatException>(() => ItemCsv.Parse(header + "ring,반지,,1,Accessory,0,0,None,0,0,0,," + tier), tier);
+        }
+
+        [Test]
+        public void StatsColumnRejectsUnknownOrDuplicateStats()
+        {
+            const string header = "item_id,display_name,description,max_stack,equipment_type,attack_power,defense,attack_mode,attack_range,attack_interval,mana_cost,stats\n";
+            var row = ItemCsv.Parse(header + "ring,반지,,1,Accessory,0,0,None,0,0,0,CritChance=8;MaxMana=20")[0];
+            Assert.That(row.Stats, Is.EqualTo(new[] { new StatModifier(StatType.CritChance, 8), new StatModifier(StatType.MaxMana, 20) }));
+
+            foreach (string stats in new[] { "Luck=1", "CritChance=8;CritChance=1", "Attack=3", "CritChance" })
+                Assert.Throws<FormatException>(() => ItemCsv.Parse(header + "ring,반지,,1,Accessory,0,0,None,0,0,0," + stats), stats);
         }
     }
 }

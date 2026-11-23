@@ -256,6 +256,8 @@ GameObject:
   - component: {fileID: 451336764}
   - component: {fileID: 451336772}
   - component: {fileID: 451336771}
+  - component: {fileID: 451336774}
+  - component: {fileID: 451336773}
   m_Layer: 0
   m_Name: Integration Player
   m_TagString: Untagged
@@ -273,7 +275,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fb56889817d178144a23e84ee9618798, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Player.PlayerMovement
   viewCamera: {fileID: 654134747}
   killHeight: -20
@@ -329,25 +331,17 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 87e39598de3817d4b9948b603f117a2a, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Inventory.PlayerInventory
   items:
   - {fileID: 11400000, guid: c5909ea4a83cd9b4d8f3f6480f5a4271, type: 2}
-  - {fileID: 11400000, guid: 5abb4f098a436704e9d2514c8e985475, type: 2}
-  - {fileID: 11400000, guid: 448cc5b227491124d9fcf8b3af24c8c1, type: 2}
-  - {fileID: 11400000, guid: 3bc5ee3aa47bcb5419199fe0c678c793, type: 2}
-  - {fileID: 11400000, guid: 91bcb142c26e7a1409c2a2540242819f, type: 2}
-  - {fileID: 11400000, guid: 0665a2b2765b3864f9c1013078fcca6e, type: 2}
-  - {fileID: 11400000, guid: 742c2de271dd3e544aa09851eb69383a, type: 2}
+  - {fileID: 11400000, guid: 28a6ca536ce89e142a52315671a1d4e9, type: 2}
+  - {fileID: 11400000, guid: 9c04cf4dc6ba5cb408cd43156a3e63aa, type: 2}
+  - {fileID: 11400000, guid: fc92d50f0b2ea1941a895ecca90a199e, type: 2}
+  - {fileID: 11400000, guid: 192ab8d28fe92f74a9e86b2e6d8dca88, type: 2}
+  - {fileID: 11400000, guid: ca45c99ac0491b84fba08d5281f2914b, type: 2}
   - {fileID: 11400000, guid: 2fd922611dde74b42afdc04ec0edc323, type: 2}
-  - {fileID: 11400000, guid: 149f770f4d68c4b4c965c16a1d2cf4f3, type: 2}
-  - {fileID: 11400000, guid: ac569c023422c424c820c4419ec75c5e, type: 2}
-  - {fileID: 11400000, guid: 41af70b866070234bb765a441c7fa6b9, type: 2}
-  - {fileID: 11400000, guid: 7aca8cc904480a6468ae63996425734c, type: 2}
-  - {fileID: 11400000, guid: 66283d5a9c3d2e740accb3efa6487ef3, type: 2}
-  - {fileID: 11400000, guid: f26f2a5ac639f474bbe49b31cf21f24f, type: 2}
   - {fileID: 11400000, guid: 6d4d13ace88e69f4692b95903876f8a4, type: 2}
-  - {fileID: 11400000, guid: d00b362630e382f4eac5c4603a0b0516, type: 2}
   - {fileID: 11400000, guid: e907610ddd7ebde4e91a139ed2c789e5, type: 2}
   - {fileID: 11400000, guid: ca38e1181ce0a63498c03747a544b514, type: 2}
   - {fileID: 11400000, guid: c5862214309496d4f8c57e4231be513d, type: 2}
@@ -357,6 +351,61 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 68caed9a62a821940adeed05bf96a232, type: 2}
   - {fileID: 11400000, guid: 16cc907af324e8c469d03e651246ddcc, type: 2}
   - {fileID: 11400000, guid: 8a7bb2fe30f5e274ead5f6ce39cd1902, type: 2}
+  - {fileID: 11400000, guid: a220abd1709fec142860470d172d0d65, type: 2}
+  - {fileID: 11400000, guid: d58ce83489309594895fb08c5aa37f58, type: 2}
+  - {fileID: 11400000, guid: 284a0512d5f664240b39cdcddabfeefa, type: 2}
+  - {fileID: 11400000, guid: 5f8c6e8a9a148b54d926a4c761e7fbb2, type: 2}
+  - {fileID: 11400000, guid: 03b460568d55ef94c8caa90615e59c85, type: 2}
+  - {fileID: 11400000, guid: c05814cde96c51142a7f2f1fd523e7e2, type: 2}
+  - {fileID: 11400000, guid: ad1ea8cdc94fd6145878ed806cf093b4, type: 2}
+  - {fileID: 11400000, guid: 4b7aee3a27162244bb24b2ec8ca86b33, type: 2}
+  - {fileID: 11400000, guid: 05b043fc06c136d43881e64164cecbef, type: 2}
+  - {fileID: 11400000, guid: 7b15c526b2a12614b8634c5c0cbd02b1, type: 2}
+  - {fileID: 11400000, guid: cf7f65903093ca54193912efe67ee3ca, type: 2}
+  - {fileID: 11400000, guid: bbbbfc3a33e028c4fb35159c9c628364, type: 2}
+  - {fileID: 11400000, guid: e68c2616dd92e6644a75d8f78cb1d75f, type: 2}
+  - {fileID: 11400000, guid: 6d16e61a3dfb0be4b81ef35c9966e93f, type: 2}
+  - {fileID: 11400000, guid: 1e0502df46db3ae4eaccc841100400f9, type: 2}
+  - {fileID: 11400000, guid: 6fbc88357cb94e54ab1b500811e1663d, type: 2}
+  - {fileID: 11400000, guid: 865735eaa8e30a84e8abdf6b462ea5d6, type: 2}
+  - {fileID: 11400000, guid: e3000bfa6027b1845be64876bca1dc1c, type: 2}
+  - {fileID: 11400000, guid: 16ef8861f503c0145a1f91f9fe19443e, type: 2}
+  - {fileID: 11400000, guid: 59d61be975c9b1745b0dfd8f7fa9c54e, type: 2}
+  - {fileID: 11400000, guid: ee127a2d1d3b136438d331b58d108450, type: 2}
+  - {fileID: 11400000, guid: 104ac575d609fdd449bab09cb461e963, type: 2}
+  - {fileID: 11400000, guid: cfbfe1b43c08bfc449f68a7c9fa2f95e, type: 2}
+  - {fileID: 11400000, guid: b31f51734d48e6c449d133b0d8a53f4d, type: 2}
+  - {fileID: 11400000, guid: 4c91406c05322a544be1e07a73223e4b, type: 2}
+  - {fileID: 11400000, guid: cc1494010c02752428ff76fb14b46f36, type: 2}
+  - {fileID: 11400000, guid: d0dccdc58e27f87468ee936b23b2c4da, type: 2}
+  - {fileID: 11400000, guid: f099f93255df3a645be097168dd7da83, type: 2}
+  - {fileID: 11400000, guid: 9a0270c1b620fd142be133e2b613f61d, type: 2}
+  - {fileID: 11400000, guid: 0685f144d7c7d4b4fb45d1e288972187, type: 2}
+  - {fileID: 11400000, guid: ecb5ba8eb47b38744900ac71119e5087, type: 2}
+  - {fileID: 11400000, guid: dade29f4091a2ab4098640d49450c403, type: 2}
+  - {fileID: 11400000, guid: 003ac0a1123e0114a941cba76575bbba, type: 2}
+  - {fileID: 11400000, guid: 97fe7523083607543b58c2d3de4b3872, type: 2}
+  - {fileID: 11400000, guid: cce94ea6d78e85946a15f7e2bb009032, type: 2}
+  - {fileID: 11400000, guid: ff031e1b0934e814491c020b3c3ecbe6, type: 2}
+  - {fileID: 11400000, guid: 03343d0c88db0f841a3275af99456a7a, type: 2}
+  - {fileID: 11400000, guid: 1c13c4bc151e6304197e316bfafbcf54, type: 2}
+  - {fileID: 11400000, guid: 71b6c28a5d7544a4e92a5ed61e8bb693, type: 2}
+  - {fileID: 11400000, guid: abd64fb44fd206646a24bf24239c39a6, type: 2}
+  - {fileID: 11400000, guid: 5fbffded440bf8c4cacf233daef7e729, type: 2}
+  - {fileID: 11400000, guid: 9faf1d1abdef73e43abd8ac4e56737b8, type: 2}
+  - {fileID: 11400000, guid: 71fafed826b049c47985cd06a4b1ed7a, type: 2}
+  - {fileID: 11400000, guid: 468fb019f7f209740ae15bf19439d579, type: 2}
+  - {fileID: 11400000, guid: 186c85b0857d6bc41b9951eae073f854, type: 2}
+  - {fileID: 11400000, guid: c504aea44f584384a92a18ca7fde5ad0, type: 2}
+  - {fileID: 11400000, guid: 1db2dcc98d2769b40b75a56a0bc751a7, type: 2}
+  - {fileID: 11400000, guid: be06decfd07fcb9478485068a2a7869b, type: 2}
+  - {fileID: 11400000, guid: 273ec8ad3273af34ea9e12e1105b0f41, type: 2}
+  - {fileID: 11400000, guid: e06f56a034ad1334c8b1e09442b1cbb4, type: 2}
+  - {fileID: 11400000, guid: 58f6670530703614995e386d8799196e, type: 2}
+  - {fileID: 11400000, guid: dca48090b16db0d42b6e9c5395ab8398, type: 2}
+  - {fileID: 11400000, guid: 37dc992ddaa8db546b23add71ec45427, type: 2}
+  - {fileID: 11400000, guid: f1d57a9837fdcb0488fc2e51f4489b6d, type: 2}
+  - {fileID: 11400000, guid: 22b6ab086a349a34a8cee1a4d23ae45f, type: 2}
 --- !u!114 &451336760
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -367,7 +416,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7fd2ee342ab7437fb79fccb07eb376bd, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Interaction.PlayerInteraction
   targetLayers:
     serializedVersion: 2
@@ -385,7 +434,7 @@ MonoBehaviour:
   m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8f3073bbb94faea4d9fb1d618cb50a60, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Player.PlayerCombat
   viewCamera: {fileID: 654134747}
   muzzle: {fileID: 1955340542}
@@ -405,7 +454,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bd2ffb773888d3449a875417e1e2c9ff, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Nomad.Monsters::Nomad.Monsters.SegmentedHealthBar
   segments: 10
   worldOffset: {x: 0, y: 2.4, z: 0}
@@ -419,7 +468,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a973d702e83013f4e82f4baabfe6b696, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Nomad.Combat::Nomad.Combat.Health
   maxHealth: 100
 --- !u!114 &451336764
@@ -432,7 +481,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 99dcb046f77574d41994ea9275948cc8, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Game.Modules.StarterKit
   items:
   - itemId: weapon-dagger
@@ -475,6 +524,34 @@ MonoBehaviour:
     count: 30
     equip: 0
     slot: 0
+  - itemId: gear-leather-cap
+    count: 1
+    equip: 0
+    slot: 0
+  - itemId: gear-padded-armor
+    count: 1
+    equip: 0
+    slot: 0
+  - itemId: gear-cloth-pants
+    count: 1
+    equip: 0
+    slot: 0
+  - itemId: gear-leather-shoes
+    count: 1
+    equip: 0
+    slot: 0
+  - itemId: gear-belt-pouch
+    count: 1
+    equip: 0
+    slot: 0
+  - itemId: gear-copper-ring
+    count: 1
+    equip: 0
+    slot: 0
+  - itemId: gear-lucky-stone
+    count: 1
+    equip: 0
+    slot: 0
 --- !u!114 &451336765
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -485,7 +562,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 02ef3eecf2ba06745bf5e701e3d5f5a9, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Hud.PlayerHud
   style: 1
   health: {fileID: 0}
@@ -500,7 +577,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0ed554056f644abfb744bb3838d8a177, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Equipment.EquipmentPanel
 --- !u!114 &451336767
 MonoBehaviour:
@@ -512,7 +589,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 2653d231f1cf45aeaf283e40cb4ec902, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Equipment.EquipmentCombatVisuals
 --- !u!114 &451336768
 MonoBehaviour:
@@ -524,7 +601,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 51d64dfe8079b4b4794e33fd1e04248e, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Equipment.PlayerEquipmentCombat
   viewCamera: {fileID: 654134747}
   muzzle: {fileID: 1955340542}
@@ -544,7 +621,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 08348671e10dc104cb2ce10527808c20, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Player.PlayerMana
   maximum: 100
   recoveryPerSecond: 8
@@ -559,7 +636,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1bc559f1224e45d78f50a79b37e7e63e, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Equipment.PlayerEquipment
 --- !u!114 &451336771
 MonoBehaviour:
@@ -571,7 +648,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: aeeaca6b7d860d54b8f91932369b395a, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.WorldHud.CharacterStaminaHud
   viewCamera: {fileID: 654134747}
   worldOffset: {x: 0, y: 1, z: 0}
@@ -587,12 +664,42 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4af9bd5b251bd4f4c91f9fb5dfeceedc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Player.PlayerStamina
   maximum: 100
   recoveryPerSecond: 25
   recoveryDelay: 1
   rollCost: 25
+--- !u!114 &451336773
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 451336755}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3f0627ce22a2f59418f5b9e701139a38, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Nomad.Equipment.PlayerStats
+  baseEvasion: 0
+  baseCritChance: 5
+  baseCritEvasion: 0
+  baseHealthRegen: 0
+  incomingCritChance: 10
+--- !u!114 &451336774
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 451336755}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a973d702e83013f4e82f4baabfe6b696, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Nomad.Combat::Nomad.Combat.Health
+  maxHealth: 100
 --- !u!1 &654134746
 GameObject:
   m_ObjectHideFlags: 0
@@ -673,7 +780,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 81398bd28c1a7574d929aa29404d143e, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Player.TopDownCamera
   target: {fileID: 451336758}
   maxLookAhead: 2
@@ -750,7 +857,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 0.02, g: 0.03, b: 0.05, a: 0.9}
@@ -825,7 +932,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Text
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -848,7 +955,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text:
+  m_Text: 
 --- !u!222 &672197763
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -1014,7 +1121,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0cd44c1031e13a943bb63640046fad76, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.CanvasScaler
   m_UiScaleMode: 1
   m_ReferencePixelsPerUnit: 100
@@ -1099,7 +1206,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 927f33e58f6642f3beb793c0e5c29283, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Terrain.TerrainGenerator
   prefabs: []
   pieceCount: 12
@@ -1176,7 +1283,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Text
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -1237,7 +1344,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 15cad3781d9f3a84c980574e77fb62f9, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Props.PropScatter
   generator: {fileID: 1613374919}
   propPrefab: {fileID: 897010172}
@@ -1292,7 +1399,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 75e06d55a08ccdc498295d587b78d524, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Terrain.TerrainIntegrationControls
   generator: {fileID: 1613374919}
   catalog: {fileID: 11400000, guid: 2588cb103094d8341a0c65cca0a8e62e, type: 2}
@@ -1361,7 +1468,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a8c4f9fa01ed4a65a057978d0314a531, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Loot.TerrainLootIntegration
   inventory: {fileID: 451336759}
   status: {fileID: 672197762}
@@ -1376,7 +1483,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 99e5f6aaeb9e40e39930375cb5606e3a, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Terrain.FieldNavigation
 --- !u!114 &1930808196
 MonoBehaviour:
@@ -1388,7 +1495,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 2f2d142741dee614fa7cf81a72388592, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Gameplay.GameplayIntegration
   normalCount: 6
   eliteCount: 1
@@ -1406,7 +1513,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f0bdf78cab3de3a438970a281b287f1f, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Monsters.Demo.MonsterActorFactory
   normalMaterial: {fileID: 2100000, guid: e71b810fa74d311429fff88083d800e9, type: 2}
   eliteMaterial: {fileID: 2100000, guid: a809024f3ded8a14a9d2474e04b182ca, type: 2}
@@ -1423,18 +1530,18 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4092ea4cd7b81214daa41c3ecd5267df, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Loot.ChestSpawner
   table:
   - ItemId: scrap
     Min: 4
     Max: 12
     Chance: 1
-  - ItemId: field-knife
+  - ItemId: weapon-dagger
     Min: 1
     Max: 1
     Chance: 0.35
-  - ItemId: field-vest
+  - ItemId: gear-padded-armor
     Min: 1
     Max: 1
     Chance: 0.2
@@ -1487,7 +1594,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 0.02, g: 0.03, b: 0.05, a: 0.9}

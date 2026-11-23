@@ -17,9 +17,10 @@ namespace Nomad.Shop.Editor
             internal readonly Shopkeeper Shop;
             private readonly ShopCatalog catalog;
 
-            internal Fixture(int gold = 1000, int stock = 30, int buy = 5, int sell = 2, float restockSeconds = 0)
+            internal Fixture(int gold = 1000, int stock = 30, int buy = 5, int sell = 2, float restockSeconds = 0,
+                bool sellOnly = false)
             {
-                ItemDefinition scrap = AssetDatabase.LoadAssetAtPath<ItemDefinition>("Assets/Nomad/Inventory/Demo/scrap.asset");
+                ItemDefinition scrap = AssetDatabase.LoadAssetAtPath<ItemDefinition>("Assets/Nomad/Equipment/Items/scrap.asset");
                 Player = new GameObject("Trade fixture");
                 Player.SetActive(false);
                 Player.transform.position = new Vector3(1000, 0, 1000);
@@ -40,6 +41,7 @@ namespace Nomad.Shop.Editor
                 entry.FindPropertyRelative("buyPrice").intValue = buy;
                 entry.FindPropertyRelative("sellPrice").intValue = sell;
                 entry.FindPropertyRelative("initialStock").intValue = stock;
+                entry.FindPropertyRelative("sellOnly").boolValue = sellOnly;
                 data.ApplyModifiedPropertiesWithoutUndo();
                 Store = new GameObject("Store fixture");
                 Store.SetActive(false);
@@ -192,6 +194,14 @@ namespace Nomad.Shop.Editor
                 f.Inventory.Add("scrap", 2);
                 Require(f.Shop.CanSell(f.Inventory, 0, 2, out _) && f.Shop.TrySell(f.Inventory, 0, 2, out _) &&
                     f.Shop.BuyLimit(f.Inventory, 0) == 2, "판매한 재고를 즉시 다시 구매 가능");
+                checks++;
+            }
+            using (var f = new Fixture(stock: 0, buy: 2, sellOnly: true))
+            {
+                f.Inventory.Add("scrap", 3);
+                Require(f.Shop.TrySell(f.Inventory, 0, 3, out _) && f.Wallet.Gold == 1006 && f.Shop.StockAt(0) == 0 &&
+                    f.Shop.BuyLimit(f.Inventory, 0) == 0 && !f.Shop.CanBuy(f.Inventory, 0, 1, out string reason) &&
+                    reason == "판매만 받는 물건입니다.", "판매 전용 상품은 팔아도 재고가 늘지 않고 구매 불가");
                 checks++;
             }
 

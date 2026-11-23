@@ -176,6 +176,9 @@ namespace Nomad.Equipment.Editor
             inventory = equipment.GetComponent<PlayerInventory>();
             combat = equipment.GetComponent<PlayerEquipmentCombat>();
             health = equipment.GetComponent<Health>();
+            // 고정 피해 검사를 위해 치명타·회피 난수를 항상 실패로 고정합니다.
+            if (equipment.TryGetComponent(out PlayerStats stats))
+                stats.RandomSource = () => 1f;
             near = UnityEngine.Object.FindObjectsByType<Health>().Where(target => target.name.StartsWith("Melee Target")).ToArray();
             far = GameObject.Find("Low Target").GetComponent<Health>();
             var extra = new GameObject("Extra Hurtbox");
@@ -189,40 +192,41 @@ namespace Nomad.Equipment.Editor
         {
             Check(PlayerEquipment.Capacity == 10 && equipment.ActiveWeapon.AttackPower == 25, "10칸/CSV 검 장착");
             int original = inventory.UsedSlots;
-            int armorCount = inventory.GetCount("demo-armor");
-            int totemCount = inventory.GetCount("demo-totem");
-            Check(!equipment.TryEquip(Find("demo-armor"), EquipmentSlot.Weapon1) && inventory.UsedSlots == original, "잘못된 부위 무변경");
+            int armorCount = inventory.GetCount("gear-plate-armor");
+            int ringCount = inventory.GetCount("gear-copper-ring");
+            Check(!equipment.TryEquip(Find("gear-plate-armor"), EquipmentSlot.Weapon1) && inventory.UsedSlots == original, "잘못된 부위 무변경");
             bool completeState = false;
-            Action listener = () => completeState = equipment.GetItem(EquipmentSlot.Body)?.ItemId == "demo-armor" &&
-                inventory.GetCount("demo-armor") == armorCount - 1;
+            Action listener = () => completeState = equipment.GetItem(EquipmentSlot.Body)?.ItemId == "gear-plate-armor" &&
+                inventory.GetCount("gear-plate-armor") == armorCount - 1;
             inventory.Changed += listener;
-            Check(equipment.TryEquip(Find("demo-armor"), EquipmentSlot.Body), "몸통 장착");
+            Check(equipment.TryEquip(Find("gear-plate-armor"), EquipmentSlot.Body), "몸통 장착");
             inventory.Changed -= listener;
-            Check(completeState && equipment.TotalDefense == 20, "완료상태 알림/방어력");
-            Check(health.TryApplyDamage(25) && health.CurrentHealth == 95, "피해25-방어20=실제피해5");
-            Check(health.TryApplyDamage(1, DamageKind.Fall) && health.CurrentHealth == 94, "낙하 방어 제외");
+            // 판금 갑옷: 방어력 4, 최대 체력 +35 (현재 체력은 그대로 100)
+            Check(completeState && equipment.TotalDefense == 4 && health.MaxHealth == 135, "완료상태 알림/방어력/최대 체력");
+            Check(health.TryApplyDamage(25) && health.CurrentHealth == 79, "피해25-방어4=실제피해21");
+            Check(health.TryApplyDamage(1, DamageKind.Fall) && health.CurrentHealth == 78, "낙하 방어 제외");
             Check(equipment.ModifyCombatDamage(1) == 1 && equipment.ModifyCombatDamage(2) == 1 &&
-                equipment.ModifyCombatDamage(200) == 180, "고정 차감/최소1");
+                equipment.ModifyCombatDamage(200) == 196, "고정 차감/최소1");
 
-            foreach (var pair in new[] { ("demo-helmet", EquipmentSlot.Head), ("demo-mask", EquipmentSlot.Face),
-                         ("demo-charm", EquipmentSlot.Accessory), ("demo-ring", EquipmentSlot.Ring),
-                         ("demo-bag", EquipmentSlot.Bag), ("demo-totem", EquipmentSlot.Totem1) })
+            foreach (var pair in new[] { ("gear-knight-helm", EquipmentSlot.Head), ("gear-copper-ring", EquipmentSlot.Accessory1),
+                         ("gear-belt-pouch", EquipmentSlot.Bag) })
                 Check(equipment.TryEquip(Find(pair.Item1), pair.Item2), "각 분류 장착");
-            inventory.Add("demo-totem", 1);
-            Check(equipment.TryEquip(Find("demo-totem"), EquipmentSlot.Totem2), "토템2 장착");
-            Check(equipment.TotalDefense == 60, "방어력 합산");
+            inventory.Add("gear-copper-ring", 2);
+            Check(equipment.TryEquip(Find("gear-copper-ring"), EquipmentSlot.Accessory2) &&
+                equipment.TryEquip(Find("gear-copper-ring"), EquipmentSlot.Accessory3), "장신구 2·3 장착");
+            Check(equipment.TotalDefense == 6 && inventory.SlotCount == PlayerInventory.Capacity + 2, "방어력 합산/허리 주머니 +2칸");
 
-            inventory.Add("demo-bow", PlayerInventory.Capacity);
-            Check(inventory.UsedSlots == PlayerInventory.Capacity && !equipment.TryUnequip(EquipmentSlot.Body), "가방 만석 해제 실패");
+            inventory.Add("demo-bow", PlayerInventory.MaxCapacity);
+            Check(inventory.UsedSlots == inventory.SlotCount && !equipment.TryUnequip(EquipmentSlot.Body), "가방 만석 해제 실패");
             int source = Find("demo-bow");
             Check(equipment.TryEquip(source, EquipmentSlot.Weapon1) && inventory.GetSlot(source).Item.ItemId == "demo-sword", "만석 교체 원칸 반환");
             Check(equipment.TryEquip(source, EquipmentSlot.Weapon1) && inventory.GetSlot(source).Item.ItemId == "demo-bow", "검 복원/중복 없음");
-            inventory.Remove("demo-bow", PlayerInventory.Capacity);
+            inventory.Remove("demo-bow", PlayerInventory.MaxCapacity);
             foreach (EquipmentSlot slot in Enum.GetValues(typeof(EquipmentSlot)))
                 if (slot != EquipmentSlot.Weapon1 && slot != EquipmentSlot.Weapon2 && slot != EquipmentSlot.Body)
                     Check(equipment.TryUnequip(slot), "분류 해제/가방 복귀");
-            Check(equipment.TotalDefense == 20 && inventory.UsedSlots == original &&
-                inventory.GetCount("demo-armor") == armorCount - 1 && inventory.GetCount("demo-totem") == totemCount + 1,
+            Check(equipment.TotalDefense == 4 && inventory.UsedSlots == original &&
+                inventory.GetCount("gear-plate-armor") == armorCount - 1 && inventory.GetCount("gear-copper-ring") == ringCount + 2,
                 "보유 수량 보존");
             Check(!equipment.TryEquip(-1, EquipmentSlot.Body) && !equipment.TryUnequip((EquipmentSlot)100), "잘못된 인덱스");
 

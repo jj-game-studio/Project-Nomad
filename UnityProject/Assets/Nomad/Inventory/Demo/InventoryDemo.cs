@@ -11,8 +11,8 @@ namespace Nomad.Inventory
         private void Start()
         {
             inventory.Add("scrap", 96);
-            inventory.Add("field-knife", 1);
-            inventory.Add("field-vest", 1);
+            inventory.Add("weapon-dagger", 1);
+            inventory.Add("gear-padded-armor", 1);
         }
 
         private void Update()
@@ -26,7 +26,7 @@ namespace Nomad.Inventory
             if (keyboard.digit2Key.wasPressedThisFrame)
                 status.text = $"Scrap removed   {inventory.Remove("scrap", 10)} / 10";
             if (keyboard.digit3Key.wasPressedThisFrame)
-                status.text = $"Knives added   {inventory.Add("field-knife", 20)} / 20";
+                status.text = $"Knives added   {inventory.Add("weapon-dagger", 20)} / 20";
         }
     }
 }

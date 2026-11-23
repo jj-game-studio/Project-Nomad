@@ -19,6 +19,8 @@ namespace Nomad.Shop
             [SerializeField, Min(1)] private int buyPrice = 10;
             [SerializeField, Min(0)] private int sellPrice = 5;
             [SerializeField, Min(0)] private int initialStock = 10;
+            // 고철처럼 상점이 사들이기만 하는 판매 전용 상품입니다. 구매할 수 없고 판매해도 재고가 늘지 않습니다.
+            [SerializeField] private bool sellOnly;
 
             public ItemDefinition Item => item;
             public Category Group => category;
@@ -27,6 +29,7 @@ namespace Nomad.Shop
             public int BuyPrice => buyPrice;
             public int SellPrice => sellPrice;
             public int InitialStock => initialStock;
+            public bool SellOnly => sellOnly;
         }
 
         [SerializeField] private string merchantName = "마을 상점";

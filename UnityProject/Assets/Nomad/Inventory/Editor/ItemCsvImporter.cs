@@ -82,6 +82,8 @@ namespace Nomad.Inventory.Editor
                 serialized.FindProperty("displayName").stringValue = row.Name;
                 serialized.FindProperty("description").stringValue = row.Description;
                 serialized.FindProperty("maxStack").intValue = row.MaxStack;
+                if (row.Tier.HasValue)
+                    serialized.FindProperty("tier").enumValueIndex = (int)row.Tier.Value;
                 if (row.Equipment.HasValue)
                 {
                     serialized.FindProperty("equipmentType").enumValueIndex = (int)row.Equipment.Value;
@@ -91,6 +93,17 @@ namespace Nomad.Inventory.Editor
                     serialized.FindProperty("attackRange").floatValue = row.AttackRange;
                     serialized.FindProperty("attackInterval").floatValue = row.AttackInterval;
                     serialized.FindProperty("manaCost").intValue = row.ManaCost.GetValueOrDefault();
+                    if (row.Stats != null)
+                    {
+                        SerializedProperty stats = serialized.FindProperty("stats");
+                        stats.arraySize = row.Stats.Length;
+                        for (int index = 0; index < row.Stats.Length; index++)
+                        {
+                            SerializedProperty entry = stats.GetArrayElementAtIndex(index);
+                            entry.FindPropertyRelative("Stat").enumValueIndex = (int)row.Stats[index].Stat;
+                            entry.FindPropertyRelative("Value").floatValue = row.Stats[index].Value;
+                        }
+                    }
                 }
                 bool changed = serialized.ApplyModifiedPropertiesWithoutUndo();
 

@@ -147,7 +147,7 @@ namespace Nomad.Shop.Editor
                         break;
                     case 4: Pointer("Stock/Content/Slot 0", false); break;
                     case 5:
-                        Require(Popup.activeSelf && wallet.Gold == expectedGold && Read("Item title") == "고철", "좌클릭 구매 팝업·자동 거래 없음");
+                        Require(Popup.activeSelf && wallet.Gold == expectedGold && Read("Item title") == "화살", "좌클릭 구매 팝업·자동 거래 없음");
                         Require(Quantity.text == "1" && Slider.wholeNumbers && Slider.minValue == 1 && Slider.maxValue == 30,
                             "정수 슬라이더·초기 수량·구매 한도");
                         Require(Node("Buy").gameObject.activeSelf && !Node("Sell").gameObject.activeSelf, "구매 버튼만 표시");
@@ -193,7 +193,7 @@ namespace Nomad.Shop.Editor
                         break;
                     case 14: Pointer("Backpack/Content/Slot 1", false); break;
                     case 15:
-                        Require(Popup.activeSelf && Read("Item title") == "야전 나이프", "가방 클릭은 해당 아이템 판매");
+                        Require(Popup.activeSelf && Read("Item title") == "단검", "가방 클릭은 해당 아이템 판매");
                         Queue(Key.L);
                         break;
                     case 16:
@@ -218,7 +218,7 @@ namespace Nomad.Shop.Editor
                         expectedGold += 60;
                         Require(wallet.Gold == expectedGold && inventory.GetSlot(1).Count == 0 && !Popup.activeSelf &&
                             Node("Sale notification").gameObject.activeSelf &&
-                            Read("Sale notification/Message") == "야전 나이프 판매 +60 G" &&
+                            Read("Sale notification/Message") == "단검 판매 +60 G" &&
                             !Node("Protection").gameObject.activeSelf, "전량 판매 후 팝업 닫기·실제 금액 알림·잠금 숨김");
                         Capture("shop-sale-complete.png");
                         Queue();
@@ -228,7 +228,7 @@ namespace Nomad.Shop.Editor
                     case 24: Queue(Key.RightArrow); break;
                     case 25: Queue(Key.Enter); break;
                     case 26:
-                        Require(Popup.activeSelf && Read("Item title") == "야전 나이프" && wallet.Gold == expectedGold,
+                        Require(Popup.activeSelf && Read("Item title") == "단검" && wallet.Gold == expectedGold,
                             "Tab·방향키 선택 후 Enter는 팝업만 열기");
                         Queue(Key.Q);
                         break;
@@ -261,7 +261,7 @@ namespace Nomad.Shop.Editor
                         Queue(Key.Enter);
                         break;
                     case 33:
-                        Require(Popup.activeSelf && Read("Item title") == "야전 나이프", "필터 내 팝업 열기");
+                        Require(Popup.activeSelf && Read("Item title") == "단검", "필터 내 팝업 열기");
                         Node("Maximum").GetComponent<Button>().onClick.Invoke();
                         Queue();
                         break;
@@ -371,7 +371,7 @@ namespace Nomad.Shop.Editor
                     case 59:
                         expectedGold += 4;
                         Require(!Popup.activeSelf && inventory.GetSlot(0).Count == remainingScrap - 2 &&
-                            wallet.Gold == expectedGold && Read("Sale notification/Message") == "고철 2개 판매 +4 G" &&
+                            wallet.Gold == expectedGold && Read("Sale notification/Message") == "화살 2개 판매 +4 G" &&
                             Read("Status") == "" && !Node("Protection").gameObject.activeInHierarchy,
                             "일부 판매도 팝업 닫기·실제 금액 알림");
                         Capture("shop-sale-partial.png");

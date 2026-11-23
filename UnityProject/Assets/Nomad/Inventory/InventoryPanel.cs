@@ -21,7 +21,7 @@ namespace Nomad.Inventory
         [SerializeField] private RectTransform grid;
         [SerializeField] private GameObject slotTemplate;
 
-        private readonly SlotView[] slots = new SlotView[PlayerInventory.Capacity];
+        private readonly SlotView[] slots = new SlotView[PlayerInventory.MaxCapacity];
         private Canvas canvas;
         private InventoryTooltip tooltip;
         private InventorySplitDialog splitDialog;
@@ -269,9 +269,13 @@ namespace Nomad.Inventory
 
             // 획득이나 제거로 내용이 바뀌면 기존 드래그를 취소합니다.
             CancelDrag();
-            capacity.text = $"{inventory.UsedSlots} / {PlayerInventory.Capacity} slots";
+            capacity.text = $"{inventory.UsedSlots} / {inventory.SlotCount} slots";
             for (int index = 0; index < slots.Length; index++)
+            {
+                // 가방 장비로 열리지 않은 칸은 숨겨 드래그·툴팁 대상에서도 빠집니다.
+                slots[index].Rect.gameObject.SetActive(index < inventory.SlotCount);
                 slots[index].Bind(inventory.GetSlot(index), index == hoveredIndex);
+            }
 
             UpdateHover(FindPointerSlot(Mouse.current), refreshDetails: true);
         }
@@ -542,7 +546,8 @@ namespace Nomad.Inventory
             Camera eventCamera = EventCamera;
             for (int index = 0; index < slots.Length; index++)
             {
-                if (RectTransformUtility.RectangleContainsScreenPoint(slots[index].Rect, position, eventCamera))
+                if (slots[index].Rect.gameObject.activeSelf &&
+                    RectTransformUtility.RectangleContainsScreenPoint(slots[index].Rect, position, eventCamera))
                     return index;
             }
 
@@ -562,7 +567,9 @@ namespace Nomad.Inventory
             private readonly UnityEngine.UI.Image icon;
             private readonly UnityEngine.UI.Text count;
             private readonly UnityEngine.UI.Text fallbackName;
+            private readonly UnityEngine.UI.Text tierBadge;
             private bool occupied;
+            private ItemTier tier;
 
             public RectTransform Rect => background.rectTransform;
             public CanvasGroup Group { get; }
@@ -589,6 +596,17 @@ namespace Nomad.Inventory
                 fallbackName.rectTransform.offsetMin = new Vector2(6, 23);
                 fallbackName.rectTransform.offsetMax = new Vector2(-6, -7);
 
+                // 왼쪽 위 등급 글자입니다. 테두리도 등급 색으로 바뀝니다.
+                tierBadge = Instantiate(count, slot.transform);
+                tierBadge.gameObject.name = "Tier";
+                tierBadge.alignment = TextAnchor.UpperLeft;
+                tierBadge.fontSize = 12;
+                tierBadge.fontStyle = FontStyle.Bold;
+                tierBadge.rectTransform.anchorMin = Vector2.zero;
+                tierBadge.rectTransform.anchorMax = Vector2.one;
+                tierBadge.rectTransform.offsetMin = new Vector2(5, 5);
+                tierBadge.rectTransform.offsetMax = new Vector2(-5, -3);
+
                 icon = new GameObject("Icon", typeof(RectTransform), typeof(UnityEngine.UI.Image))
                     .GetComponent<UnityEngine.UI.Image>();
                 icon.transform.SetParent(slot.transform, false);
@@ -612,11 +630,15 @@ namespace Nomad.Inventory
                 icon.enabled = sprite != null;
                 fallbackName.text = occupied && sprite == null ? stack.Item.DisplayName : string.Empty;
                 count.text = occupied && stack.Item.MaxStack > 1 && stack.Count > 1 ? $"×{stack.Count}" : string.Empty;
+                tier = occupied ? stack.Item.Tier : ItemTier.None;
+                tierBadge.text = TierStyle.Label(tier);
+                tierBadge.color = TierStyle.Color(tier);
+                SetHighlighted(occupied && highlighted);
             }
 
             public void SetHighlighted(bool highlighted)
             {
-                Color borderColor = occupied ? OccupiedBorder : EmptyBorder;
+                Color borderColor = !occupied ? EmptyBorder : tier != ItemTier.None ? TierStyle.Color(tier) : OccupiedBorder;
                 border.effectColor = highlighted ? HoverBorder : borderColor;
             }
         }

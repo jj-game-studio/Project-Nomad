@@ -140,11 +140,12 @@ namespace Nomad.Shop
                 return 0;
 
             ShopCatalog.Offer offer = catalog.GetOffer(offerIndex);
-            if (!inventory.TryGetItem(offer.Item.ItemId, out ItemDefinition registered) || registered != offer.Item)
+            if (offer.SellOnly || !inventory.TryGetItem(offer.Item.ItemId, out ItemDefinition registered) ||
+                registered != offer.Item)
                 return 0;
 
             long space = 0;
-            for (int index = 0; index < PlayerInventory.Capacity; index++)
+            for (int index = 0; index < PlayerInventory.MaxCapacity; index++)
                 space += inventory.SpaceInSlot(index, offer.Item);
             return (int)Math.Min(space, Math.Min(stock[offerIndex], inventory.GetComponent<PlayerWallet>().Gold / offer.BuyPrice));
         }
@@ -154,14 +155,14 @@ namespace Nomad.Shop
 
         public bool CanSell(PlayerInventory inventory, int slotIndex, int quantity, out string message)
         {
-            int offer = inventory != null && (uint)slotIndex < PlayerInventory.Capacity
+            int offer = inventory != null && (uint)slotIndex < PlayerInventory.MaxCapacity
                 ? FindOffer(inventory.GetSlot(slotIndex).Item) : -1;
             return ValidateTrade(inventory, offer, slotIndex, quantity, false, out message);
         }
 
         public bool TrySell(PlayerInventory inventory, int slotIndex, int quantity, out string message)
         {
-            int offerIndex = inventory != null && (uint)slotIndex < PlayerInventory.Capacity
+            int offerIndex = inventory != null && (uint)slotIndex < PlayerInventory.MaxCapacity
                 ? FindOffer(inventory.GetSlot(slotIndex).Item) : -1;
             return Trade(inventory, offerIndex, slotIndex, quantity, false, out message);
         }
@@ -183,6 +184,12 @@ namespace Nomad.Shop
                 message = "판매가 잠겨 있습니다. 잠금을 해제한 뒤 판매하세요.";
                 return false;
             }
+            if (buying && offer.SellOnly)
+            {
+                message = "판매만 받는 물건입니다.";
+                return false;
+            }
+
             long total = (long)(buying ? offer.BuyPrice : offer.SellPrice) * quantity;
             if (buying && (stock[offerIndex] < quantity || total > wallet.Gold))
             {
@@ -199,7 +206,7 @@ namespace Nomad.Shop
                 }
 
                 long space = 0;
-                for (int index = 0; index < PlayerInventory.Capacity; index++)
+                for (int index = 0; index < PlayerInventory.MaxCapacity; index++)
                     space += inventory.SpaceInSlot(index, offer.Item);
                 if (space < quantity)
                 {
@@ -207,7 +214,7 @@ namespace Nomad.Shop
                     return false;
                 }
             }
-            else if ((uint)slotIndex >= PlayerInventory.Capacity ||
+            else if ((uint)slotIndex >= PlayerInventory.MaxCapacity ||
                      inventory.GetSlot(slotIndex).Item != offer.Item || inventory.GetSlot(slotIndex).Count < quantity ||
                      offer.SellPrice == 0 || total + wallet.Gold > int.MaxValue ||
                      (long)stock[offerIndex] + quantity > int.MaxValue)
@@ -236,13 +243,14 @@ namespace Nomad.Shop
             try
             {
                 wallet.SetGold((int)(wallet.Gold + (buying ? -total : total)));
-                stock[offerIndex] += buying ? -quantity : quantity;
+                if (!offer.SellOnly)
+                    stock[offerIndex] += buying ? -quantity : quantity;
                 if (buying)
                 {
                     int remaining = quantity;
                     // 기존 중첩을 먼저 채워 불필요한 새 슬롯을 만들지 않습니다.
                     for (int pass = 0; pass < 2 && remaining > 0; pass++)
-                        for (int index = 0; index < PlayerInventory.Capacity && remaining > 0; index++)
+                        for (int index = 0; index < PlayerInventory.MaxCapacity && remaining > 0; index++)
                             if ((inventory.GetSlot(index).Item == offer.Item) == (pass == 0))
                                 remaining -= inventory.AddToSlotForTransfer(index, offer.Item, remaining);
                 }

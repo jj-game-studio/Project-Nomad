@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d9209f1a45eeaf4458396815df6300a9, type: 3}
+  m_Name: gear-large-backpack
+  m_EditorClassIdentifier: Assembly-CSharp::Nomad.Inventory.ItemDefinition
+  itemId: gear-large-backpack
+  displayName: "\uD070 \uBC30\uB0AD"
+  description: "\uAC00\uBC29 \uCE78\uC744 6\uCE78 \uB298\uB9BD\uB2C8\uB2E4."
+  icon: {fileID: 21300000, guid: 28df0a040c8ec534c9e938deb45a2d10, type: 3}
+  maxStack: 1
+  tier: 3
+  equipmentType: 7
+  attackPower: 0
+  defense: 0
+  attackMode: 0
+  attackRange: 0
+  attackInterval: 0
+  manaCost: 0
+  stats:
+  - Stat: 12
+    Value: 6
+  equippedVisual: {fileID: 0}

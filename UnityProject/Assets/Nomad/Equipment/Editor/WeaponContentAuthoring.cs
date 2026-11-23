@@ -21,6 +21,7 @@ namespace Nomad.Equipment.Editor
         internal const string ItemFolder = "Assets/Nomad/Equipment/Items";
         internal const string ArrowPath = "Assets/Nomad/Equipment/PlayerArrow.prefab";
         internal const string VfxResourceFolder = "Assets/Nomad/Equipment/Resources";
+        internal const string IconFolder = "Assets/Nomad/Equipment/Icons";
         private const string ModelFolder = "Assets/ThirdParty/Synty_Kingdom/PolygonFantasyKingdom/Prefabs/Weapons";
         private const string ArrowModel = "Assets/ThirdParty/Nomad/Monsters/Candidates/Arrow.prefab";
         private static readonly (string Id, string Model)[] Models =
@@ -33,7 +34,29 @@ namespace Nomad.Equipment.Editor
             ("weapon-longbow", "SM_Prop_Bow_Rigged_02"),
             ("weapon-apprentice-staff", "SM_Wep_Staff_01"),
             ("weapon-crystal-staff", "SM_Wep_Staff_04"),
-            ("weapon-archmage-staff", "SM_Wep_Staff_08")
+            ("weapon-archmage-staff", "SM_Wep_Staff_08"),
+            // S~SSS 상위 무기입니다. 활은 모델이 적어 기존 활 모델을 다시 씁니다.
+            ("weapon-rune-sword", "SM_Wep_Sword_09"),
+            ("weapon-dragonfang-blade", "SM_Wep_Sword_15"),
+            ("weapon-celestial-sword", "SM_Wep_Sword_12"),
+            ("weapon-elven-bow", "SM_Prop_Bow_01"),
+            ("weapon-dragonbone-bow", "SM_Prop_Bow_Rigged_01"),
+            ("weapon-celestial-bow", "SM_Prop_Bow_02"),
+            ("weapon-rune-staff", "SM_Wep_Staff_05"),
+            ("weapon-dragoneye-staff", "SM_Wep_Staff_07"),
+            ("weapon-celestial-staff", "SM_Wep_Staff_10")
+        };
+        // 시작 지급 무기입니다. 상위 무기는 상자에서 얻습니다(#120).
+        private static readonly string[] StarterWeapons =
+        {
+            "weapon-dagger", "demo-sword", "weapon-greatsword", "weapon-shortbow", "demo-bow", "weapon-longbow",
+            "weapon-apprentice-staff", "weapon-crystal-staff", "weapon-archmage-staff"
+        };
+        // 검토용 임시 시작 방어구·가방·장신구입니다. 장착하지 않고 가방에 넣어 직접 바꿔 보게 합니다(#160 판단 필요).
+        private static readonly string[] StarterGear =
+        {
+            "gear-leather-cap", "gear-padded-armor", "gear-cloth-pants", "gear-leather-shoes",
+            "gear-belt-pouch", "gear-copper-ring", "gear-lucky-stone"
         };
 
         [MenuItem("Nomad/Equipment/Update Weapon Content")]
@@ -76,6 +99,8 @@ namespace Nomad.Equipment.Editor
                 data.ApplyModifiedPropertiesWithoutUndo();
             }
 
+            AssignIcons();
+
             var root = new GameObject("PlayerArrow", typeof(Projectile));
             try
             {
@@ -89,6 +114,31 @@ namespace Nomad.Equipment.Editor
 
             CreateVfxMaterial();
             AssetDatabase.SaveAssets();
+        }
+
+        // Icons/<item_id>.png가 있는 아이템에 스프라이트 아이콘을 연결합니다. 원본은 Icons~/make_icons.py로 생성합니다.
+        private static void AssignIcons()
+        {
+            AssetDatabase.Refresh();
+            foreach (ItemDefinition item in Definitions())
+            {
+                string path = $"{IconFolder}/{item.ItemId}.png";
+                if (!(AssetImporter.GetAtPath(path) is TextureImporter importer))
+                    continue;
+
+                if (importer.textureType != TextureImporterType.Sprite || importer.mipmapEnabled)
+                {
+                    importer.textureType = TextureImporterType.Sprite;
+                    importer.spriteImportMode = SpriteImportMode.Single;
+                    importer.mipmapEnabled = false;
+                    importer.alphaIsTransparency = true;
+                    importer.SaveAndReimport();
+                }
+
+                var data = new SerializedObject(item);
+                data.FindProperty("icon").objectReferenceValue = Load<Sprite>(path);
+                data.ApplyModifiedPropertiesWithoutUndo();
+            }
         }
 
         // 무기 VFX 재질입니다. Resources에 두어 플레이어 빌드에도 입자 셰이더가 포함되게 합니다.
@@ -116,23 +166,26 @@ namespace Nomad.Equipment.Editor
             SerializedProperty catalog = bag.FindProperty("items");
             ItemDefinition[] existing = Enumerable.Range(0, catalog.arraySize)
                 .Select(index => (ItemDefinition)catalog.GetArrayElementAtIndex(index).objectReferenceValue).ToArray();
-            SetItems(bag, "items", existing.Concat(Definitions()).Distinct().ToArray());
+            // CSV에서 지운 아이템은 null로 남으므로 목록에서 뺍니다.
+            SetItems(bag, "items", existing.Where(item => item != null).Concat(Definitions()).Distinct().ToArray());
 
             ConfigureCombat(player, camera, muzzle, projectile);
             GetOrAdd<PlayerHud>(player);
 
             var kit = new SerializedObject(GetOrAdd<StarterKit>(player));
             SerializedProperty entries = kit.FindProperty("items");
-            entries.arraySize = Models.Length + 1;
-            for (int index = 0; index < Models.Length; index++)
+            entries.arraySize = StarterWeapons.Length + 1 + StarterGear.Length;
+            for (int index = 0; index < StarterWeapons.Length; index++)
             {
-                string id = Models[index].Id;
+                string id = StarterWeapons[index];
                 EquipmentSlot? slot = id == "demo-sword" ? EquipmentSlot.Weapon1 :
                     id == "demo-bow" ? EquipmentSlot.Weapon2 : null;
                 SetEntry(entries.GetArrayElementAtIndex(index), id, 1, slot);
             }
 
-            SetEntry(entries.GetArrayElementAtIndex(Models.Length), PlayerEquipmentCombat.ArrowItemId, 30, null);
+            SetEntry(entries.GetArrayElementAtIndex(StarterWeapons.Length), PlayerEquipmentCombat.ArrowItemId, 30, null);
+            for (int index = 0; index < StarterGear.Length; index++)
+                SetEntry(entries.GetArrayElementAtIndex(StarterWeapons.Length + 1 + index), StarterGear[index], 1, null);
             kit.ApplyModifiedPropertiesWithoutUndo();
         }
 
@@ -140,6 +193,7 @@ namespace Nomad.Equipment.Editor
         {
             GetOrAdd<PlayerEquipment>(player);
             GetOrAdd<PlayerMana>(player);
+            GetOrAdd<PlayerStats>(player);
             var combat = new SerializedObject(GetOrAdd<PlayerEquipmentCombat>(player));
             combat.FindProperty("viewCamera").objectReferenceValue = camera;
             combat.FindProperty("muzzle").objectReferenceValue = muzzle;
