@@ -79,7 +79,7 @@ namespace Nomad.Shop.Editor
                     Require(fixture.Shop.StockAt(0) == 2 && fixture.Wallet.Gold == 974 && fixture.Inventory.GetSlot(0).Count == 4,
                         "재개 후 부족분 보충·플레이어 소유 무변경");
                     Require(panel != null && Read("Stock/Content/Slot 0/Count") == "x2" &&
-                        Read("Stock/Content/Slot 0/Price") == "구매 5 G", "열린 거래창에 재입고 수량·가격 즉시 갱신");
+                        Read("Stock/Content/Slot 0/Price") == "5 G", "열린 거래창에 재입고 수량·가격 즉시 갱신");
                     panel.Close();
                     fixture.Dispose();
                     fixture = new ShopTransactionChecks.Fixture(stock: 2, restockSeconds: 0);

@@ -16,7 +16,7 @@ namespace Nomad.Shop
         internal static readonly Color Forest = new Color(0.14f, 0.25f, 0.17f);
         internal static readonly Color Border = new Color(0.75f, 0.68f, 0.52f);
         internal const float CellSize = 96;
-        internal const float CellHeight = 76;
+        internal const float CellHeight = 88;
         private static Font bodyFont;
         private static Font headingFont;
 
@@ -72,7 +72,7 @@ namespace Nomad.Shop
             float width, float height, int size, Color? color = null)
         {
             Text text = Label(parent, name, value, x, y, width, height, size, color);
-            headingFont = headingFont != null ? headingFont : Resources.Load<Font>("ShopFonts/Pretendard-SemiBold");
+            headingFont = headingFont != null ? headingFont : Resources.Load<Font>("ShopFonts/Jua-Regular");
             text.font = headingFont;
             return text;
         }
@@ -164,9 +164,10 @@ namespace Nomad.Shop
             Rounded(Rect(parent, "Title divider", x + 75, y + 3, 1, 48), Border, 0, 0).raycastTarget = false;
         }
 
-        internal static RectTransform Grid(Transform parent, string name, float x, bool merchant = false)
+        internal static RectTransform Grid(Transform parent, string name, float x, bool merchant = false, int count = 0)
         {
-            RectTransform viewport = Rect(parent, name, x, 206, 530, 530);
+            float height = merchant ? Mathf.Min(392, 8 + Mathf.Max(1, Mathf.CeilToInt(count / 3f)) * 204) : 392;
+            RectTransform viewport = Rect(parent, name, x, 206, 530, height);
             Rounded(viewport, merchant ? Canvas : Slot, 18, merchant ? 0 : 1, Border);
             viewport.gameObject.AddComponent<RectMask2D>();
             RectTransform content = Rect(viewport, "Content", 0, 0, 530, 350);

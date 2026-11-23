@@ -15,3 +15,8 @@
   - License: OFL-pretendard.txt (SIL Open Font License 1.1)
   - Regular SHA-256: 3FFBACDE6AB8411F1D2DB54BB9B1F0B3EE2A738932033722CF0388C06AED1C93
   - SemiBold SHA-256: C89BC43027DC7CDE5726E96223376F8EEC09302B2FC1F8147FD5B57CFC376118
+
+- Jua-Regular.ttf (unmodified; title font)
+  - Source: https://raw.githubusercontent.com/google/fonts/c6f97839901e4707d3792b1c50f3f92eb66b3d2f/ofl/jua/Jua-Regular.ttf
+  - SHA-256: 769677AEF240BFC3B9965F2B50748075BFF885E6C6992FC591A3FB268279F898
+  - License: OFL-jua.txt (SIL Open Font License 1.1)
