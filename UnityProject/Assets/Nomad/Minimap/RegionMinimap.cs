@@ -238,10 +238,16 @@ namespace Nomad.Minimap
             Label(view, "North", "N", 177, 3, 20, 24, 14);
             map = Rect(view, "Map", 10, 30, MapSize, MapSize).gameObject.AddComponent<RawImage>();
             map.raycastTarget = false;
-            playerArrow = Rect(map.transform, "Player", 0, 0, 14, 14);
+            playerArrow = Rect(map.transform, "Player", 0, 0, 20, 20);
             playerArrow.anchorMin = playerArrow.anchorMax = Vector2.zero;
             playerArrow.pivot = Vector2.one * 0.5f;
             var arrow = playerArrow.gameObject.AddComponent<MinimapArrow>();
+            arrow.font = font;
+            arrow.text = "▲";
+            arrow.fontSize = 18;
+            arrow.alignment = TextAnchor.MiddleCenter;
+            arrow.horizontalOverflow = HorizontalWrapMode.Overflow;
+            arrow.verticalOverflow = VerticalWrapMode.Overflow;
             arrow.color = Color.white;
             arrow.raycastTarget = false;
             legend = Label(view, "Legend", "", 10, 222, 188, 18, 11);

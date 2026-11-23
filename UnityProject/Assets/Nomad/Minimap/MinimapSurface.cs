@@ -113,7 +113,8 @@ namespace Nomad.Minimap
                     // 잔디는 충돌 없는 장식 메시이므로 실제 배치 경계를 별도로 투영합니다.
                     foreach (Renderer patch in grass)
                     {
-                        Vector3 local = patch.transform.InverseTransformPoint(sample);
+                        Vector3 point = new Vector3(sample.x, patch.bounds.center.y, sample.z);
+                        Vector3 local = patch.transform.InverseTransformPoint(point);
                         if (Contains(patch.localBounds, local)) { color = Ground; break; }
                     }
                 }
