@@ -65,7 +65,7 @@ namespace Nomad.Loot
             if (status == null || inventory == null) return;
             int scrap = 0;
             for (int i = 0; i < inventory.UsedSlots; i++)
-                if (inventory.GetStack(i).Item.ItemId == "scrap") scrap += inventory.GetStack(i).Count;
+                if (inventory.GetStack(i).Item.ItemId.StartsWith("scrap")) scrap += inventory.GetStack(i).Count;
             string result = lastChest == null ? "Approach a chest and press E"
                 : $"Last chest: {lastChest.CountItems()} items  ·  {lastChest.Status}";
             status.text = $"E Open chest | F Fill inventory | V Clear test loot | Chests {Chests.Count}\n"

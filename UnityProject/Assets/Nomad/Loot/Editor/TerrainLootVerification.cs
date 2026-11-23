@@ -102,9 +102,13 @@ namespace Nomad.Loot.Editor
             {
                 case 0:
                     Require(Count("scrap") == 96 && inventory.UsedSlots == 20, "F fills real inventory");
+                    Require(Enumerable.Range(0, chest.StackCount).Any(i => chest.GetStack(i).ItemId.StartsWith("scrap")),
+                        "every chest rolls scrap");
+                    // 고철 티어는 확률이라, 공간 부족 검사는 C 고철이 든 상자로 고정합니다(#120).
+                    if (ChestCount(chest, "scrap") == 0)
+                        chest.Initialize(chest.name, new[] { new LootStack("scrap", 10) });
                     chestItems = ItemsIn(chest);
                     chestScrap = ChestCount(chest, "scrap");
-                    Require(chestScrap > 0, "every chest rolls scrap");
                     Press(Key.E);
                     break;
                 case 1:

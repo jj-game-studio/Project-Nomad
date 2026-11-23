@@ -252,7 +252,7 @@ namespace Nomad.Gameplay.Editor
 
             int looted = 0;
             for (int i = 0; i < lootChest.StackCount; i++)
-                if (lootChest.GetStack(i).ItemId == "scrap") looted += lootChest.GetStack(i).Count;
+                if (lootChest.GetStack(i).ItemId.StartsWith("scrap")) looted += lootChest.GetStack(i).Count;
             Require(looted > 0, "chest has scrap");
             controls.Player.GetComponent<PlayerMovement>().enabled = true;
             yield return null;
@@ -409,7 +409,8 @@ namespace Nomad.Gameplay.Editor
         {
             int result = 0;
             for (int i = 0; i < inventory.UsedSlots; i++)
-                if (inventory.GetStack(i).Item.ItemId == "scrap") result += inventory.GetStack(i).Count;
+                // 상자 고철은 티어별 ID(scrap-*)일 수 있습니다.
+                if (inventory.GetStack(i).Item.ItemId.StartsWith("scrap")) result += inventory.GetStack(i).Count;
             return result;
         }
 

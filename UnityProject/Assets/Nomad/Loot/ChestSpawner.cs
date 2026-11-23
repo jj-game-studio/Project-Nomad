@@ -26,12 +26,54 @@ namespace Nomad.Loot
             }
         }
 
-        // 임시 내용물 테이블입니다. 수량·확률은 Play 검토 후 사람이 조정합니다(#20 판단 2).
-        [SerializeField] private LootEntry[] table =
+        // 티어별 상자 내용물입니다. 가중치는 상대값이며, 높은 티어일수록 드물게 나옵니다(#120). 수치는 Play 검토 후 사람이 조정합니다.
+        [Serializable]
+        public struct TierLoot
         {
-            new LootEntry("scrap", 4, 12, 1f),
-            new LootEntry("weapon-dagger", 1, 1, 0.35f),
-            new LootEntry("gear-padded-armor", 1, 1, 0.2f),
+            public string Tier;
+            public string ScrapId;
+            public int ScrapMin;
+            public int ScrapMax;
+            [Min(0f)] public float ScrapWeight;
+            [Min(0f)] public float GearWeight;
+            public string[] GearIds;
+        }
+
+        [SerializeField] private TierLoot[] tiers =
+        {
+            new TierLoot { Tier = "C", ScrapId = "scrap", ScrapMin = 4, ScrapMax = 12, ScrapWeight = 50, GearWeight = 45,
+                GearIds = new[] { "weapon-dagger", "weapon-shortbow", "weapon-apprentice-staff", "gear-leather-cap",
+                    "gear-padded-armor", "gear-cloth-pants", "gear-leather-shoes", "gear-belt-pouch", "gear-copper-ring",
+                    "gear-leather-bracelet", "gear-lucky-stone" } },
+            new TierLoot { Tier = "B", ScrapId = "scrap-copper", ScrapMin = 3, ScrapMax = 8, ScrapWeight = 25, GearWeight = 28,
+                GearIds = new[] { "demo-sword", "demo-bow", "weapon-crystal-staff", "gear-iron-helm", "gear-chain-mail",
+                    "gear-leather-pants", "gear-travel-boots", "gear-small-backpack", "gear-sapphire-pendant",
+                    "gear-vigor-bracelet", "gear-wind-charm", "gear-mana-ring" } },
+            new TierLoot { Tier = "A", ScrapId = "scrap-silver", ScrapMin = 2, ScrapMax = 5, ScrapWeight = 13, GearWeight = 15,
+                GearIds = new[] { "weapon-greatsword", "weapon-longbow", "weapon-archmage-staff", "gear-knight-helm",
+                    "gear-plate-armor", "gear-ranger-leggings", "gear-swift-boots", "gear-large-backpack", "gear-life-ring",
+                    "gear-hawk-earring", "gear-guard-amulet" } },
+            new TierLoot { Tier = "S", ScrapId = "scrap-gold", ScrapMin = 1, ScrapMax = 3, ScrapWeight = 7, GearWeight = 8,
+                GearIds = new[] { "weapon-rune-sword", "weapon-elven-bow", "weapon-rune-staff", "gear-mithril-helm",
+                    "gear-mithril-cuirass", "gear-mithril-greaves", "gear-pegasus-boots", "gear-expedition-pack",
+                    "gear-sage-necklace", "gear-titan-bracelet", "gear-phoenix-feather" } },
+            new TierLoot { Tier = "SS", ScrapId = "scrap-gem", ScrapMin = 1, ScrapMax = 2, ScrapWeight = 4, GearWeight = 3.5f,
+                GearIds = new[] { "weapon-dragonfang-blade", "weapon-dragonbone-bow", "weapon-dragoneye-staff",
+                    "gear-dragonscale-helm", "gear-dragonscale-armor", "gear-dragonscale-leggings", "gear-dragonscale-boots",
+                    "gear-dimension-bag", "gear-starlight-ring", "gear-raptor-eye" } },
+            new TierLoot { Tier = "SSS", ScrapId = "scrap-relic", ScrapMin = 1, ScrapMax = 1, ScrapWeight = 1, GearWeight = 0.5f,
+                GearIds = new[] { "weapon-celestial-sword", "weapon-celestial-bow", "weapon-celestial-staff",
+                    "gear-celestial-crown", "gear-celestial-plate", "gear-celestial-greaves", "gear-celestial-boots",
+                    "gear-eternal-heart", "gear-storm-seal" } },
+        };
+
+        [Tooltip("상자에 무기·장비가 1개 들어 있을 확률입니다.")]
+        [SerializeField, Range(0f, 1f)] private float gearChance = 0.4f;
+
+        // 고철·장비 외에 함께 나오는 소모품입니다.
+        [SerializeField] private LootEntry[] extras =
+        {
+            new LootEntry("weapon-arrow", 5, 15, 0.3f),
         };
 
         [Tooltip("제공된 상자 지점 중 최소로 사용할 비율입니다. 나머지는 seed에 따라 랜덤입니다.")]
@@ -111,20 +153,69 @@ namespace Nomad.Loot
             }
         }
 
+        // 고철 1스택은 항상, 장비 1개와 추가 소모품은 확률로 넣습니다. 티어는 가중치로 고릅니다.
         private LootStack[] Roll(System.Random random)
         {
             var stacks = new List<LootStack>();
-            foreach (LootEntry entry in table)
+            int scrapTier = PickTier(random, tier => string.IsNullOrWhiteSpace(tier.ScrapId) ? 0f : tier.ScrapWeight);
+            if (scrapTier >= 0)
+            {
+                TierLoot tier = tiers[scrapTier];
+                stacks.Add(new LootStack(tier.ScrapId, RollCount(random, tier.ScrapMin, tier.ScrapMax)));
+            }
+
+            if (random.NextDouble() < gearChance)
+            {
+                int gearTier = PickTier(random, tier => tier.GearIds == null || tier.GearIds.Length == 0 ? 0f : tier.GearWeight);
+                if (gearTier >= 0)
+                {
+                    string[] ids = tiers[gearTier].GearIds;
+                    stacks.Add(new LootStack(ids[random.Next(ids.Length)], 1));
+                }
+            }
+
+            foreach (LootEntry entry in extras)
             {
                 if (string.IsNullOrWhiteSpace(entry.ItemId) || entry.Max <= 0 || random.NextDouble() >= entry.Chance)
                     continue;
 
-                int min = Mathf.Max(1, entry.Min);
-                stacks.Add(new LootStack(entry.ItemId, random.Next(min, Mathf.Max(min, entry.Max) + 1)));
+                stacks.Add(new LootStack(entry.ItemId, RollCount(random, entry.Min, entry.Max)));
             }
 
             return stacks.ToArray();
         }
+
+        // 가중치가 모두 0이면 -1을 돌려줍니다.
+        private int PickTier(System.Random random, Func<TierLoot, float> weight)
+        {
+            float total = 0f;
+            foreach (TierLoot tier in tiers)
+                total += Mathf.Max(0f, weight(tier));
+            if (total <= 0f)
+                return -1;
+
+            double pick = random.NextDouble() * total;
+            for (int i = 0; i < tiers.Length; i++)
+            {
+                pick -= Mathf.Max(0f, weight(tiers[i]));
+                if (pick < 0)
+                    return i;
+            }
+
+            return tiers.Length - 1;
+        }
+
+        private static int RollCount(System.Random random, int min, int max)
+        {
+            min = Mathf.Max(1, min);
+            return random.Next(min, Mathf.Max(min, max) + 1);
+        }
+
+        // 테스트·검증용: 지정한 seed로 상자 하나의 내용물을 뽑습니다.
+        public LootStack[] RollContents(int seed) => Roll(new System.Random(seed));
+
+        public IReadOnlyList<TierLoot> Tiers => tiers;
+        public IReadOnlyList<LootEntry> Extras => extras;
 
         private static int[] Shuffle(int length, System.Random random)
         {
