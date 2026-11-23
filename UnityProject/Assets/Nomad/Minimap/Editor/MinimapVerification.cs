@@ -119,7 +119,8 @@ namespace Nomad.Minimap.Editor
                     case 5:
                         if (!Ready("Field")) return;
                         Require(previousTexture == null, "마을 지도 Texture 해제");
-                        Require(minimap.MarkerCount == manager.CurrentRegion.GetRootGameObjects().Sum(root => root.GetComponentsInChildren<RegionExit>().Length),
+                        int exits = manager.CurrentRegion.GetRootGameObjects().Sum(root => root.GetComponentsInChildren<FieldExit>().Length);
+                        Require(exits > 0 && minimap.MarkerCount == exits,
                             "필드의 실제 출구 수 반영·상점 잔상 없음");
                         Require(((Texture2D)minimap.MapTexture).GetPixels32().Distinct().Count() > 1, "NavMesh 지도 생성");
                         Capture("minimap-field.png");

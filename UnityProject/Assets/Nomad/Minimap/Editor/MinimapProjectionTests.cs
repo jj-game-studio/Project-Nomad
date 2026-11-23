@@ -33,7 +33,7 @@ namespace Nomad.Minimap.Editor
         public void VillageRasterIgnoresCollidersFromOtherLoadedScenes()
         {
             Scene original = SceneManager.GetActiveScene();
-            Scene first = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+            Scene first = SceneManager.CreateScene("Minimap collider verification");
             Scene other = default;
             Texture2D before = null, after = null;
             try
@@ -44,7 +44,7 @@ namespace Nomad.Minimap.Editor
                 floor.transform.localScale = new Vector3(12, 1, 12);
                 before = MinimapSurface.Village(first, out _);
 
-                other = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+                other = SceneManager.CreateScene("Minimap other scene verification");
                 GameObject roof = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 SceneManager.MoveGameObjectToScene(roof, other);
                 roof.transform.position = new Vector3(1000, 1, 1000);

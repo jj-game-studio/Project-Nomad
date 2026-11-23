@@ -147,6 +147,8 @@ namespace Nomad.Minimap
             {
                 foreach (RegionExit exit in root.GetComponentsInChildren<RegionExit>())
                     if (exit.enabled) AddMarker(exit.transform, new Color(0.35f, 0.80f, 1), true);
+                foreach (FieldExit exit in root.GetComponentsInChildren<FieldExit>())
+                    if (exit.enabled) AddMarker(exit.transform, new Color(0.35f, 0.80f, 1), true);
                 foreach (Shopkeeper shop in root.GetComponentsInChildren<Shopkeeper>())
                     if (shop.enabled) { AddMarker(shop.transform, new Color(1, 0.77f, 0.32f), false); hasShop = true; }
             }
@@ -156,6 +158,7 @@ namespace Nomad.Minimap
 
         private void AddMarker(Transform world, Color color, bool diamond)
         {
+            if (markers.Exists(marker => marker.world == world)) return;
             RectTransform icon = Rect(map.transform, diamond ? "Exit marker" : "Shop marker", 0, 0, 7, 7);
             icon.anchorMin = icon.anchorMax = Vector2.zero;
             icon.pivot = Vector2.one * 0.5f;
