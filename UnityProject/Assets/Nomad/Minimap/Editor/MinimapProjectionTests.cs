@@ -1,7 +1,5 @@
 using NUnit.Framework;
-using UnityEditor.SceneManagement;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 namespace Nomad.Minimap.Editor
 {
@@ -29,37 +27,5 @@ namespace Nomad.Minimap.Editor
             Assert.That(point.y, Is.EqualTo(0.8f).Within(0.0001f));
         }
 
-        [Test]
-        public void VillageRasterIgnoresCollidersFromOtherLoadedScenes()
-        {
-            Scene original = SceneManager.GetActiveScene();
-            Scene first = SceneManager.CreateScene("Minimap collider verification");
-            Scene other = default;
-            Texture2D before = null, after = null;
-            try
-            {
-                GameObject floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                SceneManager.MoveGameObjectToScene(floor, first);
-                floor.transform.position = new Vector3(1000, -0.5f, 1000);
-                floor.transform.localScale = new Vector3(12, 1, 12);
-                before = MinimapSurface.Village(first, out _);
-
-                other = SceneManager.CreateScene("Minimap other scene verification");
-                GameObject roof = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                SceneManager.MoveGameObjectToScene(roof, other);
-                roof.transform.position = new Vector3(1000, 1, 1000);
-                roof.transform.localScale = new Vector3(10, 1, 10);
-                after = MinimapSurface.Village(first, out _);
-                CollectionAssert.AreEqual(before.GetPixels32(), after.GetPixels32(), "다른 씬의 Collider를 지도에 섞지 않음");
-            }
-            finally
-            {
-                if (before != null) Object.DestroyImmediate(before);
-                if (after != null) Object.DestroyImmediate(after);
-                if (other.IsValid()) EditorSceneManager.CloseScene(other, true);
-                EditorSceneManager.CloseScene(first, true);
-                SceneManager.SetActiveScene(original);
-            }
-        }
     }
 }

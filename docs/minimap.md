@@ -16,7 +16,7 @@
 
 ## 검증
 
-- `scripts/Test-Unity.ps1 -Platform All -Json`: EditMode/PlayMode 회귀 검사. MinimapProjectionTests는 좌표·비율·다른 씬 Collider 배제를 확인합니다.
+- `scripts/Test-Unity.ps1 -Platform All -Json`: EditMode/PlayMode 회귀 검사. MinimapProjectionTests는 좌표·비율·마커 경계와 왕복 변환을 확인합니다. 지역별 데이터 교체는 아래 실제 씬 검증으로 확인합니다.
 - Unity 배치 `-executeMethod Nomad.Minimap.Editor.MinimapVerification.Run`: 실제 Game→Village→Field→필드 재생성→Village 왕복, 위치·방향·마커·창 입력·자원 해제 검증. `UnityProject/Artifacts/minimap-*.png`에 화면을 저장합니다.
 
 지도의 크기와 시인성은 사람의 플레이 검토가 필요합니다.
