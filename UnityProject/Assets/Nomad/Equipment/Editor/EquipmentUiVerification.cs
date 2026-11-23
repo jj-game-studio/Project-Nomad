@@ -91,7 +91,7 @@ namespace Nomad.Equipment.Editor
                 switch (stage++)
                 {
                     case 0:
-                        Check(panel.IsOpen && panel.EquipmentGrid.childCount == 10 && panel.BagGrid.childCount == 20, "Tab 장비10+가방20");
+                        Check(panel.IsOpen && panel.EquipmentGrid.childCount == 10 && ActiveBagSlots() == 20, "Tab 장비10+가방20");
                         Check(!combat.TryAttack(Point(new Vector3(0, 1, 1.5f))), "가방 열린 동안 공격 차단");
                         Capture(1920, 1080);
                         Capture(1280, 720);
@@ -344,6 +344,9 @@ namespace Nomad.Equipment.Editor
             keyboard.MakeCurrent();
         }
 
+        // 가방 칸은 최대 용량만큼 만들고 열리지 않은 칸은 숨기므로 보이는 칸만 셉니다.
+        private static int ActiveBagSlots() =>
+            panel.BagGrid.Cast<Transform>().Count(slot => slot.gameObject.activeSelf);
         private static int Find(string id) => Enumerable.Range(0, PlayerInventory.Capacity).First(index => inventory.GetSlot(index).Item?.ItemId == id);
         private static Vector2 Gear(EquipmentSlot slot) => Screen((RectTransform)panel.EquipmentGrid.GetChild((int)slot));
         private static Vector2 Bag(int slot) => Screen((RectTransform)panel.BagGrid.GetChild(slot));
