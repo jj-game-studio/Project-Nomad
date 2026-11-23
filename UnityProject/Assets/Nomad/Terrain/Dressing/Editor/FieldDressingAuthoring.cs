@@ -5,6 +5,7 @@ using Nomad.Props;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.AI;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
@@ -17,6 +18,7 @@ namespace Nomad.Terrain.Editor
         public const string VolumePath = "Assets/Nomad/Terrain/Test/TerrainTestVolume.asset";
         public const string SetPath = "Assets/ThirdParty/Nomad/Terrain/Dressing/Resources/Nomad/FieldDressingSet.asset";
 
+        public const int FieldSize = 26;
         private const string Kingdom = "Assets/ThirdParty/Synty_Kingdom/PolygonFantasyKingdom/";
         private const string Environments = Kingdom + "Prefabs/Environments/SM_Env_";
 
@@ -51,6 +53,17 @@ namespace Nomad.Terrain.Editor
             set.fences = Load(Kingdom + "Prefabs/Props/SM_Prop_", "Fence_01", "Fence_02", "Fence_03", "Fence_04");
             set.borderWalls = Load(Environments, "StoneWall_01", "StoneWall_02", "StoneWall_03");
 
+            // 폐허 구조물(#154): 2.5m 단위 집 조각입니다. 창문 상자처럼 바깥으로 튀어나온 조각은 뺍니다.
+            const string House = Kingdom + "Prefabs/Buildings/House/SM_Bld_House_";
+            set.structureBases = Load(House, "Base_Wall_01");
+            set.structureCorners = Load(House, "Base_Corner_01");
+            set.structureWalls = Load(House, "Wall_01", "Wall_02", "Wall_03", "Wall_04", "Wall_05", "Wall_06",
+                "Wall_08", "Wall_Window_03", "Wall_Window_05", "Wall_Window_06", "Wall_Cut_01", "Wall_Cut_02",
+                "Wall_SupportBeams_01", "Wall_SupportBeams_02");
+            set.structureFloors = Load(House, "Floor_Wood_01", "Floor_Wood_02");
+            set.structureMin = 3;
+            set.structureMax = 4;
+
             // 기존 에셋을 갱신할 때도 밀도를 현재 기준값으로 맞춥니다.
             set.coverThreshold = 0.48f;
             set.coverMaxPerTile = 3;
@@ -63,8 +76,30 @@ namespace Nomad.Terrain.Editor
             AssetDatabase.SaveAssets();
             Debug.Log($"FIELD_DRESSING_SET ground={set.groundMaterial != null} themes={set.coverThemes.Length} "
                 + $"rocks={set.cliffRocks.Length} trees={set.trees.Length} props={set.cover.Length} "
-                + $"fences={set.fences.Length} walls={set.borderWalls.Length}");
+                + $"fences={set.fences.Length} walls={set.borderWalls.Length} structureWalls={set.structureWalls.Length}");
             LogSizes(set.cliffRocks.Concat(set.fences).Concat(set.borderWalls).Concat(set.cover));
+        }
+
+        // 구조물이 3~4개 있고, 각 내부 중심이 시작점에서 걸어서 닿으며, 벽 일부가 남아 있어야 합니다.
+        private static void VerifyStructures(FieldDressing dressing, FieldGenerationResult field, int seed)
+        {
+            if (dressing.Structures < 3 || dressing.Structures > 4)
+                throw new System.InvalidOperationException($"seed {seed} 구조물 수 {dressing.Structures}");
+
+            var path = new NavMeshPath();
+            int walls = dressing.Root.Cast<Transform>().Count(child => child.name == "StructureWall" && child.gameObject.activeSelf);
+            foreach (Rect area in dressing.StructureAreas)
+            {
+                var center = new Vector3(area.center.x, field.PlayerPosition.y, area.center.y);
+                if (!NavMesh.SamplePosition(center, out NavMeshHit inside, 3f, NavMesh.AllAreas)
+                    || !area.Contains(new Vector2(inside.position.x, inside.position.z))
+                    || !NavMesh.CalculatePath(field.PlayerPosition, inside.position, NavMesh.AllAreas, path)
+                    || path.status != NavMeshPathStatus.PathComplete)
+                    throw new System.InvalidOperationException($"seed {seed} 구조물 내부에 들어갈 수 없습니다: {area}");
+            }
+            if (walls < dressing.Structures * 6)
+                throw new System.InvalidOperationException($"seed {seed} 구조물 벽이 너무 많이 제거되었습니다: {walls} (복구 제거 {dressing.RemovedStructureWalls}, 전체 제거 {dressing.RemovedBlockers})");
+            Debug.Log($"FIELD_STRUCTURES seed={seed} count={dressing.Structures} walls={walls} removedWalls={dressing.RemovedStructureWalls}");
         }
 
         private static FieldDressingSet.CoverTheme Theme(string name, params GameObject[][] groups) =>
@@ -152,6 +187,11 @@ namespace Nomad.Terrain.Editor
             var source = new SerializedObject(controls);
             var generator = (TerrainGenerator)source.FindProperty("generator").objectReferenceValue;
             var scatter = (PropScatter)source.FindProperty("scatter").objectReferenceValue;
+
+            // 메인 게임 Field와 같은 크기로 검토합니다. 통합 씬(18×18)의 약 2배 면적입니다(#154).
+            source.FindProperty("width").intValue = FieldSize;
+            source.FindProperty("height").intValue = FieldSize;
+            source.ApplyModifiedPropertiesWithoutUndo();
 
             FieldDressing dressing = controls.GetComponent<FieldDressing>();
             if (dressing == null) dressing = controls.gameObject.AddComponent<FieldDressing>();
@@ -322,7 +362,9 @@ namespace Nomad.Terrain.Editor
                     .Any(collider => collider.transform.IsChildOf(dressing.Root));
                 if (trapped) throw new System.InvalidOperationException($"seed {result.Seed} 시작점이 꾸밈 충돌체와 겹칩니다.");
 
-                Debug.Log($"FIELD_DRESSING_SEED seed={result.Seed} placed={dressing.Placed} blockers={dressing.Blockers} "
+                VerifyStructures(dressing, field, result.Seed);
+
+                Debug.Log($"FIELD_DRESSING_SEED seed={result.Seed} structures={dressing.Structures} placed={dressing.Placed} blockers={dressing.Blockers} "
                     + $"removed={dressing.RemovedBlockers} enemies={baseline.EnemyPoints.Count}->{field.EnemyPoints.Count} "
                     + $"chests={baseline.ChestPoints.Count}->{field.ChestPoints.Count} paths={controls.Generator.ReachableSamples}");
                 totalBlockers += dressing.Blockers;
@@ -354,6 +396,14 @@ namespace Nomad.Terrain.Editor
                         .Where(child => (child.name.Contains("StoneWall") || child.name.Contains("Fence")) && area.Contains(child.position)).ToArray();
                     Debug.Log($"FIELD_DRESSING_RIDGES seed={result.Seed} crossings={dressing.RidgeCandidates} placed={dressing.RidgeSegments} kept={ridges.Length}");
                     if (ridges.Length > 0) TerrainIntegrationValidation.Capture(controls, 0, "terrain-test-ridge", ridges[ridges.Length / 2].position);
+
+                    // 폐허 구조물을 플레이어 카메라 거리에서 확인합니다.
+                    for (int index = 0; index < dressing.StructureAreas.Count; index++)
+                    {
+                        Rect footprint = dressing.StructureAreas[index];
+                        var center = new Vector3(footprint.center.x, field.PlayerPosition.y, footprint.center.y);
+                        TerrainIntegrationValidation.Capture(controls, 0, "terrain-test-structure-" + index, center);
+                    }
                 }
             }
             if (totalBlockers == 0)

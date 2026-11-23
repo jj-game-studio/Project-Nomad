@@ -40,7 +40,6 @@ namespace Nomad.Monsters.Demo
                 reserved.Add(candidate.Point.Position);
             }
 
-            float normalEnd = elites.Count > 0 ? elites.Min(candidate => candidate.Distance) - 3 : endDistance * 0.65f;
             var random = new System.Random(field.Seed);
             var shuffled = candidates.ToList();
             for (int index = shuffled.Count - 1; index > 0; index--)
@@ -48,19 +47,27 @@ namespace Nomad.Monsters.Demo
                 int other = random.Next(index + 1);
                 (shuffled[index], shuffled[other]) = (shuffled[other], shuffled[index]);
             }
+
+            // 일반 몬스터는 시작점 주변에 몰리지 않도록 맵 전체에 고르게 퍼뜨립니다(#154).
+            // 후보가 퍼진 면적을 마릿수로 나눈 간격부터 시작해, 자리가 모자라면 간격을 줄여 다시 채웁니다.
+            float spacing = Spacing(candidates, normalCount + elites.Count + 1);
             int normals = 0;
-            foreach (Candidate candidate in shuffled)
+            for (float gap = spacing; normals < normalCount && gap >= 4; gap = gap > 4 ? Mathf.Max(4, gap * 0.8f) : 0)
             {
-                if (normals >= normalCount) break;
-                Vector3 position = candidate.Point.Position;
-                if (candidate.Distance > normalEnd || Horizontal(position, field.PlayerPosition) < safeRadius ||
-                    !Separated(position, reserved, 4) || NearArena(position, arena, 8) || !Clear(position, 0.6f, 2.1f)) continue;
-                MonsterTestSettings settings = MonsterTestSettings.Defaults(MonsterRank.Normal);
-                settings.normalStyle = normals % 3;
-                actors.Add(factory.CreateRanked(player, settings, MonsterRank.Normal, position, candidate.Point.Rotation,
-                    "Normal " + candidate.Point.Id, parent));
-                reserved.Add(position);
-                normals++;
+                foreach (Candidate candidate in shuffled)
+                {
+                    if (normals >= normalCount) break;
+                    Vector3 position = candidate.Point.Position;
+                    if (Horizontal(position, field.PlayerPosition) < safeRadius || !Separated(position, reserved, gap) ||
+                        NearArena(position, arena, 8) || !Clear(position, 0.6f, 2.1f)) continue;
+
+                    MonsterTestSettings settings = MonsterTestSettings.Defaults(MonsterRank.Normal);
+                    settings.normalStyle = normals % 3;
+                    actors.Add(factory.CreateRanked(player, settings, MonsterRank.Normal, position, candidate.Point.Rotation,
+                        "Normal " + candidate.Point.Id, parent));
+                    reserved.Add(position);
+                    normals++;
+                }
             }
             foreach (Candidate elite in elites)
                 actors.Add(factory.CreateRanked(player, MonsterTestSettings.Defaults(MonsterRank.Elite), MonsterRank.Elite,
@@ -161,6 +168,16 @@ namespace Nomad.Monsters.Demo
             }
             Debug.LogWarning($"보스 구역 후보: 외곽 {outerCandidates}, 통로 {clearCorridors}, 경로 생성 {meshAttempts}, 가림 {obstruction}", parent);
             return null;
+        }
+
+        // 후보 지점들이 차지한 수평 면적을 count개로 나눴을 때의 한 칸 크기(목표 간격)입니다.
+        private static float Spacing(List<Candidate> candidates, int count)
+        {
+            float minX = candidates.Min(candidate => candidate.Point.Position.x);
+            float maxX = candidates.Max(candidate => candidate.Point.Position.x);
+            float minZ = candidates.Min(candidate => candidate.Point.Position.z);
+            float maxZ = candidates.Max(candidate => candidate.Point.Position.z);
+            return Mathf.Max(4, Mathf.Sqrt((maxX - minX) * (maxZ - minZ) / Mathf.Max(1, count)) * 0.8f);
         }
 
         public static bool Clear(Vector3 point, float radius, float height) => !Physics.CheckCapsule(

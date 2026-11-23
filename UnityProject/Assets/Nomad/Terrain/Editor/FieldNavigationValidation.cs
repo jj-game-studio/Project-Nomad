@@ -63,7 +63,7 @@ namespace Nomad.Terrain.Editor
                 Require(enemyTotal > 0 && chestTotal > 0, "nonempty spawn candidates across fields");
                 Require(notifications == 10 && starts == 10, "one start/completion per generation");
 
-                // 출구 없는 면이 드문지 추가 seed로 확인합니다. Verify가 seed마다 출구 3개를 요구합니다.
+                // 출구 없는 면이 드문지 추가 seed로 확인합니다. Verify가 seed마다 출구 4개를 요구합니다.
                 foreach (int seed in Enumerable.Range(100, 10))
                 {
                     var serialized = new SerializedObject(controls);
@@ -104,7 +104,7 @@ namespace Nomad.Terrain.Editor
 
                 TerrainIntegrationValidation.Capture(controls, 1, "field-navigation-overview");
                 TerrainIntegrationValidation.Capture(controls, 0, "field-navigation-player");
-                string report = $"FIELD_NAVIGATION_PASS: 5 seeds x2, {enemyTotal} enemy/{chestTotal} chest candidates, 3 spaced edge exits per field (+10 exit seeds); replay, single events, all tile/link paths, disjoint slots, reserved chests, failure/blocked start, cleanup/recovery";
+                string report = $"FIELD_NAVIGATION_PASS: 5 seeds x2, {enemyTotal} enemy/{chestTotal} chest candidates, 4 spaced edge exits per field with start inside one exit (+10 exit seeds); replay, single events, all tile/link paths, disjoint slots, reserved chests, failure/blocked start, cleanup/recovery";
                 Directory.CreateDirectory("Artifacts");
                 File.WriteAllText("Artifacts/field-navigation-results.txt", report);
                 Debug.Log(report);
@@ -134,7 +134,7 @@ namespace Nomad.Terrain.Editor
                 Require(ids.Add(slot.Id), "unique id");
                 Require(NavMesh.CalculatePath(result.PlayerPosition, slot.ApproachPosition, NavMesh.AllAreas, path)
                     && path.status == NavMeshPathStatus.PathComplete, "spawn/approach reachable");
-                if (slot.Id.StartsWith("exit-")) Require(Vector3.Distance(slot.Position, result.PlayerPosition) >= 9f, "exit start exclusion");
+                if (slot.Id.StartsWith("exit-")) Require(Vector3.Distance(slot.Position, result.PlayerPosition) >= 2f, "start outside exit trigger");
                 else if (slot.Radius == 0.5f) Require(Vector3.Distance(slot.Position, result.PlayerPosition) >= 5f, "enemy start exclusion");
                 else Require(Vector3.Distance(slot.Position, slot.ApproachPosition) <= 2f, "chest approach range");
                 foreach (FieldSpawnPoint other in all)
@@ -147,12 +147,14 @@ namespace Nomad.Terrain.Editor
             }
         }
 
-        // 3m 지형은 입구 면을 제외한 서로 다른 3면의 가장자리 타일에 출구가 하나씩 있어야 합니다.
+        // 3m 지형은 4면의 가장자리 타일에 출구가 하나씩 있고, 플레이어는 그중 한 출구 안쪽(5m 이내)에서 시작합니다.
         private static void VerifyExits(TerrainIntegrationControls controls, FieldGenerationResult result)
         {
             if (controls.Legacy) return;
-            Require(result.ExitPoints.Count == 3, $"three exits: {result.ExitPoints.Count}");
-            Require(result.ExitPoints.Select(point => point.Id).Distinct().Count() == 3, "exits on distinct sides");
+            Require(result.ExitPoints.Count == 4, $"four exits: {result.ExitPoints.Count}");
+            Require(result.ExitPoints.Select(point => point.Id).Distinct().Count() == 4, "exits on distinct sides");
+            Require(result.ExitPoints.Count(exit => Vector3.Distance(exit.Position, result.PlayerPosition) <= 5f) == 1,
+                "start inside exactly one exit");
 
             Transform frame = controls.Generator.transform;
             Vector3[] centers = controls.Generator.LastResult.Pieces

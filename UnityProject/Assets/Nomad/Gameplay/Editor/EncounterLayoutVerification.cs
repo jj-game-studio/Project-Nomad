@@ -53,7 +53,7 @@ namespace Nomad.Gameplay.Editor
                 frame = Time.frameCount;
                 routine ??= Verify();
                 if (routine.MoveNext()) return;
-                Debug.Log("ENCOUNTER_LAYOUT_PASS seeds=0,7,51 normal=12 elite=1 boss=1 field=true");
+                Debug.Log("ENCOUNTER_LAYOUT_PASS seeds=0,7,51 normal=24 elite=2 boss=1 spread=4 quadrants field=true");
                 Finish(0);
             }
             catch (Exception error)
@@ -86,16 +86,25 @@ namespace Nomad.Gameplay.Editor
                 int normals = actors.Count(actor => actor.GetComponent<MonsterIdentity>().Rank == MonsterRank.Normal);
                 int elites = actors.Count(actor => actor.GetComponent<MonsterIdentity>().Rank == MonsterRank.Elite);
                 int bosses = actors.Count(actor => actor.GetComponent<MonsterIdentity>().Rank == MonsterRank.Boss);
-                Require(normals == 12 && elites == 1 && bosses == 1,
+                Require(normals == 24 && elites == 2 && bosses == 1,
                     $"seed {seed} counts: normal={normals}, elite={elites}, boss={bosses}");
                 BossArena arena = Object.FindAnyObjectByType<BossArena>();
                 Require(arena != null && arena.Connected, "separate connected arena " + seed);
                 Vector3 start = controls.Navigation.LastResult.PlayerPosition;
                 float eliteDistance = actors.Where(actor => actor.GetComponent<MonsterIdentity>().Rank == MonsterRank.Elite)
                     .Min(actor => MonsterEncounterLayout.PathLength(start, actor.transform.position));
+
+                // 일반 몬스터는 시작점 주변에 몰리지 않고 필드 사분면 네 곳 모두에 퍼져야 합니다(#154).
+                Vector3 middle = controls.Generator.LastResult.Pieces
+                    .Aggregate(Vector3.zero, (sum, piece) => sum + piece.transform.position) / controls.Generator.LastResult.Pieces.Count;
+                int[] quadrants = new int[4];
                 foreach (var normal in actors.Where(actor => actor.GetComponent<MonsterIdentity>().Rank == MonsterRank.Normal))
-                    Require(MonsterEncounterLayout.PathLength(start, normal.transform.position) < eliteDistance,
-                        "normal precedes elite " + seed);
+                {
+                    Vector3 position = normal.transform.position;
+                    quadrants[(position.x < middle.x ? 0 : 1) + (position.z < middle.z ? 0 : 2)]++;
+                }
+                Debug.Log($"ENCOUNTER_SPREAD seed={seed} quadrants={string.Join("/", quadrants)}");
+                Require(quadrants.All(count => count >= 2) && quadrants.Max() <= normals / 2, "normals spread over field " + seed);
                 Require(MonsterEncounterLayout.PathLength(start, arena.Center) > eliteDistance,
                     "boss follows elite " + seed);
                 foreach (var actor in actors)

@@ -8,12 +8,13 @@ using UnityEngine;
 namespace Nomad.Game.Modules
 {
     // Field 지역 모듈: 필드 생성이 끝나면 적 생성 지점에 몬스터를 배치하고, 다시 생성하면 이전 몬스터를 지웁니다.
-    // 일반 다수 → 먼 엘리트 → 별도 보스 구역의 임시 조우 배치를 사용합니다(#39).
+    // 맵 전체에 고르게 퍼진 일반 몬스터, 먼 엘리트, 별도 보스 구역의 조우 배치를 사용합니다(#39, #154).
+    // 26×26칸 필드(검토 씬의 약 2배 면적)에 맞춰 일반·엘리트 수를 2배로 둡니다.
     [RequireComponent(typeof(MonsterActorFactory))]
     public sealed class FieldMonsters : MonoBehaviour
     {
-        [SerializeField, Min(0)] private int normalCount = 12;
-        [SerializeField, Min(0)] private int eliteCount = 1;
+        [SerializeField, Min(0)] private int normalCount = 24;
+        [SerializeField, Min(0)] private int eliteCount = 2;
         [SerializeField, Min(0)] private int bossCount = 1;
 
         [Tooltip("플레이어 시작점에서 이 거리 안의 생성 지점에는 배치하지 않습니다.")]
