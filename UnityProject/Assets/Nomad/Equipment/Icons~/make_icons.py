@@ -228,7 +228,64 @@ def amulet(c, metal, gem):
     c.shape(poly([(16, 11), (21, 15), (19, 22), (13, 22), (11, 15)]), gem)
 
 
-LEATHER, IRON, STEEL, GOLD = hexc("8A5A36"), hexc("8C96A0"), hexc("B8C4CE"), hexc("D9B04A")
+def crown(c, metal, gem):
+    c.shape(poly([(5, 26), (5, 10), (10, 17), (16, 6), (22, 17), (27, 10), (27, 26)]), metal)
+    c.shape(rect(5, 22, 27, 26), shade(metal, 0.8), outline=False)
+    c.shape(diamond(16, 17, 3.5), gem)
+
+
+def pouch(c, base):
+    c.shape(rect(6, 12, 26, 27, 4), base)
+    c.shape(poly([(6, 12), (26, 12), (24, 19), (8, 19)]), shade(base, 0.8))
+    c.shape(rect(14, 16, 18, 20, 1), (226, 196, 106), outline=False)
+    c.shape(rect(4, 9, 28, 12, 1), shade(base, 0.6))
+
+
+def dimension_bag(c, base, glow):
+    c.shape(ellipse(16, 20, 11, 9), base)
+    c.shape(poly([(11, 13), (21, 13), (24, 5), (8, 5)]), shade(base, 0.8))
+    c.shape(rect(10, 12, 22, 14), (226, 196, 106), outline=False)
+    c.shape(ellipse(16, 21, 5, 4), glow, outline=False)
+    c.shape(ellipse(16, 21, 2.5, 2), shade(glow, 1.5), outline=False)
+
+
+def stone(c, base):
+    c.shape(poly([(9, 10), (17, 6), (25, 11), (26, 21), (18, 27), (8, 23), (6, 15)]), base)
+    c.shape(poly([(11, 12), (16, 10), (14, 15)]), shade(base, 1.5), outline=False)
+    c.shape(poly([(13, 18), (19, 15), (20, 20), (15, 22)]), (240, 230, 170), outline=False)
+
+
+def feather(c, base, tip):
+    c.shape(poly([(24, 3), (28, 8), (18, 22), (10, 26), (13, 17)]), base)
+    c.shape(poly([(24, 3), (28, 8), (24, 11), (21, 7)]), tip, outline=False)
+    c.shape(line(26, 5, 6, 29, 1.2), shade(base, 0.6), outline=False)
+
+
+def heart(c, base):
+    def make(dx, dy):
+        def inside(x, y):
+            u, v = (x - 16 - dx) / 11, -(y - 17 - dy) / 11
+            return (u * u + v * v - 1) ** 3 - u * u * v ** 3 <= 0
+        return inside, (3 + dx, 4 + dy, 29 + dx, 30 + dy)
+    c.shape(make, base)
+    c.shape(ellipse(11, 13, 2.5, 2), shade(base, 1.5), outline=False)
+
+
+def seal(c, metal, mark):
+    c.shape(ellipse(16, 16, 12, 12), metal)
+    c.shape(ellipse(16, 16, 9, 9, inner=0.85), shade(metal, 0.7), outline=False)
+    c.shape(poly([(18, 6), (11, 17), (16, 17), (13, 26), (21, 14), (16, 14)]), mark)
+
+
+def eye(c, iris):
+    c.shape(poly([(3, 16), (10, 9), (22, 9), (29, 16), (22, 23), (10, 23)]), (236, 230, 214))
+    c.shape(ellipse(16, 16, 6, 6), iris, outline=False)
+    c.shape(ellipse(16, 16, 2, 4), INK, outline=False)
+    c.shape(ellipse(14, 13, 1.2, 1.2), (255, 255, 255), outline=False)
+
+
+LEATHER, IRON, STEEL, GOLD =hexc("8A5A36"), hexc("8C96A0"), hexc("B8C4CE"), hexc("D9B04A")
+MITHRIL, DRAGON, CELESTIAL = hexc("9FC3D6"), hexc("A8392E"), hexc("F2EAD0")
 ICONS = {
     "gear-leather-cap": lambda c: cap(c, LEATHER),
     "gear-iron-helm": lambda c: helm(c, IRON),
@@ -251,6 +308,32 @@ ICONS = {
     "gear-wind-charm": lambda c: charm(c, hexc("EADFB8"), hexc("3FA07A")),
     "gear-hawk-earring": lambda c: earring(c, GOLD, hexc("E3762B")),
     "gear-guard-amulet": lambda c: amulet(c, hexc("A9B3BC"), hexc("5DBB63")),
+    # A~SSS 등급 방어구: 미스릴(은청색)·용비늘(적색)·성휘(금백색)
+    "gear-mithril-helm": lambda c: helm(c, MITHRIL, plume=hexc("4FA3D9")),
+    "gear-dragonscale-helm": lambda c: helm(c, DRAGON, plume=hexc("F0A030")),
+    "gear-celestial-crown": lambda c: crown(c, GOLD, hexc("8FE3FF")),
+    "gear-mithril-cuirass": lambda c: armor(c, MITHRIL, "plate"),
+    "gear-dragonscale-armor": lambda c: armor(c, DRAGON, "chain"),
+    "gear-celestial-plate": lambda c: armor(c, CELESTIAL, "plate"),
+    "gear-mithril-greaves": lambda c: pants(c, MITHRIL, hexc("3E5566")),
+    "gear-dragonscale-leggings": lambda c: pants(c, DRAGON, hexc("3A1A14")),
+    "gear-celestial-greaves": lambda c: pants(c, CELESTIAL, GOLD),
+    "gear-pegasus-boots": lambda c: boots(c, hexc("E8ECF2"), hexc("C8E6F5")),
+    "gear-dragonscale-boots": lambda c: boots(c, DRAGON, hexc("5A2A1E")),
+    "gear-celestial-boots": lambda c: boots(c, CELESTIAL, hexc("F2D66A")),
+    "gear-belt-pouch": lambda c: pouch(c, hexc("7A5233")),
+    "gear-expedition-pack": lambda c: backpack(c, hexc("3F5E7A"), True),
+    "gear-dimension-bag": lambda c: dimension_bag(c, hexc("4B2E6E"), hexc("B57BFF")),
+    "gear-copper-ring": lambda c: ring(c, hexc("C07A45"), hexc("5C9BD6")),
+    "gear-leather-bracelet": lambda c: bracelet(c, LEATHER, hexc("A27D4E")),
+    "gear-lucky-stone": lambda c: stone(c, hexc("6FA86A")),
+    "gear-sage-necklace": lambda c: pendant(c, hexc("8E5BD6")),
+    "gear-titan-bracelet": lambda c: bracelet(c, STEEL, hexc("D23C4A")),
+    "gear-phoenix-feather": lambda c: feather(c, hexc("E8562B"), hexc("F7C948")),
+    "gear-starlight-ring": lambda c: ring(c, CELESTIAL, hexc("9FD8FF")),
+    "gear-raptor-eye": lambda c: eye(c, hexc("E3A62B")),
+    "gear-eternal-heart": lambda c: heart(c, hexc("D2283C")),
+    "gear-storm-seal": lambda c: seal(c, hexc("5A6B7D"), hexc("F2E14A")),
 }
 
 if __name__ == "__main__":

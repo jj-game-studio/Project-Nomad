@@ -96,7 +96,7 @@ namespace Nomad.Equipment.Editor
                         Capture(1920, 1080);
                         Capture(1280, 720);
                         Capture(2560, 1080);
-                        source = Find("demo-armor");
+                        source = Find("gear-chain-mail");
                         Pointer(Bag(source), true);
                         Keys();
                         break;
@@ -104,13 +104,13 @@ namespace Nomad.Equipment.Editor
                     case 2: Pointer(Gear(EquipmentSlot.Body), true); break;
                     case 3: Pointer(Gear(EquipmentSlot.Body)); break;
                     case 4:
-                        Check(equipment.GetItem(EquipmentSlot.Body)?.ItemId == "demo-armor" && inventory.GetSlot(source).Item == null,
+                        Check(equipment.GetItem(EquipmentSlot.Body)?.ItemId == "gear-chain-mail" && inventory.GetSlot(source).Item == null,
                             "가방 선택 후 장비칸 클릭 장착");
                         Pointer(Gear(EquipmentSlot.Body), right: true);
                         break;
                     case 5:
-                        Check(equipment.GetItem(EquipmentSlot.Body) == null && Find("demo-armor") >= 0, "우클릭 해제");
-                        source = Find("demo-armor");
+                        Check(equipment.GetItem(EquipmentSlot.Body) == null && Find("gear-chain-mail") >= 0, "우클릭 해제");
+                        source = Find("gear-chain-mail");
                         Pointer(Bag(source));
                         break;
                     case 6:
@@ -127,18 +127,19 @@ namespace Nomad.Equipment.Editor
                         break;
                     case 70:
                         Check(panel.PreviewSlot == (int)EquipmentSlot.Head && !panel.CanDrop, "잘못된 도착 부위 불가 표시");
-                        Check(equipment.GetItem(EquipmentSlot.Head) == null && inventory.GetSlot(source).Item?.ItemId == "demo-armor",
+                        Check(equipment.GetItem(EquipmentSlot.Head) == null && inventory.GetSlot(source).Item?.ItemId == "gear-chain-mail",
                             "불가 미리보기 소유 무변경");
                         Pointer(Gear(EquipmentSlot.Body), true);
                         stage = 71;
                         break;
                     case 71:
                         Check(panel.PreviewSlot == (int)EquipmentSlot.Body && panel.CanDrop, "도착 장비칸 유효 표시");
-                        Check(panel.EquipmentGrid.GetChild((int)EquipmentSlot.Body).Find("ItemName").GetComponent<UnityEngine.UI.Text>().text == "갑옷",
+                        Check(panel.EquipmentGrid.GetChild((int)EquipmentSlot.Body).Find("Icon").GetComponent<UnityEngine.UI.Image>().sprite ==
+                            inventory.GetSlot(source).Item.Icon,
                             "도착 칸 아이템 미리보기");
                         Check(panel.DragPreview.gameObject.activeInHierarchy &&
                             panel.DragPreview.GetSiblingIndex() == panel.DragPreview.parent.childCount - 1, "드래그 아이템 UI 최상단");
-                        Check(equipment.GetItem(EquipmentSlot.Body) == null && inventory.GetSlot(source).Item?.ItemId == "demo-armor",
+                        Check(equipment.GetItem(EquipmentSlot.Body) == null && inventory.GetSlot(source).Item?.ItemId == "gear-chain-mail",
                             "유효 미리보기 소유 무변경");
                         if (SessionState.GetBool(SessionKey + ".CaptureDrag", false))
                         {
@@ -171,12 +172,12 @@ namespace Nomad.Equipment.Editor
                         break;
                     case 8: Pointer(Gear(EquipmentSlot.Body)); break;
                     case 9:
-                        Check(equipment.GetItem(EquipmentSlot.Body)?.ItemId == "demo-armor", "가방→장비 드래그");
-                        Pointer(Bag(Find("demo-helmet")), true);
+                        Check(equipment.GetItem(EquipmentSlot.Body)?.ItemId == "gear-chain-mail", "가방→장비 드래그");
+                        Pointer(Bag(Find("gear-iron-helm")), true);
                         stage = 88;
                         break;
                     case 88:
-                        Pointer(Bag(Find("demo-helmet")));
+                        Pointer(Bag(Find("gear-iron-helm")));
                         stage = 89;
                         break;
                     case 89:
@@ -188,8 +189,8 @@ namespace Nomad.Equipment.Editor
                         Check(panel.EquipmentDragPreview.gameObject.activeInHierarchy && panel.EquipmentDragPreview.GetSiblingIndex() ==
                             panel.EquipmentDragPreview.parent.childCount - 1, "해제 드래그 아이템 최상단");
                         Check(panel.BagPreviewSlot == source && panel.CanDropToBag && panel.BagDropPreview.gameObject.activeInHierarchy &&
-                            panel.BagDropPreview.Find("ItemName").GetComponent<UnityEngine.UI.Text>().text == "갑옷", "빈 가방 도착 칸 반투명 미리보기");
-                        Check(equipment.GetItem(EquipmentSlot.Body)?.ItemId == "demo-armor" && inventory.GetSlot(source).Item == null,
+                            panel.BagDropPreview.Find("Icon").GetComponent<UnityEngine.UI.Image>().sprite == equipment.GetItem(EquipmentSlot.Body).Icon, "빈 가방 도착 칸 반투명 미리보기");
+                        Check(equipment.GetItem(EquipmentSlot.Body)?.ItemId == "gear-chain-mail" && inventory.GetSlot(source).Item == null,
                             "해제 미리보기 소유 무변경/이전 가방 선택과 분리");
                         if (SessionState.GetBool(SessionKey + ".CaptureUnequip", false))
                         {
@@ -198,15 +199,15 @@ namespace Nomad.Equipment.Editor
                             Finish(0);
                             return;
                         }
-                        Pointer(Bag(Find("demo-helmet")), true);
+                        Pointer(Bag(Find("gear-iron-helm")), true);
                         stage = 80;
                         break;
                     case 80:
-                        Check(panel.BagPreviewSlot == Find("demo-helmet") && !panel.CanDropToBag, "불가 가방 교체 빨간 표시");
-                        Pointer(Bag(Find("demo-helmet")));
+                        Check(panel.BagPreviewSlot == Find("gear-iron-helm") && !panel.CanDropToBag, "불가 가방 교체 빨간 표시");
+                        Pointer(Bag(Find("gear-iron-helm")));
                         break;
                     case 81:
-                        Check(equipment.GetItem(EquipmentSlot.Body)?.ItemId == "demo-armor" && Find("demo-helmet") >= 0 &&
+                        Check(equipment.GetItem(EquipmentSlot.Body)?.ItemId == "gear-chain-mail" && Find("gear-iron-helm") >= 0 &&
                             !panel.EquipmentDragPreview.gameObject.activeSelf, "불가 드롭 무변경/드래그 정리");
                         Pointer(Gear(EquipmentSlot.Body), true);
                         break;
@@ -217,7 +218,7 @@ namespace Nomad.Equipment.Editor
                         break;
                     case 84:
                         Check(!panel.EquipmentDragPreview.gameObject.activeSelf && !panel.BagDropPreview.gameObject.activeSelf &&
-                            equipment.GetItem(EquipmentSlot.Body)?.ItemId == "demo-armor" && inventory.GetSlot(source).Item == null,
+                            equipment.GetItem(EquipmentSlot.Body)?.ItemId == "gear-chain-mail" && inventory.GetSlot(source).Item == null,
                             "해제 Escape 취소/양쪽 소유 유지");
                         Keys();
                         Pointer(Gear(EquipmentSlot.Body));
@@ -228,7 +229,7 @@ namespace Nomad.Equipment.Editor
                         stage = 12;
                         break;
                     case 12:
-                        Check(equipment.GetItem(EquipmentSlot.Body) == null && inventory.GetSlot(source).Item?.ItemId == "demo-armor",
+                        Check(equipment.GetItem(EquipmentSlot.Body) == null && inventory.GetSlot(source).Item?.ItemId == "gear-chain-mail",
                             "장비→지정 가방칸 빠른 드래그 드롭 실제 해제");
                         Check(!panel.EquipmentDragPreview.gameObject.activeSelf && panel.BagPreviewSlot == -1, "해제 성공 표시 정리");
                         inventory.Add("demo-sword", 1);

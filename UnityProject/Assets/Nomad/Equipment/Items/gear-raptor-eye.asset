@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d9209f1a45eeaf4458396815df6300a9, type: 3}
+  m_Name: gear-raptor-eye
+  m_EditorClassIdentifier: Assembly-CSharp::Nomad.Inventory.ItemDefinition
+  itemId: gear-raptor-eye
+  displayName: "\uB9F9\uAE08\uC758 \uB208"
+  description: "\uCE58\uBA85\uD0C0 \uD655\uB960\uC774 \uC62C\uB77C\uAC11\uB2C8\uB2E4."
+  icon: {fileID: 21300000, guid: 415aa6b414836db4dbe62a05b49fbf72, type: 3}
+  maxStack: 1
+  tier: 5
+  equipmentType: 5
+  attackPower: 0
+  defense: 0
+  attackMode: 0
+  attackRange: 0
+  attackInterval: 0
+  manaCost: 0
+  stats:
+  - Stat: 10
+    Value: 15
+  equippedVisual: {fileID: 0}

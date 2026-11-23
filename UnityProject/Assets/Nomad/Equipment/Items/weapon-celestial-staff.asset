@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d9209f1a45eeaf4458396815df6300a9, type: 3}
+  m_Name: weapon-celestial-staff
+  m_EditorClassIdentifier: Assembly-CSharp::Nomad.Inventory.ItemDefinition
+  itemId: weapon-celestial-staff
+  displayName: "\uC131\uD718 \uC9C0\uD321\uC774"
+  description: "\uD55C \uBC1C\uC5D0 \uB9C8\uB098 14\uB97C \uC18C\uBAA8\uD569\uB2C8\uB2E4."
+  icon: {fileID: 0}
+  maxStack: 1
+  tier: 6
+  equipmentType: 1
+  attackPower: 60
+  defense: 0
+  attackMode: 4
+  attackRange: 30
+  attackInterval: 0.4
+  manaCost: 14
+  stats: []
+  equippedVisual: {fileID: 1291473490771272, guid: eee4a194e73e46f49b6854e0fc1c88b3, type: 3}

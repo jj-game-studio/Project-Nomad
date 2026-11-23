@@ -12,6 +12,12 @@ namespace Nomad.Equipment.Editor
     {
         internal const string ScenePath = "Assets/Nomad/Equipment/EquipmentDemo.unity";
         internal const string CsvPath = "Assets/Nomad/Equipment/equipment.csv";
+        // 장비 검토 씬 가방에 넣는 실제 장비입니다. 등급이 다른 갑옷·투구를 비교하고 가방·장신구 칸을 확인합니다.
+        internal static readonly string[] DemoGear =
+        {
+            "gear-padded-armor", "gear-chain-mail", "gear-plate-armor", "gear-leather-cap", "gear-iron-helm", "gear-knight-helm",
+            "gear-belt-pouch", "gear-copper-ring"
+        };
 
         [MenuItem("Nomad/Equipment/Create Equipment Demo")]
         public static void Create()
@@ -53,7 +59,8 @@ namespace Nomad.Equipment.Editor
                 (Projectile)source.FindProperty("projectile").objectReferenceValue);
 
             ItemDefinition[] definitions = WeaponContentAuthoring.Definitions().Where(item =>
-                item.ItemId.StartsWith("demo-", System.StringComparison.Ordinal) || item.ItemId == PlayerEquipmentCombat.ArrowItemId).ToArray();
+                item.ItemId.StartsWith("demo-", System.StringComparison.Ordinal) || DemoGear.Contains(item.ItemId) ||
+                item.ItemId == PlayerEquipmentCombat.ArrowItemId).ToArray();
             WeaponContentAuthoring.SetItems(new SerializedObject(legacy.GetComponent<PlayerInventory>()), "items", definitions);
             WeaponContentAuthoring.SetItems(new SerializedObject(legacy.GetComponent<EquipmentDemo>()), "items", definitions);
         }

@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d9209f1a45eeaf4458396815df6300a9, type: 3}
+  m_Name: weapon-rune-sword
+  m_EditorClassIdentifier: Assembly-CSharp::Nomad.Inventory.ItemDefinition
+  itemId: weapon-rune-sword
+  displayName: "\uB8EC \uC7A5\uAC80"
+  description: "\uB8EC\uC774 \uC0C8\uACA8\uC9C4 \uAC80\uC73C\uB85C \uBE60\uB974\uACE0 \uAC15\uD558\uAC8C \uBCB1\uB2C8\uB2E4."
+  icon: {fileID: 0}
+  maxStack: 1
+  tier: 4
+  equipmentType: 1
+  attackPower: 38
+  defense: 0
+  attackMode: 2
+  attackRange: 2.3
+  attackInterval: 0.55
+  manaCost: 0
+  stats: []
+  equippedVisual: {fileID: 1530859087307534, guid: ca8d427b471a77745835639d65f3c276, type: 3}

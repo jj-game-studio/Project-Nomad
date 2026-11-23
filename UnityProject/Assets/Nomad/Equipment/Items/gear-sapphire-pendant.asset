@@ -17,6 +17,7 @@ MonoBehaviour:
   description: "\uCD5C\uB300 \uB9C8\uB098\uAC00 \uB298\uC5B4\uB0A9\uB2C8\uB2E4."
   icon: {fileID: 21300000, guid: 5e0b7e8144ce03442ae5e74fda98b5ae, type: 3}
   maxStack: 1
+  tier: 2
   equipmentType: 5
   attackPower: 0
   defense: 0

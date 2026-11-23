@@ -41,6 +41,7 @@ namespace Nomad.Inventory
 
             title = CreateText("Title", font, 20, new Color32(224, 182, 104, 255));
             title.fontStyle = FontStyle.Bold;
+            title.supportRichText = true;
             description = CreateText("Description", font, 16, new Color32(233, 234, 228, 255));
             comparisonStats = CreateText("ComparisonStats", font, 16, new Color32(233, 234, 228, 255));
             // 색상 태그는 숫자로 만든 비교 문구에만 사용하고 아이템 문구는 평문으로 유지합니다.
@@ -154,6 +155,9 @@ namespace Nomad.Inventory
             float width = Mathf.Min(cardWidth, Mathf.Max(1f, canvasSize.x - Margin * 2));
             float textWidth = Mathf.Max(1f, width - Padding * 2);
             title.text = count > 1 ? $"{item.DisplayName}  ×{count}" : item.DisplayName;
+            // 등급이 있으면 이름 앞에 등급 색 글자를 붙입니다.
+            if (item.Tier != ItemTier.None)
+                title.text = $"<color=#{TierStyle.Hex(item.Tier)}>[{TierStyle.Label(item.Tier)}]</color> " + title.text;
             if (!string.IsNullOrEmpty(shownHeading)) title.text = shownHeading + "\n" + title.text;
             description.text = shownComparison == null ? BuildDescription(item) : item.Description ?? string.Empty;
             comparisonStats.text = shownComparison ?? string.Empty;

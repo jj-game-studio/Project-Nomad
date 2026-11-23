@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d9209f1a45eeaf4458396815df6300a9, type: 3}
+  m_Name: weapon-dragonfang-blade
+  m_EditorClassIdentifier: Assembly-CSharp::Nomad.Inventory.ItemDefinition
+  itemId: weapon-dragonfang-blade
+  displayName: "\uC6A9\uC544 \uB300\uAC80"
+  description: "\uC6A9\uC758 \uC1A1\uACF3\uB2C8\uB85C \uB9CC\uB4E0 \uB300\uAC80\uC785\uB2C8\uB2E4. \uB113\uAC8C \uBCA0\uC5B4 \uB0C5\uB2C8\uB2E4."
+  icon: {fileID: 0}
+  maxStack: 1
+  tier: 5
+  equipmentType: 1
+  attackPower: 60
+  defense: 0
+  attackMode: 2
+  attackRange: 3.2
+  attackInterval: 0.95
+  manaCost: 0
+  stats: []
+  equippedVisual: {fileID: 1925294732729548, guid: aafe4819ee380074c84dd31cc94ccf83, type: 3}

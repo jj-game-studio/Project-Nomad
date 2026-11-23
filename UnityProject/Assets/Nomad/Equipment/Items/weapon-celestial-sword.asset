@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d9209f1a45eeaf4458396815df6300a9, type: 3}
+  m_Name: weapon-celestial-sword
+  m_EditorClassIdentifier: Assembly-CSharp::Nomad.Inventory.ItemDefinition
+  itemId: weapon-celestial-sword
+  displayName: "\uC131\uD718 \uAC80"
+  description: "\uBCC4\uBE5B\uC774 \uAE43\uB4E0 \uAC80\uC73C\uB85C \uB9E4\uC6B0 \uBE60\uB974\uAC8C \uBCB1\uB2C8\uB2E4."
+  icon: {fileID: 0}
+  maxStack: 1
+  tier: 6
+  equipmentType: 1
+  attackPower: 55
+  defense: 0
+  attackMode: 2
+  attackRange: 2.6
+  attackInterval: 0.45
+  manaCost: 0
+  stats: []
+  equippedVisual: {fileID: 1540267643872684, guid: 0e2c93b26f53b644ab3b9fbeb0bbbbce, type: 3}

@@ -62,3 +62,29 @@ namespace Nomad.Inventory
                 : value.ToString("0.0", CultureInfo.InvariantCulture);
     }
 }
+
+namespace Nomad.Inventory
+{
+    // 기획자가 붙이는 아이템 등급입니다. 오른쪽일수록 높고, None은 화살처럼 등급이 없는 아이템입니다.
+    public enum ItemTier { None, C, B, A, S, SS, SSS }
+
+    public static class TierStyle
+    {
+        private static readonly UnityEngine.Color32[] Colors =
+        {
+            new(101, 107, 103, 255), // None: 기존 칸 테두리
+            new(168, 172, 170, 255), // C 회색
+            new(98, 196, 112, 255),  // B 초록
+            new(84, 150, 235, 255),  // A 파랑
+            new(176, 108, 232, 255), // S 보라
+            new(240, 150, 56, 255),  // SS 주황
+            new(238, 74, 84, 255),   // SSS 빨강
+        };
+
+        public static UnityEngine.Color Color(ItemTier tier) => Colors[(int)tier];
+
+        public static string Hex(ItemTier tier) => UnityEngine.ColorUtility.ToHtmlStringRGB(Color(tier));
+
+        public static string Label(ItemTier tier) => tier == ItemTier.None ? string.Empty : tier.ToString();
+    }
+}

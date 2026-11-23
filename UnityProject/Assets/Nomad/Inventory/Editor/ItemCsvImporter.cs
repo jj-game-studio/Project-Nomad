@@ -82,6 +82,8 @@ namespace Nomad.Inventory.Editor
                 serialized.FindProperty("displayName").stringValue = row.Name;
                 serialized.FindProperty("description").stringValue = row.Description;
                 serialized.FindProperty("maxStack").intValue = row.MaxStack;
+                if (row.Tier.HasValue)
+                    serialized.FindProperty("tier").enumValueIndex = (int)row.Tier.Value;
                 if (row.Equipment.HasValue)
                 {
                     serialized.FindProperty("equipmentType").enumValueIndex = (int)row.Equipment.Value;

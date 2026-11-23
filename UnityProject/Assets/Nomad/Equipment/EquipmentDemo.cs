@@ -22,10 +22,6 @@ namespace Nomad.Equipment
                 if (item.ItemId != "demo-unarmed")
                     inventory.Add(item.ItemId, item.ItemId == PlayerEquipmentCombat.ArrowItemId ? 30 : 1);
 
-            // 한 개를 장착한 뒤 남은 장비로 호버 비교를 바로 확인합니다.
-            inventory.Add("demo-armor", 1);
-            inventory.Add("demo-helmet", 1);
-
             Equip("demo-sword", EquipmentSlot.Weapon1);
             Equip("demo-bow", EquipmentSlot.Weapon2);
             InventoryPanel.GetOrCreate(inventory);
@@ -53,7 +49,7 @@ namespace Nomad.Equipment
             if (keys.digit2Key.wasPressedThisFrame) equipment.SelectWeapon(EquipmentSlot.Weapon2);
             if (keys.f5Key.wasPressedThisFrame)
             {
-                if (equipment.GetItem(EquipmentSlot.Body) == null) Equip("demo-armor", EquipmentSlot.Body);
+                if (equipment.GetItem(EquipmentSlot.Body) == null) Equip("gear-chain-mail", EquipmentSlot.Body);
                 else equipment.TryUnequip(EquipmentSlot.Body);
             }
             if (keys.f6Key.wasPressedThisFrame) equipment.TryUnequip(equipment.ActiveWeaponSlot);

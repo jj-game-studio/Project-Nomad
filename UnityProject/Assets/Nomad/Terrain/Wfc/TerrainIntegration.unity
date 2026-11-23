@@ -337,15 +337,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: c5909ea4a83cd9b4d8f3f6480f5a4271, type: 2}
   - {fileID: 11400000, guid: 5abb4f098a436704e9d2514c8e985475, type: 2}
   - {fileID: 11400000, guid: 448cc5b227491124d9fcf8b3af24c8c1, type: 2}
-  - {fileID: 11400000, guid: 3bc5ee3aa47bcb5419199fe0c678c793, type: 2}
-  - {fileID: 11400000, guid: 91bcb142c26e7a1409c2a2540242819f, type: 2}
-  - {fileID: 11400000, guid: 0665a2b2765b3864f9c1013078fcca6e, type: 2}
-  - {fileID: 11400000, guid: 742c2de271dd3e544aa09851eb69383a, type: 2}
   - {fileID: 11400000, guid: 2fd922611dde74b42afdc04ec0edc323, type: 2}
-  - {fileID: 11400000, guid: 149f770f4d68c4b4c965c16a1d2cf4f3, type: 2}
-  - {fileID: 11400000, guid: ac569c023422c424c820c4419ec75c5e, type: 2}
-  - {fileID: 11400000, guid: 41af70b866070234bb765a441c7fa6b9, type: 2}
-  - {fileID: 11400000, guid: 7aca8cc904480a6468ae63996425734c, type: 2}
   - {fileID: 11400000, guid: 6d4d13ace88e69f4692b95903876f8a4, type: 2}
   - {fileID: 11400000, guid: e907610ddd7ebde4e91a139ed2c789e5, type: 2}
   - {fileID: 11400000, guid: ca38e1181ce0a63498c03747a544b514, type: 2}
@@ -377,6 +369,40 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 16ef8861f503c0145a1f91f9fe19443e, type: 2}
   - {fileID: 11400000, guid: 59d61be975c9b1745b0dfd8f7fa9c54e, type: 2}
   - {fileID: 11400000, guid: ee127a2d1d3b136438d331b58d108450, type: 2}
+  - {fileID: 11400000, guid: 104ac575d609fdd449bab09cb461e963, type: 2}
+  - {fileID: 11400000, guid: cfbfe1b43c08bfc449f68a7c9fa2f95e, type: 2}
+  - {fileID: 11400000, guid: b31f51734d48e6c449d133b0d8a53f4d, type: 2}
+  - {fileID: 11400000, guid: 4c91406c05322a544be1e07a73223e4b, type: 2}
+  - {fileID: 11400000, guid: cc1494010c02752428ff76fb14b46f36, type: 2}
+  - {fileID: 11400000, guid: d0dccdc58e27f87468ee936b23b2c4da, type: 2}
+  - {fileID: 11400000, guid: f099f93255df3a645be097168dd7da83, type: 2}
+  - {fileID: 11400000, guid: 9a0270c1b620fd142be133e2b613f61d, type: 2}
+  - {fileID: 11400000, guid: 0685f144d7c7d4b4fb45d1e288972187, type: 2}
+  - {fileID: 11400000, guid: ecb5ba8eb47b38744900ac71119e5087, type: 2}
+  - {fileID: 11400000, guid: dade29f4091a2ab4098640d49450c403, type: 2}
+  - {fileID: 11400000, guid: 003ac0a1123e0114a941cba76575bbba, type: 2}
+  - {fileID: 11400000, guid: 97fe7523083607543b58c2d3de4b3872, type: 2}
+  - {fileID: 11400000, guid: cce94ea6d78e85946a15f7e2bb009032, type: 2}
+  - {fileID: 11400000, guid: ff031e1b0934e814491c020b3c3ecbe6, type: 2}
+  - {fileID: 11400000, guid: 03343d0c88db0f841a3275af99456a7a, type: 2}
+  - {fileID: 11400000, guid: 1c13c4bc151e6304197e316bfafbcf54, type: 2}
+  - {fileID: 11400000, guid: 71b6c28a5d7544a4e92a5ed61e8bb693, type: 2}
+  - {fileID: 11400000, guid: abd64fb44fd206646a24bf24239c39a6, type: 2}
+  - {fileID: 11400000, guid: 5fbffded440bf8c4cacf233daef7e729, type: 2}
+  - {fileID: 11400000, guid: 9faf1d1abdef73e43abd8ac4e56737b8, type: 2}
+  - {fileID: 11400000, guid: 71fafed826b049c47985cd06a4b1ed7a, type: 2}
+  - {fileID: 11400000, guid: 468fb019f7f209740ae15bf19439d579, type: 2}
+  - {fileID: 11400000, guid: 186c85b0857d6bc41b9951eae073f854, type: 2}
+  - {fileID: 11400000, guid: c504aea44f584384a92a18ca7fde5ad0, type: 2}
+  - {fileID: 11400000, guid: 1db2dcc98d2769b40b75a56a0bc751a7, type: 2}
+  - {fileID: 11400000, guid: be06decfd07fcb9478485068a2a7869b, type: 2}
+  - {fileID: 11400000, guid: 273ec8ad3273af34ea9e12e1105b0f41, type: 2}
+  - {fileID: 11400000, guid: e06f56a034ad1334c8b1e09442b1cbb4, type: 2}
+  - {fileID: 11400000, guid: 58f6670530703614995e386d8799196e, type: 2}
+  - {fileID: 11400000, guid: dca48090b16db0d42b6e9c5395ab8398, type: 2}
+  - {fileID: 11400000, guid: 37dc992ddaa8db546b23add71ec45427, type: 2}
+  - {fileID: 11400000, guid: f1d57a9837fdcb0488fc2e51f4489b6d, type: 2}
+  - {fileID: 11400000, guid: 22b6ab086a349a34a8cee1a4d23ae45f, type: 2}
 --- !u!114 &451336760
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -511,15 +537,15 @@ MonoBehaviour:
     count: 1
     equip: 0
     slot: 0
-  - itemId: gear-small-backpack
+  - itemId: gear-belt-pouch
     count: 1
     equip: 0
     slot: 0
-  - itemId: gear-hawk-earring
+  - itemId: gear-copper-ring
     count: 1
     equip: 0
     slot: 0
-  - itemId: gear-life-ring
+  - itemId: gear-lucky-stone
     count: 1
     equip: 0
     slot: 0
