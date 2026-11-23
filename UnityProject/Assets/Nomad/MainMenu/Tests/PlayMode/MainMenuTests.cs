@@ -24,8 +24,13 @@ namespace Nomad.MainMenu.Tests
         private float oldVolume;
         private bool hadVolume;
         private float savedVolume;
+        private bool hadFullscreen;
+        private int savedFullscreen;
         private Mouse mouse;
         private Keyboard keyboard;
+        private InputSettings.BackgroundBehavior oldBackground;
+        private InputSettings.EditorInputBehaviorInPlayMode oldEditorInput;
+        private bool oldRunInBackground;
 
         [UnitySetUp]
         public IEnumerator SetUp()
@@ -34,8 +39,18 @@ namespace Nomad.MainMenu.Tests
             oldVolume = AudioListener.volume;
             hadVolume = PlayerPrefs.HasKey(MainMenuSettings.VolumeKey);
             savedVolume = PlayerPrefs.GetFloat(MainMenuSettings.VolumeKey);
+            hadFullscreen = PlayerPrefs.HasKey(MainMenuSettings.FullscreenKey);
+            savedFullscreen = PlayerPrefs.GetInt(MainMenuSettings.FullscreenKey);
+            oldBackground = InputSystem.settings.backgroundBehavior;
+            oldEditorInput = InputSystem.settings.editorInputBehaviorInPlayMode;
+            oldRunInBackground = Application.runInBackground;
+            Application.runInBackground = true;
+            InputSystem.settings.backgroundBehavior = InputSettings.BackgroundBehavior.IgnoreFocus;
+            InputSystem.settings.editorInputBehaviorInPlayMode = InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
             mouse = InputSystem.AddDevice<Mouse>();
+            mouse.MakeCurrent();
             keyboard = InputSystem.AddDevice<Keyboard>();
+            keyboard.MakeCurrent();
             yield return EditorSceneManager.LoadSceneAsyncInPlayMode(MenuPath,
                 new LoadSceneParameters(LoadSceneMode.Additive));
             SceneManager.SetActiveScene(SceneManager.GetSceneByPath(MenuPath));
@@ -58,11 +73,18 @@ namespace Nomad.MainMenu.Tests
                 Object.Destroy(GameManager.Instance.gameObject);
             InputSystem.RemoveDevice(mouse);
             InputSystem.RemoveDevice(keyboard);
+            InputSystem.settings.backgroundBehavior = oldBackground;
+            InputSystem.settings.editorInputBehaviorInPlayMode = oldEditorInput;
+            Application.runInBackground = oldRunInBackground;
             AudioListener.volume = oldVolume;
             if (hadVolume)
                 PlayerPrefs.SetFloat(MainMenuSettings.VolumeKey, savedVolume);
             else
                 PlayerPrefs.DeleteKey(MainMenuSettings.VolumeKey);
+            if (hadFullscreen)
+                PlayerPrefs.SetInt(MainMenuSettings.FullscreenKey, savedFullscreen);
+            else
+                PlayerPrefs.DeleteKey(MainMenuSettings.FullscreenKey);
             PlayerPrefs.Save();
             Time.timeScale = 1;
             yield return null;
@@ -102,6 +124,20 @@ namespace Nomad.MainMenu.Tests
             Assert.That(screen.Description.isTextOverflowing, Is.False, "설명 잘림 없음");
             Assert.That(screen.NewGameButton.GetComponentInChildren<TMP_Text>().text, Is.EqualTo("여정 시작"));
 
+            var replacement = new Texture2D(32, 16);
+            var logo = Sprite.Create(replacement, new Rect(0, 0, 32, 16), Vector2.one * 0.5f);
+            screen.Content.Background = replacement;
+            screen.Content.Logo = logo;
+            screen.RefreshContent();
+            Assert.That(screen.Background.texture, Is.SameAs(replacement));
+            Assert.That(screen.Background.GetComponent<UnityEngine.UI.AspectRatioFitter>().aspectRatio, Is.EqualTo(2f));
+            Assert.That(screen.Title.gameObject.activeSelf, Is.False);
+            Assert.That(screen.Logo.gameObject.activeSelf, Is.True);
+            screen.Content.Background = original.Background;
+            screen.Content.Logo = null;
+            Object.Destroy(logo);
+            Object.Destroy(replacement);
+
             screen.Content.Title = original.Title;
             screen.Content.Description = original.Description;
             screen.Content.NewGame = original.NewGame;
@@ -123,6 +159,11 @@ namespace Nomad.MainMenu.Tests
             Assert.That(PlayerPrefs.GetFloat(MainMenuSettings.VolumeKey), Is.EqualTo(0.35f).Within(0.01f));
             yield return Click((RectTransform)screen.VolumeSlider.transform);
             Assert.That(screen.VolumeSlider.value, Is.InRange(0.45f, 0.55f), "슬라이더 중앙 실제 클릭");
+
+            bool previousFullscreen = Screen.fullScreen;
+            screen.FullscreenToggle.isOn = !previousFullscreen;
+            Assert.That(PlayerPrefs.GetInt(MainMenuSettings.FullscreenKey), Is.EqualTo(previousFullscreen ? 0 : 1));
+            screen.FullscreenToggle.isOn = previousFullscreen;
 
             InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.Escape));
             yield return null;

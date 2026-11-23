@@ -38,6 +38,8 @@ namespace Nomad.MainMenu.Editor
         public static void Create()
         {
             Directory.CreateDirectory(Root + "/Fonts");
+            AssetDatabase.Refresh();
+            EnsureLineBreakingRules();
             bodyFont = EnsureFont("Body", "Assets/Nomad/Shop/Resources/ShopFonts/NanumGothic-Regular.ttf");
             titleFont = EnsureFont("Title", "Assets/Nomad/Shop/Resources/ShopFonts/LilitaOne-Regular.ttf");
             var content = AssetDatabase.LoadAssetAtPath<MainMenuContent>(ContentPath);
@@ -73,6 +75,34 @@ namespace Nomad.MainMenu.Editor
             RegisterStartup();
             AssetDatabase.SaveAssets();
             Debug.Log("MAIN_MENU_CREATED");
+        }
+
+        private static void EnsureLineBreakingRules()
+        {
+            // 기존 HUD 설정에서 누락된 TMP 기본 규칙만 연결하며 지정된 규칙은 보존합니다.
+            var settings = new SerializedObject(TMP_Settings.instance);
+            string[] properties = { "m_leadingCharacters", "m_followingCharacters" };
+            string[] files = { "Leading", "Following" };
+            for (int i = 0; i < properties.Length; i++)
+            {
+                SerializedProperty property = settings.FindProperty(properties[i]);
+                if (property.objectReferenceValue == null)
+                    property.objectReferenceValue = AssetDatabase.LoadAssetAtPath<TextAsset>(
+                        Root + "/Text/LineBreaking " + files[i] + " Characters.txt");
+            }
+
+            settings.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        public static void BuildWindows()
+        {
+            var result = UnityEditor.BuildPipeline.BuildPlayer(
+                EditorBuildSettings.scenes.Where(scene => scene.enabled).Select(scene => scene.path).ToArray(),
+                "Builds/MainMenu/ProjectNomad.exe", BuildTarget.StandaloneWindows64, BuildOptions.None);
+            if (result.summary.result != UnityEditor.Build.Reporting.BuildResult.Succeeded)
+                throw new System.InvalidOperationException("Windows 빌드 실패: " + result.summary.result);
+
+            Debug.Log("MAIN_MENU_WINDOWS_BUILD_PASSED");
         }
 
         private static TMP_FontAsset EnsureFont(string name, string source)
@@ -121,7 +151,7 @@ namespace Nomad.MainMenu.Editor
             shade.gameObject.AddComponent<MainMenuShade>().raycastTarget = false;
             RectTransform left = Rect("Content", root.transform, 72, 72, 570, 900);
             screen.ProjectName = Label("ProjectName", left, 0, 0, 550, 42, 22);
-            screen.ProjectName.characterSpacing = 12;
+            screen.ProjectName.characterSpacing = 65;
             screen.Title = Label("Title", left, -4, 48, 550, 206, 190);
             screen.Title.font = titleFont;
             screen.Title.fontSizeMin = 62;
@@ -143,6 +173,10 @@ namespace Nomad.MainMenu.Editor
             RectTransform menu = Rect("MenuPanel", left, 0, 420, 510, 300);
             screen.MenuPanel = menu.gameObject;
             screen.NewGameButton = Button("NewGame", menu, 0, true);
+            var arrow = Label("StartArrow", screen.NewGameButton.transform, 438, 7, 42, 68, 44);
+            arrow.text = "›";
+            arrow.alignment = TextAlignmentOptions.Center;
+            arrow.color = new Color32(24, 35, 24, 255);
             screen.SettingsButton = Button("Settings", menu, 102, false);
             screen.QuitButton = Button("Quit", menu, 204, false);
             Navigation(screen.NewGameButton, screen.QuitButton, screen.SettingsButton);
@@ -168,7 +202,7 @@ namespace Nomad.MainMenu.Editor
             var footerRect = (RectTransform)screen.Footer.transform;
             footerRect.anchorMin = footerRect.anchorMax = footerRect.pivot = new Vector2(0, 0);
             footerRect.anchoredPosition = new Vector2(52, 43);
-            screen.Footer.characterSpacing = 6;
+            screen.Footer.characterSpacing = 45;
             screen.Footer.color = new Color32(205, 193, 157, 255);
 
             var fade = Image("Fade", root.transform, 0, 0, 0, 0, Color.black);
@@ -193,6 +227,9 @@ namespace Nomad.MainMenu.Editor
         private static UnityEngine.UI.Slider Slider(Transform parent)
         {
             RectTransform rect = Rect("VolumeSlider", parent, 16, 124, 466, 40);
+            var hitArea = rect.gameObject.AddComponent<UnityEngine.UI.Image>();
+            hitArea.color = Color.clear;
+            hitArea.raycastTarget = true;
             Image("Track", rect, 0, 15, 466, 10, new Color(0.3f, 0.33f, 0.25f));
             var fill = Image("Fill", rect, 0, 15, 466, 10, Gold);
             Stretch((RectTransform)fill.transform);
@@ -244,6 +281,7 @@ namespace Nomad.MainMenu.Editor
 
             var text = Label("Label", image.transform, 34, 7, 435, 68, 40);
             text.verticalAlignment = VerticalAlignmentOptions.Middle;
+            text.fontStyle = FontStyles.Bold;
             text.color = primary ? new Color32(24, 35, 24, 255) : Cream;
             text.enableAutoSizing = true;
             text.fontSizeMin = 25;

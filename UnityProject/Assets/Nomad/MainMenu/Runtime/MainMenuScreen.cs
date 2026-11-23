@@ -83,6 +83,7 @@ namespace Nomad.MainMenu
             Title.gameObject.SetActive(Content.Logo == null);
             ProjectName.text = Content.ProjectName;
             Title.text = Content.Title;
+            Title.textWrappingMode = TextWrappingModes.NoWrap;
             Description.text = Content.Description;
             Footer.text = Content.Footer;
 

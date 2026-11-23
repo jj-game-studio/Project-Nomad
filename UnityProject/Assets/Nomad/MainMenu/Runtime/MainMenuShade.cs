@@ -3,6 +3,7 @@ using UnityEngine;
 namespace Nomad.MainMenu
 {
     // 배경과 분리된 그라데이션이므로 그림을 바꿔도 왼쪽 글자의 대비를 유지합니다.
+    [RequireComponent(typeof(CanvasRenderer))]
     public sealed class MainMenuShade : UnityEngine.UI.Graphic
     {
         protected override void OnPopulateMesh(UnityEngine.UI.VertexHelper mesh)
