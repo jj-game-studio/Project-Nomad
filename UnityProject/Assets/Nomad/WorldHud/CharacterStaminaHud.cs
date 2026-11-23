@@ -1,4 +1,5 @@
 using Nomad.Combat;
+using Nomad.Player;
 using UnityEngine;
 
 namespace Nomad.WorldHud
@@ -15,25 +16,36 @@ namespace Nomad.WorldHud
         private RectTransform anchor;
         private WorldHudGraphic fill;
         private Health health;
+        private PlayerStamina stamina;
+        private float shownStamina = -1f;
         private float fullSince = float.NegativeInfinity;
         private float insufficientUntil;
         private bool available;
         private float opacity;
 
+        private const float LowFraction = .33f;
+        private static readonly Color Amber = new Color32(255, 193, 104, 255);
+        private static readonly Color Red = new Color32(255, 95, 75, 255);
+        private static readonly Color DimRed = new Color32(120, 35, 28, 255);
+
         public float Fraction { get; private set; }
+        public bool IsLow => available && Fraction < LowFraction;
+        public Color FillColor => fill != null ? fill.color : Color.clear;
         public bool Visible => canvas != null && canvas.isActiveAndEnabled && group != null && group.alpha > 0;
 
         private void Awake()
         {
             health = GetComponent<Health>();
+            stamina = GetComponent<PlayerStamina>();
             canvas = WorldHudCanvas.Create("Character Stamina HUD", transform);
+            // 두께: 바탕 7→10, 채움 4→7 (#146 요청)
             var track = WorldHudCanvas.Arc(canvas.transform, "Stamina Arc", 80,
-                new Color32(25, 22, 19, 225), -65, 130, 7);
+                new Color32(25, 22, 19, 225), -65, 130, 10);
             anchor = track.rectTransform;
             group = track.gameObject.AddComponent<CanvasGroup>();
             group.blocksRaycasts = group.interactable = false;
             group.alpha = 0;
-            fill = WorldHudCanvas.Arc(anchor, "Fill", 78, new Color32(255, 193, 104, 255), -65, 130, 4);
+            fill = WorldHudCanvas.Arc(anchor, "Fill", 78, Amber, -65, 130, 7);
         }
 
         // 게임에서 전달한 값만 표시하고 소비·회복 규칙은 소유하지 않습니다.
@@ -51,13 +63,22 @@ namespace Nomad.WorldHud
 
         private void LateUpdate()
         {
+            // 같은 플레이어의 PlayerStamina가 있으면 그 값을 그대로 표시합니다.
+            if (stamina != null && stamina.Current != shownStamina)
+            {
+                shownStamina = stamina.Current;
+                SetStamina(shownStamina, stamina.Maximum);
+            }
+
             bool alert = Time.unscaledTime < insufficientUntil;
             bool show = available && (health == null || !health.IsDead) &&
                 (Fraction < 1 || Time.unscaledTime - fullSince < fullHoldSeconds || alert);
             opacity = show ? Mathf.MoveTowards(opacity, 1, Time.unscaledDeltaTime * 8) : 0;
             UpdatePosition();
-            fill.color = alert && Mathf.Sin(Time.unscaledTime * 35) > 0
-                ? new Color32(255, 95, 75, 255) : new Color32(255, 193, 104, 255);
+            // 33% 미만은 빨간색, 부족 알림 중에는 빨간색과 어두운 색으로 깜빡입니다.
+            Color normal = IsLow ? Red : Amber;
+            bool blink = alert && Mathf.Sin(Time.unscaledTime * 35) > 0;
+            fill.color = blink ? (IsLow ? DimRed : Red) : normal;
         }
 
         private void UpdatePosition()
@@ -71,6 +92,7 @@ namespace Nomad.WorldHud
         private void OnEnable()
         {
             if (canvas != null) canvas.gameObject.SetActive(true);
+            if (stamina != null) stamina.Insufficient += NotifyInsufficient;
             // 추적 카메라의 LateUpdate가 끝난 뒤, 실제 렌더에 쓸 위치로 다시 투영합니다.
             Canvas.willRenderCanvases += UpdatePosition;
         }
@@ -78,6 +100,7 @@ namespace Nomad.WorldHud
         private void OnDisable()
         {
             Canvas.willRenderCanvases -= UpdatePosition;
+            if (stamina != null) stamina.Insufficient -= NotifyInsufficient;
             if (canvas != null) canvas.gameObject.SetActive(false);
         }
 

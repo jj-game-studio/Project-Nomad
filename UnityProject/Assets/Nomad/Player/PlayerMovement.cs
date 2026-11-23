@@ -25,6 +25,7 @@ namespace Nomad.Player
         private CharacterController controller;
         private Health health;
         private PlayerInventory inventory;
+        private PlayerStamina stamina;
         private float verticalSpeed;
         private float rollTime;
         private float cooldownTime;
@@ -43,6 +44,7 @@ namespace Nomad.Player
             controller = GetComponent<CharacterController>();
             TryGetComponent(out health);
             TryGetComponent(out inventory);
+            TryGetComponent(out stamina);
         }
 
         private void OnEnable()
@@ -84,7 +86,11 @@ namespace Nomad.Player
             {
                 if (cooldownTime <= 0f && keyboard?.leftShiftKey.wasPressedThisFrame == true &&
                     inventory?.Panel?.HasOpenChest != true)
-                    StartRoll(direction);
+                {
+                    // 스태미나가 있으면 부족할 때 구르기를 거절합니다.
+                    if (stamina == null || stamina.TrySpend(stamina.RollCost))
+                        StartRoll(direction);
+                }
                 else if (keyboard?.spaceKey.wasPressedThisFrame == true)
                     verticalSpeed = Mathf.Sqrt(2f * Gravity * JumpHeight);
             }
