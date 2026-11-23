@@ -10,7 +10,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 3263251001759993591, guid: 3e5ec0238a72a694884198887438e827, type: 3}
       propertyPath: m_Controller
-      value: 
+      value:
       objectReference: {fileID: 9100000, guid: 1140ac0e68c35584caff88d80bdb38a6, type: 2}
     - target: {fileID: 4956259727598511509, guid: 3e5ec0238a72a694884198887438e827, type: 3}
       propertyPath: m_LocalPosition.x
@@ -79,5 +79,5 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d6962a40249071e408979adf9ab8c9e7, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.PlayerVisual.PlayerSwordAnimation

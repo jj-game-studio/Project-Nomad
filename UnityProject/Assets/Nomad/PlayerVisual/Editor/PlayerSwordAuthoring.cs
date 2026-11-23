@@ -18,10 +18,19 @@ namespace Nomad.PlayerVisual.Editor
         [MenuItem("Nomad/Player Visual/Build Sword Preview")]
         public static void Build()
         {
-            AssetDatabase.CopyAsset(PlayerAnimationAuthoring.ControllerPath, ControllerPath);
+            if (AssetDatabase.LoadAssetAtPath<AnimatorController>(ControllerPath) == null)
+                AssetDatabase.CopyAsset(PlayerAnimationAuthoring.ControllerPath, ControllerPath);
             var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(ControllerPath);
             PlayerVisualAuthoring.Require(controller != null, "Missing sword controller");
             while (controller.layers.Length > 1) controller.RemoveLayer(controller.layers.Length - 1);
+            if (!Array.Exists(controller.parameters, p => p.name == "LocomotionSpeed"))
+                controller.AddParameter("LocomotionSpeed", AnimatorControllerParameterType.Float);
+            foreach (var state in controller.layers[0].stateMachine.states)
+                if (state.state.name == "Run")
+                {
+                    state.state.speedParameter = "LocomotionSpeed";
+                    state.state.speedParameterActive = true;
+                }
 
             var source = AssetDatabase.LoadAssetAtPath<AnimationClip>(
                 "Assets/ThirdParty/ARPGPack/ARPGWarrior/Animations/Humanoid/ARPG_Warrior_Attack_Combo1.anim");
@@ -86,6 +95,13 @@ namespace Nomad.PlayerVisual.Editor
             var previous = Object.FindAnyObjectByType<PlayerAnimation>();
             Object.DestroyImmediate(previous.transform.root.gameObject);
             PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(RigPath));
+            var target = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            target.name = "Sword Target";
+            target.transform.position = new Vector3(0f, 0.9f, 1.5f);
+            target.transform.localScale = new Vector3(0.6f, 0.8f, 0.6f);
+            target.AddComponent<Nomad.Combat.Health>();
+            GameObject.Find("Instructions").GetComponent<TextMesh>().text =
+                "SWORD PREVIEW\nWASD: move | LMB: attack | Tab: equipment\nSpace: jump | Shift: roll";
             EditorSceneManager.SaveScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene(), ScenePath);
             AssetDatabase.SaveAssets();
             Debug.Log($"SWORD_PREVIEW_BUILT sourceLength={source.length:F3}");

@@ -22,6 +22,7 @@ namespace Nomad.PlayerVisual
         private float motionUntil;
         private bool wasGrounded;
         private bool wasRolling;
+        private bool separateRunSpeed;
 
         public string CurrentState => state;
         public Animator Animator => animator;
@@ -33,6 +34,8 @@ namespace Nomad.PlayerVisual
             if (animator == null) animator = GetComponentInChildren<Animator>();
             if (animator != null)
             {
+                foreach (var parameter in animator.parameters)
+                    if (parameter.name == "LocomotionSpeed") separateRunSpeed = true;
                 animator.applyRootMotion = false;
                 // 카메라 가시성 변화로 포즈 갱신이 건너뛰어지지 않게 합니다.
                 animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
@@ -77,7 +80,14 @@ namespace Nomad.PlayerVisual
             else if ((state == "Roll" || (state == "Land" && controller.isGrounded)) && Time.time < motionUntil)
                 next = state;
 
-            animator.speed = next == "Run" ? Mathf.Clamp(speed / 5f, 0.15f, 2f) : 1f;
+            float runSpeed = next == "Run" ? Mathf.Clamp(speed / 5f, 0.15f, 2f) : 1f;
+            if (separateRunSpeed)
+            {
+                // 이동 속도가 상체 공격 레이어의 재생 시간까지 바꾸지 않게 합니다.
+                animator.speed = 1f;
+                animator.SetFloat("LocomotionSpeed", runSpeed);
+            }
+            else animator.speed = runSpeed;
             if (next == state && !rollStarted && !jumpStarted) return;
 
             // 일회 동작은 처음부터 재생하고, 착지와 이동 전환은 짧게 혼합합니다.

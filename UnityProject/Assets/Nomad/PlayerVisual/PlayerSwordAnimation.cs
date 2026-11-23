@@ -1,5 +1,6 @@
 using Nomad.Equipment;
 using Nomad.Inventory;
+using Nomad.Combat;
 using UnityEngine;
 
 namespace Nomad.PlayerVisual
@@ -18,6 +19,11 @@ namespace Nomad.PlayerVisual
         private PlayerEquipmentCombat combat;
         private EquipmentCombatVisuals visuals;
         private Animator animator;
+        private Health health;
+        private PlayerInventory inventory;
+        private Transform visualRoot;
+        private Quaternion restingRotation;
+        private Quaternion attackFacing;
         private Transform socket;
         private int layer = -1;
         private float until;
@@ -29,6 +35,10 @@ namespace Nomad.PlayerVisual
         private void Awake()
         {
             locomotion = GetComponent<PlayerAnimation>();
+            health = GetComponent<Health>();
+            inventory = GetComponent<PlayerInventory>();
+            visualRoot = transform.Find("Visual");
+            if (visualRoot != null) restingRotation = visualRoot.localRotation;
             combat = GetComponent<PlayerEquipmentCombat>();
             visuals = GetComponent<EquipmentCombatVisuals>();
             animator = GetComponentInChildren<Animator>();
@@ -42,7 +52,7 @@ namespace Nomad.PlayerVisual
             socket = new GameObject("WeaponSocket").transform;
             socket.SetParent(hand, false);
             socket.localPosition = new Vector3(0.02f, -0.015f, 0.015f);
-            socket.localRotation = Quaternion.Euler(0f, 0f, 90f);
+            socket.localRotation = Quaternion.Euler(-90f, 0f, 0f);
         }
 
         private void OnEnable()
@@ -64,6 +74,11 @@ namespace Nomad.PlayerVisual
                 return;
 
             // 기존 즉시 타격에 맞춰 접촉 구간부터 재생합니다. 준비 동작의 지연 판정은 별도 조율 대상입니다.
+            if (combat.AimPoint.HasValue)
+            {
+                Vector3 direction = Vector3.ProjectOnPlane(combat.AimPoint.Value - combat.AttackOrigin, Vector3.up);
+                if (direction.sqrMagnitude > 0.001f) attackFacing = Quaternion.LookRotation(direction);
+            }
             animator.Play("SwordAttack", layer, StrikeNormalizedTime);
             animator.SetLayerWeight(layer, 1f);
             until = Time.time + combat.CurrentWeapon.AttackInterval * (1f - StrikeNormalizedTime);
@@ -74,7 +89,8 @@ namespace Nomad.PlayerVisual
         {
             if (layer < 0) return;
             if (combat.CurrentWeapon?.ItemId != SwordId || locomotion.CurrentState is "Roll" or "Jump" or "Fall" ||
-                !combat.isActiveAndEnabled || combat.InputBlocked || combat.EquipmentUiOpen)
+                !combat.isActiveAndEnabled || combat.InputBlocked || combat.EquipmentUiOpen || health.IsDead ||
+                inventory?.BlocksTradeInput == true)
             {
                 Stop();
                 return;
@@ -83,11 +99,14 @@ namespace Nomad.PlayerVisual
             if (swinging && Time.time >= until) swinging = false;
             float weight = swinging ? 1f : Mathf.MoveTowards(animator.GetLayerWeight(layer), 0f, Time.deltaTime * 12f);
             animator.SetLayerWeight(layer, weight);
+            if (visualRoot != null)
+                visualRoot.localRotation = weight > 0.01f ? Quaternion.Inverse(transform.rotation) * attackFacing : restingRotation;
         }
 
         private void Stop()
         {
             swinging = false;
+            if (visualRoot != null) visualRoot.localRotation = restingRotation;
             if (animator != null && layer >= 0) animator.SetLayerWeight(layer, 0f);
         }
     }
