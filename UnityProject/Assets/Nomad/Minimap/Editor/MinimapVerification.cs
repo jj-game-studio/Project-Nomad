@@ -125,8 +125,9 @@ namespace Nomad.Minimap.Editor
                         Capture("minimap-field.png");
                         previousTexture = minimap.MapTexture;
                         revision = minimap.Revision;
-                        TerrainGenerator generator = manager.CurrentRegion.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<TerrainGenerator>()).First();
-                        generator.Generate();
+                        TerrainIntegrationControls controls = manager.CurrentRegion.GetRootGameObjects()
+                            .SelectMany(root => root.GetComponentsInChildren<TerrainIntegrationControls>()).First();
+                        controls.Regenerate(false);
                         Require(!minimap.MapReady, "재생성 시작 시 이전 지도 즉시 무효화");
                         stage++;
                         break;
