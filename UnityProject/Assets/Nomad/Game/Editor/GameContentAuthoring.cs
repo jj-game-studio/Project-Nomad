@@ -158,6 +158,7 @@ namespace Nomad.Game.Editor
             player.AddComponent<PlayerQuickSlots>();
             WeaponContentAuthoring.Configure(player, camera, muzzle, projectile);
             player.AddComponent<PlayerInteraction>();
+            player.AddComponent<PlayerStamina>(); // 구르기 소모와 캐릭터 옆 게이지 값(#146)
             Set(player.AddComponent<CharacterStaminaHud>(), "viewCamera", camera);
             Set(player.AddComponent<InteractionHints>(), "viewCamera", camera);
         }

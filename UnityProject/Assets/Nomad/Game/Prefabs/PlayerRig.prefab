@@ -221,6 +221,7 @@ GameObject:
   - component: {fileID: 7348005141881703450}
   - component: {fileID: 3102047416739564960}
   - component: {fileID: 46609741334245826}
+  - component: {fileID: 4729146028511538819}
   - component: {fileID: 6769945103758784551}
   - component: {fileID: 3340809101191599813}
   - component: {fileID: 1887090300961367808}
@@ -461,6 +462,22 @@ MonoBehaviour:
   obstacleLayers:
     serializedVersion: 2
     m_Bits: 4294967291
+--- !u!114 &4729146028511538819
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5530718413862153197}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4af9bd5b251bd4f4c91f9fb5dfeceedc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Nomad.Player.PlayerStamina
+  maximum: 100
+  recoveryPerSecond: 25
+  recoveryDelay: 1
+  rollCost: 25
 --- !u!114 &6769945103758784551
 MonoBehaviour:
   m_ObjectHideFlags: 0

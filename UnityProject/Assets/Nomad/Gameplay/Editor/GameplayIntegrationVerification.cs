@@ -336,6 +336,7 @@ namespace Nomad.Gameplay.Editor
             Require(Mathf.Abs(sideHud.Fraction - hud.StaminaFraction) < 0.02f && sideHud.Fraction < 1f,
                 "side gauge and bottom HUD show same partial stamina");
             yield return Until(() => sideHud.Visible, "side stamina gauge visible", 1f);
+            Require(!sideHud.IsLow && sideHud.FillColor.g > 0.6f, "gauge stays amber above 33%");
 
             // 쿨다운이 지난 뒤 스태미나를 비우면 구르기가 거절되고 부족 알림이 갑니다.
             yield return Until(() => !movement.IsRolling, "roll ends", 2f);
@@ -346,6 +347,7 @@ namespace Nomad.Gameplay.Editor
             Require(stamina.TrySpend(Mathf.FloorToInt(stamina.Current)), "drain stamina fixture");
             yield return Press(UnityEngine.InputSystem.Key.LeftShift);
             Require(!movement.IsRolling && alerts == 1, "roll refused when stamina is low");
+            Require(sideHud.IsLow && sideHud.FillColor.r > sideHud.FillColor.g * 2f, "gauge turns red below 33%");
 
             float drained = stamina.Current;
             yield return Until(() => stamina.Current > drained + 1f, "stamina recovers after delay", 3f);
