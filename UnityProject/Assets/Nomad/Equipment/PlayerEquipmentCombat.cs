@@ -35,16 +35,34 @@ namespace Nomad.Equipment
         private bool restoreLegacy;
         private bool holdingAttack;
         private float nextAttackTime;
+        private bool inputBlocked;
+        private bool equipmentUiOpen;
+        private ItemDefinition pendingWeapon;
+        private EquipmentSlot pendingSlot;
+        private Vector3 pendingDirection;
+        private float strikeTime;
+        private IMeleeAttackTiming pendingTiming;
         private float walkableNormalY = Mathf.Cos(50f * Mathf.Deg2Rad);
 
         public event Action<WeaponAttackMode> Attacked;
+        public event Action<ItemDefinition, Vector3> MeleeStarted;
+        public event Action MeleeCancelled;
         public event Action<Vector3> Impacted;
         // 시각 효과가 무기별 연출을 고를 수 있도록 발사체와 명중 지점을 무기와 함께 알립니다.
         public event Action<Projectile, ItemDefinition> Fired;
         public event Action<Vector3, ItemDefinition> WeaponImpacted;
         public Vector3? AimPoint { get; private set; }
-        public bool InputBlocked { get; set; }
-        public bool EquipmentUiOpen { get; internal set; }
+        public bool InputBlocked
+        {
+            get => inputBlocked;
+            set { inputBlocked = value; if (value) CancelMelee(); }
+        }
+        public bool EquipmentUiOpen
+        {
+            get => equipmentUiOpen;
+            internal set { equipmentUiOpen = value; if (value) CancelMelee(); }
+        }
+        public bool IsMeleePending => pendingWeapon != null;
         public Vector3 AttackOrigin => transform.position + Vector3.up;
         public Vector3 ProjectileOrigin => muzzle != null ? muzzle.position : AttackOrigin;
         public LayerMask CollisionLayers => collisionLayers;
@@ -66,6 +84,8 @@ namespace Nomad.Equipment
 
         private void OnEnable()
         {
+            equipment.Changed += EquipmentChanged;
+            health.Died += OnDied;
             // 기존 전투 컴포넌트가 있는 프리팹에서도 한 클릭이 두 번 공격하지 않습니다.
             restoreLegacy = legacyCombat != null && legacyCombat.enabled;
             if (restoreLegacy)
@@ -74,12 +94,16 @@ namespace Nomad.Equipment
 
         private void OnDisable()
         {
+            equipment.Changed -= EquipmentChanged;
+            health.Died -= OnDied;
+            CancelMelee();
             if (restoreLegacy && legacyCombat != null)
                 legacyCombat.enabled = true;
         }
 
         private void LateUpdate()
         {
+            ResolveMelee();
             Mouse mouse = Mouse.current;
             if (mouse == null || !mouse.leftButton.isPressed)
             {
@@ -99,6 +123,7 @@ namespace Nomad.Equipment
 
         public bool TryAttack(Vector2 pointer)
         {
+            if (IsMeleePending) return false;
             AimPoint = null;
             ItemDefinition weapon = CurrentWeapon;
             if (!isActiveAndEnabled || !equipment.isActiveAndEnabled || InputBlocked || EquipmentUiOpen ||
@@ -119,6 +144,23 @@ namespace Nomad.Equipment
                     return false;
 
                 nextAttackTime = Time.time + weapon.AttackInterval;
+                var timing = GetComponent<IMeleeAttackTiming>();
+                float windup = timing is Behaviour presenter && presenter.isActiveAndEnabled
+                    ? timing.GetWindup(weapon) : 0f;
+
+                if (windup > 0f && !float.IsInfinity(windup))
+                {
+                    pendingWeapon = weapon;
+                    pendingSlot = equipment.ActiveWeaponSlot;
+                    pendingDirection = direction;
+                    pendingTiming = timing;
+                    strikeTime = Time.time + Mathf.Min(windup, weapon.AttackInterval);
+
+                    AimPoint = aim;
+                    MeleeStarted?.Invoke(weapon, direction);
+                    return true;
+                }
+
                 Melee(origin, direction, weapon);
             }
             else if (!TryFire(weapon, aim))
@@ -128,6 +170,48 @@ namespace Nomad.Equipment
             Attacked?.Invoke(mode);
             return true;
         }
+
+        private void ResolveMelee()
+        {
+            if (!IsMeleePending) return;
+            if (!equipment.isActiveAndEnabled || CurrentWeapon != pendingWeapon ||
+                equipment.ActiveWeaponSlot != pendingSlot || InputBlocked || EquipmentUiOpen ||
+                inventory?.BlocksTradeInput == true || health.IsDead || movement.BlocksAttack || movement.IsRolling ||
+                pendingTiming is not Behaviour presenter || presenter == null || !presenter.isActiveAndEnabled ||
+                pendingTiming.GetWindup(pendingWeapon) <= 0f)
+            {
+                CancelMelee();
+                return;
+            }
+
+            // 일시정지 중에는 취소 조건만 확인하고 준비 시간이 진행되지 않습니다.
+            if (Time.timeScale <= 0f || Time.time < strikeTime) return;
+            ItemDefinition weapon = pendingWeapon;
+            Vector3 direction = pendingDirection;
+            pendingWeapon = null;
+            pendingTiming = null;
+            AimPoint = AttackOrigin + direction * weapon.AttackRange;
+
+            // 준비 중 이동한 현재 위치에서, 시작할 때 고정한 방향으로 한 번만 판정합니다.
+            Melee(AttackOrigin, direction, weapon);
+            Attacked?.Invoke(WeaponAttackMode.Melee);
+        }
+
+        private void CancelMelee()
+        {
+            if (!IsMeleePending) return;
+            pendingWeapon = null;
+            pendingTiming = null;
+            MeleeCancelled?.Invoke();
+        }
+
+        private void EquipmentChanged()
+        {
+            if (IsMeleePending && (CurrentWeapon != pendingWeapon || equipment.ActiveWeaponSlot != pendingSlot))
+                CancelMelee();
+        }
+
+        private void OnDied(Health _) => CancelMelee();
 
         private bool TryFire(ItemDefinition weapon, Vector3 aim)
         {
