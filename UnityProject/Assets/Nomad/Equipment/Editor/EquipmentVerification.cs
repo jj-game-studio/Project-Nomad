@@ -23,6 +23,8 @@ namespace Nomad.Equipment.Editor
         private static Health far;
         private static GameObject wall;
         private static Keyboard keyboard;
+        private static Mouse mouse;
+        private static int heldAttacks;
         private static int stage;
         private static int checks;
         private static float started;
@@ -71,7 +73,7 @@ namespace Nomad.Equipment.Editor
                     return;
                 if (equipment == null)
                     Initialize();
-                if (stage != 6 && Time.time - started < 0.95f)
+                if (stage != 8 && Time.time - started < 0.95f)
                     return;
 
                 switch (stage)
@@ -119,11 +121,24 @@ namespace Nomad.Equipment.Editor
                         equipment.enabled = true;
                         break;
                     case 5:
+                        // 좌클릭을 누른 채로 두면 클릭 없이도 공격 간격마다 다시 공격합니다.
+                        mouse = InputSystem.AddDevice<Mouse>();
+                        mouse.MakeCurrent();
+                        combat.Attacked += _ => heldAttacks++;
+                        InputSystem.QueueStateEvent(mouse, new MouseState { position = Point(far.transform.position) }.WithButton(MouseButton.Left));
+                        break;
+                    case 6:
+                        Check(heldAttacks >= 2, $"좌클릭 유지 연속 공격: {heldAttacks}회");
+                        InputSystem.QueueStateEvent(mouse, new MouseState { position = Point(far.transform.position) });
+                        heldAttacks = 0;
+                        break;
+                    case 7:
+                        Check(heldAttacks == 0, "좌클릭 해제 후 공격 중단");
                         keyboard = InputSystem.AddDevice<Keyboard>();
                         keyboard.MakeCurrent();
                         InputSystem.QueueStateEvent(keyboard, new KeyboardState(UnityEngine.InputSystem.Key.LeftShift));
                         break;
-                    case 6:
+                    case 8:
                         if (!equipment.GetComponent<PlayerMovement>().IsRolling)
                         {
                             Check(Time.time - started < 0.25f, "구르기 입력 소비");
@@ -134,10 +149,10 @@ namespace Nomad.Equipment.Editor
                         Check(health.TryApplyDamage(1, DamageKind.Fall), "구르기 중 낙하 피해 유지");
                         InputSystem.QueueStateEvent(keyboard, new KeyboardState());
                         break;
-                    case 7:
+                    case 9:
                         Check(health.TryApplyDamage(1000) && health.IsDead, "장비 상태 사망");
                         Check(!combat.TryAttack(Point(far.transform.position)), "사망 공격 차단");
-                        Debug.Log($"EQUIPMENT_PLAYMODE_PASS: {checks} checks; transfers, CSV, multi-melee, fists, ranged, armor, roll/death");
+                        Debug.Log($"EQUIPMENT_PLAYMODE_PASS: {checks} checks; transfers, CSV, multi-melee, fists, ranged, hold attack, armor, roll/death");
                         Finish(0);
                         return;
                 }
@@ -261,6 +276,7 @@ namespace Nomad.Equipment.Editor
             EditorApplication.update -= Tick;
             Time.timeScale = 1;
             if (keyboard != null) InputSystem.RemoveDevice(keyboard);
+            if (mouse != null) InputSystem.RemoveDevice(mouse);
             EditorApplication.Exit(code);
         }
     }
