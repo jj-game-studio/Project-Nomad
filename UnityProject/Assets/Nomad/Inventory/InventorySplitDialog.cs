@@ -149,7 +149,7 @@ namespace Nomad.Inventory
                 error = "아이템이 변경되었습니다. 분할 창을 다시 열어 주세요.";
             else if (!validAmount)
                 error = $"1 ~ {count - 1}개를 입력하세요.";
-            else if (inventory.UsedSlots >= PlayerInventory.Capacity)
+            else if (inventory.UsedSlots >= inventory.SlotCount)
                 error = "빈 가방칸이 필요합니다.";
 
             if (validAmount) slider.SetValueWithoutNotify(amount);

@@ -24,6 +24,8 @@ namespace Nomad.Player
 
         // 지역 규칙(예: 마을 1.5배)이 걷기 속도에 곱하는 배율입니다. 구르기 속도는 바꾸지 않습니다.
         public float SpeedMultiplier { get; set; } = 1f;
+        // 장비 이동속도 배율입니다. 마을 배율(SpeedMultiplier)과 곱해집니다.
+        public float StatSpeedMultiplier { get; set; } = 1f;
 
         private CharacterController controller;
         private Health health;
@@ -153,7 +155,7 @@ namespace Nomad.Player
                 verticalSpeed -= Gravity * deltaTime;
             }
 
-            Vector3 planarVelocity = direction * (MoveSpeed * SpeedMultiplier);
+            Vector3 planarVelocity = direction * (MoveSpeed * SpeedMultiplier * StatSpeedMultiplier);
             if (IsRolling)
                 planarVelocity = rollBlocked ? Vector3.zero : rollDirection * RollSpeed;
             else if (direction.sqrMagnitude > 0f)

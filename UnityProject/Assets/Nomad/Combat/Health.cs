@@ -14,25 +14,46 @@ namespace Nomad.Combat
     {
         [SerializeField, Min(1)] private int maxHealth = 100;
 
-        public int MaxHealth => maxHealth;
+        private int maxHealthBonus;
+
+        public int BaseMaxHealth => maxHealth;
+        public int MaxHealth => Mathf.Max(1, maxHealth + maxHealthBonus);
         public int CurrentHealth { get; private set; }
         public bool IsDead => CurrentHealth == 0;
         public bool IsCombatImmune { get; set; }
 
         public event Action<Health> Died;
+        public event Action<Health> Evaded;
 
         private void Awake()
         {
-            CurrentHealth = maxHealth;
+            CurrentHealth = MaxHealth;
+        }
+
+        // 장비로 바뀐 최대 체력입니다. 늘어나도 현재 체력은 그대로, 줄어들면 새 최대치로 맞춥니다.
+        public void SetMaxHealthBonus(int bonus)
+        {
+            maxHealthBonus = bonus;
+            CurrentHealth = Mathf.Min(CurrentHealth, MaxHealth);
+        }
+
+        // 살아 있을 때만 최대 체력까지 회복합니다. 실제로 회복했으면 true입니다.
+        public bool Heal(int amount)
+        {
+            if (amount <= 0 || IsDead || CurrentHealth >= MaxHealth)
+                return false;
+
+            CurrentHealth = Mathf.Min(MaxHealth, CurrentHealth + amount);
+            return true;
         }
 
         // 살아 있을 때만 최대 체력까지 회복합니다. 실제로 회복했으면 true입니다.
         public bool RestoreFull()
         {
-            if (IsDead || CurrentHealth == maxHealth)
+            if (IsDead || CurrentHealth == MaxHealth)
                 return false;
 
-            CurrentHealth = maxHealth;
+            CurrentHealth = MaxHealth;
             return true;
         }
 
@@ -41,8 +62,16 @@ namespace Nomad.Combat
             if (amount <= 0 || IsDead || (kind == DamageKind.Combat && IsCombatImmune))
                 return false;
 
+            // 보정 결과가 0 이하이면 회피한 공격으로 보고 피해를 적용하지 않습니다.
             if (kind == DamageKind.Combat && TryGetComponent(out ICombatDamageModifier modifier))
-                amount = Mathf.Max(1, modifier.ModifyCombatDamage(amount));
+            {
+                amount = modifier.ModifyCombatDamage(amount);
+                if (amount <= 0)
+                {
+                    Evaded?.Invoke(this);
+                    return false;
+                }
+            }
 
             CurrentHealth = Mathf.Max(0, CurrentHealth - amount);
             if (IsDead)

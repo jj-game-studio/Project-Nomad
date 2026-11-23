@@ -71,21 +71,33 @@ namespace Nomad.Inventory
 
         public void ShowCompared(ItemDefinition item, Vector2 position, Camera camera, ItemDefinition[] equipped, int count)
         {
+            // 후보와 장착 장비 중 한쪽에라도 있는 스탯을 장착 장비별로 비교합니다.
             string stats = string.Empty;
             for (int index = 0; index < count; index++)
             {
-                if (index > 0) stats += "\n";
-                string label = count > 1 ? $"방어력 · 토템 {index + 1}" : "방어력";
-                stats += $"{label} {item.Defense} ({Difference(item.Defense, equipped[index].Defense)})";
+                if (count > 1)
+                    stats += (stats.Length > 0 ? "\n" : string.Empty) + $"장착 {index + 1} ({equipped[index].DisplayName}) 대비";
+
+                for (int stat = 0; stat <= (int)StatType.InventorySlots; stat++)
+                {
+                    var type = (StatType)stat;
+                    float value = item.GetStat(type);
+                    float current = equipped[index].GetStat(type);
+                    if (value == 0 && current == 0)
+                        continue;
+
+                    if (stats.Length > 0) stats += "\n";
+                    stats += $"{StatFormat.Name(type)} {StatFormat.Value(type, value)} ({Difference(type, value, current)})";
+                }
             }
             Present(item, 1, position, camera, 320f, null, stats);
         }
 
-        private static string Difference(int value, int current)
+        private static string Difference(StatType stat, float value, float current)
         {
-            long difference = (long)value - current;
-            if (difference > 0) return $"<color=#80D99A>▲{difference}</color>";
-            if (difference < 0) return $"<color=#F08383>▼{-difference}</color>";
+            float difference = value - current;
+            if (difference > 0.001f) return $"<color=#80D99A>▲{StatFormat.Value(stat, difference)}</color>";
+            if (difference < -0.001f) return $"<color=#F08383>▼{StatFormat.Value(stat, -difference)}</color>";
             return "-";
         }
 
@@ -183,6 +195,8 @@ namespace Nomad.Inventory
 
             if (item.Defense > 0)
                 stats += (stats.Length > 0 ? "\n" : string.Empty) + $"방어력 {item.Defense}";
+            foreach (StatModifier modifier in item.Stats)
+                stats += (stats.Length > 0 ? "\n" : string.Empty) + $"{StatFormat.Name(modifier.Stat)} {StatFormat.Bonus(modifier.Stat, modifier.Value)}";
 
             if (stats.Length == 0)
                 return body;

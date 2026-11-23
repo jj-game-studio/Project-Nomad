@@ -49,10 +49,12 @@ namespace Nomad.Tests
 
         [TestCase(EquipmentType.Weapon, EquipmentSlot.Weapon1, true)]
         [TestCase(EquipmentType.Weapon, EquipmentSlot.Weapon2, true)]
-        [TestCase(EquipmentType.Totem, EquipmentSlot.Totem2, true)]
+        [TestCase(EquipmentType.Accessory, EquipmentSlot.Accessory3, true)]
+        [TestCase(EquipmentType.Legs, EquipmentSlot.Legs, true)]
+        [TestCase(EquipmentType.Feet, EquipmentSlot.Head, false)]
         [TestCase(EquipmentType.Head, EquipmentSlot.Body, false)]
         [TestCase(EquipmentType.None, EquipmentSlot.Weapon1, false)]
-        [TestCase(EquipmentType.Weapon, EquipmentSlot.Ring, false)]
+        [TestCase(EquipmentType.Weapon, EquipmentSlot.Accessory1, false)]
         public void FitsMatchesTypeToSlot(EquipmentType type, EquipmentSlot slot, bool expected)
         {
             Assert.That(PlayerEquipment.Fits(type, slot), Is.EqualTo(expected));

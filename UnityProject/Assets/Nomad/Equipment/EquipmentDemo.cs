@@ -40,7 +40,7 @@ namespace Nomad.Equipment
 
         private void LogEquipment()
         {
-            Debug.Log($"EQUIPMENT_CHANGED: 선택={equipment.ActiveWeaponSlot}, 무기={equipment.ActiveWeapon?.DisplayName ?? "맨손"}, 방어력={equipment.TotalDefense}, 가방={inventory.UsedSlots}/{PlayerInventory.Capacity}");
+            Debug.Log($"EQUIPMENT_CHANGED: 선택={equipment.ActiveWeaponSlot}, 무기={equipment.ActiveWeapon?.DisplayName ?? "맨손"}, 방어력={equipment.TotalDefense}, 가방={inventory.UsedSlots}/{inventory.SlotCount}");
         }
 
         private void Update()
@@ -63,7 +63,7 @@ namespace Nomad.Equipment
 
         private void Equip(string id, EquipmentSlot slot)
         {
-            for (int index = 0; index < PlayerInventory.Capacity; index++)
+            for (int index = 0; index < PlayerInventory.MaxCapacity; index++)
                 if (inventory.GetSlot(index).Item?.ItemId == id)
                 {
                     equipment.TryEquip(index, slot);

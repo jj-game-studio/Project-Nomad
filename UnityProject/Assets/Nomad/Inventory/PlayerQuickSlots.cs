@@ -40,7 +40,7 @@ namespace Nomad.Inventory
         // 가방 칸이 바뀌어도 등록을 유지하도록 위치 대신 아이템 정의를 참조합니다.
         public bool Register(int inventorySlot, int quickSlot)
         {
-            if ((uint)inventorySlot >= PlayerInventory.Capacity || (uint)quickSlot >= Capacity)
+            if ((uint)inventorySlot >= PlayerInventory.MaxCapacity || (uint)quickSlot >= Capacity)
                 return false;
 
             ItemDefinition item = inventory.GetSlot(inventorySlot).Item;

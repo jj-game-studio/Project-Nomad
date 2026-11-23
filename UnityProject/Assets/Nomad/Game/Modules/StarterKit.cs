@@ -46,7 +46,7 @@ namespace Nomad.Game.Modules
 
         private static int FindSlot(PlayerInventory inventory, string itemId)
         {
-            for (int index = 0; index < PlayerInventory.Capacity; index++)
+            for (int index = 0; index < PlayerInventory.MaxCapacity; index++)
             {
                 if (inventory.GetSlot(index).Item?.ItemId == itemId)
                     return index;

@@ -7,15 +7,19 @@ namespace Nomad.Inventory
     [DisallowMultipleComponent]
     public sealed class PlayerInventory : MonoBehaviour
     {
+        // 가방 장비가 없을 때의 칸 수입니다. 가방 장비는 MaxCapacity까지 칸을 늘립니다.
         public const int Capacity = 20;
+        public const int MaxCapacity = 30;
 
         [SerializeField] private ItemDefinition[] items = Array.Empty<ItemDefinition>();
 
         private readonly Dictionary<string, ItemDefinition> catalog = new(StringComparer.Ordinal);
-        private readonly ItemStack[] slots = new ItemStack[Capacity];
-        private readonly List<int> stackOrder = new(Capacity);
+        private readonly ItemStack[] slots = new ItemStack[MaxCapacity];
+        private readonly List<int> stackOrder = new(MaxCapacity);
 
         public int UsedSlots => stackOrder.Count;
+        // 현재 사용할 수 있는 칸 수입니다. 이 번호 이상의 칸은 잠겨 있어 아이템을 넣을 수 없습니다.
+        public int SlotCount { get; private set; } = Capacity;
         internal InventoryPanel Panel { get; set; }
         internal bool HasOpenTrade { get; private set; }
         private int tradeClosedFrame = -1;
@@ -56,6 +60,27 @@ namespace Nomad.Inventory
             return slots[index];
         }
 
+        // 줄어드는 칸이 모두 비어 있을 때만 바꿉니다. ignoredSlot은 같은 전송에서 비워질 칸입니다.
+        public bool CanResize(int slotCount, int ignoredSlot = -1)
+        {
+            if (slotCount < 1 || slotCount > MaxCapacity)
+                return false;
+
+            for (int index = slotCount; index < MaxCapacity; index++)
+                if (index != ignoredSlot && slots[index].Item != null)
+                    return false;
+            return true;
+        }
+
+        internal bool TryResize(int slotCount)
+        {
+            if (!CanResize(slotCount))
+                return false;
+
+            SlotCount = slotCount;
+            return true;
+        }
+
         public int GetCount(string itemId)
         {
             return TryGetItem(itemId, out ItemDefinition item) ? GetCount(item) : 0;
@@ -73,6 +98,9 @@ namespace Nomad.Inventory
 
         internal int SpaceInSlot(int index, ItemDefinition item)
         {
+            if ((uint)index >= SlotCount)
+                return 0;
+
             ItemStack slot = slots[index];
             return slot.Item == null || slot.Item == item ? item.MaxStack - slot.Count : 0;
         }
@@ -113,7 +141,7 @@ namespace Nomad.Inventory
 
         public bool MoveStack(int from, int to)
         {
-            if ((uint)from >= Capacity || (uint)to >= Capacity || from == to)
+            if ((uint)from >= SlotCount || (uint)to >= SlotCount || from == to)
                 return false;
 
             ItemStack source = slots[from];
@@ -168,7 +196,7 @@ namespace Nomad.Inventory
                 remaining -= added;
             }
 
-            for (int index = 0; index < slots.Length && UsedSlots < Capacity && remaining > 0; index++)
+            for (int index = 0; index < SlotCount && remaining > 0; index++)
             {
                 if (slots[index].Item != null)
                     continue;
