@@ -19,7 +19,7 @@ namespace Nomad.Loot.Editor
     {
         private const string SessionKey = "Nomad.Loot.TerrainVerify";
         private const int SweepSeeds = 20;
-        private static readonly string[] Items = { "scrap", "field-knife", "field-vest" };
+        private static readonly string[] Items = { "scrap", "weapon-dagger", "gear-padded-armor" };
         private static double deadline;
         private static int frame;
         private static int starterSlots;

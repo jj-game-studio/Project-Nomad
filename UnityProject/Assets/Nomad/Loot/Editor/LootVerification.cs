@@ -187,7 +187,7 @@ namespace Nomad.Loot.Editor
             var chest = new GameObject("Loot test").AddComponent<LootChest>();
             chest.Initialize("test", new[] { new LootStack("scrap", 10) });
             inventory.Add("scrap", 96);
-            inventory.Add("field-knife", 19);
+            inventory.Add("weapon-dagger", 19);
             int recursive = -1;
             Action reenter = () => recursive = chest.TryLoot(inventory);
             inventory.Changed += reenter;
@@ -201,7 +201,7 @@ namespace Nomad.Loot.Editor
             Object.Destroy(chest.gameObject);
 
             chest = new GameObject("Unknown and ordered loot").AddComponent<LootChest>();
-            chest.Initialize("ordered", new[] { new LootStack("unknown", 3), new LootStack("scrap", 100), new LootStack("field-knife", 2) });
+            chest.Initialize("ordered", new[] { new LootStack("unknown", 3), new LootStack("scrap", 100), new LootStack("weapon-dagger", 2) });
             Require(chest.TryLoot(inventory) == 92, "목록 순서 및 기존 스택 우선");
             Require(chest.GetStack(0).Count == 3 && chest.GetStack(1).Count == 8 && chest.GetStack(2).Count == 2, "미등록 ID/공간 부족 보존");
             Object.Destroy(chest.gameObject);
@@ -219,7 +219,7 @@ namespace Nomad.Loot.Editor
 
             inventory.Add("scrap", 89);
             chest = new GameObject("Storage test").AddComponent<LootChest>();
-            chest.Initialize("store", new[] { new LootStack("scrap", 96), new LootStack("field-knife", 1) });
+            chest.Initialize("store", new[] { new LootStack("scrap", 96), new LootStack("weapon-dagger", 1) });
             bool observedComplete = false;
             Action observe = () =>
             {
@@ -329,8 +329,8 @@ namespace Nomad.Loot.Editor
             var data = new SerializedObject(inventory);
             SerializedProperty items = data.FindProperty("items");
             items.arraySize = 2;
-            items.GetArrayElementAtIndex(0).objectReferenceValue = AssetDatabase.LoadAssetAtPath<ItemDefinition>("Assets/Nomad/Inventory/Demo/scrap.asset");
-            items.GetArrayElementAtIndex(1).objectReferenceValue = AssetDatabase.LoadAssetAtPath<ItemDefinition>("Assets/Nomad/Inventory/Demo/field-knife.asset");
+            items.GetArrayElementAtIndex(0).objectReferenceValue = AssetDatabase.LoadAssetAtPath<ItemDefinition>("Assets/Nomad/Equipment/Items/scrap.asset");
+            items.GetArrayElementAtIndex(1).objectReferenceValue = AssetDatabase.LoadAssetAtPath<ItemDefinition>("Assets/Nomad/Equipment/Items/weapon-dagger.asset");
             data.ApplyModifiedPropertiesWithoutUndo();
             root.SetActive(true);
             return inventory;

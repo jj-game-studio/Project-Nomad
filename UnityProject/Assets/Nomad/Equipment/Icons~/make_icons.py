@@ -3,6 +3,7 @@
 import math
 import os
 import struct
+import sys
 import zlib
 
 SIZE = 128
@@ -284,6 +285,55 @@ def eye(c, iris):
     c.shape(ellipse(14, 13, 1.2, 1.2), (255, 255, 255), outline=False)
 
 
+# ---- 판매용 고철 (#120) ----
+
+def scrap_plate(c, metal, rust):
+    c.shape(poly([(5, 10), (19, 5), (27, 13), (24, 26), (9, 27), (4, 19)]), metal)
+    c.shape(ellipse(12, 15, 3, 2.5), rust, outline=False)
+    c.shape(ellipse(20, 21, 2.5, 2), rust, outline=False)
+    c.shape(ellipse(19, 11, 1.4, 1.4), INK, outline=False)
+    c.shape(ellipse(10, 22, 1.4, 1.4), INK, outline=False)
+
+
+def gear(c, metal):
+    teeth = []
+    for i in range(16):
+        a = math.pi * 2 * i / 16
+        r = 13 if i % 2 == 0 else 10
+        teeth.append((16 + math.cos(a) * r, 16 + math.sin(a) * r))
+    c.shape(poly(teeth), metal)
+    c.shape(ellipse(16, 16, 6, 6, inner=0.55), shade(metal, 0.7), outline=False)
+    c.shape(ellipse(14, 12, 2, 1.4), shade(metal, 1.35), outline=False)
+
+
+def ornament(c, metal, gem):
+    c.shape(ellipse(16, 16, 12, 9), metal)
+    c.shape(ellipse(16, 16, 9, 6.5, inner=0.8), shade(metal, 0.7), outline=False)
+    c.shape(diamond(16, 16, 4.5), gem)
+    c.shape(ellipse(10, 12, 2, 1.2), shade(metal, 1.3), outline=False)
+
+
+def nugget(c, metal):
+    c.shape(poly([(5, 22), (8, 13), (15, 8), (24, 10), (28, 18), (24, 26), (12, 27)]), metal)
+    c.shape(poly([(10, 14), (15, 10), (20, 11), (14, 15)]), shade(metal, 1.3), outline=False)
+    c.shape(poly([(18, 24), (25, 19), (24, 24)]), shade(metal, 0.7), outline=False)
+
+
+def gem_cluster(c, base):
+    c.shape(poly([(5, 27), (9, 14), (13, 27)]), shade(base, 0.8))
+    c.shape(poly([(19, 27), (23, 12), (27, 27)]), shade(base, 0.8))
+    c.shape(poly([(10, 27), (12, 9), (16, 4), (20, 9), (22, 27)]), base)
+    c.shape(poly([(16, 4), (20, 9), (19, 24), (16, 27)]), shade(base, 1.3), outline=False)
+
+
+def relic(c, stone_color, glow):
+    c.shape(rect(7, 4, 25, 28, radius=3), stone_color)
+    c.shape(rect(10, 7, 22, 25, radius=2), shade(stone_color, 0.75), outline=False)
+    c.shape(poly([(16, 9), (21, 20), (11, 20)]), glow, outline=False)
+    c.shape(ellipse(16, 16, 1.6, 1.6), shade(stone_color, 0.5), outline=False)
+    c.shape(line(11, 23, 21, 23, 1.2), glow, outline=False)
+
+
 LEATHER, IRON, STEEL, GOLD =hexc("8A5A36"), hexc("8C96A0"), hexc("B8C4CE"), hexc("D9B04A")
 MITHRIL, DRAGON, CELESTIAL = hexc("9FC3D6"), hexc("A8392E"), hexc("F2EAD0")
 ICONS = {
@@ -334,11 +384,22 @@ ICONS = {
     "gear-raptor-eye": lambda c: eye(c, hexc("E3A62B")),
     "gear-eternal-heart": lambda c: heart(c, hexc("D2283C")),
     "gear-storm-seal": lambda c: seal(c, hexc("5A6B7D"), hexc("F2E14A")),
+    # 판매용 고철: 티어가 높을수록 귀한 재료로 보이게 합니다.
+    "scrap": lambda c: scrap_plate(c, hexc("7E848A"), hexc("A0582E")),
+    "scrap-copper": lambda c: gear(c, hexc("C9783F")),
+    "scrap-silver": lambda c: ornament(c, hexc("C9D1D8"), hexc("5C9BD6")),
+    "scrap-gold": lambda c: nugget(c, GOLD),
+    "scrap-gem": lambda c: gem_cluster(c, hexc("3FC7B5")),
+    "scrap-relic": lambda c: relic(c, hexc("8A7F6A"), hexc("8FE3FF")),
 }
 
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
+    # 인자로 아이템 ID를 주면 그 아이콘만 다시 그립니다.
+    only = set(sys.argv[1:])
     for item_id, draw in ICONS.items():
+        if only and item_id not in only:
+            continue
         canvas = Canvas()
         draw(canvas)
         canvas.png(os.path.join(OUT, item_id + ".png"))

@@ -140,7 +140,8 @@ namespace Nomad.Shop
                 return 0;
 
             ShopCatalog.Offer offer = catalog.GetOffer(offerIndex);
-            if (!inventory.TryGetItem(offer.Item.ItemId, out ItemDefinition registered) || registered != offer.Item)
+            if (offer.SellOnly || !inventory.TryGetItem(offer.Item.ItemId, out ItemDefinition registered) ||
+                registered != offer.Item)
                 return 0;
 
             long space = 0;
@@ -183,6 +184,12 @@ namespace Nomad.Shop
                 message = "판매가 잠겨 있습니다. 잠금을 해제한 뒤 판매하세요.";
                 return false;
             }
+            if (buying && offer.SellOnly)
+            {
+                message = "판매만 받는 물건입니다.";
+                return false;
+            }
+
             long total = (long)(buying ? offer.BuyPrice : offer.SellPrice) * quantity;
             if (buying && (stock[offerIndex] < quantity || total > wallet.Gold))
             {
@@ -236,7 +243,8 @@ namespace Nomad.Shop
             try
             {
                 wallet.SetGold((int)(wallet.Gold + (buying ? -total : total)));
-                stock[offerIndex] += buying ? -quantity : quantity;
+                if (!offer.SellOnly)
+                    stock[offerIndex] += buying ? -quantity : quantity;
                 if (buying)
                 {
                     int remaining = quantity;

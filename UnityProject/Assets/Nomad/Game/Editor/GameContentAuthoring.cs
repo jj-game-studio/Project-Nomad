@@ -37,7 +37,7 @@ namespace Nomad.Game.Editor
         // 필드 원본: #73 TerrainTest(Terrain 지면·꾸밈·조명·Volume). 원본 씬은 수정하지 않고 복사합니다(#94).
         private const string FieldSourcePath = Nomad.Terrain.Editor.FieldDressingAuthoring.ScenePath;
         private const string ProjectilePath = "Assets/Nomad/Combat/PlayerProjectile.prefab";
-        private static readonly string[] ItemFolders = { "Assets/Nomad/Inventory/Demo", WeaponContentAuthoring.ItemFolder };
+        private static readonly string[] ItemFolders = { WeaponContentAuthoring.ItemFolder };
 
         [MenuItem("Nomad/Game/Build Game Content")]
         public static void BuildAll()
