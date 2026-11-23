@@ -100,6 +100,7 @@ namespace Nomad.Shop
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = 200;
             CanvasScaler scaler = gameObject.AddComponent<CanvasScaler>();
+            GetComponent<Canvas>().pixelPerfect = true;
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1440, 900);
             scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.Expand;
@@ -167,6 +168,10 @@ namespace Nomad.Shop
             tradePopup = ShopUi.Rect(panel, "Trade Popup", 0, 0, 1160, 630);
             ShopUi.Background(tradePopup, new Color(0.08f, 0.10f, 0.07f, 0.68f));
             RectTransform card = ShopUi.Rect(tradePopup, "Card", 160, 45, 840, 540);
+            tradePopup.gameObject.AddComponent<ShopPopupBackdrop>().Configure(card, () =>
+            {
+                if (!HelpOpen) ClosePopup();
+            });
             ShopUi.Shadow(ShopUi.Rounded(card, ShopUi.Canvas, 24, 2, ShopUi.Border), 6, 0.25f);
             tradeHeading = ShopUi.Heading(card, "Trade heading", "", 30, 20, 560, 36, 26, ShopUi.GoldInk);
             ShopUi.Button(card, "Popup Help", "?", 718, 18, 36, 34, ToggleHelp);
@@ -482,6 +487,7 @@ namespace Nomad.Shop
 
             if (showPopup)
             {
+                saleNotification.gameObject.SetActive(false);
                 popupItem = merchant ? shop.Catalog.GetOffer(index).Item : inventory.GetSlot(index).Item;
                 if (popupItem == null)
                 {
@@ -574,21 +580,20 @@ namespace Nomad.Shop
                 ? shop.TryBuy(inventory, merchantIndex, quantity, out message)
                 : shop.TrySell(inventory, playerIndex, quantity, out message);
 
-            status.text = success && !buying ? "" : message;
+            status.text = success ? "" : message;
             EventSystem.current?.SetSelectedGameObject(null);
             Refresh();
 
-            if (success && !buying)
+            if (success)
             {
                 // Refresh는 잔량에 맞춰 수량을 바꾸므로 완료 금액은 실제 재화 증분으로 표시합니다.
                 string count = soldCount > 1 ? $" {soldCount:N0}개" : "";
-                saleNotificationText.text = $"{popupName}{count} 판매 +{wallet.Gold - previousGold:N0} G";
+                string trade = buying ? "구매" : "판매";
+                int change = wallet.Gold - previousGold;
+                saleNotificationText.text = $"{popupName}{count} {trade} {(change >= 0 ? "+" : "−")}{Mathf.Abs(change):N0} G";
                 saleNotificationUntil = Time.unscaledTime + 3;
                 saleNotification.gameObject.SetActive(true);
-
-                PlayerInventory.ItemStack remaining = inventory.GetSlot(playerIndex);
-                if (remaining.Item != popupItem || remaining.Count == 0)
-                    ClosePopup();
+                ClosePopup();
             }
         }
 
