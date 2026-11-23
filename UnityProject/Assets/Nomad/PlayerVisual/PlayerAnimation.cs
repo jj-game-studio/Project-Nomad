@@ -10,7 +10,9 @@ namespace Nomad.PlayerVisual
     public sealed class PlayerAnimation : MonoBehaviour
     {
         // 외형 재생 시간이며 PlayerMovement의 이동·판정 시간과는 독립입니다.
-        public const float JumpMotionDuration = 1.1f;
+        public const float JumpRiseDuration = 0.35f;
+        public const float JumpFallDuration = 0.35f;
+        public const float LandingMotionDuration = 0.55f;
         public const float RollMotionDuration = 0.8f;
 
         [SerializeField] private Animator animator;
@@ -29,7 +31,12 @@ namespace Nomad.PlayerVisual
             movement = GetComponent<PlayerMovement>();
             controller = GetComponent<CharacterController>();
             if (animator == null) animator = GetComponentInChildren<Animator>();
-            if (animator != null) animator.applyRootMotion = false;
+            if (animator != null)
+            {
+                animator.applyRootMotion = false;
+                // 카메라 가시성 변화로 포즈 갱신이 건너뛰어지지 않게 합니다.
+                animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+            }
         }
 
         private void OnEnable()
@@ -52,16 +59,22 @@ namespace Nomad.PlayerVisual
 
             bool rollStarted = movement.IsRolling && !wasRolling;
             bool jumpStarted = !controller.isGrounded && wasGrounded && velocity.y > 0.1f;
+            bool landed = controller.isGrounded && !wasGrounded && (state == "Jump" || state == "Fall");
             wasRolling = movement.IsRolling;
             wasGrounded = controller.isGrounded;
 
-            // 실제 행동이 끝나도 외형의 마무리는 재생합니다. 새 점프·구르기는 즉시 우선합니다.
+            // 점프는 실제 상승·낙하·착지를 따르고, 구르기와 착지 마무리만 끝까지 재생합니다.
             if (rollStarted || jumpStarted)
             {
                 next = rollStarted ? "Roll" : "Jump";
-                motionUntil = Time.time + (rollStarted ? RollMotionDuration : JumpMotionDuration);
+                motionUntil = rollStarted ? Time.time + RollMotionDuration : 0f;
             }
-            else if ((state == "Roll" || state == "Jump") && Time.time < motionUntil)
+            else if (landed)
+            {
+                next = "Land";
+                motionUntil = Time.time + LandingMotionDuration;
+            }
+            else if ((state == "Roll" || (state == "Land" && controller.isGrounded)) && Time.time < motionUntil)
                 next = state;
 
             animator.speed = next == "Run" ? Mathf.Clamp(speed / 5f, 0.15f, 2f) : 1f;

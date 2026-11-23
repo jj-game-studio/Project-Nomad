@@ -61,6 +61,7 @@ namespace Nomad.PlayerVisual.Editor
                 {
                     ConfigureAvatar(animator);
                     animator.applyRootMotion = false;
+                    animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
                     // 프로젝트 소유 Controller로 기존 에셋의 동작을 재생합니다.
                     animator.runtimeAnimatorController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(PlayerAnimationAuthoring.ControllerPath);
                 }

@@ -17,7 +17,11 @@ namespace Nomad.PlayerVisual.Editor
         private static Keyboard keyboard;
         private static PlayerAnimation animation;
         private static Quaternion idleLeg;
-        private static bool sawRun, sawJump, sawJumpRecovery, sawRoll, sawRollRecovery, rollReleased;
+        private static bool sawRun, sawJump, sawFall, sawLanding, sawRoll, sawRollRecovery, rollReleased;
+        private static string jumpPhase;
+        private static int jumpEntries, fallEntries, landEntries;
+        private static Vector3 previousHips;
+        private static float maxHipsStep;
         private static int stage;
         private static float start;
         private static float peak;
@@ -79,13 +83,40 @@ namespace Nomad.PlayerVisual.Editor
                     CaptureFront("player-animation-jump.png");
                     sawJump = true;
                 }
-                if (stage == 3 && elapsed > 0.85f && !sawJumpRecovery)
+                if (stage == 3)
                 {
-                    Check(animation.CurrentState == "Jump" && player.GetComponent<CharacterController>().isGrounded,
-                        "Jump visual recovery was cut on landing");
-                    Check(animation.Animator.GetCurrentAnimatorStateInfo(0).normalizedTime < 0.9f, "Jump animation still plays too fast");
+                    string phase = animation.CurrentState;
+                    if (phase != jumpPhase)
+                    {
+                        if (phase == "Jump") jumpEntries++;
+                        if (phase == "Fall") fallEntries++;
+                        if (phase == "Land") landEntries++;
+                        Check(jumpEntries <= 1 && fallEntries <= 1 && landEntries <= 1, "Jump phase restarted");
+                        Debug.Log($"JUMP_PHASE {phase} elapsed={elapsed:F3}");
+                        jumpPhase = phase;
+                    }
+                    Vector3 hips = animation.Animator.GetBoneTransform(HumanBodyBones.Hips).position - position;
+                    if (elapsed > 0.05f)
+                    {
+                        float step = Vector3.Distance(previousHips, hips);
+                        maxHipsStep = Mathf.Max(maxHipsStep, step);
+                        if (step > 0.08f) Debug.Log($"JUMP_POSE_STEP elapsed={elapsed:F3} phase={phase} delta={step:F4}, prev={previousHips}, now={hips}");
+                    }
+                    previousHips = hips;
+                }
+                if (stage == 3 && elapsed > 0.45f && !sawFall)
+                {
+                    Check(animation.CurrentState == "Fall", "Apex did not switch to airborne pose");
+                    CaptureFront("player-animation-fall.png");
+                    sawFall = true;
+                }
+                if (stage == 3 && elapsed > 0.85f && !sawLanding)
+                {
+                    Check(animation.CurrentState == "Land" && player.GetComponent<CharacterController>().isGrounded,
+                        "Landing pose does not follow actual ground contact");
+                    Check(SoleHeight() > -0.15f && SoleHeight() < 0.15f, "Landing feet drifted from ground");
                     CaptureFront("player-animation-jump-recovery.png");
-                    sawJumpRecovery = true;
+                    sawLanding = true;
                 }
                 if (stage == 4 && elapsed > 0.12f && !sawRoll)
                 {
@@ -129,10 +160,13 @@ namespace Nomad.PlayerVisual.Editor
                         break;
                     case 3:
                         peak = Mathf.Max(peak, position.y);
-                        if (elapsed > 1.25f)
+                        if (elapsed > 1.4f)
                         {
                             Check(peak > 1.1f && peak < 1.3f && Mathf.Abs(position.y) < 0.1f, $"Jump/land {peak}, {position}");
-                            Check(animation.CurrentState == "Idle", "Jump recovery did not finish");
+                            Check(animation.CurrentState == "Idle", "Landing recovery did not finish");
+                            Check(jumpEntries == 1 && fallEntries == 1 && landEntries == 1 && maxHipsStep < 0.15f,
+                                $"Jump phase continuity: {jumpEntries}/{fallEntries}/{landEntries}, maxHipStep={maxHipsStep}");
+                            Debug.Log($"JUMP_PHASES_PASS maxHipsStep={maxHipsStep:F4}, peak={peak:F3}");
                             MoveTo(Vector3.zero);
                             origin = player.transform.position;
                             Advance(Key.LeftShift, Key.W);
@@ -147,8 +181,8 @@ namespace Nomad.PlayerVisual.Editor
                     case 5 when elapsed > 0.6f:
                         Check(player.transform.position.z < 3.5f, "Wall collision regression");
                         InputSystem.QueueStateEvent(keyboard, new KeyboardState());
-                        Check(sawRun && sawJump && sawJumpRecovery && sawRoll, "Missing animation state evidence");
-                        Debug.Log($"PLAYER_VISUAL_PLAY_PASS: frame={Time.frameCount}, model, animated feet, idle loop, run leg motion, slower jump/roll recovery without physical timing changes, movement, facing, jump, roll, wall");
+                        Check(sawRun && sawJump && sawFall && sawLanding && sawRoll, "Missing animation state evidence");
+                        Debug.Log($"PLAYER_VISUAL_PLAY_PASS: frame={Time.frameCount}, model, animated feet, idle loop, run leg motion, rise/fall/landing once each, pose continuity, unchanged roll recovery and physics, movement, facing, jump, roll, wall");
                         Finish(0);
                         break;
                 }

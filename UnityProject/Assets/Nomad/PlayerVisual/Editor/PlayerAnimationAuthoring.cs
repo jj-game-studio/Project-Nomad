@@ -1,8 +1,10 @@
+using System;
 using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace Nomad.PlayerVisual.Editor
 {
@@ -18,8 +20,9 @@ namespace Nomad.PlayerVisual.Editor
             AssetDatabase.Refresh();
             var idle = Copy("Idle", Warrior + "ARPG_Warrior_Idle_no_weapon.anim", true);
             var run = Copy("Run", Warrior + "ARPG_Warrior_Run_no_weapon_IPC.anim", true);
-            var fall = Copy("Fall", Warrior + "ARPG_Warrior_Airborne.anim", true);
-            var jump = Copy("Jump", "Assets/ThirdParty/Mixamo/StandingJump.fbx", false);
+            var jump = JumpSlice("Jump", 0.6f, 0.93f, false);
+            var fall = JumpSlice("Fall", 0.93f, 1.27f, false);
+            var land = JumpSlice("Land", 1.27f, 2.1f, true);
             var roll = Copy("Roll", "Assets/ThirdParty/Mixamo/StandToRoll.fbx", false);
 
             var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(ControllerPath);
@@ -28,12 +31,54 @@ namespace Nomad.PlayerVisual.Editor
             foreach (var child in machine.states) machine.RemoveState(child.state);
             AddState(machine, "Idle", idle, 1f);
             AddState(machine, "Run", run, 1f);
-            AddState(machine, "Jump", jump, jump.length / PlayerAnimation.JumpMotionDuration);
-            AddState(machine, "Fall", fall, 1f);
+            AddState(machine, "Jump", jump, jump.length / PlayerAnimation.JumpRiseDuration);
+            AddState(machine, "Fall", fall, fall.length / PlayerAnimation.JumpFallDuration);
+            AddState(machine, "Land", land, land.length / PlayerAnimation.LandingMotionDuration);
             AddState(machine, "Roll", roll, roll.length / PlayerAnimation.RollMotionDuration);
             EditorUtility.SetDirty(controller);
             AssetDatabase.SaveAssets();
             return controller;
+        }
+
+        private static AnimationClip JumpSlice(string name, float from, float to, bool landing)
+        {
+            var source = AssetDatabase.LoadAllAssetsAtPath("Assets/ThirdParty/Mixamo/StandingJump.fbx")
+                .OfType<AnimationClip>().First(c => !c.name.StartsWith("__"));
+            var clip = Copy(name, "Assets/ThirdParty/Mixamo/StandingJump.fbx", false);
+            var bindings = AnimationUtility.GetCurveBindings(source);
+            var curves = new AnimationCurve[bindings.Length];
+            int steps = Mathf.CeilToInt((to - from) * 60f);
+
+            // 필요한 구간만 다시 샘플링하며 원본 FBX는 수정하지 않습니다.
+            for (int i = 0; i < bindings.Length; i++)
+            {
+                var original = AnimationUtility.GetEditorCurve(source, bindings[i]);
+                float offset = !landing && bindings[i].propertyName == "RootT.y"
+                    ? original.Evaluate(from) - original.Evaluate(0f) : 0f;
+                var keys = new Keyframe[steps + 1];
+                for (int k = 0; k <= steps; k++)
+                {
+                    float time = (to - from) * k / steps;
+                    float sample = from + time;
+                    float tangent = (original.Evaluate(sample + 0.001f) - original.Evaluate(sample - 0.001f)) / 0.002f;
+                    keys[k] = new Keyframe(time, original.Evaluate(sample) - offset, tangent, tangent);
+                }
+                curves[i] = new AnimationCurve(keys);
+            }
+            AnimationUtility.SetEditorCurves(clip, bindings, curves);
+            AnimationUtility.SetAnimationEvents(clip, Array.Empty<AnimationEvent>());
+            var settings = AnimationUtility.GetAnimationClipSettings(clip);
+            settings.startTime = 0f;
+            settings.stopTime = to - from;
+            settings.loopTime = false;
+            settings.loopBlend = false;
+            settings.loopBlendPositionY = landing;
+            AnimationUtility.SetAnimationClipSettings(clip, settings);
+            EditorUtility.SetDirty(clip);
+            PlayerVisualAuthoring.Require(Mathf.Abs(clip.length - (to - from)) < 0.02f && clip.humanMotion,
+                $"Invalid jump slice: {name}, {clip.length}");
+            Debug.Log($"JUMP_SLICE {name}: {from:F2}-{to:F2}, duration={clip.length:F3}");
+            return clip;
         }
 
         private static void AddState(AnimatorStateMachine machine, string name, AnimationClip clip, float speed)
