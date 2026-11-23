@@ -7,12 +7,31 @@ namespace Nomad.Terrain
     public static class MicroTerrainWalkability
     {
         public static Vector3 BlockedPoint { get; private set; }
-        public static bool Validate(GameObject root, IReadOnlyList<TerrainPiece> pieces, out int samples, out string reason, GameObject extraObstacles = null)
+
+        // 필드 생성 시간 측정용 누계입니다. 측정 측이 ResetStats로 초기화합니다.
+        public static int BuildCount { get; private set; }
+        public static int UpdateCount { get; private set; }
+        public static double BuildSeconds { get; private set; }
+        public static int PathChecks { get; private set; }
+        public static double PathSeconds { get; private set; }
+
+        public static void ResetStats()
+        {
+            BuildCount = 0;
+            UpdateCount = 0;
+            BuildSeconds = 0;
+            PathChecks = 0;
+            PathSeconds = 0;
+        }
+
+        // cache를 넘기면 반복 검사 사이에 NavMesh를 유지하고, 바뀐 장애물이 걸친 타일만 다시 굽습니다.
+        public static bool Validate(GameObject root, IReadOnlyList<TerrainPiece> pieces, out int samples, out string reason,
+            GameObject extraObstacles = null, WalkabilityCache cache = null)
         {
             samples = 0;
             BlockedPoint = pieces[0].transform.position;
             reason = string.Empty;
-            NavMeshData data = Build(root, pieces, extraObstacles);
+            NavMeshData data = Build(root, pieces, extraObstacles, null, cache);
             if (data == null) { reason = "NavMesh 생성 실패"; return false; }
             NavMeshDataInstance instance = NavMesh.AddNavMeshData(data);
             try
@@ -20,18 +39,25 @@ namespace Nomad.Terrain
                 var first = pieces[0].GetComponent<MicroTerrainTile>();
                 Vector3 start = pieces[0].transform.TransformPoint(new Vector3(-1.1f, first.HeightAt(-1.1f, -1.1f), -1.1f));
                 start.y = FieldGround.SurfaceHeight(FieldGround.FindTerrain(pieces[0]), start, start.y);
-                return ValidatePaths(pieces, start, out samples, out reason, extraObstacles);
+                if (cache == null) return ValidatePaths(pieces, start, out samples, out reason, extraObstacles);
+
+                // 반복 검사에서는 장애물이 줄기만 하므로 앞서 통과한 표본은 그대로 통과합니다.
+                // 지난번에 막힌 표본부터 이어서 검사합니다. 최종 경로 보장은 이후 단계의 전체 검사가 맡습니다.
+                bool valid = ValidatePaths(pieces, start, out samples, out reason, extraObstacles, null,
+                    cache.ResumeSample, out int failed);
+                cache.ResumeSample = failed;
+                return valid;
             }
             finally
             {
                 instance.Remove();
-                if (Application.isPlaying) Object.Destroy(data);
-                else Object.DestroyImmediate(data);
+                if (cache == null) Release(data);
             }
         }
 
         public static NavMeshData Build(GameObject root, IReadOnlyList<TerrainPiece> pieces,
-            GameObject extraObstacles = null, IReadOnlyList<FieldSpawnPoint> reservations = null)
+            GameObject extraObstacles = null, IReadOnlyList<FieldSpawnPoint> reservations = null,
+            WalkabilityCache cache = null)
         {
             var sources = new List<NavMeshBuildSource>();
             Bounds bounds = new Bounds(pieces[0].transform.position, Vector3.one);
@@ -77,14 +103,69 @@ namespace Nomad.Terrain
             settings.voxelSize = 0.075f;
             settings.overrideTileSize = true;
             settings.tileSize = 128;
-            return NavMeshBuilder.BuildNavMeshData(settings, sources, bounds, Vector3.zero, Quaternion.identity);
+
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            NavMeshData data;
+
+            // 같은 영역을 다시 굽는 경우 기존 데이터를 갱신합니다. 원본이 그대로인 타일은 다시 굽지 않습니다.
+            if (cache != null && cache.Data != null && cache.Bounds == bounds)
+            {
+                data = NavMeshBuilder.UpdateNavMeshData(cache.Data, settings, sources, bounds) ? cache.Data : null;
+                UpdateCount++;
+            }
+            else
+            {
+                data = NavMeshBuilder.BuildNavMeshData(settings, sources, bounds, Vector3.zero, Quaternion.identity);
+                BuildCount++;
+                if (cache != null)
+                {
+                    cache.Dispose();
+                    cache.Data = data;
+                    cache.Bounds = bounds;
+                }
+            }
+
+            BuildSeconds += watch.Elapsed.TotalSeconds;
+            return data;
+        }
+
+        internal static void Release(NavMeshData data)
+        {
+            if (data == null) return;
+            if (Application.isPlaying) Object.Destroy(data);
+            else Object.DestroyImmediate(data);
         }
 
         public static bool ValidatePaths(IReadOnlyList<TerrainPiece> pieces, Vector3 start,
             out int samples, out string reason, GameObject extraObstacles = null,
-            IReadOnlyList<FieldSpawnPoint> reservations = null)
+            IReadOnlyList<FieldSpawnPoint> reservations = null) =>
+            ValidatePaths(pieces, start, out samples, out reason, extraObstacles, reservations, 0, out _);
+
+        // resumeFrom 앞의 표본은 경로 계산 없이 통과로 셉니다. failed는 막힌 표본 순번입니다.
+        private static bool ValidatePaths(IReadOnlyList<TerrainPiece> pieces, Vector3 start,
+            out int samples, out string reason, GameObject extraObstacles,
+            IReadOnlyList<FieldSpawnPoint> reservations, int resumeFrom, out int failed)
+        {
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            try
+            {
+                return ValidatePathsCore(pieces, start, out samples, out reason, extraObstacles, reservations,
+                    resumeFrom, out failed);
+            }
+            finally
+            {
+                PathChecks++;
+                PathSeconds += watch.Elapsed.TotalSeconds;
+            }
+        }
+
+        private static bool ValidatePathsCore(IReadOnlyList<TerrainPiece> pieces, Vector3 start,
+            out int samples, out string reason, GameObject extraObstacles,
+            IReadOnlyList<FieldSpawnPoint> reservations, int resumeFrom, out int failed)
         {
             samples = 0;
+            failed = 0;
+            int index = 0;
             reason = string.Empty;
             var boxes = extraObstacles == null ? new BoxCollider[0] : extraObstacles.GetComponentsInChildren<BoxCollider>();
             if (!NavMesh.SamplePosition(start, out NavMeshHit origin, 0.4f, NavMesh.AllAreas))
@@ -99,6 +180,8 @@ namespace Nomad.Terrain
                 foreach (float x in new[] { -offset, 0.03f, offset })
                 foreach (float z in new[] { -offset, 0.07f, offset })
                 {
+                    if (index++ < resumeFrom) { samples++; continue; }
+
                     Vector3 point = piece.transform.TransformPoint(new Vector3(x, profile.HeightAt(x, z), z));
                     // 필드 Terrain이 지면이면 표본 높이를 그 표면에서 읽습니다. 없으면 타일 높이 그대로입니다.
                     point.y = FieldGround.SurfaceHeight(field, point, point.y);
@@ -110,7 +193,7 @@ namespace Nomad.Terrain
                         || Mathf.Abs(hit.position.y - point.y) > 0.3f
                         || !NavMesh.CalculatePath(origin.position, hit.position, NavMesh.AllAreas, path)
                         || path.status != NavMeshPathStatus.PathComplete)
-                    { BlockedPoint = point; reason = "도달할 수 없는 표면: " + piece.name + " / " + point; return false; }
+                    { BlockedPoint = point; failed = index - 1; reason = "도달할 수 없는 표면: " + piece.name + " / " + point; return false; }
                     samples++;
                 }
             }
@@ -127,6 +210,22 @@ namespace Nomad.Terrain
                     return true;
             }
             return false;
+        }
+    }
+
+    // 반복 경로 검사가 같은 NavMesh를 증분 갱신하도록 붙잡아 둡니다. 다 쓰면 Dispose로 정리합니다.
+    public sealed class WalkabilityCache : System.IDisposable
+    {
+        internal NavMeshData Data;
+        internal Bounds Bounds;
+
+        // 장애물만 줄어드는 반복 검사에서 이어서 검사할 표본 순번입니다.
+        internal int ResumeSample;
+
+        public void Dispose()
+        {
+            MicroTerrainWalkability.Release(Data);
+            Data = null;
         }
     }
 }
