@@ -28,8 +28,7 @@ namespace Nomad.Visibility.Editor
         private static int stage;
         private static int checks;
         private static GameObject module;
-        private static Material[] foliageMaterials;
-        private static Renderer foliageRenderer;
+        private const string FadeShaderName = "Nomad/Visibility/Foliage Fade";
 
         [MenuItem("Nomad/Visibility/Verify Visibility")]
         public static void Run()
@@ -120,12 +119,8 @@ namespace Nomad.Visibility.Editor
                     Check(sight.InCone(player.position + Quaternion.Euler(0f, 59f, 0f) * Vector3.forward * 5f), "inside cone edge");
                     Check(!sight.InCone(player.position + Quaternion.Euler(0f, 61f, 0f) * Vector3.forward * 5f), "outside cone edge");
 
-                    var open = Capture("visibility-initial.png");
-                    Shader.SetGlobalFloat("_NomadVisibilityActive", 0f);
-                    var closed = Capture("visibility-foliage-closed.png");
-                    Shader.SetGlobalFloat("_NomadVisibilityActive", 1f);
-                    Check(closed.green > open.green + 50, "rendered foliage opens only with visibility mask");
-                    Check(open.red > closed.red + 20, "rendered enemy inside foliage is revealed");
+                    VerifyFoliage();
+                    VerifyShade();
                     Point(Vector3.back);
                     InputSystem.QueueStateEvent(keyboard, new KeyboardState(UnityEngine.InputSystem.Key.F3));
                     break;
@@ -197,7 +192,9 @@ namespace Nomad.Visibility.Editor
                     Check(!sight.transform.Find("Visibility Debug Range").gameObject.activeSelf, "disabled sight hides debug immediately");
                     Check(!front.GetComponentInChildren<Renderer>().forceRenderingOff, "module removal restores renderer");
                     Check(front.GetComponent<SegmentedHealthBar>().enabled, "module removal restores HUD");
-                    Check(Shader.GetGlobalFloat("_NomadVisibilityActive") == 0f, "module removal disables cutaway");
+                    Check(Shader.GetGlobalFloat("_NomadVisibilityActive") == 0f, "module removal disables visibility mask");
+                    Check(!field.ShadeRenderer.enabled, "module removal hides shade");
+                    Check(!GameObject.Find("Bush cutaway sample").GetComponent<VisibilityFoliage>().InSight, "module removal returns foliage to opaque");
                     sight.enabled = true;
                     field.enabled = true;
                     break;
@@ -205,17 +202,8 @@ namespace Nomad.Visibility.Editor
                     Check(sight.transform.Find("Visibility Debug Range").gameObject.activeSelf, "Inspector toggle and reenable restore debug");
                     Evaluate();
                     Check(!front.IsVisible, "module restart reapplies occlusion");
-                    var foliage = GameObject.Find("Bush cutaway sample").GetComponent<VisibilityFoliage>();
-                    foliageRenderer = foliage.GetComponentsInChildren<Renderer>()[0];
-                    foliage.enabled = false;
-                    foliageMaterials = foliageRenderer.sharedMaterials;
-                    foliage.enabled = true;
-                    Check(foliageRenderer.sharedMaterial.shader.name == "Nomad/Visibility/Foliage Cutaway", "instance foliage shader");
-                    Check(foliageMaterials[0].shader.name != "Nomad/Visibility/Foliage Cutaway", "source material unchanged");
-                    foliage.enabled = false;
-                    Check(foliageRenderer.sharedMaterial == foliageMaterials[0], "foliage disable restores materials");
-                    foliage.enabled = true;
-                    Check(!ShaderUtil.ShaderHasError(foliageRenderer.sharedMaterial.shader), "shader compile");
+                    Check(!ShaderUtil.ShaderHasError(Shader.Find(FadeShaderName)), "fade shader compile");
+                    Check(!ShaderUtil.ShaderHasError(Shader.Find("Nomad/Visibility/Shade")), "shade shader compile");
 
                     player.gameObject.SetActive(false);
                     break;
@@ -309,14 +297,16 @@ namespace Nomad.Visibility.Editor
             Transform bush = GameObject.Find("Bush cutaway sample").transform;
             Vector3 savedBushPosition = bush.position;
             Vector3 savedBushScale = bush.localScale;
-            bush.position = player.position - Vector3.forward * 1.5f;
+            bush.position = player.position - Vector3.forward * 2.2f;
             bush.localScale = Vector3.one * 0.6f;
-            var open = Capture("visibility-nearby-open.png");
-            Vector4 parameters = Shader.GetGlobalVector("_NomadVisibilityParams");
-            Shader.SetGlobalVector("_NomadVisibilityParams", new Vector4(parameters.x, parameters.y, parameters.z, 0f));
-            var closed = Capture("visibility-nearby-closed.png");
-            Shader.SetGlobalVector("_NomadVisibilityParams", parameters);
-            Check(open.red > closed.red + 20, "nearby mask reveals enemy inside rear foliage in render");
+            Physics.SyncTransforms();
+            var rearFoliage = bush.GetComponent<VisibilityFoliage>();
+            rearFoliage.Evaluate(sight);
+            Check(rearFoliage.InSight, "nearby radius fades rear foliage");
+            sight.NearbyRadius = 0f;
+            rearFoliage.Evaluate(sight);
+            Check(!rearFoliage.InSight, "rear foliage outside sight stays opaque");
+            sight.NearbyRadius = 3f;
             bush.position = savedBushPosition;
             bush.localScale = savedBushScale;
 
@@ -331,7 +321,53 @@ namespace Nomad.Visibility.Editor
             sight.GetComponent<VisibilityDebugRange>().Configure(sight);
         }
 
-        private static (int green, int red) Capture(string name)
+        // 숲 반투명: 시야 안 덤불은 원래 색의 반투명 재질로 바뀌고, 안쪽 적이 렌더에 드러납니다.
+        // 나무: 줄기 충돌은 남지만 시선을 막지 않습니다.
+        private static void VerifyFoliage()
+        {
+            var bush = GameObject.Find("Bush cutaway sample").GetComponent<VisibilityFoliage>();
+            Renderer leaves = bush.GetComponentInChildren<Renderer>();
+            Color source = AssetDatabase.LoadAssetAtPath<Material>(VisibilityAuthoring.Folder + "/Materials/Foliage.mat").GetColor("_BaseColor");
+            Check(bush.InSight && bush.Faded && bush.Alpha < 1f, "foliage in sight fades");
+            Check(leaves.sharedMaterial.shader.name == FadeShaderName, "faded foliage uses fade shader");
+            Check(leaves.sharedMaterial.GetColor("_BaseColor") == source, "fade keeps source color");
+
+            var open = Capture("visibility-initial.png");
+            bush.enabled = false;
+            Check(leaves.sharedMaterial.shader.name != FadeShaderName, "foliage disable restores source material");
+            var closed = Capture("visibility-foliage-opaque.png");
+            bush.enabled = true;
+            Check(open.red > closed.red + 20, "rendered enemy inside faded foliage is revealed");
+
+            var tree = GameObject.Find("Tree cutaway sample").GetComponent<VisibilityFoliage>();
+            Transform trunk = tree.transform.Find("Trunk");
+            Vector3 toTrunk = trunk.position - sight.Eye;
+            toTrunk.y = 0f;
+            Vector3 beyond = sight.Eye + toTrunk.normalized * (toTrunk.magnitude + 1.2f);
+            Check(!tree.BlocksSight && trunk.GetComponent<Collider>().enabled, "tree keeps collision without blocking sight");
+            Check(sight.CanSee(beyond), "sight passes through tree trunk");
+            Check(tree.InSight, "tree in sight fades");
+        }
+
+        // 시야 밖(등 뒤, 벽 뒤)은 어둡고 시야 안은 밝기를 유지합니다.
+        private static void VerifyShade()
+        {
+            Vector3 front = new Vector3(0f, 0f, 3f);
+            Vector3 back = player.position - Vector3.forward * 4.5f;
+            Vector3 hidden = new Vector3(-5f, 0f, 6f);
+            Check(field.ShadeRenderer != null && field.ShadeRenderer.enabled, "shade active with sight");
+
+            var shaded = Capture("visibility-shade.png", front, back, hidden);
+            field.ShadeRenderer.enabled = false;
+            var plain = Capture("visibility-shade-off.png", front, back, hidden);
+            field.ShadeRenderer.enabled = true;
+            Debug.Log($"VISIBILITY_SHADE front={shaded.light[0]:F3}/{plain.light[0]:F3} back={shaded.light[1]:F3}/{plain.light[1]:F3} wall={shaded.light[2]:F3}/{plain.light[2]:F3}");
+            Check(shaded.light[0] > plain.light[0] * 0.9f, "visible area stays lit");
+            Check(shaded.light[1] < plain.light[1] * 0.6f, "area behind player is shaded");
+            Check(shaded.light[2] < plain.light[2] * 0.6f, "area behind wall is shaded");
+        }
+
+        private static (int green, int red, float[] light) Capture(string name, params Vector3[] probes)
         {
             Directory.CreateDirectory("Artifacts/visibility");
             Camera camera = Camera.main;
@@ -351,12 +387,26 @@ namespace Nomad.Visibility.Editor
                 if (pixel.g > pixel.r * 1.8f && pixel.g > pixel.b * 1.8f) green++;
                 if (pixel.r > pixel.g * 1.8f && pixel.r > pixel.b * 1.8f) red++;
             }
+
+            // 지점 주변 5x5 픽셀의 평균 밝기입니다. 화면 밖 지점은 검증 실패로 처리합니다.
+            var light = new float[probes.Length];
+            for (int index = 0; index < probes.Length; index++)
+            {
+                Vector3 view = camera.WorldToViewportPoint(probes[index]);
+                Check(view.z > 0f && view.x > 0.02f && view.x < 0.98f && view.y > 0.02f && view.y < 0.98f, "probe on screen " + probes[index]);
+                int x = Mathf.RoundToInt(view.x * 1279f);
+                int y = Mathf.RoundToInt(view.y * 719f);
+                for (int dx = -2; dx <= 2; dx++)
+                    for (int dy = -2; dy <= 2; dy++)
+                        light[index] += image.GetPixel(x + dx, y + dy).grayscale / 25f;
+            }
+
             Debug.Log("VISIBILITY_RENDER " + name + " green=" + green + " red=" + red);
             camera.targetTexture = null;
             RenderTexture.active = previous;
             Object.Destroy(image);
             Object.Destroy(texture);
-            return (green, red);
+            return (green, red, light);
         }
 
         private static void Check(bool condition, string label)
