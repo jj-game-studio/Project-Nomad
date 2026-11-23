@@ -40,6 +40,12 @@ namespace Nomad.Equipment
         private Vector2 equipmentPressPosition;
         private bool equipmentDragging;
         private Mouse dragMouse;
+        private Vector2 bagPressPosition;
+        // 더블클릭 판정용 직전 클릭입니다. 가방 칸은 0 이상, 장비칸은 -1-번호로 저장합니다.
+        private const float DoubleClickInterval = 0.3f;
+        private int lastClickTarget = int.MinValue;
+        private ItemDefinition lastClickItem;
+        private float lastClickTime;
         private bool wasOpen;
         private bool pointerFocused = true;
         private InventoryPanel inventoryView;
@@ -149,6 +155,7 @@ namespace Nomad.Equipment
             if (inventory?.BlocksTradeInput == true || inventoryView?.BlocksSplitInput == true)
             {
                 CancelSelection();
+                ResetClick();
                 return;
             }
 
@@ -163,7 +170,10 @@ namespace Nomad.Equipment
                 CancelSelection();
             wasOpen = IsOpen;
             if (!IsOpen)
+            {
+                ResetClick();
                 return;
+            }
 
             if (selected >= 0 && inventory.GetSlot(selected).Item != selectedItem)
                 CancelSelection();
@@ -249,6 +259,7 @@ namespace Nomad.Equipment
                 dragMouse = mouse;
                 if (bagSlot >= 0)
                 {
+                    bagPressPosition = point;
                     selected = bagSlot;
                     selectedItem = inventory.GetSlot(bagSlot).Item;
                     dragEquipment = -1;
@@ -276,7 +287,26 @@ namespace Nomad.Equipment
 
             if (!mouse.leftButton.wasReleasedThisFrame)
                 return;
-            if (gearSlot >= 0 && selected >= 0 && selectedItem != null)
+
+            // 드래그 없이 같은 칸을 두 번 누르면 더블클릭입니다. 그 밖의 놓기는 직전 클릭 기록을 지웁니다.
+            bool bagClick = bagSlot >= 0 && selected == bagSlot && selectedItem != null &&
+                (point - bagPressPosition).sqrMagnitude < 25f;
+            bool gearClick = gearSlot >= 0 && dragEquipment == gearSlot && !equipmentDragging;
+            if (!bagClick && !gearClick)
+                ResetClick();
+
+            if (bagClick && !inventoryView.HasOpenChest && selectedItem.EquipmentType != EquipmentType.None)
+            {
+                // 상자가 열려 있으면 가방 더블클릭은 기존처럼 상자 넣기에 양보합니다.
+                if (IsDoubleClick(bagSlot, selectedItem))
+                {
+                    notice.text = equipment.TryEquipAuto(bagSlot) ? "장착했습니다." : "장착할 수 없는 아이템입니다.";
+                    CancelSelection();
+                }
+            }
+            else if (bagClick)
+                ResetClick();
+            else if (gearSlot >= 0 && selected >= 0 && selectedItem != null)
             {
                 notice.text = equipment.TryEquip(selected, (EquipmentSlot)gearSlot) ? "장착했습니다." : "이 칸에 장착할 수 없는 아이템입니다.";
                 CancelSelection();
@@ -291,11 +321,37 @@ namespace Nomad.Equipment
             }
             else if (gearSlot >= 0 && dragEquipment == gearSlot)
             {
-                if (!equipmentDragging && gearSlot <= 1) equipment.SelectWeapon((EquipmentSlot)gearSlot);
+                ItemDefinition item = equipment.GetItem((EquipmentSlot)gearSlot);
+                if (gearClick && item != null && IsDoubleClick(-1 - gearSlot, item))
+                {
+                    // 빈 가방 칸이 없거나 가방 용량 규칙에 막히면 TryUnequip이 거절해 그대로 둡니다.
+                    bool removed = equipment.TryUnequip((EquipmentSlot)gearSlot);
+                    notice.text = removed ? "장비를 가방에 넣었습니다." : "빈 가방 칸이 없어 해제할 수 없습니다.";
+                }
+                else if (gearClick && gearSlot <= 1)
+                    equipment.SelectWeapon((EquipmentSlot)gearSlot);
                 CancelSelection();
             }
             else if (dragEquipment >= 0 || (bagSlot < 0 && gearSlot < 0))
                 CancelSelection();
+        }
+
+        private bool IsDoubleClick(int target, ItemDefinition item)
+        {
+            float now = Time.unscaledTime;
+            bool twice = lastClickTarget == target && lastClickItem == item && now - lastClickTime <= DoubleClickInterval;
+
+            // 세 번째 클릭이 다시 더블클릭으로 잡히지 않도록 성공하면 기록을 비웁니다.
+            lastClickTarget = twice ? int.MinValue : target;
+            lastClickItem = twice ? null : item;
+            lastClickTime = now;
+            return twice;
+        }
+
+        private void ResetClick()
+        {
+            lastClickTarget = int.MinValue;
+            lastClickItem = null;
         }
 
         private void UpdateEquipmentDrag(Mouse mouse)

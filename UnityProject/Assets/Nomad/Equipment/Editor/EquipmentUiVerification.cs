@@ -91,7 +91,7 @@ namespace Nomad.Equipment.Editor
                 switch (stage++)
                 {
                     case 0:
-                        Check(panel.IsOpen && panel.EquipmentGrid.childCount == 10 && panel.BagGrid.childCount == 20, "Tab 장비10+가방20");
+                        Check(panel.IsOpen && panel.EquipmentGrid.childCount == 10 && ActiveBagSlots() == 20, "Tab 장비10+가방20");
                         Check(!combat.TryAttack(Point(new Vector3(0, 1, 1.5f))), "가방 열린 동안 공격 차단");
                         Capture(1920, 1080);
                         Capture(1280, 720);
@@ -246,6 +246,26 @@ namespace Nomad.Equipment.Editor
                         Check(equipment.GetItem(EquipmentSlot.Weapon2)?.ItemId == "demo-sword" && inventory.GetSlot(source).Item?.ItemId == "demo-bow",
                             "장비→호환 가방 아이템 실제 교체");
                         Check(equipment.TryEquip(source, EquipmentSlot.Weapon2) && inventory.Remove("demo-sword", 1) == 1, "교체 소유 보존/검사 상태 복원");
+                        source = Find("demo-armor");
+                        Pointer(Bag(source), true);
+                        stage = 93;
+                        frame = Time.frameCount + 1;
+                        return;
+                    // 더블클릭은 0.3초 안에 끝나도록 한 프레임 간격으로 누르고 뗍니다.
+                    case 93: Pointer(Bag(source)); frame = Time.frameCount + 1; return;
+                    case 94: Pointer(Bag(source), true); frame = Time.frameCount + 1; return;
+                    case 95: Pointer(Bag(source)); break;
+                    case 96:
+                        Check(equipment.GetItem(EquipmentSlot.Body)?.ItemId == "demo-armor" && inventory.GetSlot(source).Item == null,
+                            "가방 더블클릭 장착");
+                        Pointer(Gear(EquipmentSlot.Body), true);
+                        frame = Time.frameCount + 1;
+                        return;
+                    case 97: Pointer(Gear(EquipmentSlot.Body)); frame = Time.frameCount + 1; return;
+                    case 98: Pointer(Gear(EquipmentSlot.Body), true); frame = Time.frameCount + 1; return;
+                    case 99: Pointer(Gear(EquipmentSlot.Body)); break;
+                    case 100:
+                        Check(equipment.GetItem(EquipmentSlot.Body) == null && Find("demo-armor") >= 0, "장비칸 더블클릭 해제");
                         Keys(UnityEngine.InputSystem.Key.Tab);
                         Pointer(Point(new Vector3(0, 1, 1.5f)));
                         stage = 13;
@@ -324,6 +344,9 @@ namespace Nomad.Equipment.Editor
             keyboard.MakeCurrent();
         }
 
+        // 가방 칸은 최대 용량만큼 만들고 열리지 않은 칸은 숨기므로 보이는 칸만 셉니다.
+        private static int ActiveBagSlots() =>
+            panel.BagGrid.Cast<Transform>().Count(slot => slot.gameObject.activeSelf);
         private static int Find(string id) => Enumerable.Range(0, PlayerInventory.Capacity).First(index => inventory.GetSlot(index).Item?.ItemId == id);
         private static Vector2 Gear(EquipmentSlot slot) => Screen((RectTransform)panel.EquipmentGrid.GetChild((int)slot));
         private static Vector2 Bag(int slot) => Screen((RectTransform)panel.BagGrid.GetChild(slot));

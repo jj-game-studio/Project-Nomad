@@ -24,9 +24,11 @@ namespace Nomad.Tests
             helmet = Item("helmet", 1, EquipmentType.Head, defense: 3);
             armor = Item("armor", 1, EquipmentType.Body, defense: 4);
             ItemDefinition potion = Item("potion", 5);
+            ItemDefinition axe = Item("axe", 1, EquipmentType.Weapon, attack: 12);
+            ItemDefinition ring = Item("ring", 1, EquipmentType.Accessory);
 
             var owner = Inactive("Player");
-            inventory = AddInventory(owner, sword, bow, helmet, armor, potion);
+            inventory = AddInventory(owner, sword, bow, helmet, armor, potion, axe, ring);
             equipment = owner.AddComponent<PlayerEquipment>();
             health = owner.AddComponent<Health>();
             owner.SetActive(true);
@@ -45,6 +47,81 @@ namespace Nomad.Tests
             }
 
             return false;
+        }
+
+        private int BagSlot(string id)
+        {
+            for (int index = 0; index < inventory.SlotCount; index++)
+                if (inventory.GetSlot(index).Item?.ItemId == id)
+                    return index;
+            return -1;
+        }
+
+        // 더블클릭 장착: 가방에 넣은 뒤 자동으로 알맞은 장비칸을 고릅니다.
+        private bool AutoEquip(string id)
+        {
+            inventory.Add(id, 1);
+            return equipment.TryEquipAuto(BagSlot(id));
+        }
+
+        [Test]
+        public void AutoEquipWeaponFillsEmptySlotsThenReplacesActiveWeapon()
+        {
+            Assert.That(AutoEquip("sword"), Is.True);
+            Assert.That(AutoEquip("bow"), Is.True);
+            Assert.That(equipment.GetItem(EquipmentSlot.Weapon1), Is.SameAs(sword));
+            Assert.That(equipment.GetItem(EquipmentSlot.Weapon2), Is.SameAs(bow));
+
+            // 두 칸이 모두 차 있으면 현재 선택한 무기칸과 교체하고, 이전 무기는 같은 가방 칸으로 돌아옵니다.
+            equipment.SelectWeapon(EquipmentSlot.Weapon2);
+            inventory.Add("axe", 1);
+            int slot = BagSlot("axe");
+            Assert.That(equipment.TryEquipAuto(slot), Is.True);
+            Assert.That(equipment.GetItem(EquipmentSlot.Weapon1), Is.SameAs(sword));
+            Assert.That(equipment.GetItem(EquipmentSlot.Weapon2).ItemId, Is.EqualTo("axe"));
+            Assert.That(inventory.GetSlot(slot).Item, Is.SameAs(bow));
+        }
+
+        [Test]
+        public void AutoEquipWeaponUsesSecondSlotWhenOnlyFirstIsEmpty()
+        {
+            EquipFromBag("bow", EquipmentSlot.Weapon2);
+
+            Assert.That(AutoEquip("sword"), Is.True);
+            Assert.That(equipment.GetItem(EquipmentSlot.Weapon1), Is.SameAs(sword));
+            Assert.That(equipment.GetItem(EquipmentSlot.Weapon2), Is.SameAs(bow));
+        }
+
+        [Test]
+        public void AutoEquipAccessoryFillsInOrderThenReplacesFirst()
+        {
+            for (int count = 0; count < 3; count++)
+                Assert.That(AutoEquip("ring"), Is.True);
+            Assert.That(equipment.GetItem(EquipmentSlot.Accessory1), Is.Not.Null);
+            Assert.That(equipment.GetItem(EquipmentSlot.Accessory2), Is.Not.Null);
+            Assert.That(equipment.GetItem(EquipmentSlot.Accessory3), Is.Not.Null);
+
+            Assert.That(equipment.TryGetAutoSlot(EquipmentType.Accessory, out EquipmentSlot target), Is.True);
+            Assert.That(target, Is.EqualTo(EquipmentSlot.Accessory1));
+            Assert.That(AutoEquip("ring"), Is.True);
+            Assert.That(inventory.UsedSlots, Is.EqualTo(1));
+
+            // 가운데 칸을 비우면 다음 장신구는 그 칸으로 갑니다.
+            Assert.That(equipment.TryUnequip(EquipmentSlot.Accessory2), Is.True);
+            Assert.That(equipment.TryGetAutoSlot(EquipmentType.Accessory, out target), Is.True);
+            Assert.That(target, Is.EqualTo(EquipmentSlot.Accessory2));
+        }
+
+        [Test]
+        public void AutoEquipPutsArmorInItsSlotAndRejectsOtherItems()
+        {
+            Assert.That(AutoEquip("helmet"), Is.True);
+            Assert.That(equipment.GetItem(EquipmentSlot.Head), Is.SameAs(helmet));
+
+            Assert.That(AutoEquip("potion"), Is.False);
+            Assert.That(equipment.TryEquipAuto(-1), Is.False);
+            Assert.That(equipment.TryEquipAuto(inventory.SlotCount), Is.False);
+            Assert.That(inventory.GetSlot(BagSlot("potion")).Count, Is.EqualTo(1));
         }
 
         [TestCase(EquipmentType.Weapon, EquipmentSlot.Weapon1, true)]
