@@ -2,6 +2,7 @@
     "name": "Nomad.Game",
     "references": [
         "UnityEngine.UI",
-        "Unity.TextMeshPro"
+        "Unity.TextMeshPro",
+        "Unity.InputSystem"
     ]
 }

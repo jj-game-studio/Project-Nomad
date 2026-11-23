@@ -448,6 +448,19 @@ namespace Nomad.Game.Tests
             while (!manager.IsLoading)
             {
                 Assert.That(Time.realtimeSinceStartup, Is.LessThan(end), "출구 트리거로 전환이 시작되어야 합니다.");
+
+                // 마을→필드 출구는 필드 선택창을 띄웁니다(#194). 후보 3~4개 중 첫 필드를 골라 출발합니다.
+                if (manager.IsChoosingField && manager.FieldChoices != null)
+                {
+                    Assert.That(manager.FieldChoices.Count, Is.InRange(3, 4), "필드 후보 3~4개");
+                    FieldPreset chosen = manager.FieldChoices[0];
+                    manager.ChooseField(chosen);
+                    Assert.That(manager.SelectedField, Is.SameAs(chosen), "고른 필드 변형");
+                    Assert.That(Time.timeScale, Is.EqualTo(1f), "선택 후 시간 재개");
+                    yield return null;
+                    continue;
+                }
+
                 player.GetComponent<CharacterController>().Move(Vector3.down * 0.01f);
                 yield return new WaitForFixedUpdate();
             }

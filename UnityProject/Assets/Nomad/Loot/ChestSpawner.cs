@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Nomad.Game;
 using Nomad.Inventory;
 using Nomad.Terrain;
 using UnityEngine;
@@ -68,6 +69,9 @@ namespace Nomad.Loot
         [Tooltip("제공된 상자 지점 중 최소로 사용할 비율입니다. 나머지는 seed에 따라 랜덤입니다.")]
         [SerializeField, Range(0f, 1f)] private float minimumFill = 0.5f;
 
+        // 출격 때 고른 필드 변형입니다(#194). null이면 위 기본값을 그대로 씁니다.
+        private FieldPreset preset;
+
         private readonly List<LootChest> chests = new();
         private GameObject root;
         private Material bodyMaterial;
@@ -100,11 +104,13 @@ namespace Nomad.Loot
             if (string.IsNullOrEmpty(generationId) || points == null || points.Count == 0)
                 return chests;
 
+            preset = GameManager.Instance != null ? GameManager.Instance.SelectedField : null;
             var random = new System.Random(unchecked(seed * 7919 + 20));
             int[] order = Shuffle(points.Count, random);
             int count = fillAllPoints ? points.Count
                 : random.Next(Mathf.CeilToInt(points.Count * minimumFill), points.Count + 1);
 
+            int bonusIndex = preset != null && count > 0 ? random.Next(count) : -1;
             root = new GameObject("FieldChests");
             root.transform.SetParent(transform, false);
             for (int i = 0; i < count; i++)
@@ -112,7 +118,17 @@ namespace Nomad.Loot
                 FieldSpawnPoint point = points[order[i]];
                 Quaternion rotation = point.Rotation * Quaternion.Euler(0f, random.Next(4) * 90f, 0f);
                 LootChest chest = CreateChest($"{generationId}/{point.Id}", point.Position, rotation);
-                chest.Initialize(chest.name, Roll(random));
+                LootStack[] contents = Roll(random);
+
+                // 필드 변형이 있으면 상자 하나에 확정 티어 이상 장비 1개를 더 넣습니다(#194).
+                if (i == bonusIndex)
+                {
+                    ItemDefinition bonus = PickAtLeast(GearPool(random), (ItemTier)(preset.GuaranteedTier + 1), random);
+                    if (bonus != null)
+                        contents = contents.Append(new LootStack(bonus.ItemId, 1)).ToArray();
+                }
+
+                chest.Initialize(chest.name, contents);
                 chests.Add(chest);
             }
 
@@ -178,6 +194,9 @@ namespace Nomad.Loot
             }
 
             int sellItems = random.Next(Mathf.Min(sellItemsMin, sellItemsMax), Mathf.Max(sellItemsMin, sellItemsMax) + 1);
+            if (preset != null)
+                sellItems = Mathf.RoundToInt(sellItems * preset.ScrapAmount);
+
             for (int i = 0; i < sellItems; i++)
             {
                 ItemDefinition item = Pick(sellPool, random);
@@ -185,9 +204,9 @@ namespace Nomad.Loot
                     Put(item.ItemId, 1);
             }
 
-            if (random.NextDouble() < gearChance)
+            if (random.NextDouble() < (preset != null ? preset.GearChance : gearChance))
             {
-                ItemDefinition item = Pick(gearPool, random);
+                ItemDefinition item = Pick(GearPool(random), random);
                 if (item != null)
                     Put(item.ItemId, 1);
             }
@@ -204,11 +223,44 @@ namespace Nomad.Loot
             return order.Select(id => new LootStack(id, counts[id])).ToArray();
         }
 
+        // 필드 변형의 무기 비율로 무기(weapon-)와 방어구(gear-) 중 한쪽 후보를 고릅니다. 한쪽이 비면 전체를 씁니다.
+        private List<ItemDefinition> GearPool(System.Random random)
+        {
+            if (preset == null)
+                return gearPool;
+
+            bool weapon = random.NextDouble() < preset.WeaponShare;
+            List<ItemDefinition> side = gearPool
+                .Where(item => item.ItemId.StartsWith("weapon-", StringComparison.Ordinal) == weapon).ToList();
+            return side.Count > 0 ? side : gearPool;
+        }
+
+        // 필드 변형이 있으면 그 티어 가중치를, 없으면 기본 표를 씁니다.
+        private float WeightOf(ItemTier tier)
+        {
+            int index = (int)tier - 1;
+            if (preset != null && index >= 0 && index < preset.TierWeights.Length)
+                return preset.TierWeights[index];
+
+            return tierWeights.FirstOrDefault(entry => entry.Tier == tier).Weight;
+        }
+
+        // minimum 이상 티어만 남겨 고르고, 그런 후보가 없으면 가장 높은 티어에서 고릅니다.
+        private ItemDefinition PickAtLeast(List<ItemDefinition> pool, ItemTier minimum, System.Random random)
+        {
+            List<ItemDefinition> high = pool.Where(item => item.Tier >= minimum).ToList();
+            if (high.Count == 0 && pool.Count > 0)
+                high = pool.Where(item => item.Tier == pool.Max(other => other.Tier)).ToList();
+
+            // 최소 티어 이상에서는 가중치가 0인 티어도 뽑힐 수 있게 1을 더합니다.
+            return Pick(high, random, 1f);
+        }
+
         // 후보가 있는 티어 중에서 가중치로 하나를 고르고, 그 티어 안에서는 균등하게 고릅니다.
-        private ItemDefinition Pick(List<ItemDefinition> pool, System.Random random)
+        private ItemDefinition Pick(List<ItemDefinition> pool, System.Random random, float weightBonus = 0f)
         {
             List<(List<ItemDefinition> Items, float Weight)> tiers = tierWeights
-                .Select(entry => (pool.Where(item => item.Tier == entry.Tier).ToList(), Mathf.Max(0f, entry.Weight)))
+                .Select(entry => (pool.Where(item => item.Tier == entry.Tier).ToList(), Mathf.Max(0f, WeightOf(entry.Tier)) + weightBonus))
                 .Where(tier => tier.Item1.Count > 0 && tier.Item2 > 0f).ToList();
             if (tiers.Count == 0)
                 return null;
