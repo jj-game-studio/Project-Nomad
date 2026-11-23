@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Nomad.Game;
 using Nomad.Shop;
 using Nomad.Terrain;
+using Nomad.Monsters.Demo;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
@@ -28,6 +29,8 @@ namespace Nomad.Minimap
         private Font font;
         private MinimapProjection projection;
         private Coroutine rebuild;
+        private BossRouteGuide bossGuide;
+        private RectTransform bossMarker;
 
         public bool MapReady => map != null && map.texture != null;
         public bool IsVisible => view != null && view.gameObject.activeSelf;
@@ -107,6 +110,9 @@ namespace Nomad.Minimap
                     marker.icon.gameObject.SetActive(window.Contains(marker.world.position));
                     marker.icon.anchoredPosition = window.Marker(marker.world.position, MapSize);
                 }
+            bool showBoss = bossGuide != null && bossGuide.Available;
+            bossMarker.gameObject.SetActive(showBoss);
+            if (showBoss) bossMarker.anchoredPosition = window.Marker(bossGuide.Goal, MapSize, 10);
         }
 
         private void BindRegion(Scene next)
@@ -156,6 +162,7 @@ namespace Nomad.Minimap
             bool hasShop = false;
             foreach (GameObject root in region.GetRootGameObjects())
             {
+                if (bossGuide == null) bossGuide = root.GetComponentInChildren<BossRouteGuide>();
                 foreach (RegionExit exit in root.GetComponentsInChildren<RegionExit>())
                     if (exit.enabled) AddMarker(exit.transform, new Color(0.35f, 0.80f, 1), true);
                 foreach (FieldExit exit in root.GetComponentsInChildren<FieldExit>())
@@ -164,6 +171,7 @@ namespace Nomad.Minimap
                     if (shop.enabled) { AddMarker(shop.transform, new Color(1, 0.77f, 0.32f), false); hasShop = true; }
             }
             legend.text = "▲ 나  <color=#59CCFF>◆ 출구</color>" + (hasShop ? "  <color=#FFC452>■ 상점</color>" : "");
+            if (bossGuide != null) legend.text += "  <color=#C8AD72>◇ 보스</color>";
             playerArrow.SetAsLastSibling();
         }
 
@@ -191,6 +199,8 @@ namespace Nomad.Minimap
             }
             foreach (var marker in markers) if (marker.icon != null) Destroy(marker.icon.gameObject);
             markers.Clear();
+            bossGuide = null;
+            if (bossMarker != null) bossMarker.gameObject.SetActive(false);
             if (view != null) view.gameObject.SetActive(false);
         }
 
@@ -264,6 +274,13 @@ namespace Nomad.Minimap
             arrow.verticalOverflow = VerticalWrapMode.Overflow;
             arrow.color = Color.white;
             arrow.raycastTarget = false;
+            Text boss = Label(map.transform, "Boss direction", "◇", 0, 0, 18, 18, 16);
+            boss.alignment = TextAnchor.MiddleCenter;
+            boss.color = new Color(0.86f, 0.72f, 0.42f, 0.65f);
+            bossMarker = boss.rectTransform;
+            bossMarker.anchorMin = bossMarker.anchorMax = Vector2.zero;
+            bossMarker.pivot = Vector2.one * 0.5f;
+            bossMarker.gameObject.SetActive(false);
             legend = Label(view, "Legend", "", 10, 222, 188, 18, 11);
             legend.alignment = TextAnchor.MiddleCenter;
             view.gameObject.SetActive(false);

@@ -53,7 +53,7 @@ namespace Nomad.Gameplay.Editor
                 frame = Time.frameCount;
                 routine ??= Verify();
                 if (routine.MoveNext()) return;
-                Debug.Log("ENCOUNTER_LAYOUT_PASS seeds=0,7,51 normal=24 elite=2 boss=1 spread=4 quadrants field=true");
+                Debug.Log("ENCOUNTER_LAYOUT_PASS normal=24 elite=1 boss=1 spread=4 quadrants field=true");
                 Finish(0);
             }
             catch (Exception error)
@@ -81,12 +81,13 @@ namespace Nomad.Gameplay.Editor
                 controls.Regenerate(false);
                 yield return null;
                 yield return null;
+                while (controls.Navigation.State != FieldGenerationState.Ready) yield return null;
                 Require(controls.Navigation.State == FieldGenerationState.Ready, "field ready " + seed);
                 var actors = monsters.Enemies;
                 int normals = actors.Count(actor => actor.GetComponent<MonsterIdentity>().Rank == MonsterRank.Normal);
                 int elites = actors.Count(actor => actor.GetComponent<MonsterIdentity>().Rank == MonsterRank.Elite);
                 int bosses = actors.Count(actor => actor.GetComponent<MonsterIdentity>().Rank == MonsterRank.Boss);
-                Require(normals == 24 && elites == 2 && bosses == 1,
+                Require(normals == 24 && elites == 1 && bosses == 1,
                     $"seed {seed} counts: normal={normals}, elite={elites}, boss={bosses}");
                 BossArena arena = Object.FindAnyObjectByType<BossArena>();
                 Require(arena != null && arena.Connected, "separate connected arena " + seed);
@@ -105,10 +106,11 @@ namespace Nomad.Gameplay.Editor
                 }
                 Debug.Log($"ENCOUNTER_SPREAD seed={seed} quadrants={string.Join("/", quadrants)}");
                 Require(quadrants.All(count => count >= 2) && quadrants.Max() <= normals / 2, "normals spread over field " + seed);
-                Require(MonsterEncounterLayout.PathLength(start, arena.Center) > eliteDistance,
+                Require(MonsterEncounterLayout.PathLength(start, arena.Entrance) + BossArena.HalfSize > eliteDistance,
                     "boss follows elite " + seed);
                 foreach (var actor in actors)
-                    Require(!float.IsInfinity(MonsterEncounterLayout.PathLength(start, actor.transform.position)),
+                    Require((arena.UsesGate && actor.GetComponent<MonsterIdentity>().Rank == MonsterRank.Boss) ||
+                        !float.IsInfinity(MonsterEncounterLayout.PathLength(start, actor.transform.position)),
                         "reachable actor " + actor.name);
                 Capture(controls, arena, seed);
                 BossArena previous = arena;

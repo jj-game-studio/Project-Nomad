@@ -24,14 +24,14 @@ namespace Nomad.Monsters
             if (dropped) return;
             dropped = true;
 
-            // TODO: 장비 담당자가 이 지점에서 등급별 드롭테이블 결과를 전달합니다.
-            // 현재는 실제 장비 데이터/획득 기능이 없는 표시물 하나만 생성합니다.
+            // 시각적 낙하와 아이템/루팅 계약을 분리해 장비 모듈을 직접 참조하지 않습니다.
             var root = new GameObject("Equipment drop (placeholder, no pickup)");
             UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(root, gameObject.scene);
             root.transform.SetParent(dropParent, true);
             root.transform.position = transform.position;
             SpawnedDrop = root.AddComponent<PlaceholderEquipmentDrop>();
             SpawnedDrop.Configure(GetComponent<MonsterIdentity>()?.Rank ?? MonsterRank.Normal);
+            DropCreated?.Invoke(SpawnedDrop);
         }
     }
 }

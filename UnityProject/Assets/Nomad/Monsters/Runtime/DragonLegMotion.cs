@@ -31,8 +31,8 @@ namespace Nomad.Monsters
         {
             float speed = !health.IsDead && agent.enabled && agent.isOnNavMesh ? agent.velocity.magnitude : 0f;
             if (GetComponent<MonsterTactics>()?.IsDashing == true) speed = 6f;
-            gait = Mathf.MoveTowards(gait, Mathf.Clamp01(speed / 2f), Time.deltaTime * 3f);
-            phase += speed * Time.deltaTime * 1.65f;
+            gait = Mathf.MoveTowards(gait, Mathf.Clamp01(speed / 2f), Time.deltaTime * 5f);
+            phase += speed * Time.deltaTime * 1.9f;
             float blend = 1f - Mathf.Exp(-Time.deltaTime * 14f);
             for (int i = 0; i < joints.Length; i++)
             {
@@ -40,7 +40,7 @@ namespace Nomad.Monsters
                 float diagonal = name.Contains("front") == name.EndsWith(".L") ? 0f : Mathf.PI;
                 float step = Mathf.Sin(phase + diagonal);
                 float angle = name.Contains("upper") || name.Contains("hip") || name.Contains("shoulder") ? step * 16f :
-                    name.Contains("lower") ? Mathf.Max(0f, step) * 24f : -step * 8f;
+                    name.Contains("lower") ? Mathf.Max(0f, step) * 28f : -step * 6f;
                 Quaternion desired = rest[i] * Quaternion.Euler(angle * gait, 0f, 0f);
                 // 매 프레임 Animator가 쓴 과도한 회전을 버리고 기준 포즈 안에서만 보간합니다.
                 pose[i] = Quaternion.Slerp(pose[i], desired, blend);

@@ -75,6 +75,7 @@ namespace Nomad.Monsters.Demo
             bar.Boss = rank == MonsterRank.Boss;
             bar.WorldOffset = Vector3.up * (rank == MonsterRank.Elite ? 4.1f : 2.4f);
             root.AddComponent<MonsterDeathDrop>().Configure(parent != null ? parent : transform);
+            root.AddComponent<MonsterEquipmentLoot>().Configure(target.GetComponent<Nomad.Inventory.PlayerInventory>());
             root.AddComponent<MonsterHitFeedback>();
             if (prefab != null) root.AddComponent<MonsterAnimationDriver>();
             MonsterTracker tracker = root.AddComponent<MonsterTracker>();

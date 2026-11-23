@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 695c21989aadc294ba05048eee61120c, type: 3}
+  m_Name: MonsterEquipmentDrops
+  m_EditorClassIdentifier: Assembly-CSharp::Nomad.Monsters.Demo.MonsterEquipmentDropTable
+  normal:
+  - {fileID: 11400000, guid: ca38e1181ce0a63498c03747a544b514, type: 2}
+  - {fileID: 11400000, guid: 6cd253bc79234094eb91fa7f72ae01ac, type: 2}
+  - {fileID: 11400000, guid: 8a7bb2fe30f5e274ead5f6ce39cd1902, type: 2}
+  elite:
+  - {fileID: 11400000, guid: d6426022bc0c7424993c84a733fdc32a, type: 2}
+  - {fileID: 11400000, guid: 68caed9a62a821940adeed05bf96a232, type: 2}
+  - {fileID: 11400000, guid: c5862214309496d4f8c57e4231be513d, type: 2}
+  - {fileID: 11400000, guid: 16cc907af324e8c469d03e651246ddcc, type: 2}
+  boss:
+  - {fileID: 11400000, guid: c5862214309496d4f8c57e4231be513d, type: 2}
+  - {fileID: 11400000, guid: 16cc907af324e8c469d03e651246ddcc, type: 2}
+  normalCount: 1
+  eliteCount: 1
+  bossCount: 2

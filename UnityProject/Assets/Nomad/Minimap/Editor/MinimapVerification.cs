@@ -160,7 +160,7 @@ namespace Nomad.Minimap.Editor
             }
         }
 
-        private static void Capture(string name)
+        internal static void Capture(string name)
         {
             Camera camera = Camera.main;
             Canvas[] overlays = Resources.FindObjectsOfTypeAll<Canvas>().Where(canvas => canvas.isActiveAndEnabled &&

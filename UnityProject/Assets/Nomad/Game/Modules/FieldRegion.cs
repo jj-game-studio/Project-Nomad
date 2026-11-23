@@ -69,7 +69,11 @@ namespace Nomad.Game.Modules
         private void OnGenerationCompleted(FieldGenerationResult result)
         {
             if (result.Success)
+            {
+                retryPending = false;
+                retries = 0;
                 return;
+            }
 
             if (retries < maxRetries)
                 retryPending = true;

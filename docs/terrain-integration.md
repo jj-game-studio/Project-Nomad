@@ -95,3 +95,7 @@ WFC는 후보 전파·최소 후보 셀 선택·가중 선택을 유지합니다
 - 전투를 포함한 이동 → 파밍 → 전투 흐름은 몬스터 통합(#59) 이후 확인합니다.
 
 `Nomad.Loot.Editor.TerrainLootVerification.Run`은 저장 씬에서 실제 E/F/V/T 입력으로 상자 지점 배치·가득 찬 가방 부분 획득·반복 획득 무복제·빈 상자·Collider 유지·동일 seed 재현(위치·내용물)·이전 세대 정리·인벤토리 유지·HUD를 검사합니다. 이어서12개 seed에서 지점 외 배치 없음·수량 범위·같은 세대 중복 배치 없음·재현성, 지점0개·실패 결과의 상자 없음을 검사합니다. 성공 표식 `TERRAIN_LOOT_PASS`, 로그 `Artifacts/terrain-loot-play.log`, 캡처 `terrain-loot-player.png`와 `terrain-loot-overview.png`입니다. 기존 통합 Play 검증 진입점도 유지합니다.
+
+## 필수 조우와 장비 드롭 (#179)
+저장된 TerrainIntegration.unity의 기존 GameplayIntegration 참조가 같은 MonsterEncounterLayout을 사용합니다. 기본 일반6·엘리트1·보스1, 별도 제단/보스 안내와 실제 장비 드롭을 연결합니다. 기존 씬의 수량은 이미1/1이므로 새 직렬화 설정은 필요하지 않습니다. #178이 씬을 선점하고 있어 불필요한 씬 재저장은 피하고 기존 저장 씬 그대로 RunTerrain에서 새 런타임을 검증합니다.
+검증 진입점은 Nomad.Gameplay.Editor.MonsterProgressionVerification.RunTerrain이며 필수 수량·도달성·진입문 왕복·E 루팅·가방 포화·부분 획득·재생성 정리를 검사합니다.
