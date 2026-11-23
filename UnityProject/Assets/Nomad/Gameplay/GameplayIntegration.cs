@@ -133,45 +133,20 @@ namespace Nomad.Gameplay
             generationId = field.GenerationId;
             enemyRoot = new GameObject("Field enemies " + generationId);
             SceneManager.MoveGameObjectToScene(enemyRoot, gameObject.scene);
-            var candidates = new List<FieldSpawnPoint>(field.EnemyPoints);
-            var random = new System.Random(field.Seed);
-            for (int index = candidates.Count - 1; index > 0; index--)
-            {
-                int other = random.Next(index + 1);
-                FieldSpawnPoint point = candidates[index];
-                candidates[index] = candidates[other];
-                candidates[other] = point;
-            }
-
-            int normals = 0;
-            int elites = 0;
-            int bosses = 0;
+            enemies.AddRange(MonsterEncounterLayout.Spawn(field, enemyRoot.transform, factory,
+                player, normalCount, eliteCount, bossCount));
             var styles = new int[3];
-            foreach (FieldSpawnPoint point in candidates)
+            int elites = 0, bosses = 0;
+            foreach (Health enemy in enemies)
             {
-                if (normals >= normalCount && elites >= eliteCount && bosses >= bossCount) break;
-                if (Vector3.Distance(point.Position, field.PlayerPosition) < 12f) continue;
-                if (Physics.CheckCapsule(point.Position + Vector3.up * 0.4f,
-                    point.Position + Vector3.up * 1.5f, 0.35f, Physics.DefaultRaycastLayers,
-                    QueryTriggerInteraction.Ignore)) continue;
-
-                MonsterRank rank = normals < normalCount ? MonsterRank.Normal :
-                    elites < eliteCount ? MonsterRank.Elite : MonsterRank.Boss;
-                MonsterTestSettings settings = MonsterTestSettings.Defaults(rank);
-                if (rank == MonsterRank.Normal) settings.normalStyle = normals % 3;
-                Health enemy = factory.CreateRanked(player, settings, rank,
-                    point.Position, point.Rotation, rank + " " + point.Id, enemyRoot.transform);
                 enemy.gameObject.AddComponent<MonsterTestRanges>();
-                enemies.Add(enemy);
-                if (rank == MonsterRank.Boss) bosses++;
-                else if (rank == MonsterRank.Elite) elites++;
-                else
-                {
-                    normals++;
-                    styles[(int)enemy.GetComponent<MonsterIdentity>().Weapon]++;
-                }
+                MonsterIdentity identity = enemy.GetComponent<MonsterIdentity>();
+                if (identity.Rank == MonsterRank.Normal) styles[(int)identity.Weapon]++;
+                else if (identity.Rank == MonsterRank.Elite) elites++;
+                else bosses++;
             }
-            message = $"Sword {styles[0]} / Crossbow {styles[1]} / Mage {styles[2]}\nElite {elites} / Boss {bosses} | Drops: no pickup";
+            message = $"Sword {styles[0]} / Crossbow {styles[1]} / Mage {styles[2]}\nElite {elites} / Boss {bosses} | Equipment loot: E";
+            controls.SetView(0);
         }
 
         private void ClearGeneration()

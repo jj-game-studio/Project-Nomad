@@ -323,7 +323,7 @@ if (monsters.Count >= 12)
             GUILayout.Label(notice);
             detection = GUILayout.Toggle(detection, "Detection: cyan radius (walls block sight)");
             travel = GUILayout.Toggle(travel, "Travel: amber target gap / purple home");
-            hitFlash = GUILayout.Toggle(hitFlash, "Hit flash");
+            hitFlash = GUILayout.Toggle(hitFlash, "Hit flash + impact");
             damageNumbers = GUILayout.Toggle(damageNumbers, "Damage numbers");
             hitShards = GUILayout.Toggle(hitShards, "Hit shards");
             GUILayout.Label("SETTINGS: new spawn / apply + reset");
@@ -463,7 +463,7 @@ if (monsters.Count >= 12)
                 travel = GUILayout.Toggle(travel, "Leash / travel limits");
                 skillWarnings = GUILayout.Toggle(skillWarnings, "Skill telegraphs");
                 healthBars = GUILayout.Toggle(healthBars, "Monster HP bars");
-                hitFlash = GUILayout.Toggle(hitFlash, "Hit flash");
+                hitFlash = GUILayout.Toggle(hitFlash, "Hit flash + impact");
                 damageNumbers = GUILayout.Toggle(damageNumbers, "Damage numbers");
                 hitShards = GUILayout.Toggle(hitShards, "Hit shards");
             }

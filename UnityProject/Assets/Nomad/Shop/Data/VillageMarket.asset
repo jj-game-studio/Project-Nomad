@@ -87,3 +87,11 @@ MonoBehaviour:
     sellPrice: 400
     initialStock: 0
     sellOnly: 1
+  - item: {fileID: 11400000, guid: 3c8f640aad1ef4340986c4cbaed4de2b, type: 2}
+    category: 2
+    displayName: "체력 회복약"
+    description: "Q로 사용합니다. 체력 40 회복. 체력이 가득 차면 소모하지 않습니다."
+    buyPrice: 40
+    sellPrice: 15
+    initialStock: 20
+    sellOnly: 0

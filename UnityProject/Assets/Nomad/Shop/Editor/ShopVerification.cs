@@ -165,9 +165,9 @@ namespace Nomad.Shop.Editor
                         break;
                     case 8:
                         expectedGold -= selectedQuantity * 5;
-                        Require(wallet.Gold == expectedGold && inventory.GetSlot(0).Count == 12 + selectedQuantity && Popup.activeSelf,
-                            "Enter 지정 수량 구매·팝업 유지");
-                        Queue(Key.Escape);
+                        Require(wallet.Gold == expectedGold && inventory.GetSlot(0).Count == 12 + selectedQuantity && !Popup.activeSelf &&
+                            Node("Sale notification").gameObject.activeSelf, "Enter 지정 수량 구매·팝업 닫기·알림");
+                        Queue();
                         break;
                     case 9:
                         Require(!Popup.activeSelf && Node("Backpack/Content").GetComponent<RectTransform>().anchoredPosition == backpackPosition &&
@@ -248,8 +248,8 @@ namespace Nomad.Shop.Editor
                         expectedGold -= 360;
                         int knives = Enumerable.Range(0, PlayerInventory.Capacity).Sum(index =>
                             inventory.GetSlot(index).Item == shop.Catalog.GetOffer(1).Item ? inventory.GetSlot(index).Count : 0);
-                        Require(wallet.Gold == expectedGold && knives == 3 && Popup.activeSelf, "직접 입력 3개 구매·장비는 슬롯별 보관");
-                        Queue(Key.Escape);
+                        Require(wallet.Gold == expectedGold && knives == 3 && !Popup.activeSelf, "직접 입력 3개 구매·팝업 닫기·장비는 슬롯별 보관");
+                        Queue();
                         break;
                     case 31:
                         Queue();
@@ -271,7 +271,7 @@ namespace Nomad.Shop.Editor
                         wallet.TryAddGold(1);
                         break;
                     case 35:
-                        Require(Quantity.text == "0" && Slider.maxValue == 0 && !Node("Buy").GetComponent<Button>().interactable &&
+                        Require(Popup.activeSelf && Quantity.text == "0" && Slider.maxValue == 0 && !Node("Buy").GetComponent<Button>().interactable &&
                             Read("Readiness").Contains("부족"), "재화 변경 시 한도 0·거래 비활성·사유");
                         wallet.TryAddGold(expectedGold - 1);
                         Queue(Key.Escape);
@@ -370,10 +370,10 @@ namespace Nomad.Shop.Editor
                         break;
                     case 59:
                         expectedGold += 4;
-                        Require(Popup.activeSelf && inventory.GetSlot(0).Count == remainingScrap - 2 &&
+                        Require(!Popup.activeSelf && inventory.GetSlot(0).Count == remainingScrap - 2 &&
                             wallet.Gold == expectedGold && Read("Sale notification/Message") == "화살 2개 판매 +4 G" &&
-                            Read("Status") == "" && Node("Protection").gameObject.activeSelf,
-                            "일부 판매는 팝업 유지·실제 금액 알림·팝업 완료 문구 제거");
+                            Read("Status") == "" && !Node("Protection").gameObject.activeInHierarchy,
+                            "일부 판매도 팝업 닫기·실제 금액 알림");
                         Capture("shop-sale-partial.png");
                         notificationDeadline = EditorApplication.timeSinceStartup + 3.2;
                         Queue();
@@ -381,16 +381,36 @@ namespace Nomad.Shop.Editor
                     case 60:
                         if (EditorApplication.timeSinceStartup < notificationDeadline) { stage--; break; }
                         Require(!Node("Sale notification").gameObject.activeSelf, "판매 알림은 3초 후 숨김");
-                        Node("Cancel").GetComponent<Button>().onClick.Invoke();
                         break;
                     case 61:
+                        Pointer("Stock/Content/Slot 0", true);
+                        break;
+                    case 62: Pointer("Stock/Content/Slot 0", false); break;
+                    case 63:
+                        Require(Popup.activeSelf, "바깥 클릭 검사 팝업 열기");
+                        Pointer("Item title", true);
+                        break;
+                    case 64: Pointer("Item title", false); break;
+                    case 65:
+                        Require(Popup.activeSelf && wallet.Gold == expectedGold, "카드 내부 빈 곳 클릭 유지·거래 없음");
+                        Pointer("Trade Popup", true, MouseButton.Left, new Vector2(24, -24));
+                        break;
+                    case 66: Pointer("Trade Popup", false, MouseButton.Left, new Vector2(24, -24)); break;
+                    case 67:
+                        Require(!Popup.activeSelf && wallet.Gold == expectedGold && panel != null, "바깥 좌클릭 취소·상점 유지·거래 없음");
+                        Pointer("Stock/Content/Slot 0", true);
+                        break;
+                    case 68: Pointer("Stock/Content/Slot 0", false); break;
+                    case 69:
+                        Require(Popup.activeSelf && panel.GetComponent<Canvas>().pixelPerfect, "취소 후 재열기·픽셀 정렬");
+                        Capture("shop-popup-native.png");
                         inventory.GetComponent<Health>().TryApplyDamage(1000);
                         Queue();
                         break;
-                    case 62:
+                    case 70:
                         Require(Object.FindAnyObjectByType<ShopPanel>() == null && !shop.TryBuy(inventory, 0, 1, out _), "사망 시 닫기·거래 차단");
                         break;
-                    case 63:
+                    case 71:
                         if (!ShopRestockChecks.Step()) { stage--; break; }
                         Debug.Log($"SHOP_PLAYMODE_PASS transaction_checks={transactionChecks} ui_stages={stage}");
                         Finish(0);
@@ -424,7 +444,7 @@ namespace Nomad.Shop.Editor
                 Quantity.ProcessEvent(new Event { type = EventType.KeyDown, character = character });
         }
 
-        private static void Pointer(string path, bool held, MouseButton button = MouseButton.Left)
+        private static void Pointer(string path, bool held, MouseButton button = MouseButton.Left, Vector2? pointInRect = null)
         {
             Canvas.ForceUpdateCanvases();
             RectTransform rect = (RectTransform)Node(path);
@@ -438,7 +458,7 @@ namespace Nomad.Shop.Editor
                         top < offset ? top : top + rect.rect.height - scroll.viewport.rect.height));
                 Canvas.ForceUpdateCanvases();
             }
-            Vector2 point = RectTransformUtility.WorldToScreenPoint(null, rect.TransformPoint(rect.rect.center));
+            Vector2 point = RectTransformUtility.WorldToScreenPoint(null, rect.TransformPoint(pointInRect ?? rect.rect.center));
             InputSystem.QueueStateEvent(mouse, new MouseState { position = point }.WithButton(button, held));
         }
 

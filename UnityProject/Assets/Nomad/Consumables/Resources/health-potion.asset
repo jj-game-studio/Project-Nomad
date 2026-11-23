@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d9209f1a45eeaf4458396815df6300a9, type: 3}
+  m_Name: health-potion
+  m_EditorClassIdentifier: Assembly-CSharp::Nomad.Inventory.ItemDefinition
+  itemId: health-potion
+  displayName: "\uCCB4\uB825 \uD68C\uBCF5\uC57D"
+  description: "Q\uB85C \uC0AC\uC6A9\uD569\uB2C8\uB2E4. \uCCB4\uB825 40 \uD68C\uBCF5. \uCCB4\uB825\uC774 \uAC00\uB4DD \uCC28\uBA74 \uC18C\uBAA8\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4."
+  icon: {fileID: -2007373494811564851, guid: c54f6d8a78405704ca4cdf1361ea2a8c, type: 3}
+  maxStack: 10
+  tier: 1
+  equipmentType: 0
+  attackPower: 0
+  defense: 0
+  attackMode: 0
+  attackRange: 0
+  attackInterval: 0
+  manaCost: 0
+  stats: []
+  equippedVisual: {fileID: 0}

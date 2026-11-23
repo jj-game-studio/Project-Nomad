@@ -1,14 +1,18 @@
 using System;
+using Nomad.Interaction;
 using UnityEngine;
 
 namespace Nomad.Terrain
 {
-    // 생성 필드 출구의 임시 표식과 진입 트리거입니다. 실제 장면 전환은 소비 측(#89)이 Entered에 연결합니다.
+    // 출구를 스치는 전투/회피로 지역이 바뀌지 않도록 명시적인 E 상호작용으로만 귀환합니다.
     [DisallowMultipleComponent]
-    public sealed class FieldExit : MonoBehaviour
+    public sealed class FieldExit : MonoBehaviour, IInteractable, IInteractionAction
     {
         public FieldSpawnPoint Point { get; private set; }
         public event Action<FieldExit, Collider> Entered;
+        public string InteractionId => "field-exit-" + Point.Id;
+        public string InteractionAction => "마을로 귀환";
+        public Vector3 InteractionPoint => transform.position + Vector3.up * 0.5f;
 
         public static FieldExit Create(FieldSpawnPoint point, Transform parent)
         {
@@ -53,6 +57,14 @@ namespace Nomad.Terrain
             else DestroyImmediate(value);
         }
 
-        private void OnTriggerEnter(Collider other) => Entered?.Invoke(this, other);
+        public bool CanInteract(InteractionContext context) => context.Player != null &&
+            Vector3.Distance(context.Player.position, transform.position) <= InteractionRange.Default;
+
+        public void Interact(InteractionContext context)
+        {
+            if (!CanInteract(context)) return;
+            Collider body = context.Player.GetComponent<Collider>();
+            if (body != null) Entered?.Invoke(this, body);
+        }
     }
 }
