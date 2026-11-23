@@ -1,3 +1,4 @@
+using Nomad.Player;
 using Nomad.Terrain;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
@@ -127,10 +128,13 @@ namespace Nomad.Game.Modules
             private readonly AntialiasingMode antialiasing;
             private readonly CameraClearFlags clearFlags;
             private readonly Color background;
+            private readonly bool following;
 
             public CameraState(Camera target)
             {
                 camera = target;
+                TopDownCamera follow = target.GetComponent<TopDownCamera>();
+                following = follow == null || follow.enabled;
                 UniversalAdditionalCameraData data = target.GetUniversalAdditionalCameraData();
                 postProcessing = data.renderPostProcessing;
                 antialiasing = data.antialiasing;
@@ -148,6 +152,11 @@ namespace Nomad.Game.Modules
                 data.antialiasing = antialiasing;
                 camera.clearFlags = clearFlags;
                 camera.backgroundColor = background;
+
+                // 필드의 조망 시점이 꺼 둔 플레이어 추적을 다음 지역에 남기지 않습니다.
+                TopDownCamera follow = camera.GetComponent<TopDownCamera>();
+                if (follow != null)
+                    follow.enabled = following;
             }
         }
     }
