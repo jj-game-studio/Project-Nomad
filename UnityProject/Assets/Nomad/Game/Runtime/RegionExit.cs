@@ -9,6 +9,9 @@ namespace Nomad.Game
         [Tooltip("전환할 지역 씬 이름")]
         [SerializeField] private string targetRegion = "Field";
 
+        [Tooltip("켜면 바로 이동하지 않고 필드 선택창을 띄웁니다(#194).")]
+        [SerializeField] private bool chooseField = true;
+
         public string TargetRegion => targetRegion;
 
         private void OnTriggerEnter(Collider other)
@@ -18,7 +21,12 @@ namespace Nomad.Game
                 return;
 
             if (other.transform.IsChildOf(manager.Player.transform))
-                manager.LoadRegion(targetRegion);
+            {
+                if (chooseField && targetRegion == "Field")
+                    manager.OpenFieldSelect(targetRegion);
+                else
+                    manager.LoadRegion(targetRegion);
+            }
         }
     }
 }

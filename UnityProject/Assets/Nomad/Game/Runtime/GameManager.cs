@@ -1,6 +1,8 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 
 namespace Nomad.Game
@@ -18,6 +20,13 @@ namespace Nomad.Game
         private RegionTransitionView transitionView;
         private bool regionEntryFailed;
 
+        // 필드 선택창 상태입니다(#194). 후보는 마을에 머무는 동안 유지되고, 출발하면 다시 뽑습니다.
+        private FieldSelectView fieldSelectView;
+        private List<FieldPreset> fieldChoices;
+        private string fieldSelectTarget;
+        private float fieldSelectTimeScale;
+        private int fieldSelectClosedFrame = -1;
+
         // 처음부터 다시 시작할 때 불러오는 부트스트랩 씬입니다(Build Settings 첫 씬).
         public const string GameSceneName = "Game";
 
@@ -28,6 +37,13 @@ namespace Nomad.Game
         public string PreviousRegion { get; private set; }
         public bool IsLoading { get; private set; }
         public bool IsRestarting { get; private set; }
+
+        // 이번 출격에 고른 필드 변형입니다. 필드 씬을 단독 Play하면 null이고 각 모듈의 기본값을 씁니다.
+        public FieldPreset SelectedField { get; private set; }
+
+        // 선택창이 열려 있거나 이번 프레임에 닫혔으면 Esc 일시정지가 같은 입력을 받지 않게 합니다.
+        public bool IsChoosingField => (fieldSelectView != null && fieldSelectView.IsOpen) ||
+            fieldSelectClosedFrame == Time.frameCount;
 
         // 모듈 중 Player 태그가 붙은 오브젝트입니다. 지역이 바뀌어도 같은 인스턴스를 유지합니다.
         public GameObject Player { get; private set; }
@@ -105,6 +121,7 @@ namespace Nomad.Game
         private void OnDestroy()
         {
             transitionView?.ReleaseFont();
+            fieldSelectView?.ReleaseFont();
             if (Instance == this)
                 Instance = null;
         }
@@ -118,6 +135,67 @@ namespace Nomad.Game
 
             StartCoroutine(LoadRegionRoutine(sceneName));
             return true;
+        }
+
+        // 필드 선택창을 열고 게임 시간을 멈춥니다. 고르면 그 필드로 출발하고, 취소하면 현재 지역에 남습니다.
+        public void OpenFieldSelect(string sceneName)
+        {
+            if (IsLoading || IsRestarting || IsChoosingField)
+                return;
+
+            var random = new System.Random();
+            fieldChoices ??= FieldPreset.Roll(random.Next(3, 5), random);
+            fieldSelectTarget = sceneName;
+            fieldSelectTimeScale = Time.timeScale;
+            Time.timeScale = 0f;
+
+            fieldSelectView ??= new FieldSelectView(transform, CloseFieldSelect);
+            fieldSelectView.Show(fieldChoices, ChooseField);
+        }
+
+        private void ChooseField(FieldPreset preset)
+        {
+            CloseFieldSelect();
+            SelectedField = preset;
+            if (LoadRegion(fieldSelectTarget))
+                fieldChoices = null;
+        }
+
+        private void CloseFieldSelect()
+        {
+            if (fieldSelectView == null || !fieldSelectView.IsOpen)
+                return;
+
+            fieldSelectView.Hide();
+            fieldSelectClosedFrame = Time.frameCount;
+            Time.timeScale = fieldSelectTimeScale;
+        }
+
+        private void Update()
+        {
+            if (fieldSelectView == null || !fieldSelectView.IsOpen)
+                return;
+
+            // 숫자 키로 고르고 Esc로 취소합니다.
+            Keyboard keyboard = Keyboard.current;
+            if (keyboard == null)
+                return;
+
+            if (keyboard.escapeKey.wasPressedThisFrame)
+            {
+                CloseFieldSelect();
+                return;
+            }
+
+            Key[] keys = { Key.Digit1, Key.Digit2, Key.Digit3, Key.Digit4 };
+            for (int i = 0; i < fieldChoices.Count && i < keys.Length; i++)
+            {
+                if (keyboard[keys[i]].wasPressedThisFrame)
+                {
+                    ChooseField(fieldChoices[i]);
+                    return;
+                }
+            }
         }
 
         public void ReportRegionEntryFailure(Scene region)

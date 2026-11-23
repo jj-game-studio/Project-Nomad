@@ -75,8 +75,13 @@ namespace Nomad.Game.Modules
             enemyRoot = new GameObject("Field Enemies " + generationId);
             enemyRoot.transform.SetParent(transform, false);
 
+            // 출격 때 고른 필드 변형이 있으면 일반 몬스터 배율과 엘리트 수를 그 값으로 바꿉니다(#194).
+            FieldPreset preset = GameManager.Instance.SelectedField;
+            int normals = preset != null ? Mathf.RoundToInt(normalCount * preset.MonsterAmount) : normalCount;
+            int elites = preset != null ? preset.EliteCount : eliteCount;
+
             enemies.AddRange(MonsterEncounterLayout.Spawn(field, enemyRoot.transform, factory,
-                target, normalCount, eliteCount, bossCount, safeRadius));
+                target, normals, elites, bossCount, safeRadius));
         }
 
         // 지형이 교체되는 프레임에 이전 몬스터가 움직이지 않도록 바로 끄고 지웁니다.

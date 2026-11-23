@@ -27,7 +27,7 @@ namespace Nomad.Game.Modules
 
         private void Update()
         {
-            if (manager == null || manager.IsLoading || manager.IsRestarting ||
+            if (manager == null || manager.IsLoading || manager.IsRestarting || manager.IsChoosingField ||
                 manager.Player == null || !manager.Player.activeInHierarchy ||
                 (manager.Player.TryGetComponent(out Health health) && health.IsDead))
             {
