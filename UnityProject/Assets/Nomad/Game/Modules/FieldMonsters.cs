@@ -14,7 +14,7 @@ namespace Nomad.Game.Modules
     [RequireComponent(typeof(MonsterActorFactory))]
     public sealed class FieldMonsters : MonoBehaviour
     {
-        [SerializeField, Min(0)] private int normalCount = 24;
+        [SerializeField, Min(0)] private int normalCount = 12;
         [SerializeField, Min(0)] private int eliteCount = 1;
         [SerializeField, Min(0)] private int bossCount = 1;
 

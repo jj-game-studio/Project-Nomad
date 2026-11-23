@@ -42,7 +42,7 @@ namespace Nomad.Monsters.Demo
                 damage = elite ? 18 : 20,
                 heavyDamage = elite ? 35 : 40,
                 moveSpeed = elite ? 4.5f : 3.8f,
-                attackSpeed = 1.25f,
+                attackSpeed = elite ? 1.25f : 0.9f,
                 attackRange = elite ? 2.4f : 1.8f,
                 rangedDamage = elite ? 22 : 15,
                 projectileSpeed = elite ? 7f : 9f,
