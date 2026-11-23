@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using Nomad.Combat;
 using Nomad.Interaction;
 using Nomad.Inventory;
@@ -28,6 +29,13 @@ namespace Nomad.Shop.Editor
         private static ShopPanel panel;
         private static Vector3 position;
         private static string unexpectedError;
+        private static int expectedGold;
+        private static int selectedQuantity;
+        private static Vector2 backpackPosition;
+        private static Vector2 stockPosition;
+        private static Vector3 slotPosition;
+        private static double notificationDeadline;
+        private static int remainingScrap;
 
         [MenuItem("Nomad/Shop/Verify Shop (batch only)")]
         public static void Run()
@@ -106,294 +114,284 @@ namespace Nomad.Shop.Editor
                 {
                     case 1:
                         panel = Object.FindAnyObjectByType<ShopPanel>();
-                        Require(panel != null && Read("Gold").Contains("1,000"), "E로 열기·현재 재화 표시");
-                        Require(Read("Restock").StartsWith("재입고까지 ") && Read("Balance") == "거래 후 잔액 995 골드",
-                            "재입고 타이머·구매 후 예상 잔액");
-                        Require(Read("Backpack/Content/Slot 0/Price") == "판매 2 G" &&
-                            Read("Stock/Content/Slot 0/Price") == "구매 5 G", "양쪽 칸별 가격 표시");
-                        Require(Node("Backpack/Content").childCount == 20 &&
-                            Node("Stock/Content").childCount == 3, "가방 20칸·상점 목록 표시");
+                        Require(panel != null && Read("Gold").Contains("1,000") && !Popup.activeSelf && Node("Trade tray") == null,
+                            "상점 열기는 목록만 표시·하단 거래 제거");
                         Canvas.ForceUpdateCanvases();
-                        RectTransform lastSlot = (RectTransform)Node("Backpack/Content/Slot 19");
-                        ScrollRect backpack = Node("Backpack").GetComponent<ScrollRect>();
-                        Require(-lastSlot.anchoredPosition.y + lastSlot.rect.height + 8 <= backpack.viewport.rect.height,
-                            "스크롤 없이 가방 20칸 전체 표시");
-                        Capture("shop-ui.png");
+                        Require(Node("Paper").GetComponent<ShopRoundedRect>().color.grayscale -
+                            Node("Capacity").GetComponent<Text>().color.grayscale > 0.5f &&
+                            Node("Restock").GetComponent<Text>().color.grayscale -
+                            panel.transform.Find("Shop Window").GetComponent<ShopRoundedRect>().color.grayscale > 0.5f &&
+                            Node("Restock").GetComponent<Text>().fontSize >= 14,
+                            "가방 칸 수·재입고 보조 정보 대비와 크기");
+                        Require(Node("Backpack hint") == null && Node("Keys") == null &&
+                            Read("Stock/Content/Slot 0/Price") == "5 G" &&
+                            !Node("Backpack/Content/Slot 0/Price").gameObject.activeSelf,
+                            "기본 화면 안내/반복 가격 제거·판매가는 팝업으로 이동");
+                        Require(Node("Backpack").GetComponent<RectTransform>().rect.height == 392 &&
+                            Node("Stock").GetComponent<RectTransform>().rect.height == 212 &&
+                            Node("Backpack/Content/Slot 0/Icon").GetComponent<RectTransform>().rect.width >= 44,
+                            "목록 여백 축소·상품 수에 맞는 높이·가방 아이콘 확대");
+                        backpackPosition = Node("Backpack/Content").GetComponent<RectTransform>().anchoredPosition;
+                        stockPosition = Node("Stock/Content").GetComponent<RectTransform>().anchoredPosition;
+                        slotPosition = Node("Stock/Content/Slot 0").GetComponent<RectTransform>().anchoredPosition;
+                        expectedGold = 1000;
                         RequireVisible("Backpack/Content/Slot 0/Count");
-                        RequireVisible("Stock/Content/Slot 0/Count");
-                        RequireVisible("Backpack/Content/Slot 0/Name");
-                        RequireVisible("Stock/Content/Slot 0/Price");
-                        Font font = Resources.Load<Font>("ShopFonts/NanumGothic-Regular");
-                        Text title = Node("Title").GetComponent<Text>();
-                        Require(font != null && font.HasCharacter('상') && font.HasCharacter('점') &&
-                            title.font == font && title.text == "마을 상점" && Quantity.textComponent.font == font,
-                            "제목·수량 글꼴과 한글 글리프 확인");
-                        Require(Node("Stock/Content/Slot 0").GetComponent<ShopRoundedRect>().Radius >= 10 &&
-                            Node("Quantity").GetComponent<ShopRoundedRect>() != null, "둥근 카드·입력 칸 연결");
-                        Queue(Key.B);
+                        RequireVisible("Stock/Content/Slot 0/Name");
+                        Capture("shop-list.png");
+                        Pointer("Stock/Content/Slot 0", true, MouseButton.Right);
                         break;
-                    case 2:
-                        Require(wallet.Gold == 995 && inventory.GetSlot(0).Count == 13 && shop.StockAt(0) == 29,
-                            "B 구매");
-                        Queue();
+                    case 2: Pointer("Stock/Content/Slot 0", false, MouseButton.Right); break;
+                    case 3:
+                        Require(!Popup.activeSelf && wallet.Gold == expectedGold, "목록 우클릭 무동작·거래 없음");
+                        Pointer("Stock/Content/Slot 0", true);
                         break;
-                    case 3: Queue(Key.Tab); break;
-                    case 4:
-                        Require(Read("Selection").StartsWith("판매"), "Tab으로 가방 선택");
-                        Queue(Key.V);
-                        break;
+                    case 4: Pointer("Stock/Content/Slot 0", false); break;
                     case 5:
-                        Require(wallet.Gold == 997 && inventory.GetSlot(0).Count == 12 && shop.StockAt(0) == 30,
-                            "V 판매");
-                        Queue();
-                        Pointer("Stock/Content/Slot 2", false);
+                        Require(Popup.activeSelf && wallet.Gold == expectedGold && Read("Item title") == "고철", "좌클릭 구매 팝업·자동 거래 없음");
+                        Require(Quantity.text == "1" && Slider.wholeNumbers && Slider.minValue == 1 && Slider.maxValue == 30,
+                            "정수 슬라이더·초기 수량·구매 한도");
+                        Require(Node("Buy").gameObject.activeSelf && !Node("Sell").gameObject.activeSelf, "구매 버튼만 표시");
+                        Require(Quantity.textComponent.font == Resources.Load<Font>("ShopFonts/Pretendard-Regular") &&
+                            Node("Item title").GetComponent<Text>().font == Resources.Load<Font>("ShopFonts/Jua-Regular"), "한글 폰트");
+                        Capture("shop-popup-buy.png");
+                        Pointer("Quantity Slider", true);
                         break;
-                    case 6: Pointer("Stock/Content/Slot 2", true); break;
-                    case 7: Pointer("Stock/Content/Slot 2", false); break;
-                    case 8:
-                        Require(Read("Selection").Contains("구매  야전 조끼"), "마우스로 상점 상품 선택");
-                        Pointer("Buy", true);
-                        break;
-                    case 9: Pointer("Buy", false); break;
-                    case 10:
-                        Require(wallet.Gold == 797 && shop.StockAt(2) == 2, "구매 버튼 클릭");
-                        Pointer("Backpack/Content/Slot 0", true);
-                        break;
-                    case 11: Pointer("Backpack/Content/Slot 0", false); break;
-                    case 12: Pointer("Sell", true); break;
-                    case 13: Pointer("Sell", false); break;
-                    case 14:
-                        Require(wallet.Gold == 799 && inventory.GetSlot(0).Count == 11, "판매 버튼 클릭");
-                        Queue(Key.Equals);
-                        break;
-                    case 15:
-                        Require(Quantity.text == "2", "키로 수량 증가");
+                    case 6: Pointer("Quantity Slider", false); break;
+                    case 7:
+                        selectedQuantity = int.Parse(Quantity.text);
+                        Require(selectedQuantity > 1 && selectedQuantity < 30 && Slider.value == selectedQuantity &&
+                            Read("Selection") == $"{selectedQuantity * 5:N0} G", "실제 슬라이더 클릭·수량·합계 동기화");
                         Queue(Key.Enter);
                         break;
-                    case 16:
-                        Require(wallet.Gold == 803 && inventory.GetSlot(0).Count == 9, "Enter 수량 거래·중복 실행 방지");
-                        position = inventory.transform.position;
-                        Queue(Key.W, Key.Space, Key.LeftShift);
-                        break;
-                    case 17:
-                        Vector3 drift = inventory.transform.position - position;
-                        // 거래 중에도 중력에 의한 바닥 정착은 유지하므로 수평 이동·점프·구르기를 구분합니다.
-                        Require(new Vector2(drift.x, drift.z).sqrMagnitude < 0.0001f && drift.y <= 0.01f &&
-                            !inventory.GetComponent<Nomad.Player.PlayerMovement>().IsRolling,
-                            "거래 중 이동·점프·구르기 차단: " + drift);
-                        Queue(Key.E);
-                        break;
-                    case 18:
-                        Require(Object.FindAnyObjectByType<ShopPanel>() == null, "E 닫기·같은 프레임 재열림 방지");
-                        Queue();
-                        break;
-                    case 19: Queue(Key.E); break;
-                    case 20:
-                        panel = Object.FindAnyObjectByType<ShopPanel>();
-                        Require(panel != null, "E 재열기");
-                        Queue();
-                        Pointer("Close", true);
-                        break;
-                    case 21: Pointer("Close", false); break;
-                    case 22:
-                        Require(Object.FindAnyObjectByType<ShopPanel>() == null, "닫기 버튼 클릭");
-                        Queue(Key.E);
-                        break;
-                    case 23:
-                        Require(Object.FindAnyObjectByType<ShopPanel>() != null, "재화 보존·재접속");
+                    case 8:
+                        expectedGold -= selectedQuantity * 5;
+                        Require(wallet.Gold == expectedGold && inventory.GetSlot(0).Count == 12 + selectedQuantity && Popup.activeSelf,
+                            "Enter 지정 수량 구매·팝업 유지");
                         Queue(Key.Escape);
                         break;
-                    case 24:
-                        Require(Object.FindAnyObjectByType<ShopPanel>() == null && wallet.Gold == 803, "Esc 닫기·재화 보존");
+                    case 9:
+                        Require(!Popup.activeSelf && Node("Backpack/Content").GetComponent<RectTransform>().anchoredPosition == backpackPosition &&
+                            Node("Stock/Content").GetComponent<RectTransform>().anchoredPosition == stockPosition &&
+                            (Vector3)Node("Stock/Content/Slot 0").GetComponent<RectTransform>().anchoredPosition == slotPosition,
+                            "팝업·거래 후 슬롯/스크롤 위치 고정");
+                        Queue(Key.LeftShift);
+                        Pointer("Backpack/Content/Slot 0", true);
+                        break;
+                    case 10: Pointer("Backpack/Content/Slot 0", false); break;
+                    case 11:
+                        Require(Popup.activeSelf && Quantity.text == inventory.GetSlot(0).Count.ToString() &&
+                            Node("Sell").gameObject.activeSelf && !Node("Buy").gameObject.activeSelf && wallet.Gold == expectedGold,
+                            "Shift 가방 클릭은 전량 판매 팝업·자동 판매 없음");
+                        Capture("shop-popup-sell.png");
+                        Queue();
+                        Pointer("Cancel", true, MouseButton.Right);
+                        break;
+                    case 12: Pointer("Cancel", false, MouseButton.Right); break;
+                    case 13:
+                        Require(!Popup.activeSelf && wallet.Gold == expectedGold, "우클릭은 팝업만 닫기");
+                        Pointer("Backpack/Content/Slot 1", true);
+                        break;
+                    case 14: Pointer("Backpack/Content/Slot 1", false); break;
+                    case 15:
+                        Require(Popup.activeSelf && Read("Item title") == "야전 나이프", "가방 클릭은 해당 아이템 판매");
+                        Queue(Key.L);
+                        break;
+                    case 16:
+                        Require(wallet.IsSaleProtected(inventory.GetSlot(1).Item) && !Node("Sell").GetComponent<Button>().interactable,
+                            "판매 잠금 버튼 비활성");
+                        Queue(Key.V);
+                        break;
+                    case 17:
+                        Require(wallet.Gold == expectedGold && inventory.GetSlot(1).Count == 1 &&
+                            !Node("Sale notification").gameObject.activeSelf, "판매 잠금 중 키 거래 차단·완료 알림 없음");
                         Queue();
                         break;
-                    case 25: Queue(Key.Tab); break;
+                    case 18: Queue(Key.L); break;
+                    case 19:
+                        Require(!wallet.IsSaleProtected(inventory.GetSlot(1).Item) && Node("Sell").GetComponent<Button>().interactable,
+                            "판매 잠금 해제");
+                        Queue();
+                        Pointer("Sell", true);
+                        break;
+                    case 20: Pointer("Sell", false); break;
+                    case 21:
+                        expectedGold += 60;
+                        Require(wallet.Gold == expectedGold && inventory.GetSlot(1).Count == 0 && !Popup.activeSelf &&
+                            Node("Sale notification").gameObject.activeSelf &&
+                            Read("Sale notification/Message") == "야전 나이프 판매 +60 G" &&
+                            !Node("Protection").gameObject.activeSelf, "전량 판매 후 팝업 닫기·실제 금액 알림·잠금 숨김");
+                        Capture("shop-sale-complete.png");
+                        Queue();
+                        break;
+                    case 22: Queue(); break;
+                    case 23: Queue(Key.Tab); break;
+                    case 24: Queue(Key.RightArrow); break;
+                    case 25: Queue(Key.Enter); break;
                     case 26:
-                        Require(inventory.GetComponent<Nomad.Player.PlayerMovement>().enabled, "플레이어 활성 유지");
-                        Queue(Key.E);
+                        Require(Popup.activeSelf && Read("Item title") == "야전 나이프" && wallet.Gold == expectedGold,
+                            "Tab·방향키 선택 후 Enter는 팝업만 열기");
+                        Queue(Key.Q);
                         break;
                     case 27:
-                        panel = Object.FindAnyObjectByType<ShopPanel>();
-                        Require(panel != null && !Object.FindAnyObjectByType<InventoryPanel>().transform.Find("InventoryPanel").gameObject.activeSelf,
-                            "가방 창에서 상점 전환 시 가방 닫기");
-                        Queue();
-                        inventory.transform.position += Vector3.right * 5;
+                        Require(Quantity.isFocused, "Q 수량 입력 포커스");
+                        Quantity.text = "";
+                        TypeQuantity("3x");
+                        Queue(Key.Enter);
                         break;
                     case 28:
-                        Require(Object.FindAnyObjectByType<ShopPanel>() == null, "거리 이탈 자동 닫기");
-                        inventory.transform.position = position;
-                        Physics.SyncTransforms();
+                        Require(wallet.Gold == expectedGold && Quantity.text == "3" && Slider.value == 3,
+                            "직접 입력 동기화·확정 Enter 중복 거래 없음");
+                        Queue();
                         break;
-                    case 29: Queue(Key.E); break;
+                    case 29: Queue(Key.Enter); break;
                     case 30:
-                        panel = Object.FindAnyObjectByType<ShopPanel>();
-                        Require(panel != null, "범위 복귀 상점 열기");
-                        Queue(Key.LeftShift);
-                        Pointer("Backpack/Content/Slot 0", true);
+                        expectedGold -= 360;
+                        int knives = Enumerable.Range(0, PlayerInventory.Capacity).Sum(index =>
+                            inventory.GetSlot(index).Item == shop.Catalog.GetOffer(1).Item ? inventory.GetSlot(index).Count : 0);
+                        Require(wallet.Gold == expectedGold && knives == 3 && Popup.activeSelf, "직접 입력 3개 구매·장비는 슬롯별 보관");
+                        Queue(Key.Escape);
                         break;
-                    case 31: Pointer("Backpack/Content/Slot 0", false); break;
+                    case 31:
+                        Queue();
+                        Node("Filter Equipment").GetComponent<Button>().onClick.Invoke();
+                        break;
                     case 32:
-                        Require(Quantity.text == "9" && wallet.Gold == 803, "Shift+클릭 보유 칸 전량 선택·즉시 판매 없음");
-                        Queue();
-                        Pointer("Stock/Content/Slot 0", true);
+                        Require(!Popup.activeSelf && !Node("Stock/Content/Slot 0").gameObject.activeSelf &&
+                            Node("Stock/Content/Slot 1").gameObject.activeSelf, "분류 변경은 목록만 갱신");
+                        Queue(Key.Enter);
                         break;
-                    case 33: Pointer("Stock/Content/Slot 0", false); break;
+                    case 33:
+                        Require(Popup.activeSelf && Read("Item title") == "야전 나이프", "필터 내 팝업 열기");
+                        Node("Maximum").GetComponent<Button>().onClick.Invoke();
+                        Queue();
+                        break;
                     case 34:
-                        Require(Quantity.text == "1", "일반 클릭 수량 초기화");
-                        Queue(Key.RightShift);
-                        Pointer("Stock/Content/Slot 0", true);
+                        Require(int.Parse(Quantity.text) == shop.BuyLimit(inventory, 1), "최대 버튼 구매 한도");
+                        typeof(PlayerWallet).GetProperty(nameof(PlayerWallet.Gold)).SetValue(wallet, 0);
+                        wallet.TryAddGold(1);
                         break;
-                    case 35: Pointer("Stock/Content/Slot 0", false); break;
+                    case 35:
+                        Require(Quantity.text == "0" && Slider.maxValue == 0 && !Node("Buy").GetComponent<Button>().interactable &&
+                            Read("Readiness").Contains("부족"), "재화 변경 시 한도 0·거래 비활성·사유");
+                        wallet.TryAddGold(expectedGold - 1);
+                        Queue(Key.Escape);
+                        break;
                     case 36:
-                        Require(Quantity.text == shop.StockAt(0).ToString() && wallet.Gold == 803,
-                            "오른쪽 Shift+클릭 상점 재고 전량 선택·즉시 구매 없음");
+                        Require(!Popup.activeSelf && wallet.Gold == expectedGold, "Esc는 팝업 먼저 닫기");
                         Queue();
-                        Pointer("Quantity", true);
                         break;
-                    case 37: Pointer("Quantity", false); break;
+                    case 37: Queue(Key.Escape); break;
                     case 38:
-                        Require(Quantity.isFocused, "수량 입력 칸 포커스");
-                        Quantity.ProcessEvent(Event.KeyboardEvent("^a"));
-                        break;
-                    case 39: Quantity.ProcessEvent(Event.KeyboardEvent("backspace")); break;
-                    case 40:
-                        Require(Quantity.text == "" && !Node("Buy").GetComponent<Button>().interactable,
-                            "입력 중 빈 값 거래 차단");
+                        Require(Object.FindAnyObjectByType<ShopPanel>() == null, "목록에서 Esc 상점 닫기");
                         Queue();
-                        TypeQuantity("3");
+                        break;
+                    case 39: Queue(Key.E); break;
+                    case 40:
+                        panel = Object.FindAnyObjectByType<ShopPanel>();
+                        Require(panel != null && !Popup.activeSelf, "재열기는 목록에서 시작");
+                        position = inventory.transform.position;
+                        inventory.transform.position += Vector3.right * 10;
+                        Physics.SyncTransforms();
+                        Queue();
                         break;
                     case 41:
-                        Require(Quantity.text == "3", "InputField 키 이벤트로 수량 지정");
-                        Queue(Key.B, Key.V, Key.E, Key.L);
+                        Require(Object.FindAnyObjectByType<ShopPanel>() == null, "거리 이탈 닫기");
+                        inventory.transform.position = position;
+                        Physics.SyncTransforms();
+                        Queue();
                         break;
-                    case 42:
-                        Require(wallet.Gold == 803 && panel != null && !wallet.IsSaleProtected(inventory.GetSlot(0).Item),
-                            "편집 중 거래·닫기·판매 잠금 단축키 차단");
-                        Queue(Key.Enter);
-                        break;
+                    case 42: Queue(Key.E); break;
                     case 43:
-                        Require(wallet.Gold == 803 && Quantity.text == "3" && !Quantity.isFocused,
-                            "입력 Enter는 확정만 하고 거래하지 않음");
-                        Queue();
-                        Pointer("Buy", true);
+                        panel = Object.FindAnyObjectByType<ShopPanel>();
+                        Require(panel != null, "복귀 후 열기");
+                        Queue(Key.F1);
                         break;
-                    case 44: Pointer("Buy", false); break;
+                    case 44:
+                        Require(Node("Shop Help").gameObject.activeSelf && !Popup.activeSelf, "F1 기본 화면 도움말 열기");
+                        Queue(Key.Escape);
+                        break;
                     case 45:
-                        Require(wallet.Gold == 788 && inventory.GetSlot(0).Count == 12,
-                            "직접 입력한 수량 3개 구매");
-                        Pointer("Quantity", true);
-                        break;
-                    case 46: Pointer("Quantity", false); break;
-                    case 47: Quantity.ProcessEvent(Event.KeyboardEvent("^a")); break;
-                    case 48:
-                        Quantity.ProcessEvent(Event.KeyboardEvent("backspace"));
-                        TypeQuantity("-a9999999999");
-                        break;
-                    case 49:
-                        Require(Quantity.text == shop.StockAt(0).ToString(), "음수·문자 제외 및 초과 입력 재고로 제한");
-                        Queue(Key.Enter);
-                        break;
-                    case 50:
-                        Require(wallet.Gold == 788, "초과 수량 입력 확정 시 거래 없음");
-                        Queue();
-                        Pointer("Stock/Content/Slot 1", true);
-                        break;
-                    case 51: Pointer("Stock/Content/Slot 1", false); break;
-                    case 52: Pointer("Maximum", true); break;
-                    case 53: Pointer("Maximum", false); break;
-                    case 54:
-                        Require(Quantity.text == "5", "Max 버튼 전체 선택");
-                        Pointer("Backpack/Content/Slot 0", true);
-                        break;
-                    case 55: Pointer("Backpack/Content/Slot 0", false); break;
-                    case 56:
-                        Quantity.text = "4";
-                        Require(Read("Selection").Contains("합계 8 골드"), "판매 직접 입력과 총액 갱신");
-                        Queue(Key.V);
-                        break;
-                    case 57:
-                        Require(wallet.Gold == 796 && inventory.GetSlot(0).Count == 8, "직접 지정한 수량 4개 판매");
-                        Queue(Key.LeftShift);
-                        Pointer("Backpack/Content/Slot 19", true);
-                        break;
-                    case 58: Pointer("Backpack/Content/Slot 19", false); break;
-                    case 59:
-                        Require(Quantity.text == "0" && !Quantity.interactable &&
-                            !Node("Sell").GetComponent<Button>().interactable, "빈 칸 전체 선택 시 거래 불가");
+                        Require(!Node("Shop Help").gameObject.activeSelf && panel != null, "Esc는 도움말만 닫기");
                         Queue();
                         Pointer("Stock/Content/Slot 0", true);
                         break;
-                    case 60: Pointer("Stock/Content/Slot 0", false); break;
+                    case 46: Pointer("Stock/Content/Slot 0", false); break;
+                    case 47:
+                        Require(Popup.activeSelf && Read("Buy/Label") == "구매" && Read("Cancel/Label") == "취소" &&
+                            Read("Unit price") == "개당 5 G" && Read("Total caption") == "총 구매 금액",
+                            "팝업 정보 분리·버튼에서 단축키 표기 제거");
+                        Capture("shop-popup-buy.png");
+                        Queue(Key.F1);
+                        break;
+                    case 48:
+                        Require(Node("Shop Help").gameObject.activeSelf && Popup.activeSelf, "팝업 위 F1 도움말 열기");
+                        Queue(Key.Enter);
+                        break;
+                    case 49:
+                        Require(wallet.Gold == expectedGold, "도움말 뒤 거래 입력 차단");
+                        Queue(Key.Escape);
+                        break;
+                    case 50:
+                        Require(!Node("Shop Help").gameObject.activeSelf && Popup.activeSelf, "도움말 닫기 후 원래 팝업 유지");
+                        Queue(Key.Tab);
+                        break;
+                    case 51:
+                        Require(new SerializedObject(Node("Buy").GetComponent<ShopRoundedRect>()).FindProperty("strokeWidth").floatValue == 3,
+                            "Tab 구매 버튼 포커스 강조");
+                        Queue();
+                        break;
+                    case 52: Queue(Key.Tab); break;
+                    case 53:
+                        Require(new SerializedObject(Node("Cancel").GetComponent<ShopRoundedRect>()).FindProperty("strokeWidth").floatValue == 3,
+                            "Tab 다음 활성 버튼으로 이동");
+                        Capture("shop-popup-focus.png");
+                        Queue(Key.Enter);
+                        break;
+                    case 54:
+                        Require(!Popup.activeSelf && wallet.Gold == expectedGold, "Enter는 포커스된 취소 실행·구매하지 않음");
+                        Node("Help").GetComponent<Button>().onClick.Invoke();
+                        Capture("shop-help.png");
+                        Queue();
+                        break;
+                    case 55:
+                        Require(Node("Shop Help").gameObject.activeSelf, "물음표 버튼 도움말 열기");
+                        Node("Shop Help/Card/Close").GetComponent<Button>().onClick.Invoke();
+                        break;
+                    case 56:
+                        Require(!Node("Shop Help").gameObject.activeSelf, "도움말 닫기 버튼");
+                        remainingScrap = inventory.GetSlot(0).Count;
+                        Pointer("Backpack/Content/Slot 0", true);
+                        break;
+                    case 57: Pointer("Backpack/Content/Slot 0", false); break;
+                    case 58:
+                        Require(Popup.activeSelf, "일부 판매 검사 팝업 열기");
+                        Quantity.text = "2";
+                        Node("Sell").GetComponent<Button>().onClick.Invoke();
+                        break;
+                    case 59:
+                        expectedGold += 4;
+                        Require(Popup.activeSelf && inventory.GetSlot(0).Count == remainingScrap - 2 &&
+                            wallet.Gold == expectedGold && Read("Sale notification/Message") == "고철 2개 판매 +4 G" &&
+                            Read("Status") == "" && Node("Protection").gameObject.activeSelf,
+                            "일부 판매는 팝업 유지·실제 금액 알림·팝업 완료 문구 제거");
+                        Capture("shop-sale-partial.png");
+                        notificationDeadline = EditorApplication.timeSinceStartup + 3.2;
+                        Queue();
+                        break;
+                    case 60:
+                        if (EditorApplication.timeSinceStartup < notificationDeadline) { stage--; break; }
+                        Require(!Node("Sale notification").gameObject.activeSelf, "판매 알림은 3초 후 숨김");
+                        Node("Cancel").GetComponent<Button>().onClick.Invoke();
+                        break;
                     case 61:
-                        Capture("shop-ui-after-trade.png");
-                        Node("Filter Equipment").GetComponent<Button>().onClick.Invoke();
-                        Require(!Node("Stock/Content/Slot 0").gameObject.activeSelf &&
-                            Node("Stock/Content/Slot 1").gameObject.activeSelf && Read("Description").Contains("장비"),
-                            "상품 분류 필터·설명 표시");
-                        Queue(Key.RightArrow);
-                        break;
-                    case 62:
-                        Require(Read("Selection").Contains("야전 조끼"), "필터 안에서 키보드 선택 이동");
-                        Node("Filter Supplies").GetComponent<Button>().onClick.Invoke();
-                        Require(Read("Readiness") == "이 분류에는 상품이 없습니다." &&
-                            !Node("Buy").GetComponent<Button>().interactable, "빈 분류 거래 차단·안내");
-                        Queue(Key.B);
-                        break;
-                    case 63:
-                        Require(wallet.Gold == 796, "빈 분류에서 B 거래 차단");
-                        Node("Filter All").GetComponent<Button>().onClick.Invoke();
-                        Node("Affordable").GetComponent<Button>().onClick.Invoke();
-                        Require(Quantity.text == shop.BuyLimit(inventory, 0).ToString() &&
-                            Node("Buy").GetComponent<Button>().interactable && wallet.Gold == 796,
-                            "구매 한도 선택은 거래 없이 유효 수량 설정");
-                        Capture("shop-ui-improved.png");
-                        Queue();
-                        Pointer("Backpack/Content/Slot 0", true);
-                        break;
-                    case 64: Pointer("Backpack/Content/Slot 0", false); break;
-                    case 65: Queue(Key.L); break;
-                    case 66:
-                        Require(wallet.IsSaleProtected(inventory.GetSlot(0).Item) &&
-                            Read("Backpack/Content/Slot 0/Keep") == "잠금" &&
-                            !Node("Sell").GetComponent<Button>().interactable && Read("Readiness").Contains("판매가 잠겨 있습니다"),
-                            "L 판매 잠금·스택 표시·판매 버튼/사유 일치");
-                        Capture("shop-ui-kept.png");
-                        Queue(Key.V);
-                        break;
-                    case 67:
-                        Require(wallet.Gold == 796 && inventory.GetSlot(0).Count == 8 &&
-                            !shop.TrySell(inventory, 0, 1, out _), "보관 잠금 중 키·직접 판매 모두 무변경");
-                        panel.Close();
-                        Queue();
-                        break;
-                    case 68: Queue(Key.E); break;
-                    case 69:
-                        panel = Object.FindAnyObjectByType<ShopPanel>();
-                        Require(panel != null && Read("Backpack/Content/Slot 0/Keep") == "잠금", "재열기 후 판매 잠금 유지");
-                        Queue();
-                        Pointer("Backpack/Content/Slot 0", true);
-                        break;
-                    case 70: Pointer("Backpack/Content/Slot 0", false); break;
-                    case 71:
-                        Node("Protection").GetComponent<Button>().onClick.Invoke();
-                        break;
-                    case 72:
-                        Require(!wallet.IsSaleProtected(inventory.GetSlot(0).Item) && Node("Sell").GetComponent<Button>().interactable &&
-                            Read("Balance") == "거래 후 잔액 798 골드", "버튼 잠금 해제·판매 후 예상 잔액");
                         inventory.GetComponent<Health>().TryApplyDamage(1000);
                         Queue();
                         break;
-                    case 73:
-                        Require(Object.FindAnyObjectByType<ShopPanel>() == null &&
-                            !shop.TryBuy(inventory, 0, 1, out _), "사망 시 닫기·거래 금지");
-                        Require(File.Exists(Path.Combine(Application.dataPath, "../Artifacts/shop-ui.png")), "화면 캡처 생성");
+                    case 62:
+                        Require(Object.FindAnyObjectByType<ShopPanel>() == null && !shop.TryBuy(inventory, 0, 1, out _), "사망 시 닫기·거래 차단");
                         break;
-                    case 74:
-                        if (!ShopRestockChecks.Step())
-                        {
-                            stage--;
-                            break;
-                        }
+                    case 63:
+                        if (!ShopRestockChecks.Step()) { stage--; break; }
                         Debug.Log($"SHOP_PLAYMODE_PASS transaction_checks={transactionChecks} ui_stages={stage}");
                         Finish(0);
                         break;
@@ -406,7 +404,10 @@ namespace Nomad.Shop.Editor
             }
         }
 
-        private static Transform Node(string path) => panel.transform.Find("Shop Window/" + path);
+        private static Transform Node(string path) => panel.transform.Find("Shop Window/" + path) ??
+            panel.transform.Find("Shop Window/Trade Popup/Card/" + path);
+        private static GameObject Popup => Node("Trade Popup").gameObject;
+        private static Slider Slider => Node("Quantity Slider").GetComponent<Slider>();
         private static InputField Quantity => Node("Quantity").GetComponent<InputField>();
         private static string Read(string path) => Node(path).GetComponent<Text>().text;
 
@@ -423,7 +424,7 @@ namespace Nomad.Shop.Editor
                 Quantity.ProcessEvent(new Event { type = EventType.KeyDown, character = character });
         }
 
-        private static void Pointer(string path, bool held)
+        private static void Pointer(string path, bool held, MouseButton button = MouseButton.Left)
         {
             Canvas.ForceUpdateCanvases();
             RectTransform rect = (RectTransform)Node(path);
@@ -438,7 +439,7 @@ namespace Nomad.Shop.Editor
                 Canvas.ForceUpdateCanvases();
             }
             Vector2 point = RectTransformUtility.WorldToScreenPoint(null, rect.TransformPoint(rect.rect.center));
-            InputSystem.QueueStateEvent(mouse, new MouseState { position = point }.WithButton(MouseButton.Left, held));
+            InputSystem.QueueStateEvent(mouse, new MouseState { position = point }.WithButton(button, held));
         }
 
         private static void Queue(params Key[] keys) => InputSystem.QueueStateEvent(keyboard, new KeyboardState(keys));

@@ -1,0 +1,4 @@
+{
+    "name": "Nomad.MainMenu",
+    "references": ["Nomad.Game", "UnityEngine.UI", "Unity.TextMeshPro", "Unity.InputSystem"]
+}
