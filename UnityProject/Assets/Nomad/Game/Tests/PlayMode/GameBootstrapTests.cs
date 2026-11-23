@@ -507,7 +507,7 @@ namespace Nomad.Game.Tests
                     enemies.Add((Component)enemy);
             }
 
-            Assert.That(enemies.Count, Is.LessThanOrEqualTo(14), "일반12·엘리트1·보스1 이하");
+            Assert.That(enemies.Count, Is.LessThanOrEqualTo(27), "일반24·엘리트2·보스1 이하");
             foreach (Component enemy in enemies)
             {
                 Assert.That(enemy.gameObject.scene, Is.EqualTo(manager.CurrentRegion), "몬스터는 필드 씬에 생성");
