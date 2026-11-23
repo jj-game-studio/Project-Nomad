@@ -1,0 +1,83 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1001 &326664723790517093
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 3263251001759993591, guid: 3e5ec0238a72a694884198887438e827, type: 3}
+      propertyPath: m_Controller
+      value: 
+      objectReference: {fileID: 9100000, guid: 1140ac0e68c35584caff88d80bdb38a6, type: 2}
+    - target: {fileID: 4956259727598511509, guid: 3e5ec0238a72a694884198887438e827, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4956259727598511509, guid: 3e5ec0238a72a694884198887438e827, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4956259727598511509, guid: 3e5ec0238a72a694884198887438e827, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4956259727598511509, guid: 3e5ec0238a72a694884198887438e827, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4956259727598511509, guid: 3e5ec0238a72a694884198887438e827, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4956259727598511509, guid: 3e5ec0238a72a694884198887438e827, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4956259727598511509, guid: 3e5ec0238a72a694884198887438e827, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4956259727598511509, guid: 3e5ec0238a72a694884198887438e827, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4956259727598511509, guid: 3e5ec0238a72a694884198887438e827, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4956259727598511509, guid: 3e5ec0238a72a694884198887438e827, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9020314318137777676, guid: 3e5ec0238a72a694884198887438e827, type: 3}
+      propertyPath: m_Name
+      value: SwordPlayerRig
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 6662108422826559729, guid: 3e5ec0238a72a694884198887438e827, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2661158583349127543}
+  m_SourcePrefab: {fileID: 100100000, guid: 3e5ec0238a72a694884198887438e827, type: 3}
+--- !u!1 &6412030230929103764 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6662108422826559729, guid: 3e5ec0238a72a694884198887438e827, type: 3}
+  m_PrefabInstance: {fileID: 326664723790517093}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &2661158583349127543
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6412030230929103764}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d6962a40249071e408979adf9ab8c9e7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Nomad.PlayerVisual.PlayerSwordAnimation

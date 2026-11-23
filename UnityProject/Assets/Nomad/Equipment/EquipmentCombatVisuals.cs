@@ -26,6 +26,9 @@ namespace Nomad.Equipment
         private const float SlashDuration = 0.18f;
         private float slashUntil;
 
+        // 외형 모듈이 제공할 때만 손 뼈를 사용하며 기존 캡슐 플레이어는 기존 배치를 유지합니다.
+        public Transform WeaponSocket { get; set; }
+        public GameObject WeaponModel => weaponModel;
         public bool ShowRange { get; set; }
         public LineRenderer RangeLine => rangeLine;
         public int ActiveEffects => effects.Count;
@@ -134,6 +137,16 @@ namespace Nomad.Equipment
             if (weaponModel == null)
                 return;
 
+            if (WeaponSocket != null && weapon.ItemId == "demo-sword")
+            {
+                weaponModel.transform.SetParent(WeaponSocket, false);
+                weaponModel.transform.localPosition = Vector3.zero;
+                weaponModel.transform.localRotation = weapon.EquippedVisual.transform.localRotation;
+                weaponModel.SetActive(true);
+                return;
+            }
+
+            weaponModel.transform.SetParent(transform, true);
             Quaternion facing = Quaternion.LookRotation(direction);
             Quaternion pose = Quaternion.identity;
             if (Time.time < slashUntil)
