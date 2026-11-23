@@ -32,6 +32,7 @@ namespace Nomad.Equipment
         private PlayerMana mana;
         private PlayerCombat legacyCombat;
         private bool restoreLegacy;
+        private bool holdingAttack;
         private float nextAttackTime;
         private float walkableNormalY = Mathf.Cos(50f * Mathf.Deg2Rad);
 
@@ -78,9 +79,20 @@ namespace Nomad.Equipment
         private void LateUpdate()
         {
             Mouse mouse = Mouse.current;
-            if (mouse != null && (mouse.leftButton.wasPressedThisFrame ||
-                (CurrentWeapon?.AttackMode == WeaponAttackMode.Staff && mouse.leftButton.isPressed)))
-                TryAttack(mouse.position.ReadValue());
+            if (mouse == null || !mouse.leftButton.isPressed)
+            {
+                holdingAttack = false;
+                return;
+            }
+
+            // UI 조작으로 시작한 누르기는 손을 뗄 때까지 공격으로 이어지지 않습니다.
+            Vector2 pointer = mouse.position.ReadValue();
+            if (mouse.leftButton.wasPressedThisFrame)
+                holdingAttack = !InputBlocked && !EquipmentUiOpen && inventory?.BlocksTradeInput != true && !IsOverUi(pointer);
+
+            // 모든 무기는 누르고 있는 동안 공격 간격마다 계속 공격합니다.
+            if (holdingAttack)
+                TryAttack(pointer);
         }
 
         public bool TryAttack(Vector2 pointer)

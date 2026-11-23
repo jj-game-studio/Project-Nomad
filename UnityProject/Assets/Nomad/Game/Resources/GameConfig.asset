@@ -20,6 +20,7 @@ MonoBehaviour:
   - {fileID: 7897914465955937552, guid: 44974f7561b60c945a324084a222e9d5, type: 3}
   - {fileID: 6009674774015590388, guid: 3ecac182734228b4a8057ff6ad8e0ec3, type: 3}
   - {fileID: 7000928150726817001, guid: 6b4ff08e26b14c208b84194992df8985, type: 3}
+  - {fileID: 56125218601046419, guid: 09e359e4859d88e409d2c856a6c159c8, type: 3}
   regionModules:
   - region: Field
     prefabs:
