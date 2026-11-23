@@ -267,6 +267,65 @@ namespace Nomad.Game.Tests
         }
 
         [UnityTest]
+        public IEnumerator Escape_AfterLootingClosesChestBeforePausing()
+        {
+            yield return EditorSceneManager.LoadSceneAsyncInPlayMode(GameScenePath,
+                new LoadSceneParameters(LoadSceneMode.Additive));
+            GameManager manager = GameManager.Instance;
+            yield return WaitForRegion(manager);
+
+            Component inventory = manager.Player.GetComponent("PlayerInventory");
+            Behaviour interaction = (Behaviour)manager.Player.GetComponent("PlayerInteraction");
+            var internalMembers = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+            System.Type panelType = System.Type.GetType("Nomad.Inventory.InventoryPanel, Assembly-CSharp");
+            var panel = (Behaviour)panelType.GetMethod("GetOrCreate",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
+                .Invoke(null, new object[] { inventory });
+            var hasOpenChest = panelType.GetProperty("HasOpenChest", internalMembers);
+            float originalScale = Time.timeScale;
+            bool originalAudioPause = AudioListener.pause;
+
+            // 필드와 같은 상자·가방을 사용하되, 랜덤 배치나 몬스터에 영향받지 않게 가까이 생성합니다.
+            GameObject chestObject = new GameObject("Escape Test Chest");
+            chestObject.transform.position = manager.Player.transform.TransformPoint(
+                manager.Player.GetComponent<CharacterController>().center);
+            try
+            {
+                System.Type chestType = System.Type.GetType("Nomad.Loot.LootChest, Assembly-CSharp");
+                Component chest = chestObject.AddComponent(chestType);
+                System.Type stackType = System.Type.GetType("Nomad.Loot.LootStack, Assembly-CSharp");
+                System.Array stacks = System.Array.CreateInstance(stackType, 1);
+                stacks.SetValue(System.Activator.CreateInstance(stackType, new object[] { "scrap", 2 }), 0);
+                chestType.GetMethod("Initialize").Invoke(chest, new object[] { "escape-test-chest", stacks });
+                panelType.GetMethod("ShowChest", internalMembers).Invoke(panel, new object[] { chest, interaction });
+                Assert.That(hasOpenChest.GetValue(panel), Is.True, "상자 파밍 창 열림");
+                Assert.That(chestType.GetMethod("TryLoot").Invoke(chest, new object[] { inventory }), Is.EqualTo(2));
+
+                yield return PressEscape();
+                Assert.That(hasOpenChest.GetValue(panel), Is.False, "첫 Esc는 상자만 닫음");
+                var backpack = (GameObject)panelType.GetField("panel", internalMembers).GetValue(panel);
+                Assert.That(backpack.activeSelf, Is.False, "가방도 닫힘");
+                Assert.That(Time.timeScale, Is.EqualTo(originalScale), "게임 진행 유지");
+                Assert.That(AudioListener.pause, Is.EqualTo(originalAudioPause));
+                Assert.That(interaction.enabled && panel.enabled, Is.True, "일시정지로 입력을 끄지 않음");
+                Assert.That(manager.transform.Find("PauseMenu/PauseCanvas/Backdrop"), Is.Null, "일시정지 창 생성 안 함");
+
+                yield return PressEscape();
+                Assert.That(Time.timeScale, Is.Zero, "다음 Esc는 일시정지");
+                Assert.That(PauseButton(manager.transform.Find("PauseMenu"), "PausePanel", "Resume").activeInHierarchy, Is.True);
+
+                yield return PressEscape();
+                Assert.That(Time.timeScale, Is.EqualTo(originalScale), "다시 Esc로 재개");
+                Assert.That(AudioListener.pause, Is.EqualTo(originalAudioPause));
+                Assert.That(CallInventory(manager.Player, "Remove", "scrap", 2), Is.EqualTo(2), "획득한 아이템 보존");
+            }
+            finally
+            {
+                Object.Destroy(chestObject);
+            }
+        }
+
+        [UnityTest]
         public IEnumerator PauseRestart_StartsFreshInVillage()
         {
             yield return EditorSceneManager.LoadSceneAsyncInPlayMode(GameScenePath,
