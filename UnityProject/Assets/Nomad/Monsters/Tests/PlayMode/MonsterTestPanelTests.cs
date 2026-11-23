@@ -154,9 +154,10 @@ namespace Nomad.Monsters.Tests
             Assert.That(bar.Boss, Is.True);
             boss.TryApplyDamage(250);
             yield return null;
-            Assert.That(bar.DamageTrailRatio, Is.GreaterThan(0.75f));
+            float remaining = 1f - 250f / boss.MaxHealth;
+            Assert.That(bar.DamageTrailRatio, Is.GreaterThan(remaining));
             yield return new WaitForSeconds(1.5f);
-            Assert.That(bar.DamageTrailRatio, Is.EqualTo(0.75f).Within(0.01f));
+            Assert.That(bar.DamageTrailRatio, Is.EqualTo(remaining).Within(0.01f));
         }
 
         [UnityTest]
@@ -178,7 +179,7 @@ namespace Nomad.Monsters.Tests
             Assert.That(normal.GetComponent<MonsterTracker>().HomeRange, Is.EqualTo(7f));
             Call("SetKind", 1);
             Health elite = (Health)Call("SpawnAt", new Vector3(5f, 0f, -2f));
-            Assert.That(elite.CurrentHealth, Is.EqualTo(250));
+            Assert.That(elite.CurrentHealth, Is.EqualTo(220));
             Assert.That(elite.GetComponent<MonsterTracker>().HomePosition.x, Is.EqualTo(5f).Within(0.1f));
             yield return null;
         }
@@ -189,7 +190,7 @@ namespace Nomad.Monsters.Tests
             Call("SetKind", 2);
             Health boss = (Health)Call("SpawnAt", new Vector3(3f, 0f, -2f));
             Assert.That(boss, Is.Not.Null);
-            Assert.That(boss.MaxHealth, Is.EqualTo(1000));
+            Assert.That(boss.MaxHealth, Is.EqualTo(850));
             Assert.That(boss.GetComponent<MonsterIdentity>().Rank, Is.EqualTo(MonsterRank.Boss));
             Assert.That(boss.GetComponentInChildren<SkinnedMeshRenderer>(), Is.Not.Null);
             Call("SetKind", 0);

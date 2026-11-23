@@ -13,6 +13,7 @@ namespace Nomad.Monsters.Demo
         private readonly Vector3[] corners = new Vector3[64];
         private readonly Transform[] dashes = new Transform[5];
         private Material material;
+        private Mesh arrowMesh;
         private float nextUpdate;
         public bool Available => arena != null && boss != null && !boss.IsDead && player != null && !player.IsDead;
         public Vector3 Goal => Vector3.Distance(player.transform.position, arena.Center) < BossArena.HalfSize * 1.5f ?
@@ -26,16 +27,24 @@ namespace Nomad.Monsters.Demo
             arena = room;
             player = observer;
             boss = enemy;
-            material = new Material(Shader.Find("Universal Render Pipeline/Lit")) { color = new Color(0.57f, 0.53f, 0.38f) };
+            material = QuietRedMaterial(0.32f);
+            arrowMesh = new Mesh { name = "Quiet route arrow" };
+            arrowMesh.vertices = new[]
+            {
+                new Vector3(-0.24f, 0, -0.20f), new Vector3(0, 0, 0.12f), new Vector3(0.24f, 0, -0.20f),
+                new Vector3(0.24f, 0, -0.03f), new Vector3(0, 0, 0.30f), new Vector3(-0.24f, 0, -0.03f)
+            };
+            arrowMesh.triangles = new[] { 0, 5, 1, 5, 4, 1, 1, 4, 3, 1, 3, 2 };
+            arrowMesh.RecalculateBounds();
             for (int index = 0; index < dashes.Length; index++)
             {
-                GameObject dash = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                dash.name = "Quiet route dash";
+                GameObject dash = new GameObject("Quiet red route arrow");
                 dash.transform.SetParent(transform, false);
-                dash.transform.localScale = new Vector3(0.065f, 0.015f, 0.35f);
-                dash.GetComponent<Collider>().enabled = false;
-                Destroy(dash.GetComponent<Collider>());
-                dash.GetComponent<Renderer>().sharedMaterial = material;
+                dash.AddComponent<MeshFilter>().sharedMesh = arrowMesh;
+                MeshRenderer renderer = dash.AddComponent<MeshRenderer>();
+                renderer.sharedMaterial = material;
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                renderer.receiveShadows = false;
                 dashes[index] = dash.transform;
                 dash.SetActive(false);
             }
@@ -77,6 +86,23 @@ namespace Nomad.Monsters.Demo
             return false;
         }
 
-        private void OnDestroy() { if (material != null) Destroy(material); }
+        internal static Material QuietRedMaterial(float alpha)
+        {
+            var red = new Material(Shader.Find("Universal Render Pipeline/Unlit")) { color = new Color(0.85f, 0.19f, 0.17f, alpha) };
+            red.SetFloat("_Surface", 1);
+            red.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            red.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            red.SetFloat("_ZWrite", 0);
+            red.SetFloat("_Cull", 0);
+            red.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            red.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+            return red;
+        }
+
+        private void OnDestroy()
+        {
+            if (material != null) Destroy(material);
+            if (arrowMesh != null) Destroy(arrowMesh);
+        }
     }
 }

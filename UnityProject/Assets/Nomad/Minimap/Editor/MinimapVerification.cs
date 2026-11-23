@@ -75,6 +75,7 @@ namespace Nomad.Minimap.Editor
                     case 0:
                         if (!Ready("Village")) return;
                         Require(minimap.MarkerCount >= 2, "마을 출구·상점 표시");
+                        Require(minimap.EnemyMarkerCount == 0, "마을에 필드 적 잔상 없음");
                         Require(minimap.GetComponentInChildren<GraphicRaycaster>(true) == null &&
                             minimap.GetComponentsInChildren<Graphic>(true).All(graphic => !graphic.raycastTarget), "입력 비차단 HUD");
                         Capture("minimap-village.png");
@@ -125,6 +126,7 @@ namespace Nomad.Minimap.Editor
                         int exits = manager.CurrentRegion.GetRootGameObjects().Sum(root => root.GetComponentsInChildren<FieldExit>().Length);
                         Require(exits > 0 && minimap.MarkerCount == exits,
                             "필드의 실제 출구 수 반영·상점 잔상 없음");
+                        Require(minimap.EnemyMarkerCount > 0, "필드의 생존 적 위치 수집");
                         Require(((Texture2D)minimap.MapTexture).GetPixels32().Distinct().Count() > 1, "NavMesh 지도 생성");
                         Capture("minimap-field.png");
                         previousTexture = minimap.MapTexture;
@@ -139,6 +141,7 @@ namespace Nomad.Minimap.Editor
                         if (!Ready("Field") || minimap.Revision == revision) return;
                         Require(previousTexture == null, "이전 세대 Texture 해제");
                         Require(Object.FindObjectsByType<RegionMinimap>(FindObjectsSortMode.None).Length == 1, "HUD 중복 없음");
+                        Require(minimap.EnemyMarkerCount > 0, "재생성 후 새 적 마커 수집");
                         Capture("minimap-field-regenerated.png");
                         previousTexture = minimap.MapTexture;
                         Require(manager.LoadRegion("Village"), "마을 복귀 요청");
@@ -147,6 +150,7 @@ namespace Nomad.Minimap.Editor
                     case 7:
                         if (!Ready("Village")) return;
                         Require(previousTexture == null && minimap.MarkerCount >= 2, "마을 복귀 시 지도·마커 교체");
+                        Require(minimap.EnemyMarkerCount == 0, "마을 복귀 시 적 마커 해제");
                         Capture("minimap-village-return.png");
                         Debug.Log("MINIMAP_PLAYMODE_PASS village=pass field=pass regeneration=pass roundtrip=pass markers=pass input=pass resources=pass");
                         Finish(0);

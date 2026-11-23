@@ -134,6 +134,14 @@ namespace Nomad.Gameplay.Editor
                     controls.Navigation.LastResult.PlayerPosition, arena.Entrance)), "보스 안내 목적지에 도달 가능");
                 Require(arena.transform.Find("Weathered floor tile") != null && arena.transform.Find("Ruined arena parapet") != null,
                     "제단 바닥·난간 외형");
+                Health guardedBoss = actors.First(actor => actor.GetComponent<MonsterIdentity>().Rank == MonsterRank.Boss);
+                Require(arena.IsLocked && !guardedBoss.TryApplyDamage(1) && !guardedBoss.GetComponent<MonsterTracker>().enabled &&
+                    !guardedBoss.GetComponent<MonsterMeleeAttack>().enabled, "엘리트 생존 중 보스 휴면·선제 피해 방지");
+                Vector3 savedPosition = player.transform.position;
+                MovePlayer(player, arena.Center - arena.Forward * (BossArena.HalfSize + 1) + Vector3.up * 0.1f);
+                player.GetComponent<CharacterController>().Move(arena.Forward * 4);
+                Require(Vector3.Dot(player.transform.position - arena.Center, arena.Forward) < -11.5f, "엘리트 생존 중 물리 진입 차단");
+                MovePlayer(player, savedPosition);
                 Debug.Log($"PROGRESSION_SEED_PASS requested={seed} actual={controls.Navigation.LastResult.Seed} elite=1 boss=1 gate={arena.UsesGate}");
                 if (seed == 51)
                 {
@@ -149,6 +157,20 @@ namespace Nomad.Gameplay.Editor
                     yield return null;
                     CaptureArena(arena);
                     if (sight != null) sight.enabled = true;
+                    if (!terrain)
+                    {
+                        var minimap = Object.FindAnyObjectByType<Nomad.Minimap.RegionMinimap>();
+                        while (!minimap.MapReady || !minimap.IsVisible) yield return null;
+                        Require(minimap.EnemyMarkerCount == actors.Length, "생존 적만 종류별 미니맵 등록");
+                        Health nearby = actors.First(actor => actor.GetComponent<MonsterIdentity>().Rank == MonsterRank.Normal);
+                        MovePlayer(player, nearby.transform.position + Vector3.right * 2);
+                        yield return null;
+                        yield return null;
+                        Require(minimap.VisibleEnemyMarkerCount > 0 && minimap.VisibleEnemyMarkerCount < actors.Length,
+                            "현재 지도 범위 안의 적만 표시");
+                        Nomad.Minimap.Editor.MinimapVerification.Capture("minimap-enemies-179.png");
+                        MovePlayer(player, savedPosition);
+                    }
                 }
             }
 
@@ -157,7 +179,19 @@ namespace Nomad.Gameplay.Editor
             var fallbackRoot = new GameObject("Fallback gate verification");
             BossArena fallback = fallbackRoot.AddComponent<BossArena>();
             Require(fallback.Build(origin, Vector3.right, 160, origin.y, true), "진입문 대체 구역 경로 생성");
-            BossGate enter = fallbackRoot.GetComponentsInChildren<BossGate>().First(gate => gate.InteractionAction == "보스 구역 입장");
+            var keyObject = new GameObject("Gate elite verification");
+            keyObject.transform.SetParent(fallbackRoot.transform);
+            Health gateElite = keyObject.AddComponent<Health>();
+            Health gateBoss = Object.FindAnyObjectByType<MonsterActorFactory>().CreateRanked(player,
+                MonsterTestSettings.Defaults(MonsterRank.Boss), MonsterRank.Boss, fallback.Center, Quaternion.identity,
+                "Gate boss verification", fallbackRoot.transform);
+            fallback.RequireElite(gateElite, gateBoss);
+            BossGate enter = fallbackRoot.GetComponentsInChildren<BossGate>().First(gate => gate.Destination == fallback.Arrival);
+            enter.Interact(new InteractionContext(player.transform, inventory));
+            Require(Vector3.Distance(player.transform.position, origin) < 0.2f && fallback.IsLocked, "잠긴 E 진입문 차단");
+            gateElite.TryApplyDamage(gateElite.CurrentHealth);
+            Require(!fallback.IsLocked && !gateBoss.IsCombatImmune && gateBoss.GetComponent<MonsterTracker>().enabled,
+                "엘리트 처치 이벤트로 문·보스 전투 즉시 해제");
             enter.Interact(new InteractionContext(player.transform, inventory));
             Require(Vector3.Distance(player.transform.position, fallback.Arrival) < 0.2f, "E 진입문 입장 위치");
             BossGate leave = fallbackRoot.GetComponentsInChildren<BossGate>().First(gate => gate != enter);
@@ -168,11 +202,16 @@ namespace Nomad.Gameplay.Editor
 
             Health elite = Actors(controls).First(actor => actor.GetComponent<MonsterIdentity>().Rank == MonsterRank.Elite);
             elite.TryApplyDamage(elite.CurrentHealth + 1);
+            BossArena activeArena = Object.FindAnyObjectByType<BossArena>();
+            Require(!activeArena.IsLocked && !Actors(controls).First(actor => actor.GetComponent<MonsterIdentity>().Rank == MonsterRank.Boss).IsCombatImmune,
+                "실제 필수 엘리트 처치 후 제단 개방");
             PlaceholderEquipmentDrop drop = elite.GetComponent<MonsterDeathDrop>().SpawnedDrop;
             float until = Time.unscaledTime + 3;
             while (drop.GetComponent<LootChest>() == null && Time.unscaledTime < until) yield return null;
             LootChest chest = drop.GetComponent<LootChest>();
             Require(chest != null && chest.StackCount == 1 && drop.Landed, "엘리트 착지 후 실제 장비1개");
+            if (!terrain) Require(Object.FindAnyObjectByType<Nomad.Minimap.RegionMinimap>().EnemyMarkerCount == Actors(controls).Length - 1,
+                "엘리트 사망 시 미니맵 표시 제거");
             string itemId = chest.GetStack(0).ItemId;
             inventory.Add(itemId, int.MaxValue);
             Require(chest.TryLoot(inventory) == 0 && chest.GetStack(0).Count == 1, "가방 가득 차면 드롭 보존");
@@ -207,7 +246,7 @@ namespace Nomad.Gameplay.Editor
             Require(drop == null && bossDrop == null && Object.FindObjectsByType<BossArena>(FindObjectsSortMode.None).Length == 1,
                 "재생성 시 이전 드롭·구역·길안내 정리");
             Debug.Log("MONSTER_PROGRESSION_PASS mode=" + (terrain ? "TerrainIntegration" : "Game") +
-                " seeds=3 required=pass gates=pass loot=pass full=pass partial=pass no_duplicate=pass cleanup=pass");
+                " seeds=3 required=pass elite_lock=pass gates=pass loot=pass full=pass partial=pass no_duplicate=pass cleanup=pass");
         }
 
         private static Health[] Actors(TerrainIntegrationControls controls) => Object.FindObjectsByType<MonsterIdentity>(FindObjectsSortMode.None)

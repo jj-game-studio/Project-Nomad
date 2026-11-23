@@ -163,6 +163,7 @@ namespace Nomad.Monsters.Demo
 
         private void OnDestroy()
         {
+            ClearProgression();
             if (data != null) Destroy(data);
             foreach (Material material in materials) if (material != null) Destroy(material);
         }

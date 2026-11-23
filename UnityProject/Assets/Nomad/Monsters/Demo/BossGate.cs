@@ -8,7 +8,7 @@ namespace Nomad.Monsters.Demo
     {
         public Vector3 Destination { get; private set; }
         public string InteractionId => "boss-gate-" + GetEntityId().GetHashCode();
-        public string InteractionAction { get; private set; }
+        public string InteractionAction => entry && arena != null && arena.IsLocked ? "엘리트 처치 후 입장" : label;
         public Vector3 InteractionPoint => transform.position + Vector3.up;
         public float InteractionRange => 2.5f;
 
@@ -19,7 +19,9 @@ namespace Nomad.Monsters.Demo
             root.transform.SetPositionAndRotation(point, rotation);
             var gate = root.AddComponent<BossGate>();
             gate.Destination = destination;
-            gate.InteractionAction = label;
+            gate.label = label;
+            gate.arena = parent.GetComponent<BossArena>();
+            gate.entry = label == "보스 구역 입장";
             var trigger = root.AddComponent<SphereCollider>();
             trigger.isTrigger = true;
             trigger.radius = 0.8f;
@@ -39,13 +41,16 @@ namespace Nomad.Monsters.Demo
         }
 
         private Material material;
+        private BossArena arena;
+        private bool entry;
+        private string label;
 
         public bool CanInteract(InteractionContext context) => context.Player != null &&
             Vector3.Distance(context.Player.position, transform.position) <= InteractionRange + 0.5f;
 
         public void Interact(InteractionContext context)
         {
-            if (!CanInteract(context)) return;
+            if (!CanInteract(context) || (entry && arena != null && arena.IsLocked)) return;
             Quaternion facing = transform.rotation;
             GameManager manager = GameManager.Instance;
             if (manager != null && manager.Player == context.Player.gameObject)

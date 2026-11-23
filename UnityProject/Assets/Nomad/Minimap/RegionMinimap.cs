@@ -3,7 +3,8 @@ using System.Collections.Generic;
 using Nomad.Game;
 using Nomad.Shop;
 using Nomad.Terrain;
-using Nomad.Monsters.Demo;
+using Nomad.Monsters;
+using Nomad.Combat;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
@@ -18,6 +19,7 @@ namespace Nomad.Minimap
         private float mapDiameter = 36;
         private static RegionMinimap instance;
         private readonly List<(Transform world, RectTransform icon)> markers = new();
+        private readonly List<(Health health, RectTransform icon)> enemies = new();
         private GameManager manager;
         private FieldNavigation navigation;
         private Scene region;
@@ -29,14 +31,15 @@ namespace Nomad.Minimap
         private Font font;
         private MinimapProjection projection;
         private Coroutine rebuild;
-        private BossRouteGuide bossGuide;
-        private RectTransform bossMarker;
+        private float nextEnemyScan;
 
         public bool MapReady => map != null && map.texture != null;
         public bool IsVisible => view != null && view.gameObject.activeSelf;
         public string RegionName { get; private set; }
         public int Revision { get; private set; }
         public int MarkerCount => markers.Count;
+        public int EnemyMarkerCount => enemies.Count;
+        public int VisibleEnemyMarkerCount => enemies.FindAll(marker => marker.icon.gameObject.activeSelf).Count;
         public Texture MapTexture => map != null ? map.texture : null;
         public Vector2 PlayerPosition { get; private set; }
         public Rect MapUvRect => map.uvRect;
@@ -110,9 +113,20 @@ namespace Nomad.Minimap
                     marker.icon.gameObject.SetActive(window.Contains(marker.world.position));
                     marker.icon.anchoredPosition = window.Marker(marker.world.position, MapSize);
                 }
-            bool showBoss = bossGuide != null && bossGuide.Available;
-            bossMarker.gameObject.SetActive(showBoss);
-            if (showBoss) bossMarker.anchoredPosition = window.Marker(bossGuide.Goal, MapSize, 10);
+            if (Time.unscaledTime >= nextEnemyScan) CollectEnemies();
+            for (int index = enemies.Count - 1; index >= 0; index--)
+            {
+                var enemy = enemies[index];
+                if (enemy.health == null || enemy.health.IsDead)
+                {
+                    Destroy(enemy.icon.gameObject);
+                    enemies.RemoveAt(index);
+                    continue;
+                }
+                bool nearby = enemy.health.gameObject.activeInHierarchy && window.Contains(enemy.health.transform.position);
+                enemy.icon.gameObject.SetActive(nearby);
+                if (nearby) enemy.icon.anchoredPosition = window.Marker(enemy.health.transform.position, MapSize, 7);
+            }
         }
 
         private void BindRegion(Scene next)
@@ -162,7 +176,6 @@ namespace Nomad.Minimap
             bool hasShop = false;
             foreach (GameObject root in region.GetRootGameObjects())
             {
-                if (bossGuide == null) bossGuide = root.GetComponentInChildren<BossRouteGuide>();
                 foreach (RegionExit exit in root.GetComponentsInChildren<RegionExit>())
                     if (exit.enabled) AddMarker(exit.transform, new Color(0.35f, 0.80f, 1), true);
                 foreach (FieldExit exit in root.GetComponentsInChildren<FieldExit>())
@@ -171,7 +184,34 @@ namespace Nomad.Minimap
                     if (shop.enabled) { AddMarker(shop.transform, new Color(1, 0.77f, 0.32f), false); hasShop = true; }
             }
             legend.text = "▲ 나  <color=#59CCFF>◆ 출구</color>" + (hasShop ? "  <color=#FFC452>■ 상점</color>" : "");
-            if (bossGuide != null) legend.text += "  <color=#C8AD72>◇ 보스</color>";
+            CollectEnemies();
+            if (enemies.Count > 0) legend.text += "\n<color=#E87878>● 일반</color>  <color=#F5B34D>◆ 엘리트</color>  <color=#EE4545>◆ 보스</color>";
+            playerArrow.SetAsLastSibling();
+        }
+
+        private void CollectEnemies()
+        {
+            nextEnemyScan = Time.unscaledTime + 1;
+            if (!region.IsValid() || !region.isLoaded) return;
+            foreach (GameObject root in region.GetRootGameObjects())
+            foreach (MonsterIdentity identity in root.GetComponentsInChildren<MonsterIdentity>())
+            {
+                Health health = identity.GetComponent<Health>();
+                if (health == null || health.IsDead || enemies.Exists(marker => marker.health == health)) continue;
+                bool normal = identity.Rank == MonsterRank.Normal;
+                float size = normal ? 5 : identity.Rank == MonsterRank.Elite ? 8 : 11;
+                RectTransform icon = Rect(map.transform, "Enemy " + identity.Rank, 0, 0, size, size);
+                icon.anchorMin = icon.anchorMax = Vector2.zero;
+                icon.pivot = Vector2.one * 0.5f;
+                var graphic = icon.gameObject.AddComponent<ShopRoundedRect>();
+                graphic.color = normal ? new Color(0.91f, 0.47f, 0.47f) : identity.Rank == MonsterRank.Elite ?
+                    new Color(0.96f, 0.70f, 0.30f) : new Color(0.93f, 0.27f, 0.27f);
+                graphic.Style(normal ? size * 0.5f : 1, 0, Color.clear);
+                graphic.raycastTarget = false;
+                if (!normal) icon.localRotation = Quaternion.Euler(0, 0, 45);
+                icon.gameObject.SetActive(false);
+                enemies.Add((health, icon));
+            }
             playerArrow.SetAsLastSibling();
         }
 
@@ -199,8 +239,8 @@ namespace Nomad.Minimap
             }
             foreach (var marker in markers) if (marker.icon != null) Destroy(marker.icon.gameObject);
             markers.Clear();
-            bossGuide = null;
-            if (bossMarker != null) bossMarker.gameObject.SetActive(false);
+            foreach (var enemy in enemies) if (enemy.icon != null) Destroy(enemy.icon.gameObject);
+            enemies.Clear();
             if (view != null) view.gameObject.SetActive(false);
         }
 
@@ -252,7 +292,7 @@ namespace Nomad.Minimap
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1440, 900);
             scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.Expand;
-            view = Rect(canvasRoot, "Minimap", -18, 18, 208, 244);
+            view = Rect(canvasRoot, "Minimap", -18, 18, 208, 260);
             view.anchorMin = view.anchorMax = view.pivot = Vector2.one;
             var frame = view.gameObject.AddComponent<ShopRoundedRect>();
             frame.color = new Color(0.08f, 0.14f, 0.11f, 0.96f);
@@ -274,14 +314,7 @@ namespace Nomad.Minimap
             arrow.verticalOverflow = VerticalWrapMode.Overflow;
             arrow.color = Color.white;
             arrow.raycastTarget = false;
-            Text boss = Label(map.transform, "Boss direction", "◇", 0, 0, 18, 18, 16);
-            boss.alignment = TextAnchor.MiddleCenter;
-            boss.color = new Color(0.86f, 0.72f, 0.42f, 0.65f);
-            bossMarker = boss.rectTransform;
-            bossMarker.anchorMin = bossMarker.anchorMax = Vector2.zero;
-            bossMarker.pivot = Vector2.one * 0.5f;
-            bossMarker.gameObject.SetActive(false);
-            legend = Label(view, "Legend", "", 10, 222, 188, 18, 11);
+            legend = Label(view, "Legend", "", 10, 222, 188, 32, 10);
             legend.alignment = TextAnchor.MiddleCenter;
             view.gameObject.SetActive(false);
         }

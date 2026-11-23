@@ -19,6 +19,7 @@ namespace Nomad.Monsters.Demo
         public static List<Health> Spawn(FieldGenerationResult field, Transform parent, MonsterActorFactory factory,
             Health player, int normalCount, int eliteCount, int bossCount, float safeRadius = 12)
         {
+            eliteCount = bossCount > 0 ? 1 : Mathf.Clamp(eliteCount, 0, 1);
             var actors = new List<Health>();
             var candidates = Routes(field).OrderBy(candidate => candidate.Distance).ToList();
             if (candidates.Count == 0)
@@ -93,6 +94,7 @@ namespace Nomad.Monsters.Demo
                 Health boss = factory.CreateRanked(player, settings, MonsterRank.Boss, arena.Center, Quaternion.identity,
                     "Boss - final arena", parent);
                 actors.Add(boss);
+                arena.RequireElite(actors.First(actor => actor.GetComponent<MonsterIdentity>().Rank == MonsterRank.Elite), boss);
                 arena.gameObject.AddComponent<BossRouteGuide>().Configure(arena, player, boss);
             }
             if (normals != normalCount || elites.Count != eliteCount || (bossCount > 0 && arena == null))
