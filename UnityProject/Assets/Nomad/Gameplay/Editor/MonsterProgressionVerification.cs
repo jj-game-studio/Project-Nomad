@@ -124,6 +124,8 @@ namespace Nomad.Gameplay.Editor
                 Require(controls.Navigation.State == FieldGenerationState.Ready, "경로 준비 seed=" + seed);
                 Require(controls.GameplayView, "재생성 후 실제 플레이 시점 유지");
                 Health[] actors = Actors(controls);
+                if (!terrain) Require(actors.Count(actor => actor.GetComponent<MonsterIdentity>().Rank == MonsterRank.Normal) == 12,
+                    "일반 몬스터12마리");
                 if (!terrain) Require(Object.FindAnyObjectByType<Nomad.Game.Modules.FieldMonsters>().Enemies.Count == actors.Length,
                     "보스도 관리 목록에 등록됨");
                 Require(actors.Count(actor => actor.GetComponent<MonsterIdentity>().Rank == MonsterRank.Elite) == 1 &&
@@ -248,6 +250,39 @@ namespace Nomad.Gameplay.Editor
             GameObject.Find("ChestLootPanel").transform.Find("Close").GetComponent<Button>().onClick.Invoke();
 
             Health boss = Actors(controls).First(actor => actor.GetComponent<MonsterIdentity>().Rank == MonsterRank.Boss);
+            boss.GetComponent<MonsterTracker>().enabled = false;
+            boss.GetComponent<MonsterMeleeAttack>().enabled = false;
+            boss.GetComponent<NavMeshAgent>().isStopped = true;
+            MovePlayer(player, boss.transform.position + Vector3.right * 2.4f);
+            yield return null;
+            var gear = player.GetComponent<Nomad.Equipment.PlayerEquipment>();
+            var combat = player.GetComponent<Nomad.Equipment.PlayerEquipmentCombat>();
+            inventory.Remove(itemId, 1);
+            inventory.Add("weapon-dagger", 1);
+            int daggerSlot = Enumerable.Range(0, inventory.SlotCount).First(index => inventory.GetSlot(index).Item?.ItemId == "weapon-dagger");
+            Require(gear.TryEquip(daggerSlot, Nomad.Equipment.EquipmentSlot.Weapon1), "피격 검사 단검 장착");
+            gear.SelectWeapon(Nomad.Equipment.EquipmentSlot.Weapon1);
+            int bossHealth = boss.CurrentHealth;
+            Vector2 pointer = Camera.main.WorldToScreenPoint(boss.transform.position + Vector3.up);
+            Require(combat.TryAttack(pointer) && boss.CurrentHealth < bossHealth, "몸통 중심2.4m 거리에서도 실제 단검 적중");
+            var shot = (Projectile)new SerializedObject(combat).FindProperty("projectile").objectReferenceValue;
+            Vector3 originShot = boss.transform.position + new Vector3(0.95f, 1.3f, -5);
+            bossHealth = boss.CurrentHealth;
+            Require(Projectile.TryLaunch(shot, player.transform, originShot, originShot + Vector3.forward * 10,
+                Physics.DefaultRaycastLayers, 40, 10, 1), "비껴간 발사체 생성");
+            float hitDeadline = Time.unscaledTime + 2;
+            while (boss.CurrentHealth == bossHealth && Time.unscaledTime < hitDeadline) yield return null;
+            Require(boss.CurrentHealth < bossHealth, "몸통 중심0.95m 옆을 지나는 실제 발사체 적중");
+            NavMeshAgent bossAgent = boss.GetComponent<NavMeshAgent>();
+            bossAgent.isStopped = false;
+            Require(bossAgent.SetDestination(boss.transform.position + activeArena.Forward * 3), "용 실제 보행 경로");
+            for (int walkFrame = 0; walkFrame < 45; walkFrame++)
+            {
+                yield return null;
+                if (walkFrame % 15 == 0) CaptureDragonWalk(boss, walkFrame / 15);
+            }
+            bossAgent.isStopped = true;
+            inventory.Add(itemId, int.MaxValue);
             BossRouteGuide activeGuide = Object.FindAnyObjectByType<BossRouteGuide>();
             boss.TryApplyDamage(boss.CurrentHealth + 1);
             PlaceholderEquipmentDrop bossDrop = boss.GetComponent<MonsterDeathDrop>().SpawnedDrop;
@@ -295,6 +330,17 @@ namespace Nomad.Gameplay.Editor
             player.transform.position = position;
             if (enabled) controller.enabled = true;
             Physics.SyncTransforms();
+        }
+
+        private static void CaptureDragonWalk(Health boss, int frame)
+        {
+            Camera camera = Camera.main;
+            Vector3 position = camera.transform.position;
+            Quaternion rotation = camera.transform.rotation;
+            camera.transform.position = boss.transform.position + new Vector3(8, 5, -9);
+            camera.transform.LookAt(boss.transform.position + Vector3.up * 1.8f);
+            Nomad.Minimap.Editor.MinimapVerification.Capture("dragon-walk-190-" + frame + ".png");
+            camera.transform.SetPositionAndRotation(position, rotation);
         }
 
         private static void CaptureArena(BossArena arena)

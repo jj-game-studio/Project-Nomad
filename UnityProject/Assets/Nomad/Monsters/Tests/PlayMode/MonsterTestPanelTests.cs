@@ -201,6 +201,38 @@ namespace Nomad.Monsters.Tests
         }
 
         [UnityTest]
+        public IEnumerator DragonWalkKeepsLegLengthsAndFootOrientationStable()
+        {
+            Call("SetKind", 2);
+            Health boss = (Health)Call("SpawnAt", new Vector3(3, 0, -2));
+            boss.GetComponent<MonsterMeleeAttack>().enabled = false;
+            boss.GetComponent<MonsterTracker>().enabled = false;
+            NavMeshAgent agent = boss.GetComponent<NavMeshAgent>();
+            Transform[] bones = boss.GetComponentsInChildren<Transform>();
+            Transform[] feet = Array.FindAll(bones, bone => bone.name.StartsWith("leg_") && bone.name.Contains("_foot."));
+            Assert.That(feet.Length, Is.EqualTo(4));
+            float[] lengths = Array.ConvertAll(feet, foot => Vector3.Distance(foot.parent.position, foot.position));
+            Quaternion[] previous = Array.ConvertAll(feet, foot => foot.rotation);
+            Assert.That(agent.SetDestination(new Vector3(3, 0, 4)), Is.True);
+            Vector3 start = boss.transform.position;
+            float peakGait = 0;
+            float deadline = Time.time + 1.5f;
+            while (Time.time < deadline)
+            {
+                yield return null;
+                peakGait = Mathf.Max(peakGait, boss.GetComponent<DragonLegMotion>().Gait);
+                for (int index = 0; index < feet.Length; index++)
+                {
+                    Assert.That(Vector3.Distance(feet[index].parent.position, feet[index].position), Is.EqualTo(lengths[index]).Within(0.03f), "정강이 길이 유지");
+                    Assert.That(Quaternion.Angle(previous[index], feet[index].rotation), Is.LessThan(50), "발의 순간 뒤집힘/회전 방지");
+                    previous[index] = feet[index].rotation;
+                }
+            }
+            Assert.That(Vector3.Distance(start, boss.transform.position), Is.GreaterThan(1), "실제 보행 중 검사");
+            Assert.That(peakGait, Is.GreaterThan(0.5f), "이동 중 보행 동작 활성화");
+        }
+
+        [UnityTest]
         public IEnumerator DragonIdleMovesActualBonesAndDeathPlaysSuppliedClip()
         {
             Call("SetKind", 2);
