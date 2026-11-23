@@ -1,3 +1,4 @@
+using System;
 using Nomad.Combat;
 using UnityEngine;
 
@@ -10,6 +11,7 @@ namespace Nomad.Monsters
         private bool dropped;
         private Transform dropParent;
         public PlaceholderEquipmentDrop SpawnedDrop { get; private set; }
+        public event Action<PlaceholderEquipmentDrop> DropCreated;
 
         public void Configure(Transform parent) => dropParent = parent;
 

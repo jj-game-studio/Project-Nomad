@@ -63,6 +63,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Game.Modules.FieldMonsters
   normalCount: 24
-  eliteCount: 2
+  eliteCount: 1
   bossCount: 1
   safeRadius: 12

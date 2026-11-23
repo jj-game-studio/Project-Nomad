@@ -14,7 +14,7 @@ namespace Nomad.Game.Modules
     public sealed class FieldMonsters : MonoBehaviour
     {
         [SerializeField, Min(0)] private int normalCount = 24;
-        [SerializeField, Min(0)] private int eliteCount = 2;
+        [SerializeField, Min(0)] private int eliteCount = 1;
         [SerializeField, Min(0)] private int bossCount = 1;
 
         [Tooltip("플레이어 시작점에서 이 거리 안의 생성 지점에는 배치하지 않습니다.")]
