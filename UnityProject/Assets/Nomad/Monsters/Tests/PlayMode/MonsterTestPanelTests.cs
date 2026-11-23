@@ -303,6 +303,30 @@ namespace Nomad.Monsters.Tests
         }
 
         [UnityTest]
+        public IEnumerator InterruptedAttackResumesPursuitAfterReactivation()
+        {
+            Call("SetKind", 0);
+            Set(Settings(0), "ranged", false);
+            Set(Settings(0), "skills", false);
+            player.transform.position = new Vector3(3, 0.05f, -0.7f);
+            Call("SetInvincible", true);
+            Health actor = (Health)Call("SpawnAt", new Vector3(3, 0, -2));
+            var attack = actor.GetComponent<MonsterMeleeAttack>();
+            float deadline = Time.time + 3;
+            while (attack.Phase != MeleePhase.Windup && Time.time < deadline) yield return null;
+            Assert.That(attack.Phase, Is.EqualTo(MeleePhase.Windup));
+            actor.gameObject.SetActive(false);
+            player.transform.position = new Vector3(3, 0.05f, 4);
+            actor.gameObject.SetActive(true);
+            Vector3 start = actor.transform.position;
+            deadline = Time.time + 2;
+            while (Vector3.Distance(start, actor.transform.position) < 0.5f && Time.time < deadline) yield return null;
+            Assert.That(actor.GetComponent<MonsterTracker>().enabled, Is.True, "공격 중 정지시킨 탐지 재개");
+            Assert.That(actor.GetComponent<NavMeshAgent>().isStopped, Is.False, "재활성화 후 남은 정지 상태 해제");
+            Assert.That(Vector3.Distance(start, actor.transform.position), Is.GreaterThan(0.5f), "실제 추격 이동 재개");
+        }
+
+        [UnityTest]
         public IEnumerator RestoreRevivesPlayerAndClearRemovesTrackedActors()
         {
             Call("SetKind", 0);
