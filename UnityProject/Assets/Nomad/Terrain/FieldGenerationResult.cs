@@ -31,6 +31,7 @@ namespace Nomad.Terrain
         public int Seed { get; }
         public bool Success { get; }
         public string FailureReason { get; }
+        // 플레이어는 4면 출구 중 하나의 안쪽에서 필드 안쪽을 바라보며 시작합니다.
         public Vector3 PlayerPosition { get; }
         public Quaternion PlayerRotation { get; }
         public IReadOnlyList<FieldSpawnPoint> EnemyPoints { get; }
@@ -39,14 +40,14 @@ namespace Nomad.Terrain
         public IReadOnlyList<FieldSpawnPoint> ExitPoints { get; }
 
         internal FieldGenerationResult(TerrainGenerationResult terrain, bool success, string reason,
-            Vector3 start, List<FieldSpawnPoint> enemies, List<FieldSpawnPoint> chests, List<FieldSpawnPoint> exits)
+            Vector3 start, Quaternion facing, List<FieldSpawnPoint> enemies, List<FieldSpawnPoint> chests, List<FieldSpawnPoint> exits)
         {
             GenerationId = terrain.GenerationId;
             Seed = terrain.Seed;
             Success = success;
             FailureReason = reason;
             PlayerPosition = start;
-            PlayerRotation = Quaternion.identity;
+            PlayerRotation = facing;
             EnemyPoints = Array.AsReadOnly(enemies.ToArray());
             ChestPoints = Array.AsReadOnly(chests.ToArray());
             ExitPoints = Array.AsReadOnly(exits.ToArray());
