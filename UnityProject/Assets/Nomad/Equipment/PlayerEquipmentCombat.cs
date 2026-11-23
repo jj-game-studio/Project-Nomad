@@ -16,6 +16,8 @@ namespace Nomad.Equipment
     {
         public const string ArrowItemId = "weapon-arrow";
         public const float MeleeHalfAngle = 60f;
+        // 커서 레이 주변에서 적을 찾는 에임 보정 반경(m)입니다.
+        public const float AimAssistRadius = 0.6f;
 
         [SerializeField] private Camera viewCamera;
         [SerializeField] private Transform muzzle;
@@ -246,13 +248,61 @@ namespace Nomad.Equipment
                 return false;
 
             Ray aimRay = camera.ScreenPointToRay(pointer);
-            if (Projectile.TryGetFirstHit(aimRay, 1000f, collisionLayers, transform, out RaycastHit hit))
+            bool hasHit = Projectile.TryGetFirstHit(aimRay, 1000f, collisionLayers, transform, out RaycastHit hit);
+
+            // 커서 아래나 근처의 적은 지형보다 우선해 몸 중심을 조준합니다.
+            if (TryGetSnapTarget(aimRay, hasHit ? hit.collider : null, out aim))
+                return true;
+
+            if (hasHit)
                 aim = hit.point;
             else if (new Plane(Vector3.up, AttackOrigin).Raycast(aimRay, out float distance))
                 aim = aimRay.GetPoint(distance);
             else
                 return false;
+
+            // 적이 없으면 발사구 높이로 평탄화해 바닥에 꽂히지 않고 수평으로 날아가게 합니다.
+            aim.y = ProjectileOrigin.y;
             return true;
+        }
+
+        private bool TryGetSnapTarget(Ray aimRay, Collider direct, out Vector3 center)
+        {
+            center = default;
+            Collider best = IsSnapTarget(direct) ? direct : null;
+            float bestDistance = float.PositiveInfinity;
+
+            // 직접 맞은 적이 없으면 보정 반경 안에서 레이를 따라 가장 가까운 적을 고릅니다.
+            if (best == null)
+                foreach (RaycastHit hit in Physics.SphereCastAll(aimRay, AimAssistRadius, 1000f, collisionLayers,
+                             QueryTriggerInteraction.Ignore))
+                {
+                    if (hit.distance >= bestDistance || !IsSnapTarget(hit.collider))
+                        continue;
+
+                    best = hit.collider;
+                    bestDistance = hit.distance;
+                }
+
+            if (best == null)
+                return false;
+
+            // 발사구에서 적 중심까지 지형에 막히면 스냅하지 않습니다.
+            center = best.bounds.center;
+            Vector3 path = center - ProjectileOrigin;
+            Health target = best.GetComponentInParent<Health>();
+            return !Projectile.TryGetFirstHit(new Ray(ProjectileOrigin, path.normalized), path.magnitude,
+                       collisionLayers, transform, out RaycastHit blocker) ||
+                   blocker.collider.GetComponentInParent<Health>() == target;
+        }
+
+        private bool IsSnapTarget(Collider collider)
+        {
+            if (collider == null || collider.transform.IsChildOf(transform))
+                return false;
+
+            Health target = collider.GetComponentInParent<Health>();
+            return target != null && !target.IsDead;
         }
 
         private void NotifyImpact(Vector3 point, ItemDefinition weapon)
