@@ -68,8 +68,11 @@ MonoBehaviour:
   m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Visibility.VisibilityField
   sight: {fileID: 7789403471345100214}
-  foliageShader: {fileID: 4800000, guid: a87ee9697b5ef174badeb9ede41df0ac, type: 3}
+  fadeShader: {fileID: 4800000, guid: a87ee9697b5ef174badeb9ede41df0ac, type: 3}
   connectGeneratedFoliage: 1
+  shadeShader: {fileID: 4800000, guid: 908e41f6c2904b198228d6d1b1aef112, type: 3}
+  shadeColor: {r: 0.02, g: 0.03, b: 0.06, a: 0.5}
+  shadeSoftness: 0.8
 --- !u!114 &5321964419866321769
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -68,8 +68,8 @@ namespace Nomad.Visibility.Editor
 
             var sight = new GameObject("Player Visibility").AddComponent<PlayerVisibility>();
             sight.Configure(player.transform, camera);
-            Shader shader = AssetDatabase.LoadAssetAtPath<Shader>(Folder + "/Shaders/FoliageCutaway.shader");
-            sight.gameObject.AddComponent<VisibilityField>().Configure(sight, shader);
+            Shader shader = FadeShader;
+            sight.gameObject.AddComponent<VisibilityField>().Configure(sight, shader, ShadeShader);
 
             Enemy("Visible enemy", new Vector3(3f, 0f, 1f), red);
             Enemy("Behind wall", new Vector3(-4f, 0f, 3f), red);
@@ -93,7 +93,7 @@ namespace Nomad.Visibility.Editor
             leaves.transform.SetParent(tree.transform, false);
             leaves.transform.localPosition = Vector3.up * 3f;
             Object.DestroyImmediate(leaves.GetComponent<Collider>());
-            tree.AddComponent<VisibilityFoliage>().Configure(shader, 1.5f, true);
+            tree.AddComponent<VisibilityFoliage>().Configure(shader);
 
             EditorSceneManager.SaveScene(SceneManager.GetActiveScene(), ScenePath);
             BuildModule();
@@ -111,8 +111,7 @@ namespace Nomad.Visibility.Editor
             var controls = Object.FindFirstObjectByType<TerrainIntegrationControls>();
             var sight = new GameObject("Player Visibility").AddComponent<PlayerVisibility>();
             sight.Configure(controls.Player.transform, Camera.main);
-            sight.gameObject.AddComponent<VisibilityField>().Configure(sight,
-                AssetDatabase.LoadAssetAtPath<Shader>(Folder + "/Shaders/FoliageCutaway.shader"));
+            sight.gameObject.AddComponent<VisibilityField>().Configure(sight, FadeShader, ShadeShader);
             EditorSceneManager.SaveScene(SceneManager.GetActiveScene());
             Debug.Log("VISIBILITY_FIELD_CREATED");
         }
@@ -130,12 +129,14 @@ namespace Nomad.Visibility.Editor
         {
             var module = new GameObject("PlayerVisibilityModule");
             var sight = module.AddComponent<PlayerVisibility>();
-            module.AddComponent<VisibilityField>().Configure(sight,
-                AssetDatabase.LoadAssetAtPath<Shader>(Folder + "/Shaders/FoliageCutaway.shader"));
+            module.AddComponent<VisibilityField>().Configure(sight, FadeShader, ShadeShader);
             module.AddComponent<VisibilityBinding>();
             PrefabUtility.SaveAsPrefabAsset(module, Folder + "/PlayerVisibilityModule.prefab");
             Object.DestroyImmediate(module);
         }
+
+        private static Shader FadeShader => AssetDatabase.LoadAssetAtPath<Shader>(Folder + "/Shaders/FoliageFade.shader");
+        private static Shader ShadeShader => AssetDatabase.LoadAssetAtPath<Shader>(Folder + "/Shaders/VisibilityShade.shader");
 
         private static void Enemy(string name, Vector3 position, Material material)
         {

@@ -1,31 +1,27 @@
-Shader "Nomad/Visibility/Foliage Cutaway"
+Shader "Nomad/Visibility/Foliage Fade"
 {
+    // 시야 안의 식생·소품을 원래 텍스처 색 그대로 반투명하게 그립니다.
     Properties
     {
         _BaseMap("Base Map", 2D) = "white" {}
         _BaseColor("Base Color", Color) = (1,1,1,1)
         _Cutoff("Alpha Cutoff", Range(0,1)) = 0.1
-        _CutHeight("Remaining World Height", Float) = 0.4
+        _Alpha("Alpha", Range(0,1)) = 0.35
     }
     SubShader
     {
-        Tags { "RenderPipeline"="UniversalPipeline" "RenderType"="TransparentCutout" "Queue"="AlphaTest" }
-        Cull Off
+        Tags { "RenderPipeline"="UniversalPipeline" "RenderType"="Transparent" "Queue"="Transparent" }
+        Cull Back
         HLSLINCLUDE
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
         TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
-        TEXTURE2D(_NomadVisibilityDistances); SAMPLER(sampler_NomadVisibilityDistances);
         CBUFFER_START(UnityPerMaterial)
             float4 _BaseMap_ST;
             half4 _BaseColor;
             float _Cutoff;
-            float _CutHeight;
+            half _Alpha;
         CBUFFER_END
-        float4 _NomadVisibilityEye;
-        float4 _NomadVisibilityForward;
-        float4 _NomadVisibilityParams;
-        float _NomadVisibilityActive;
 
         struct Attributes { float4 positionOS : POSITION; float3 normalOS : NORMAL; float2 uv : TEXCOORD0; };
         struct Varyings
@@ -52,32 +48,31 @@ Shader "Nomad/Visibility/Foliage Cutaway"
         {
             half4 color = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, input.uv) * _BaseColor;
             clip(color.a - _Cutoff);
-            if (_NomadVisibilityActive > 0.5 && input.positionWS.y > _CutHeight)
-            {
-                float2 delta = input.positionWS.xz - _NomadVisibilityEye.xz;
-                float2 forward = _NomadVisibilityForward.xz;
-                float signedAngle = atan2(forward.y * delta.x - forward.x * delta.y, dot(forward, delta));
-                float halfAngle = _NomadVisibilityParams.y * 0.5;
-                bool nearby = _NomadVisibilityParams.w > 0 && length(delta) <= _NomadVisibilityParams.w;
-                if (nearby || (abs(signedAngle) <= halfAngle && length(delta) <= _NomadVisibilityParams.x))
-                {
-                    float u = saturate((signedAngle + PI) / TWO_PI);
-                    float stepSize = 1.0 / _NomadVisibilityParams.z;
-                    // 경계의 양쪽 중 짧은 거리를 사용해 얇은 벽 뒤 누출을 줄입니다.
-                    float a = SAMPLE_TEXTURE2D_LOD(_NomadVisibilityDistances, sampler_NomadVisibilityDistances, float2(u, 0.5), 0).r;
-                    float b = SAMPLE_TEXTURE2D_LOD(_NomadVisibilityDistances, sampler_NomadVisibilityDistances, float2(saturate(u - stepSize), 0.5), 0).r;
-                    float c = SAMPLE_TEXTURE2D_LOD(_NomadVisibilityDistances, sampler_NomadVisibilityDistances, float2(saturate(u + stepSize), 0.5), 0).r;
-                    clip(length(delta) - min(a, min(b, c)) + 0.05);
-                }
-            }
             return color;
         }
         ENDHLSL
+
+        // 앞면 깊이만 먼저 써서 반투명 메시 안쪽 면이 겹쳐 보이지 않게 합니다.
+        Pass
+        {
+            Name "FadeDepth"
+            Tags { "LightMode"="SRPDefaultUnlit" }
+            ZWrite On
+            ColorMask 0
+            HLSLPROGRAM
+            #pragma vertex Vert
+            #pragma fragment Depth
+            half4 Depth(Varyings input) : SV_Target { Surface(input); return 0; }
+            ENDHLSL
+        }
 
         Pass
         {
             Name "Forward"
             Tags { "LightMode"="UniversalForward" }
+            Blend SrcAlpha OneMinusSrcAlpha
+            ZWrite Off
+            ZTest LEqual
             HLSLPROGRAM
             #pragma vertex Vert
             #pragma fragment Frag
@@ -92,27 +87,18 @@ Shader "Nomad/Visibility/Foliage Cutaway"
                 half lighting = saturate(dot(normal, light.direction)) * 0.7h + 0.3h;
                 color.rgb *= SampleSH(normal) + light.color * lighting * light.shadowAttenuation;
                 color.rgb = MixFog(color.rgb, input.fog);
+                color.a = _Alpha;
                 return color;
             }
             ENDHLSL
         }
 
-        Pass
-        {
-            Name "DepthOnly"
-            Tags { "LightMode"="DepthOnly" }
-            ColorMask 0
-            HLSLPROGRAM
-            #pragma vertex Vert
-            #pragma fragment Depth
-            half4 Depth(Varyings input) : SV_Target { Surface(input); return 0; }
-            ENDHLSL
-        }
-
+        // 반투명해져도 원래 그림자는 유지합니다.
         Pass
         {
             Name "ShadowCaster"
             Tags { "LightMode"="ShadowCaster" }
+            ZWrite On
             ColorMask 0
             HLSLPROGRAM
             #pragma vertex Vert
