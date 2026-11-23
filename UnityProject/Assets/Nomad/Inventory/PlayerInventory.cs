@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace Nomad.Inventory
@@ -18,6 +19,9 @@ namespace Nomad.Inventory
         private readonly List<int> stackOrder = new(MaxCapacity);
 
         public int UsedSlots => stackOrder.Count;
+        // 이 가방이 받을 수 있는 아이템 목록입니다. 상자 내용물 후보로도 씁니다.
+        // 플레이어가 아직 비활성(Awake 전)이어도 쓸 수 있게 직렬화 목록을 그대로 돌려줍니다.
+        public IReadOnlyList<ItemDefinition> Catalog => items.Where(item => item != null).ToArray();
         // 현재 사용할 수 있는 칸 수입니다. 이 번호 이상의 칸은 잠겨 있어 아이템을 넣을 수 없습니다.
         public int SlotCount { get; private set; } = Capacity;
         internal InventoryPanel Panel { get; set; }

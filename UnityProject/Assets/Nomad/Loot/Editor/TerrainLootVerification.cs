@@ -19,7 +19,7 @@ namespace Nomad.Loot.Editor
     {
         private const string SessionKey = "Nomad.Loot.TerrainVerify";
         private const int SweepSeeds = 20;
-        private static readonly string[] Items = { "scrap", "weapon-dagger", "gear-padded-armor" };
+        private static readonly string[] Items = { "scrap", "gear-chain-mail" };
         private static double deadline;
         private static int frame;
         private static int starterSlots;
@@ -102,9 +102,12 @@ namespace Nomad.Loot.Editor
             {
                 case 0:
                     Require(Count("scrap") == 96 && inventory.UsedSlots == 20, "F fills real inventory");
+                    Require(Enumerable.Range(0, chest.StackCount).Any(i => chest.GetStack(i).ItemId.StartsWith("scrap")),
+                        "every chest rolls scrap");
+                    // 내용물은 티어 확률이라(화살은 기존 화살 스택에 합쳐지기도 함), 공간 부족 검사는 고정 내용물로 합니다(#120).
+                    chest.Initialize(chest.name, new[] { new LootStack("scrap", 10), new LootStack("gear-chain-mail", 1) });
                     chestItems = ItemsIn(chest);
                     chestScrap = ChestCount(chest, "scrap");
-                    Require(chestScrap > 0, "every chest rolls scrap");
                     Press(Key.E);
                     break;
                 case 1:
@@ -118,7 +121,8 @@ namespace Nomad.Loot.Editor
                     Press(Key.V);
                     break;
                 case 2:
-                    Require(inventory.UsedSlots == starterSlots && Total() == starterTotal, "V clears only loot review items");
+                    Require(inventory.UsedSlots == starterSlots && Total() == starterTotal,
+                        $"V clears only loot review items (slots {inventory.UsedSlots}/{starterSlots}, total {Total()}/{starterTotal})");
                     long remaining = ItemsIn(chest);
                     TakeAll();
                     Require(chest.Status == LootStatus.Empty && Total() == starterTotal + remaining, "remaining items collected exactly once");

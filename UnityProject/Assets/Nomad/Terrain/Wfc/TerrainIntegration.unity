@@ -1532,19 +1532,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4092ea4cd7b81214daa41c3ecd5267df, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Loot.ChestSpawner
-  table:
-  - ItemId: scrap
-    Min: 4
-    Max: 12
-    Chance: 1
-  - ItemId: weapon-dagger
-    Min: 1
-    Max: 1
-    Chance: 0.35
-  - ItemId: gear-padded-armor
-    Min: 1
-    Max: 1
-    Chance: 0.2
   minimumFill: 0.5
 --- !u!1 &1951189840
 GameObject:
