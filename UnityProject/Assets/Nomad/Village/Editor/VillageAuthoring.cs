@@ -16,8 +16,8 @@ namespace Nomad.Village.Editor
         private const float Half = 34f;
         private const float GateHalfWidth = 4f;
 
-        // 메인 게임 Player가 처음 서는 위치입니다. Player·카메라는 GameManager의 Player 모듈이 만듭니다.
-        internal static readonly Vector3 StartPosition = new Vector3(0f, 0.1f, -14f);
+        // 메인 게임 Player가 처음 서는 위치입니다(광장 큰 나무 남쪽). Player·카메라는 GameManager의 Player 모듈이 만듭니다.
+        internal static readonly Vector3 StartPosition = new Vector3(0f, 0.1f, -6.5f);
 
         [MenuItem("Nomad/Village/Create Village")]
         public static void Create()
@@ -36,6 +36,7 @@ namespace Nomad.Village.Editor
 
             CreateEntrance("Player Entrance", null, StartPosition, Quaternion.identity);
             Nomad.Shop.Editor.VillageShopAuthoring.ApplyToScene(scene);
+            PrayerTreeAuthoring.ApplyToScene(scene);
 
             Light sun = new GameObject("Sun").AddComponent<Light>();
             sun.type = LightType.Directional;

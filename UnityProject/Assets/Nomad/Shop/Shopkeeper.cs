@@ -9,7 +9,7 @@ using UnityEngine;
 namespace Nomad.Shop
 {
     [DisallowMultipleComponent]
-    public sealed class Shopkeeper : MonoBehaviour, IInteractable
+    public sealed class Shopkeeper : MonoBehaviour, IInteractable, IInteractionAction
     {
         [SerializeField] private string interactionId = "temporary-shop";
         [SerializeField] private ShopCatalog catalog;
@@ -20,6 +20,7 @@ namespace Nomad.Shop
         private bool trading;
         private double nextRestockAt;
         public string InteractionId => interactionId;
+        public string InteractionAction => "거래";
         public Vector3 InteractionPoint => transform.position + Vector3.up * 0.5f;
         public ShopCatalog Catalog => catalog;
         public double RestockRemaining => catalog != null && catalog.RestockSeconds > 0

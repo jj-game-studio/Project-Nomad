@@ -22,6 +22,9 @@ namespace Nomad.Player
         [SerializeField] private Camera viewCamera;
         [SerializeField] private float killHeight = -20f;
 
+        // 지역 규칙(예: 마을 1.5배)이 걷기 속도에 곱하는 배율입니다. 구르기 속도는 바꾸지 않습니다.
+        public float SpeedMultiplier { get; set; } = 1f;
+
         private CharacterController controller;
         private Health health;
         private PlayerInventory inventory;
@@ -150,7 +153,7 @@ namespace Nomad.Player
                 verticalSpeed -= Gravity * deltaTime;
             }
 
-            Vector3 planarVelocity = direction * MoveSpeed;
+            Vector3 planarVelocity = direction * (MoveSpeed * SpeedMultiplier);
             if (IsRolling)
                 planarVelocity = rollBlocked ? Vector3.zero : rollDirection * RollSpeed;
             else if (direction.sqrMagnitude > 0f)

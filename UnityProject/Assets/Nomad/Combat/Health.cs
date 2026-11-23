@@ -26,6 +26,16 @@ namespace Nomad.Combat
             CurrentHealth = maxHealth;
         }
 
+        // 살아 있을 때만 최대 체력까지 회복합니다. 실제로 회복했으면 true입니다.
+        public bool RestoreFull()
+        {
+            if (IsDead || CurrentHealth == maxHealth)
+                return false;
+
+            CurrentHealth = maxHealth;
+            return true;
+        }
+
         public bool TryApplyDamage(int amount, DamageKind kind = DamageKind.Combat)
         {
             if (amount <= 0 || IsDead || (kind == DamageKind.Combat && IsCombatImmune))

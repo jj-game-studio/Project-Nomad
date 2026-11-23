@@ -21,7 +21,7 @@ namespace Nomad.Loot
     }
 
     [DisallowMultipleComponent]
-    public sealed class LootChest : MonoBehaviour, IInteractable
+    public sealed class LootChest : MonoBehaviour, IInteractable, IInteractionAction
     {
         private const string RemainingMessage = "Items remain - inventory full or unknown item";
 
@@ -35,6 +35,7 @@ namespace Nomad.Loot
         private bool busy;
         public string ChestId => chestId;
         public string InteractionId => chestId;
+        public string InteractionAction => "열기";
         public Vector3 InteractionPoint => interactionPoint == null ? transform.position : interactionPoint.position;
         public LootStatus Status { get; private set; }
         public string Message { get; private set; } = "Closed";

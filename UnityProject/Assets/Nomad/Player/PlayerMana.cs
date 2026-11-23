@@ -28,6 +28,12 @@ namespace Nomad.Player
                 Current = Mathf.Min(maximum, Current + recoveryPerSecond * Time.deltaTime);
         }
 
+        public void RestoreFull()
+        {
+            if (!health.IsDead)
+                Current = maximum;
+        }
+
         public bool CanSpend(int amount) => isActiveAndEnabled && !health.IsDead && amount > 0 && Current >= amount;
 
         public bool TrySpend(int amount)
