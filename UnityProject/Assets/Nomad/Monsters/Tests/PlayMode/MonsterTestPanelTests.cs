@@ -303,6 +303,37 @@ namespace Nomad.Monsters.Tests
         }
 
         [UnityTest]
+        public IEnumerator ReturnHomeWithNormalStoppingDistanceFinishesAndDetectsAgain()
+        {
+            Call("SetKind", 0);
+            object config = Settings(0);
+            Set(config, "homeRange", 2f);
+            Set(config, "ranged", false);
+            Set(config, "moveSpeed", 1.5f);
+            Call("SetInvincible", true);
+            player.transform.position = new Vector3(3, 0.05f, 5);
+            Health actor = (Health)Call("SpawnAt", new Vector3(3, 0, -2));
+            MonsterTracker tracker = actor.GetComponent<MonsterTracker>();
+            NavMeshAgent agent = actor.GetComponent<NavMeshAgent>();
+            float attackStop = agent.stoppingDistance;
+            Assert.That(attackStop, Is.GreaterThan(0.5f), "원점 도착 반경보다 큰 기본 정지거리 재현");
+            float deadline = Time.time + 8;
+            while (!tracker.IsReturning && Time.time < deadline) yield return null;
+            Assert.That(tracker.IsReturning, Is.True);
+            player.transform.position = new Vector3(3, 0.05f, 20);
+            while (tracker.IsReturning && Time.time < deadline) yield return null;
+            Assert.That(tracker.IsReturning, Is.False, "원점 근처에서 영구 복귀 상태에 머물지 않음");
+            Assert.That(Vector3.Distance(actor.transform.position, tracker.HomePosition), Is.LessThan(0.6f));
+            Assert.That(agent.stoppingDistance, Is.EqualTo(attackStop), "전투 정지거리 복원");
+            player.transform.position = actor.transform.position + Vector3.forward * 3;
+            Vector3 start = actor.transform.position;
+            deadline = Time.time + 2;
+            while (Vector3.Distance(start, actor.transform.position) < 0.5f && Time.time < deadline) yield return null;
+            Assert.That(tracker.IsTracking, Is.True, "복귀 후 다시 탐지");
+            Assert.That(Vector3.Distance(start, actor.transform.position), Is.GreaterThan(0.5f), "재추적 실제 이동");
+        }
+
+        [UnityTest]
         public IEnumerator InterruptedAttackResumesPursuitAfterReactivation()
         {
             Call("SetKind", 0);
