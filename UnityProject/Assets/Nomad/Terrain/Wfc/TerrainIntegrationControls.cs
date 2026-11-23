@@ -22,8 +22,8 @@ namespace Nomad.Terrain
         [SerializeField] private Camera viewCamera;
         [SerializeField] private UnityEngine.UI.Text status;
         [SerializeField] private int seed = 51;
-        [SerializeField, Range(12, 24)] private int width = 6;
-        [SerializeField, Range(12, 24)] private int height = 6;
+        [SerializeField, Range(12, 32)] private int width = 6;
+        [SerializeField, Range(12, 32)] private int height = 6;
 
         // 검토 씬의 R/T/L/P/O/G 키입니다. 메인 게임 필드에서는 끕니다.
         [SerializeField] private bool testControls = true;
@@ -189,7 +189,7 @@ namespace Nomad.Terrain
         {
             if (player == null) return;
             player.SetActive(false);
-            player.transform.SetPositionAndRotation(spawn, Quaternion.identity);
+            player.transform.SetPositionAndRotation(spawn, Navigation.LastResult?.PlayerRotation ?? Quaternion.identity);
             player.SetActive(true);
             Physics.SyncTransforms();
         }
