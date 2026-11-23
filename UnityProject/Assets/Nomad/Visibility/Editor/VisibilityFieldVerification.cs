@@ -75,7 +75,7 @@ namespace Nomad.Visibility.Editor
                 {
                     MonsterIdentity[] monsters = Object.FindObjectsByType<MonsterIdentity>(FindObjectsSortMode.None);
                     Check(monsters.Length > 0, "field spawns monsters");
-                    Check(monsters.All(m => m.GetComponent<VisibilityTarget>()?.Controlled == true), "all spawns registered");
+                    Check(monsters.All(m => m.GetComponent<Health>().IsDead || m.GetComponent<VisibilityTarget>()?.Controlled == true), "all spawns registered");
                     Check(monsters.All(m => m.GetComponent<Health>().enabled && m.GetComponent<Collider>().enabled), "combat and collision preserved");
                     Check(monsters.All(m => m.GetComponent<UnityEngine.AI.NavMeshAgent>().enabled), "AI navigation preserved");
                     Check(monsters.Any(m => !m.GetComponent<VisibilityTarget>().IsVisible), "field has hidden enemies");

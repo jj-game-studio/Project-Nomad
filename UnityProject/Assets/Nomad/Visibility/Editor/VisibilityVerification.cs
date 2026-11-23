@@ -116,6 +116,7 @@ namespace Nomad.Visibility.Editor
                     Health behindHealth = behind.GetComponent<Health>();
                     Check(behindBody != null && behindHealth != null, $"enemy components exist collider={behindBody != null} health={behindHealth != null}");
                     Check(behindBody.enabled && behindHealth.enabled, "collision and health maintained");
+                    VerifyCorpse();
                     Check(!sight.InCone(player.position + Vector3.forward * 25f), "range boundary");
                     Check(sight.InCone(player.position + Vector3.forward * 23f), "inside range");
                     Check(!sight.InCone(player.position + Vector3.right * 5f), "outside cone");
@@ -352,6 +353,23 @@ namespace Nomad.Visibility.Editor
             Check(tree.InSight, "tree in sight fades");
         }
 
+        // 시체: 벽 뒤에 숨겨진 적도 죽으면 파밍할 수 있게 다시 보입니다.
+        private static void VerifyCorpse()
+        {
+            var corpse = Object.Instantiate(behind.gameObject).GetComponent<VisibilityTarget>();
+            corpse.name = "Corpse verification enemy";
+            Physics.SyncTransforms();
+            corpse.Evaluate(sight);
+            Renderer body = corpse.GetComponentInChildren<Renderer>();
+            Check(!corpse.IsVisible && body.forceRenderingOff, "living enemy behind wall hidden");
+
+            corpse.GetComponent<Health>().TryApplyDamage(100000);
+            corpse.Evaluate(sight);
+            Check(corpse.IsCorpse && corpse.IsVisible && !corpse.Controlled && !body.forceRenderingOff, "corpse behind wall stays visible");
+            corpse.GetComponent<Collider>().enabled = false;
+            Object.Destroy(corpse.gameObject);
+        }
+
         // 시야 밖(등 뒤, 벽 뒤)은 어둡고 시야 안은 밝기를 유지합니다.
         private static void VerifyShade()
         {
@@ -366,8 +384,8 @@ namespace Nomad.Visibility.Editor
             field.ShadeRenderer.enabled = true;
             Debug.Log($"VISIBILITY_SHADE front={shaded.light[0]:F3}/{plain.light[0]:F3} back={shaded.light[1]:F3}/{plain.light[1]:F3} wall={shaded.light[2]:F3}/{plain.light[2]:F3}");
             Check(shaded.light[0] > plain.light[0] * 0.9f, "visible area stays lit");
-            Check(shaded.light[1] < plain.light[1] * 0.6f, "area behind player is shaded");
-            Check(shaded.light[2] < plain.light[2] * 0.6f, "area behind wall is shaded");
+            Check(shaded.light[1] < plain.light[1] * 0.75f, "area behind player is shaded");
+            Check(shaded.light[2] < plain.light[2] * 0.75f, "area behind wall is shaded");
         }
 
         private static (int green, int red, float[] light) Capture(string name, params Vector3[] probes)

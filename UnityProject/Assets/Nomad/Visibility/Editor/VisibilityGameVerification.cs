@@ -89,7 +89,13 @@ namespace Nomad.Visibility.Editor
 
                 PlayerVisibility active = current.GetComponentInChildren<PlayerVisibility>();
                 Check(active != null, "GameManager owns visibility module");
-                if (active.Observer != current.Player.transform || !active.Available) return;
+                if (active.Observer != current.Player.transform) return;
+
+                // 마을에서는 시야가 쉬고, 필드에서는 켜진 뒤에 검사합니다.
+                bool village = current.CurrentRegion.name == "Village";
+                if (village != active.Suppressed) return;
+                if (village) CheckVillage(active);
+                else if (!active.Available) return;
 
                 if (stage == 0)
                 {
@@ -116,7 +122,7 @@ namespace Nomad.Visibility.Editor
                     Check(active.Observer == observer, "same persistent observer");
                     MonsterIdentity[] monsters = Object.FindObjectsByType<MonsterIdentity>();
                     Check(monsters.Length > 0, "Field contains monsters");
-                    Check(monsters.All(m => m.GetComponent<VisibilityTarget>()?.Controlled == true), "all monsters controlled");
+                    Check(monsters.All(m => m.GetComponent<Health>().IsDead || m.GetComponent<VisibilityTarget>()?.Controlled == true), "all monsters controlled");
                     Check(VisibilityTarget.ActiveCount == monsters.Length, "no stale targets");
                     Check(monsters.Any(m => !m.GetComponent<VisibilityTarget>().IsVisible), "hidden enemies exist");
                     Check(monsters.All(m => m.GetComponent<Health>().enabled && m.GetComponent<Collider>().enabled), "combat and collision retained");
@@ -205,6 +211,15 @@ namespace Nomad.Visibility.Editor
         }
 
         private static string Label(Component item) => item.name.ToLowerInvariant();
+
+        private static void CheckVillage(PlayerVisibility active)
+        {
+            Check(!active.Available, "visibility off in Village");
+            Check(Shader.GetGlobalFloat("_NomadVisibilityActive") == 0f, "no visibility mask in Village");
+            VisibilityField field = active.GetComponent<VisibilityField>();
+            Check(field.ShadeRenderer == null || !field.ShadeRenderer.enabled, "no shade in Village");
+            Check(Object.FindObjectsByType<VisibilityTarget>().All(t => !t.Controlled), "nothing hidden in Village");
+        }
 
         private static void CheckModule(GameManager current)
         {

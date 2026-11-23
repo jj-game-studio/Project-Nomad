@@ -3,7 +3,7 @@ Shader "Nomad/Visibility/Shade"
     // 화면 깊이로 월드 위치를 복원해 시야 밖(부채꼴·주변 원형 밖, 장애물 뒤)을 어둡게 덮습니다.
     Properties
     {
-        _ShadeColor("Shade Color", Color) = (0.02, 0.03, 0.06, 0.7)
+        _ShadeColor("Shade Color", Color) = (0.02, 0.03, 0.06, 0.5)
         _Softness("Edge Softness (m)", Float) = 0.8
     }
     SubShader

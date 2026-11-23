@@ -35,7 +35,9 @@ namespace Nomad.Visibility
         public float Distance => distance;
         public float Angle => angle;
         public float NearbyRadius { get => Mathf.Clamp(nearbyRadius, 0f, 20f); set => nearbyRadius = Mathf.Clamp(value, 0f, 20f); }
-        public bool Available => isActiveAndEnabled && observer != null && observer.gameObject.activeInHierarchy;
+        // 마을처럼 시야를 쓰지 않는 지역에서는 쉬어 모든 것을 그대로 보여 줍니다.
+        public bool Suppressed { get; set; }
+        public bool Available => isActiveAndEnabled && !Suppressed && observer != null && observer.gameObject.activeInHierarchy;
         public int Revision { get; private set; }
         public bool ShowDebugRange { get => showDebugRange; set => showDebugRange = value; }
 

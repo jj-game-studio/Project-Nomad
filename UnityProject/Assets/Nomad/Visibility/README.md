@@ -17,14 +17,14 @@ Hierarchy의 **Player Visibility**(모듈은 PlayerVisibilityModule) → Player 
 ## 표시 규칙
 
 적 몸통/머리/양옆 중 하나라도 전방 부채꼴 또는 주변 원형에 들어오고 장애물 검사를 통과하면 표시합니다. 주변 원형은 방향을 무시하지만 벽을 통과하는 감지 능력은 아닙니다.
-Renderer.forceRenderingOff 및 체력바·피격 숫자만 제어하고 Collider·Health·AI·공격은 유지합니다.
+죽은 적(시체)은 파밍할 수 있도록 시야와 관계없이 항상 보입니다(#158). Renderer.forceRenderingOff 및 체력바·피격 숫자만 제어하고 Collider·Health·AI·공격은 유지합니다.
 새 Renderer도 LateUpdate에서 반영합니다. 스킬 예고는 적 소속 Renderer와 함께 숨깁니다.
 이미 발사된 독립 발사체/소리/독립 사망 드롭은 적 표시와 별개입니다.
 
 ## 시야 밖 어둠 (#158)
 
 매 프레임 월드 기준 전 방향 눈높이 방사선512개의 도달 거리를 셰이더에 전달합니다(이웃 표본 선형 보간). 화면 깊이로 각 픽셀의 월드 위치를 복원해 부채꼴·주변 원형 밖과 장애물 뒤를 어둡게 덮습니다.
-VisibilityField Inspector의 **Shade Color**(알파=농도, 초기0.7)와 **Shade Softness**(경계 부드러움, 초기0.8m)로 조절합니다. 주변 원형·부채꼴 좌우/끝·장애물 경계에 같은 폭이 적용됩니다. 모듈을 끄면 사라집니다.
+VisibilityField Inspector의 **Shade Color**(알파=농도, 초기0.5)와 **Shade Softness**(경계 부드러움, 초기0.8m)로 조절합니다. 주변 원형·부채꼴 좌우/끝·장애물 경계에 같은 폭이 적용됩니다. 모듈을 끄면 사라집니다.
 카메라 앞 사각형(`Visibility Shade`)으로 그리며 카메라의 깊이 텍스처 사용을 켭니다(해제 시 원래 값으로 복원).
 눈높이 수평 근사라서 눈높이보다 낮은 엄폐물 뒤 바닥은 밝게 남고, 벽 윗면 일부는 어두울 수 있습니다.
 
@@ -66,3 +66,8 @@ GameConfig.modules에 정식 등록되어 마을·필드·재시작에서 영속
 영속 관찰자·시야 인스턴스 유지, 중복 모듈/이전 적 잔존 없음, 적 숨김과 전투/충돌 유지 및 새 플레이어 재바인딩을 확인합니다.
 `VisibilityGameVerification.RunPreview` 배치 진입점은 등록 전 검증용입니다. Play 중에만 프리팹을 추가하며 GameConfig를 저장하지 않습니다.
 PREVIEW 통과는 정식 등록 검증 통과와 구분합니다. 실제 구매 식생·경사지 외형/성능 및 Windows 빌드는 별도 확인 대상입니다.
+
+## 마을 비활성 (#158)
+
+VisibilityBinding의 **Disabled Regions**(초기 Village) 지역에서는 시야가 쉬어 적 숨김·어둠·반투명을 모두 해제합니다. 필드로 가면 다시 켜집니다.
+`Verify Main Game`이 마을 진입·복귀·재시작 때 해제 상태를 검사합니다.

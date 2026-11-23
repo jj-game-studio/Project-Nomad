@@ -17,7 +17,7 @@ namespace Nomad.Visibility
         [Header("시야 밖 어둠")]
         [SerializeField] private Shader shadeShader;
         [Tooltip("시야 밖을 덮는 색입니다. 알파가 어둠 농도입니다.")]
-        [SerializeField] private Color shadeColor = new Color(0.02f, 0.03f, 0.06f, 0.7f);
+        [SerializeField] private Color shadeColor = new Color(0.02f, 0.03f, 0.06f, 0.5f);
         [Tooltip("보이는 영역 경계에서 어둠이 짙어지는 거리(m)입니다.")]
         [SerializeField, Range(0f, 3f)] private float shadeSoftness = 0.8f;
 
