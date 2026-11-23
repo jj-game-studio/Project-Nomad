@@ -8,11 +8,11 @@ using UnityEngine;
 namespace Nomad.Game.Modules
 {
     // Field 지역 모듈: 필드 생성이 끝나면 적 생성 지점에 몬스터를 배치하고, 다시 생성하면 이전 몬스터를 지웁니다.
-    // 수량·안전 거리는 #59 통합 테스트(GameplayIntegration)와 같은 임시값이며 최종 난이도가 아닙니다.
+    // 일반 다수 → 먼 엘리트 → 별도 보스 구역의 임시 조우 배치를 사용합니다(#39).
     [RequireComponent(typeof(MonsterActorFactory))]
     public sealed class FieldMonsters : MonoBehaviour
     {
-        [SerializeField, Min(0)] private int normalCount = 6;
+        [SerializeField, Min(0)] private int normalCount = 12;
         [SerializeField, Min(0)] private int eliteCount = 1;
         [SerializeField, Min(0)] private int bossCount = 1;
 
@@ -74,54 +74,8 @@ namespace Nomad.Game.Modules
             enemyRoot = new GameObject("Field Enemies " + generationId);
             enemyRoot.transform.SetParent(transform, false);
 
-            int normals = 0;
-            int elites = 0;
-            int bosses = 0;
-            foreach (FieldSpawnPoint point in Shuffle(field.EnemyPoints, field.Seed))
-            {
-                if (normals >= normalCount && elites >= eliteCount && bosses >= bossCount)
-                    break;
-                if (!CanSpawn(point, field.PlayerPosition))
-                    continue;
-
-                // 일반을 먼저 채우고 엘리트·보스 순으로 배치합니다. 일반은 검·석궁·지팡이를 번갈아 씁니다.
-                MonsterRank rank = normals < normalCount ? MonsterRank.Normal
-                    : elites < eliteCount ? MonsterRank.Elite : MonsterRank.Boss;
-                MonsterTestSettings settings = MonsterTestSettings.Defaults(rank);
-                if (rank == MonsterRank.Normal)
-                    settings.normalStyle = normals % 3;
-
-                enemies.Add(factory.CreateRanked(target, settings, rank, point.Position, point.Rotation,
-                    rank + " " + point.Id, enemyRoot.transform));
-
-                if (rank == MonsterRank.Boss) bosses++;
-                else if (rank == MonsterRank.Elite) elites++;
-                else normals++;
-            }
-        }
-
-        // 시작점과 너무 가깝거나 다른 충돌체와 겹치는 지점은 건너뜁니다.
-        private bool CanSpawn(FieldSpawnPoint point, Vector3 playerPosition)
-        {
-            if (Vector3.Distance(point.Position, playerPosition) < safeRadius)
-                return false;
-
-            return !Physics.CheckCapsule(point.Position + Vector3.up * 0.4f, point.Position + Vector3.up * 1.5f,
-                0.35f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
-        }
-
-        // 같은 seed는 같은 배치가 되도록 seed로 섞습니다.
-        private static List<FieldSpawnPoint> Shuffle(IReadOnlyList<FieldSpawnPoint> points, int seed)
-        {
-            var list = new List<FieldSpawnPoint>(points);
-            var random = new System.Random(seed);
-            for (int index = list.Count - 1; index > 0; index--)
-            {
-                int other = random.Next(index + 1);
-                (list[index], list[other]) = (list[other], list[index]);
-            }
-
-            return list;
+            enemies.AddRange(MonsterEncounterLayout.Spawn(field, enemyRoot.transform, factory,
+                target, normalCount, eliteCount, bossCount, safeRadius));
         }
 
         // 지형이 교체되는 프레임에 이전 몬스터가 움직이지 않도록 바로 끄고 지웁니다.

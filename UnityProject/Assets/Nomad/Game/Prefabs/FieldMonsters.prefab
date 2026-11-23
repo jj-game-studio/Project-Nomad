@@ -62,7 +62,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8d06f57bac2c05d47ae1825f42513302, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Game.Modules.FieldMonsters
-  normalCount: 6
+  normalCount: 12
   eliteCount: 1
   bossCount: 1
   safeRadius: 12
