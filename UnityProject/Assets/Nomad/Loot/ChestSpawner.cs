@@ -30,8 +30,8 @@ namespace Nomad.Loot
         [SerializeField] private LootEntry[] table =
         {
             new LootEntry("scrap", 4, 12, 1f),
-            new LootEntry("field-knife", 1, 1, 0.35f),
-            new LootEntry("field-vest", 1, 1, 0.2f),
+            new LootEntry("weapon-dagger", 1, 1, 0.35f),
+            new LootEntry("gear-padded-armor", 1, 1, 0.2f),
         };
 
         [Tooltip("제공된 상자 지점 중 최소로 사용할 비율입니다. 나머지는 seed에 따라 랜덤입니다.")]

@@ -9,7 +9,7 @@ namespace Nomad.Loot
     // 저장된 지형 통합 검토 씬에서 Ready 결과의 상자 지점에 상자를 배치하고 파밍 검토 키를 제공합니다.
     public sealed class TerrainLootIntegration : MonoBehaviour
     {
-        private static readonly string[] ReviewItems = { "scrap", "field-knife", "field-vest" };
+        private static readonly string[] ReviewItems = { "scrap", "weapon-dagger", "gear-padded-armor" };
 
         [SerializeField] private PlayerInventory inventory;
         [SerializeField] private UnityEngine.UI.Text status;
@@ -48,7 +48,7 @@ namespace Nomad.Loot
             {
                 ClearReviewItems();
                 inventory.Add("scrap", 96);
-                inventory.Add("field-knife", 19);
+                inventory.Add("weapon-dagger", 19);
             }
             if (keyboard?.vKey.wasPressedThisFrame == true)
                 ClearReviewItems();

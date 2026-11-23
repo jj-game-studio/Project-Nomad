@@ -121,16 +121,16 @@ namespace Nomad.Inventory.Editor
                         Require(changes == 3 && inventory.UsedSlots == 20 && capacity.text == "20 / 20 slots", "20슬롯 채우기");
                         Require(inventory.Add("scrap", 10) == 3 && inventory.GetStack(0).Count == 99,
                             "가득 찬 상태에서 부분 추가");
-                        Require(inventory.Add("scrap", 10) == 0 && inventory.Add("field-vest", 1) == 0, "추가 공간 없음");
+                        Require(inventory.Add("scrap", 10) == 0 && inventory.Add("gear-padded-armor", 1) == 0, "추가 공간 없음");
                         Require(inventory.Add("unknown", 5) == 0 && inventory.Remove("scrap", -1) == 0, "유효하지 않은 요청");
                         Require(inventory.Remove("scrap", int.MaxValue) == 99 && inventory.UsedSlots == 19, "보유량까지만 제거");
-                        Require(inventory.Remove("field-knife", int.MaxValue) == 18 && inventory.UsedSlots == 1, "무기 중첩 제한");
+                        Require(inventory.Remove("weapon-dagger", int.MaxValue) == 18 && inventory.UsedSlots == 1, "무기 중첩 제한");
                         Require(inventory.Add("scrap", int.MaxValue) == 19 * 99 && inventory.UsedSlots == 20, "대량 요청과 용량 제한");
                         Require(changes == 7, "성공한 변경당 알림 한 번");
                         inventory.Remove("scrap", int.MaxValue);
-                        inventory.Remove("field-vest", int.MaxValue);
+                        inventory.Remove("gear-padded-armor", int.MaxValue);
                         inventory.Add("scrap", 106);
-                        inventory.Add("field-knife", 1);
+                        inventory.Add("weapon-dagger", 1);
                         changesBeforeDrag = changes;
                         MovePointerToSlot(2, held: true);
                         break;
@@ -140,13 +140,13 @@ namespace Nomad.Inventory.Editor
                     case 8:
                         Require(panel.Find("DragPreview").gameObject.activeSelf, "드래그 미리보기 표시");
                         Require(SlotBorder(19) == (Color)new Color32(224, 182, 104, 255), "빈 드롭 대상 강조");
-                        Require(inventory.GetSlot(2).Item.ItemId == "field-knife" && changes == changesBeforeDrag,
+                        Require(inventory.GetSlot(2).Item.ItemId == "weapon-dagger" && changes == changesBeforeDrag,
                             "놓기 전 인벤토리 보존");
                         MovePointerToSlot(19);
                         break;
                     case 9:
-                        Require(inventory.GetSlot(2).Item == null && inventory.GetSlot(19).Item.ItemId == "field-knife" &&
-                            inventory.GetStack(2).Item.ItemId == "field-knife" && inventory.UsedSlots == 3,
+                        Require(inventory.GetSlot(2).Item == null && inventory.GetSlot(19).Item.ItemId == "weapon-dagger" &&
+                            inventory.GetStack(2).Item.ItemId == "weapon-dagger" && inventory.UsedSlots == 3,
                             "먼 빈 칸으로 이동하고 기존 스택 순회 유지");
                         Require(changes == changesBeforeDrag + 1 && !panel.Find("DragPreview").gameObject.activeSelf,
                             "성공 후 한 번 알림 및 미리보기 정리");
@@ -159,7 +159,7 @@ namespace Nomad.Inventory.Editor
                         MovePointerToSlot(0);
                         break;
                     case 12:
-                        Require(inventory.GetSlot(19).Count == 99 && inventory.GetSlot(0).Item.ItemId == "field-knife",
+                        Require(inventory.GetSlot(19).Count == 99 && inventory.GetSlot(0).Item.ItemId == "weapon-dagger",
                             "다른 아이템과 교환");
                         MovePointerToSlot(19, held: true);
                         break;
@@ -205,7 +205,7 @@ namespace Nomad.Inventory.Editor
                         break;
                     case 21:
                         Require(!panel.gameObject.activeSelf, "Tab 화면 닫기");
-                        Require(inventory.GetSlot(19).Item.ItemId == "field-knife" &&
+                        Require(inventory.GetSlot(19).Item.ItemId == "weapon-dagger" &&
                             !panel.Find("DragPreview").gameObject.activeSelf, "가방 닫으면 드래그 취소");
                         Debug.Log($"INVENTORY_PLAYMODE_PASS: keyboard, 5x4 grid, icons, hover, drag/drop, stacks, partial add, removal, notifications, frame={frame}");
                         Finish(0);

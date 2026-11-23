@@ -15,24 +15,75 @@ MonoBehaviour:
   merchantName: "마을 상점"
   restockSeconds: 300
   offers:
-  - item: {fileID: 11400000, guid: c5909ea4a83cd9b4d8f3f6480f5a4271, type: 2}
-    category: 0
-    displayName: "고철"
-    description: "회수한 고철입니다. 탐험에 쓰거나 상점에 팔 수 있습니다."
+  - item: {fileID: 11400000, guid: f8378015573b54e49bc98fa3876b463e, type: 2}
+    category: 2
+    displayName: "화살"
+    description: "활을 한 번 쏠 때 하나씩 소모합니다."
     buyPrice: 5
     sellPrice: 2
     initialStock: 30
-  - item: {fileID: 11400000, guid: 5abb4f098a436704e9d2514c8e985475, type: 2}
+    sellOnly: 0
+  - item: {fileID: 11400000, guid: 6cd253bc79234094eb91fa7f72ae01ac, type: 2}
     category: 1
-    displayName: "야전 나이프"
-    description: "탐험에 들고 다니기 좋은 작은 나이프입니다."
+    displayName: "단검"
+    description: "사거리가 짧고 빠르게 휘두릅니다."
     buyPrice: 120
     sellPrice: 60
     initialStock: 5
-  - item: {fileID: 11400000, guid: 448cc5b227491124d9fcf8b3af24c8c1, type: 2}
+    sellOnly: 0
+  - item: {fileID: 11400000, guid: e68c2616dd92e6644a75d8f78cb1d75f, type: 2}
     category: 1
-    displayName: "야전 조끼"
-    description: "필드 탐험용 조끼입니다."
+    displayName: "누비 갑옷"
+    description: "최대 체력을 늘립니다."
     buyPrice: 200
     sellPrice: 100
     initialStock: 3
+    sellOnly: 0
+  - item: {fileID: 11400000, guid: c5909ea4a83cd9b4d8f3f6480f5a4271, type: 2}
+    category: 0
+    displayName: "고철"
+    description: "녹슨 쇳조각입니다. 상점에 팔 수 있습니다."
+    buyPrice: 2
+    sellPrice: 2
+    initialStock: 0
+    sellOnly: 1
+  - item: {fileID: 11400000, guid: 28a6ca536ce89e142a52315671a1d4e9, type: 2}
+    category: 0
+    displayName: "구리 부품"
+    description: "쓸 만한 구리 부품입니다. 상점에 팔 수 있습니다."
+    buyPrice: 8
+    sellPrice: 8
+    initialStock: 0
+    sellOnly: 1
+  - item: {fileID: 11400000, guid: 9c04cf4dc6ba5cb408cd43156a3e63aa, type: 2}
+    category: 0
+    displayName: "은 장식"
+    description: "오래된 은 장식입니다. 상점에 팔 수 있습니다."
+    buyPrice: 20
+    sellPrice: 20
+    initialStock: 0
+    sellOnly: 1
+  - item: {fileID: 11400000, guid: fc92d50f0b2ea1941a895ecca90a199e, type: 2}
+    category: 0
+    displayName: "금 덩이"
+    description: "작은 금 덩이입니다. 상점에 비싸게 팔 수 있습니다."
+    buyPrice: 60
+    sellPrice: 60
+    initialStock: 0
+    sellOnly: 1
+  - item: {fileID: 11400000, guid: 192ab8d28fe92f74a9e86b2e6d8dca88, type: 2}
+    category: 0
+    displayName: "원석"
+    description: "빛나는 보석 원석입니다. 상점에 비싸게 팔 수 있습니다."
+    buyPrice: 150
+    sellPrice: 150
+    initialStock: 0
+    sellOnly: 1
+  - item: {fileID: 11400000, guid: ca45c99ac0491b84fba08d5281f2914b, type: 2}
+    category: 0
+    displayName: "고대 유물"
+    description: "고대 문명의 유물입니다. 상점에 매우 비싸게 팔 수 있습니다."
+    buyPrice: 400
+    sellPrice: 400
+    initialStock: 0
+    sellOnly: 1

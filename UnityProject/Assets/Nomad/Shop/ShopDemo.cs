@@ -9,9 +9,9 @@ namespace Nomad.Shop
 
         private void Start()
         {
-            inventory.Add("scrap", 12);
-            inventory.Add("field-knife", 1);
-            inventory.Add("field-vest", 1);
+            inventory.Add("weapon-arrow", 12);
+            inventory.Add("weapon-dagger", 1);
+            inventory.Add("gear-padded-armor", 1);
             InventoryPanel.GetOrCreate(inventory);
         }
 

@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d9209f1a45eeaf4458396815df6300a9, type: 3}
+  m_Name: scrap-copper
+  m_EditorClassIdentifier: Assembly-CSharp::Nomad.Inventory.ItemDefinition
+  itemId: scrap-copper
+  displayName: "\uAD6C\uB9AC \uBD80\uD488"
+  description: "\uC4F8 \uB9CC\uD55C \uAD6C\uB9AC \uBD80\uD488\uC785\uB2C8\uB2E4. \uC0C1\uC810\uC5D0 \uD314 \uC218 \uC788\uC2B5\uB2C8\uB2E4."
+  icon: {fileID: 21300000, guid: c842476b74c0492aa04f6ad2c3745739, type: 3}
+  maxStack: 99
+  tier: 2
+  equipmentType: 0
+  attackPower: 0
+  defense: 0
+  attackMode: 0
+  attackRange: 0
+  attackInterval: 0
+  manaCost: 0
+  stats: []
+  equippedVisual: {fileID: 0}

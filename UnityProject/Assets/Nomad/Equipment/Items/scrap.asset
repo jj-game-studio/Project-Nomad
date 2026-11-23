@@ -13,6 +13,17 @@ MonoBehaviour:
   m_Name: scrap
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Inventory.ItemDefinition
   itemId: scrap
-  displayName: Scrap
-  icon: {fileID: 21300000, guid: 124c580c14d04ee2a6ee0cbe12818542, type: 3}
+  displayName: "\uACE0\uCCA0"
+  description: "\uB179\uC2A8 \uC1F3\uC870\uAC01\uC785\uB2C8\uB2E4. \uC0C1\uC810\uC5D0 \uD314 \uC218 \uC788\uC2B5\uB2C8\uB2E4."
+  icon: {fileID: 21300000, guid: c204b00bec7c490d99f788e1a2814c2b, type: 3}
   maxStack: 99
+  tier: 1
+  equipmentType: 0
+  attackPower: 0
+  defense: 0
+  attackMode: 0
+  attackRange: 0
+  attackInterval: 0
+  manaCost: 0
+  stats: []
+  equippedVisual: {fileID: 0}

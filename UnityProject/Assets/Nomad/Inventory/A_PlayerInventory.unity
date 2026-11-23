@@ -1409,8 +1409,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Inventory.PlayerInventory
   items:
   - {fileID: 11400000, guid: c5909ea4a83cd9b4d8f3f6480f5a4271, type: 2}
-  - {fileID: 11400000, guid: 5abb4f098a436704e9d2514c8e985475, type: 2}
-  - {fileID: 11400000, guid: 448cc5b227491124d9fcf8b3af24c8c1, type: 2}
+  - {fileID: 11400000, guid: 6cd253bc79234094eb91fa7f72ae01ac, type: 2}
+  - {fileID: 11400000, guid: e68c2616dd92e6644a75d8f78cb1d75f, type: 2}
 --- !u!114 &2014884801
 MonoBehaviour:
   m_ObjectHideFlags: 0

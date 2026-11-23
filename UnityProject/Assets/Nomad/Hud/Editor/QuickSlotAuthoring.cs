@@ -191,11 +191,11 @@ namespace Nomad.Hud.Editor
             yield return null;
             Pointer(Slot(0), false);
             yield return null;
-            Check(quick.GetItem(0).ItemId == "field-knife" && inventoryChanges == 0, "replace existing registration");
+            Check(quick.GetItem(0).ItemId == "weapon-dagger" && inventoryChanges == 0, "replace existing registration");
             IEnumerator equipment = VerifyEquipmentDisplay();
             while (equipment.MoveNext())
                 yield return equipment.Current;
-            Check(inventory.MoveStack(1, 19) && quick.GetItem(0).ItemId == "field-knife", "registration follows moved item");
+            Check(inventory.MoveStack(1, 19) && quick.GetItem(0).ItemId == "weapon-dagger", "registration follows moved item");
             inventory.Add("scrap", 10);
             Check(quick.GetCount(1) == 106 && SlotRect(1).Find("Item Count").GetComponent<TMP_Text>().text == "×106",
                 "count sums all stacks and refreshes HUD");
@@ -209,7 +209,7 @@ namespace Nomad.Hud.Editor
             Pointer(Slot(0), false);
             QueueKey();
             yield return null;
-            Check(quick.GetItem(0).ItemId == "field-knife", "Escape cancels without replacing");
+            Check(quick.GetItem(0).ItemId == "weapon-dagger", "Escape cancels without replacing");
 
             Pointer(Bag(2), true);
             yield return null;
@@ -220,7 +220,7 @@ namespace Nomad.Hud.Editor
             Pointer(Slot(0), false);
             QueueKey();
             yield return null;
-            Check(!panel.gameObject.activeSelf && quick.GetItem(0).ItemId == "field-knife", "closing cancels pending drop");
+            Check(!panel.gameObject.activeSelf && quick.GetItem(0).ItemId == "weapon-dagger", "closing cancels pending drop");
             QueueKey(Key.Tab);
             yield return null;
             QueueKey();
@@ -230,12 +230,12 @@ namespace Nomad.Hud.Editor
             yield return null;
             Pointer(Slot(0), true);
             yield return null;
-            inventory.Remove("field-vest", 1);
+            inventory.Remove("gear-padded-armor", 1);
             Pointer(Slot(0), false);
             yield return null;
-            Check(quick.GetItem(0).ItemId == "field-knife", "inventory change cancels stale drag");
+            Check(quick.GetItem(0).ItemId == "weapon-dagger", "inventory change cancels stale drag");
 
-            inventory.Add("field-vest", 1);
+            inventory.Add("gear-padded-armor", 1);
 
             Pointer(Bag(2), true);
             yield return null;
@@ -243,7 +243,7 @@ namespace Nomad.Hud.Editor
             yield return null;
             Pointer(new Vector2(5, Screen.height - 5), false);
             yield return null;
-            Check(quick.GetItem(0).ItemId == "field-knife" && inventory.GetSlot(2).Item.ItemId == "field-vest",
+            Check(quick.GetItem(0).ItemId == "weapon-dagger" && inventory.GetSlot(2).Item.ItemId == "gear-padded-armor",
                 "drop outside keeps registration and inventory");
 
             Pointer(Bag(2), true);
@@ -253,7 +253,7 @@ namespace Nomad.Hud.Editor
             view.SendMessage("OnApplicationFocus", false);
             Pointer(Slot(0), false);
             yield return null;
-            Check(quick.GetItem(0).ItemId == "field-knife" && !SlotRect(0).Find("Drop Highlight").gameObject.activeSelf,
+            Check(quick.GetItem(0).ItemId == "weapon-dagger" && !SlotRect(0).Find("Drop Highlight").gameObject.activeSelf,
                 "focus loss cancels drag and highlight");
 
             hud.enabled = false;
@@ -262,13 +262,13 @@ namespace Nomad.Hud.Editor
             hud.enabled = true;
             Check(quick.GetCount(1) == 96 && SlotRect(1).Find("Item Count").GetComponent<TMP_Text>().text == "×96",
                 "HUD reenable refreshes current count");
-            inventory.Remove("field-knife", 1);
+            inventory.Remove("weapon-dagger", 1);
             Check(quick.GetItem(0) == null, "last item removal clears registration");
             inventory.Remove("scrap", int.MaxValue);
             Check(quick.GetItem(1) == null && quick.GetItem(2) == null && quick.GetItem(3) == null,
                 "depletion clears remaining registration");
 
-            inventory.Add("field-knife", PlayerInventory.Capacity);
+            inventory.Add("weapon-dagger", PlayerInventory.Capacity);
             inventory.Add("scrap", int.MaxValue);
             Check(inventory.UsedSlots == PlayerInventory.Capacity, "full backpack prepared");
             quick.Register(0, 1);
@@ -281,23 +281,23 @@ namespace Nomad.Hud.Editor
             yield return null;
             Check(quick.GetItem(1) == null && SameInventory(fullBag), "full backpack unassigns without moving items");
             inventory.Remove("scrap", int.MaxValue);
-            inventory.Remove("field-knife", int.MaxValue);
+            inventory.Remove("weapon-dagger", int.MaxValue);
 
             // 최종 렌더는 등록된 아이템과 열린 가방을 함께 보여줍니다.
             inventory.Add("scrap", 106);
-            inventory.Add("field-knife", 1);
+            inventory.Add("weapon-dagger", 1);
             quick.Register(0, 1);
             for (int index = 0; index < PlayerInventory.Capacity; index++)
             {
-                if (inventory.GetSlot(index).Item?.ItemId == "field-knife")
+                if (inventory.GetSlot(index).Item?.ItemId == "weapon-dagger")
                     quick.Register(index, 0);
             }
             yield return null;
-            inventory.Add("field-knife", 2);
-            inventory.Add("field-vest", 1);
+            inventory.Add("weapon-dagger", 2);
+            inventory.Add("gear-padded-armor", 1);
             for (int index = 0; index < PlayerInventory.Capacity; index++)
             {
-                if (inventory.GetSlot(index).Item?.ItemId == "field-vest")
+                if (inventory.GetSlot(index).Item?.ItemId == "gear-padded-armor")
                     quick.Register(index, 3);
             }
             yield return null;
@@ -400,8 +400,8 @@ namespace Nomad.Hud.Editor
             Check(EquipmentIconOnly(0), "single weapon has no x1 label");
             quick.Register(2, 3);
             Check(EquipmentIconOnly(3), "single armor has no x1 label");
-            inventory.Add("field-knife", 3);
-            inventory.Add("field-vest", 2);
+            inventory.Add("weapon-dagger", 3);
+            inventory.Add("gear-padded-armor", 2);
             Check(quick.GetCount(0) == 4 && EquipmentIconOnly(0), "multiple weapons show one icon without total count");
             Check(quick.GetCount(3) == 3 && EquipmentIconOnly(3), "multiple armor show one icon without total count");
             Check(inventory.UsedSlots == 8, "equipment still occupies separate backpack slots");
@@ -426,8 +426,8 @@ namespace Nomad.Hud.Editor
             }
             Check(SlotRect(1).Find("Item Count").GetComponent<TMP_Text>().text == "×96",
                 "material count remains visible alongside equipment");
-            inventory.Remove("field-knife", 3);
-            inventory.Remove("field-vest", 2);
+            inventory.Remove("weapon-dagger", 3);
+            inventory.Remove("gear-padded-armor", 2);
             Check(EquipmentIconOnly(0) && EquipmentIconOnly(3), "equipment remains icon only after partial removal");
             quick.Unregister(3);
             Debug.Log("QUICK_SLOTS_EQUIPMENT_DISPLAY_PASS: one and multiple weapons/armor; icon only; backpack and material counts preserved");

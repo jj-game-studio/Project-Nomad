@@ -68,7 +68,7 @@ namespace Nomad.Loot.Editor
             collider.center = Vector3.up * 0.4f;
             collider.size = new Vector3(1, 0.8f, 1);
             var target = root.AddComponent<LootChest>();
-            target.Initialize(id, contents ?? new[] { new LootStack("scrap", 10), new LootStack("field-vest", 1) });
+            target.Initialize(id, contents ?? new[] { new LootStack("scrap", 10), new LootStack("gear-padded-armor", 1) });
             var point = new GameObject("Interaction Point").transform;
             point.SetParent(root.transform, false);
             point.localPosition = collider.center;
@@ -196,7 +196,7 @@ namespace Nomad.Loot.Editor
                     break;
                 case 9:
                     Require(Scrap() == 0, "G frees a slot");
-                    inventory.Remove("field-knife", 1);
+                    inventory.Remove("weapon-dagger", 1);
                     Queue();
                     Click("Take All", true);
                     break;
@@ -260,10 +260,10 @@ namespace Nomad.Loot.Editor
                     ClickBackpackSlot(1, false);
                     break;
                 case 23:
-                    Require(inventory.GetSlot(1).Item.ItemId == "field-knife" && chest.GetStack(0).Count == 4 &&
+                    Require(inventory.GetSlot(1).Item.ItemId == "weapon-dagger" && chest.GetStack(0).Count == 4 &&
                         calls == 6 && Feedback().Contains("another item"), "drop on another item preserves both stacks");
                     inventory.Remove("scrap", int.MaxValue);
-                    inventory.Remove("field-knife", 1);
+                    inventory.Remove("weapon-dagger", 1);
                     Click("Viewport/Loot Stacks/Loot Stack 0", true);
                     break;
                 case 24:
@@ -334,10 +334,10 @@ namespace Nomad.Loot.Editor
                 case 37:
                     Require(Panel() == null && Scrap() == 4 && chest.GetStack(0).Count == 10,
                         "moving the chest out of reach closes the panel and preserves its contents");
-                    inventory.Remove("field-knife", int.MaxValue);
+                    inventory.Remove("weapon-dagger", int.MaxValue);
                     var shortList = new LootStack[5];
                     for (int i = 0; i < shortList.Length; i++)
-                        shortList[i] = new LootStack("field-knife", 1);
+                        shortList[i] = new LootStack("weapon-dagger", 1);
                     chest = CreateChest("b-scroll-check", player.transform.position + new Vector3(-0.9f, 0, 0), shortList);
                     Physics.SyncTransforms();
                     Queue(Key.E);
@@ -345,7 +345,7 @@ namespace Nomad.Loot.Editor
                 case 38:
                     Require(Panel() != null && !LootScroll().verticalScrollbar.gameObject.activeSelf,
                         "five rows fit in the opened chest");
-                    Require(inventory.Add("field-knife", 5) == 5, "prepare five more loot stacks");
+                    Require(inventory.Add("weapon-dagger", 5) == 5, "prepare five more loot stacks");
                     for (int i = 0; i < 5; i++)
                         Require(chest.TryStoreStack(inventory, i) == 1, "add more rows while the chest is open");
                     layoutReadyFrame = frame + 3;

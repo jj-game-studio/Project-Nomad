@@ -1,3 +1,4 @@
+using System.Linq;
 using Nomad.Combat;
 using Nomad.Interaction;
 using Nomad.Inventory;
@@ -41,14 +42,26 @@ namespace Nomad.Shop.Editor
             EnsureFolder(Folder + "/Data");
             EnsureFolder(GeneratedFolder);
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-            ItemDefinition[] items = {
-                AssetDatabase.LoadAssetAtPath<ItemDefinition>("Assets/Nomad/Inventory/Demo/scrap.asset"),
-                AssetDatabase.LoadAssetAtPath<ItemDefinition>("Assets/Nomad/Inventory/Demo/field-knife.asset"),
-                AssetDatabase.LoadAssetAtPath<ItemDefinition>("Assets/Nomad/Inventory/Demo/field-vest.asset")
+            // 화살·장비는 사고팔 수 있고, 고철은 판매 전용이라 재고 0으로 시작해 상점이 사들이기만 합니다(#120).
+            (string Id, int Category, int Buy, int Sell, int Stock, bool SellOnly)[] table =
+            {
+                ("weapon-arrow", 2, 5, 2, 30, false),
+                ("weapon-dagger", 1, 120, 60, 5, false),
+                ("gear-padded-armor", 1, 200, 100, 3, false),
+                ("scrap", 0, 2, 2, 0, true),
+                ("scrap-copper", 0, 8, 8, 0, true),
+                ("scrap-silver", 0, 20, 20, 0, true),
+                ("scrap-gold", 0, 60, 60, 0, true),
+                ("scrap-gem", 0, 150, 150, 0, true),
+                ("scrap-relic", 0, 400, 400, 0, true)
             };
+            ItemDefinition[] items = table
+                .Select(offer => AssetDatabase.LoadAssetAtPath<ItemDefinition>($"Assets/Nomad/Equipment/Items/{offer.Id}.asset"))
+                .ToArray();
             foreach (ItemDefinition item in items)
                 if (item == null)
                     throw new System.InvalidOperationException("상점 검증에 필요한 기본 아이템을 찾을 수 없습니다.");
+
             var catalog = AssetDatabase.LoadAssetAtPath<ShopCatalog>(CatalogPath);
             if (catalog == null)
             {
@@ -57,23 +70,17 @@ namespace Nomad.Shop.Editor
                 var data = new SerializedObject(catalog);
                 SerializedProperty offers = data.FindProperty("offers");
                 offers.arraySize = items.Length;
-                int[] buy = { 5, 120, 200 }, sell = { 2, 60, 100 }, stock = { 30, 5, 3 };
-                string[] names = { "고철", "야전 나이프", "야전 조끼" };
-                string[] descriptions = {
-                    "회수한 고철입니다. 탐험에 쓰거나 상점에 팔 수 있습니다.",
-                    "탐험에 들고 다니기 좋은 작은 나이프입니다.",
-                    "필드 탐험용 조끼입니다."
-                };
                 for (int index = 0; index < items.Length; index++)
                 {
                     SerializedProperty entry = offers.GetArrayElementAtIndex(index);
                     entry.FindPropertyRelative("item").objectReferenceValue = items[index];
-                    entry.FindPropertyRelative("displayName").stringValue = names[index];
-                    entry.FindPropertyRelative("category").enumValueIndex = index == 0 ? 0 : 1;
-                    entry.FindPropertyRelative("description").stringValue = descriptions[index];
-                    entry.FindPropertyRelative("buyPrice").intValue = buy[index];
-                    entry.FindPropertyRelative("sellPrice").intValue = sell[index];
-                    entry.FindPropertyRelative("initialStock").intValue = stock[index];
+                    entry.FindPropertyRelative("displayName").stringValue = items[index].DisplayName;
+                    entry.FindPropertyRelative("category").enumValueIndex = table[index].Category;
+                    entry.FindPropertyRelative("description").stringValue = items[index].Description;
+                    entry.FindPropertyRelative("buyPrice").intValue = table[index].Buy;
+                    entry.FindPropertyRelative("sellPrice").intValue = table[index].Sell;
+                    entry.FindPropertyRelative("initialStock").intValue = table[index].Stock;
+                    entry.FindPropertyRelative("sellOnly").boolValue = table[index].SellOnly;
                 }
                 data.ApplyModifiedPropertiesWithoutUndo();
             }

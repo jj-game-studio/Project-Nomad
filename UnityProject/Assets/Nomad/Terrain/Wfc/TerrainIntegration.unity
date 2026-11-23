@@ -335,8 +335,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Inventory.PlayerInventory
   items:
   - {fileID: 11400000, guid: c5909ea4a83cd9b4d8f3f6480f5a4271, type: 2}
-  - {fileID: 11400000, guid: 5abb4f098a436704e9d2514c8e985475, type: 2}
-  - {fileID: 11400000, guid: 448cc5b227491124d9fcf8b3af24c8c1, type: 2}
+  - {fileID: 11400000, guid: 28a6ca536ce89e142a52315671a1d4e9, type: 2}
+  - {fileID: 11400000, guid: 9c04cf4dc6ba5cb408cd43156a3e63aa, type: 2}
+  - {fileID: 11400000, guid: fc92d50f0b2ea1941a895ecca90a199e, type: 2}
+  - {fileID: 11400000, guid: 192ab8d28fe92f74a9e86b2e6d8dca88, type: 2}
+  - {fileID: 11400000, guid: ca45c99ac0491b84fba08d5281f2914b, type: 2}
   - {fileID: 11400000, guid: 2fd922611dde74b42afdc04ec0edc323, type: 2}
   - {fileID: 11400000, guid: 6d4d13ace88e69f4692b95903876f8a4, type: 2}
   - {fileID: 11400000, guid: e907610ddd7ebde4e91a139ed2c789e5, type: 2}
@@ -1534,11 +1537,11 @@ MonoBehaviour:
     Min: 4
     Max: 12
     Chance: 1
-  - ItemId: field-knife
+  - ItemId: weapon-dagger
     Min: 1
     Max: 1
     Chance: 0.35
-  - ItemId: field-vest
+  - ItemId: gear-padded-armor
     Min: 1
     Max: 1
     Chance: 0.2

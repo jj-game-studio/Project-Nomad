@@ -28,11 +28,11 @@ namespace Nomad.Loot.Editor
             if (inventory == null) inventory = player.AddComponent<PlayerInventory>();
             var data = new SerializedObject(inventory);
             SerializedProperty items = data.FindProperty("items");
-            // 상자 임시 내용물(scrap·field-knife·field-vest)을 모두 받을 수 있게 등록합니다.
+            // 상자 임시 내용물(scrap·weapon-dagger·gear-padded-armor)을 모두 받을 수 있게 등록합니다.
             items.arraySize = 3;
-            items.GetArrayElementAtIndex(0).objectReferenceValue = AssetDatabase.LoadAssetAtPath<ItemDefinition>("Assets/Nomad/Inventory/Demo/scrap.asset");
-            items.GetArrayElementAtIndex(1).objectReferenceValue = AssetDatabase.LoadAssetAtPath<ItemDefinition>("Assets/Nomad/Inventory/Demo/field-knife.asset");
-            items.GetArrayElementAtIndex(2).objectReferenceValue = AssetDatabase.LoadAssetAtPath<ItemDefinition>("Assets/Nomad/Inventory/Demo/field-vest.asset");
+            items.GetArrayElementAtIndex(0).objectReferenceValue = AssetDatabase.LoadAssetAtPath<ItemDefinition>("Assets/Nomad/Equipment/Items/scrap.asset");
+            items.GetArrayElementAtIndex(1).objectReferenceValue = AssetDatabase.LoadAssetAtPath<ItemDefinition>("Assets/Nomad/Equipment/Items/weapon-dagger.asset");
+            items.GetArrayElementAtIndex(2).objectReferenceValue = AssetDatabase.LoadAssetAtPath<ItemDefinition>("Assets/Nomad/Equipment/Items/gear-padded-armor.asset");
             data.ApplyModifiedPropertiesWithoutUndo();
             if (player.GetComponent<PlayerInteraction>() == null) player.AddComponent<PlayerInteraction>();
 
