@@ -645,9 +645,12 @@ namespace Nomad.Terrain
 
             // 기준 크기(18×18=324칸)보다 큰 필드는 장애물도 많으므로 복구 횟수를 면적에 비례해 늘립니다.
             int limit = Mathf.CeilToInt(repairLimit * Mathf.Max(1f, result.Pieces.Count / 324f));
+
+            // 장애물을 하나씩 지우며 다시 검사하므로, NavMesh를 유지해 지운 장애물 주변 타일만 다시 굽습니다.
+            using var cache = new WalkabilityCache();
             for (int attempt = 0; attempt < limit && blockers.Count > 0; attempt++)
             {
-                if (MicroTerrainWalkability.Validate(terrainRoot, result.Pieces, out _, out _, root)) return;
+                if (MicroTerrainWalkability.Validate(terrainRoot, result.Pieces, out _, out _, root, cache)) return;
                 // 막힌 지점에서 가장 가까운 장애물 하나만 지웁니다. 한꺼번에 지우면 길을 막지 않은 담까지 사라집니다.
                 float nearest = float.PositiveInfinity;
                 foreach (GameObject blocker in blockers)
@@ -655,7 +658,7 @@ namespace Nomad.Terrain
                 RemoveBlockersNear(MicroTerrainWalkability.BlockedPoint, nearest + 0.01f);
             }
 
-            if (blockers.Count > 0 && !MicroTerrainWalkability.Validate(terrainRoot, result.Pieces, out _, out string reason, root))
+            if (blockers.Count > 0 && !MicroTerrainWalkability.Validate(terrainRoot, result.Pieces, out _, out string reason, root, cache))
             {
                 Debug.LogWarning($"꾸밈 경로 복구 {limit}회 후에도 막혀 장애물을 모두 제거합니다: {reason}", this);
                 RemoveBlockersNear(Vector3.zero, float.PositiveInfinity);
