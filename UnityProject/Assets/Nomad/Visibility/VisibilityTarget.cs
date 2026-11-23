@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Nomad.Combat;
 using Nomad.Monsters;
 using UnityEngine;
 
@@ -15,9 +16,14 @@ namespace Nomad.Visibility
         private float lastSeen = float.NegativeInfinity;
         private PlayerVisibility owner;
         private int revision = -1;
+        private Health health;
 
         public bool IsVisible { get; private set; }
         public bool Controlled { get; private set; }
+        // 시체는 파밍할 수 있도록 시야와 관계없이 항상 보입니다.
+        public bool IsCorpse => health != null && health.IsDead;
+
+        private void Awake() => health = GetComponent<Health>();
 
         private void OnEnable()
         {
@@ -30,7 +36,7 @@ namespace Nomad.Visibility
         public void Evaluate(PlayerVisibility source)
         {
             owner = source;
-            if (!source.Available) { Release(); return; }
+            if (!source.Available || IsCorpse) { Release(); return; }
             if (revision != source.Revision)
             {
                 lastSeen = float.NegativeInfinity;
@@ -69,7 +75,7 @@ namespace Nomad.Visibility
         private void LateUpdate()
         {
             if (!Controlled) return;
-            if (owner == null || !owner.Available) { Release(); return; }
+            if (owner == null || !owner.Available || IsCorpse) { Release(); return; }
             // 공격 표시/피격 파편처럼 나중에 생긴 Renderer도 숨깁니다.
             Capture();
             Apply();

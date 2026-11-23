@@ -75,7 +75,7 @@ namespace Nomad.Visibility.Editor
                 {
                     MonsterIdentity[] monsters = Object.FindObjectsByType<MonsterIdentity>(FindObjectsSortMode.None);
                     Check(monsters.Length > 0, "field spawns monsters");
-                    Check(monsters.All(m => m.GetComponent<VisibilityTarget>()?.Controlled == true), "all spawns registered");
+                    Check(monsters.All(m => m.GetComponent<Health>().IsDead || m.GetComponent<VisibilityTarget>()?.Controlled == true), "all spawns registered");
                     Check(monsters.All(m => m.GetComponent<Health>().enabled && m.GetComponent<Collider>().enabled), "combat and collision preserved");
                     Check(monsters.All(m => m.GetComponent<UnityEngine.AI.NavMeshAgent>().enabled), "AI navigation preserved");
                     Check(monsters.Any(m => !m.GetComponent<VisibilityTarget>().IsVisible), "field has hidden enemies");
@@ -119,7 +119,8 @@ namespace Nomad.Visibility.Editor
                     sight.SetDirection(Vector3.forward);
                     tracked.GetComponent<VisibilityTarget>().Evaluate(sight);
                     Check(!tracked.GetComponent<VisibilityTarget>().IsVisible, "field rear target hidden");
-                    Check(tracked.GetComponent<MonsterTracker>().enabled, "hidden tracker still enabled");
+                    // 추적기는 근접 공격 중 몬스터 스스로 잠시 끄므로, 시야가 건드리지 않는 이동 에이전트로 AI 유지를 확인합니다.
+                    Check(tracked.GetComponent<UnityEngine.AI.NavMeshAgent>().enabled, "hidden navigation still enabled");
                     Check(tracked.GetComponent<MonsterMeleeAttack>().enabled, "hidden attacker still enabled");
                     Debug.Log("VISIBILITY_FIELD_PASS generations=" + generations + " checks=" + checks);
                     Finish(0);

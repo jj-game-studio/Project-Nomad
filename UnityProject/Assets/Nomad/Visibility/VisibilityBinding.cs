@@ -1,3 +1,5 @@
+using System;
+using Nomad.Game;
 using Nomad.Player;
 using UnityEngine;
 
@@ -8,6 +10,8 @@ namespace Nomad.Visibility
     [RequireComponent(typeof(PlayerVisibility), typeof(VisibilityField))]
     public sealed class VisibilityBinding : MonoBehaviour
     {
+        [Tooltip("이 지역에서는 시야를 끄고 모두 보이게 합니다.")]
+        [SerializeField] private string[] disabledRegions = { "Village" };
         private PlayerVisibility sight;
         private float nextSearch;
 
@@ -15,6 +19,10 @@ namespace Nomad.Visibility
 
         private void Update()
         {
+            GameManager game = GameManager.Instance;
+            sight.Suppressed = game != null && game.CurrentRegion.IsValid() &&
+                Array.IndexOf(disabledRegions, game.CurrentRegion.name) >= 0;
+
             if (sight.Observer != null && sight.Observer.gameObject.activeInHierarchy) return;
             if (Time.unscaledTime < nextSearch) return;
             nextSearch = Time.unscaledTime + 0.1f;
