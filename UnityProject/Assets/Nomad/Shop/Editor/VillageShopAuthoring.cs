@@ -48,6 +48,9 @@ namespace Nomad.Shop.Editor
             if (existing != null)
             {
                 ShopAuthoring.SetReference(existing.GetComponent<Shopkeeper>(), "catalog", catalog);
+                Transform placed = existing.Find("Trade sign");
+                if (placed != null)
+                    PlaceSign(placed.GetComponent<TextMesh>());
                 return;
             }
 
@@ -79,14 +82,22 @@ namespace Nomad.Shop.Editor
 
             var sign = new GameObject("Trade sign").AddComponent<TextMesh>();
             sign.transform.SetParent(shop.transform, false);
-            sign.transform.localPosition = Vector3.up * 2.2f;
             sign.transform.rotation = Quaternion.Euler(50, 0, 0);
-            ShopAuthoring.SetSignText(sign, "마을 상점\n[E] 거래");
+            PlaceSign(sign);
             sign.anchor = TextAnchor.MiddleCenter;
             sign.alignment = TextAlignment.Center;
             sign.fontSize = 60;
             sign.characterSize = 0.045f;
             sign.color = new Color(1, 0.9f, 0.6f);
+        }
+
+        // E 안내는 공용 상호작용 UI가 맡으므로 간판은 이름만 두고, 그 UI와 겹치지 않게 위로 올립니다.
+        private static void PlaceSign(TextMesh sign)
+        {
+            sign.transform.localPosition = Vector3.up * 3.2f;
+            ShopAuthoring.SetSignText(sign, "마을 상점");
+            EditorUtility.SetDirty(sign);
+            EditorUtility.SetDirty(sign.transform);
         }
     }
 }

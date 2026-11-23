@@ -18732,8 +18732,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Village.PrayerTree
   interactionId: village-prayer-tree
-  trunkRadius: 2.4
   pointHeight: 1
+  range: 3.6
 --- !u!1001 &607311634
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -40914,7 +40914,7 @@ Transform:
   m_GameObject: {fileID: 1399202157}
   serializedVersion: 2
   m_LocalRotation: {x: 0.4226183, y: -0, z: -0, w: 0.9063078}
-  m_LocalPosition: {x: 0, y: 2.2, z: 0}
+  m_LocalPosition: {x: 0, y: 3.2, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -40928,7 +40928,7 @@ TextMesh:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1399202157}
-  m_Text: "\uB9C8\uC744 \uC0C1\uC810\n[E] \uAC70\uB798"
+  m_Text: "\uB9C8\uC744 \uC0C1\uC810"
   m_OffsetZ: 0
   m_CharacterSize: 0.045
   m_LineSpacing: 1
@@ -43207,7 +43207,7 @@ Transform:
   m_GameObject: {fileID: 1489085475}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.1, z: -14}
+  m_LocalPosition: {x: 0, y: 0.1, z: -6.5}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -45918,6 +45918,51 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 4803003020443780, guid: aed71a26f6deb4948906a74ef02072e8, type: 3}
   m_PrefabInstance: {fileID: 1584592304}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1587026752
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1587026753}
+  - component: {fileID: 1587026754}
+  m_Layer: 0
+  m_Name: Village Rules
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1587026753
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1587026752}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1661668804}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1587026754
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1587026752}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a46941d39b977364cb5431659546ea4d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Nomad.Village.VillageRules
+  moveSpeedMultiplier: 1.5
 --- !u!1001 &1587382248
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -48525,6 +48570,7 @@ Transform:
   - {fileID: 1594977743}
   - {fileID: 1691292034}
   - {fileID: 1016454527}
+  - {fileID: 1587026753}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1662347628

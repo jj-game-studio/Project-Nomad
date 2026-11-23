@@ -28,6 +28,8 @@ namespace Nomad.Village.Editor
         private static double deadline;
         private static int frame;
         private static int stage;
+        private static int walked;
+        private static Transform vfx;
         private static string unexpectedError;
 
         public static void Run()
@@ -97,6 +99,13 @@ namespace Nomad.Village.Editor
                     keyboard = InputSystem.AddDevice<Keyboard>();
                     keyboard.MakeCurrent();
                     Queue();
+
+                    Vector3 spawn = player.transform.position - new Vector3(0, 0.1f, -6.5f);
+                    spawn.y = 0;
+                    Require(spawn.magnitude < 0.5f, $"광장 나무 남쪽 시작 위치 ({player.transform.position})");
+                    Require(Mathf.Approximately(player.GetComponent<PlayerMovement>().SpeedMultiplier, 1.5f), "마을 이동 속도 1.5배");
+                    TextMesh sign = shop.GetComponentInChildren<TextMesh>();
+                    Require(sign.text == "마을 상점" && sign.transform.localPosition.y > 3, "상점 간판 이름만 표시·위로 이동");
                 }
 
                 switch (stage)
@@ -118,7 +127,8 @@ namespace Nomad.Village.Editor
                         return;
                     case 3:
                         // 상점에서 광장 안쪽으로 걸어 나무 줄기 앞에 섭니다.
-                        if (!WalkTo(tree.InteractionPoint, 1.1f))
+                        Require(tree.InteractionPoint == tree.transform.position + Vector3.up, "기도 아이콘 나무 중점 고정");
+                        if (!WalkTo(tree.transform.position, tree.InteractionRange - 0.8f))
                             return;
                         stage++;
                         return;
@@ -139,7 +149,34 @@ namespace Nomad.Village.Editor
                         mana = player.GetComponent<PlayerMana>();
                         Require(health.CurrentHealth == health.MaxHealth && Mathf.Approximately(mana.Current, mana.Maximum),
                             "E 기도로 체력·마나 최대 회복");
-                        Debug.Log("VILLAGE_INTERACTION_PLAYMODE_PASS shop=label tree=label prayer=restore");
+                        vfx = player.transform.Find(PrayerVfx.RootName);
+                        Require(vfx != null && vfx.GetComponentsInChildren<ParticleSystem>().Length > 0, "기도 VFX가 플레이어 자식으로 재생");
+                        stage++;
+                        return;
+                    case 6:
+                        // 이동 중에도 VFX가 플레이어를 따라가는지 확인합니다.
+                        if (++walked < 8)
+                        {
+                            player.Move(Vector3.back * 0.15f);
+                            return;
+                        }
+                        Require(vfx != null && vfx.parent == player.transform &&
+                            (vfx.position - player.transform.position).sqrMagnitude < 0.0001f &&
+                            vfx.GetComponentInChildren<ParticleSystem>().main.simulationSpace == ParticleSystemSimulationSpace.Local,
+                            "이동 중 VFX 추종");
+                        Capture("village-prayer-vfx.png");
+                        stage++;
+                        return;
+                    case 7:
+                        if (vfx != null)
+                            return;
+                        Require(manager.LoadRegion("Field"), "Field 로드 시작");
+                        stage++;
+                        return;
+                    case 8:
+                        Require(manager.CurrentRegion.name == "Field" &&
+                            Mathf.Approximately(player.GetComponent<PlayerMovement>().SpeedMultiplier, 1f), "필드에서 이동 속도 원복");
+                        Debug.Log("VILLAGE_INTERACTION_PLAYMODE_PASS spawn=tree-south speed=1.5 shop=label tree=center prayer=restore vfx=follow field=speed1");
                         Finish(0);
                         return;
                 }

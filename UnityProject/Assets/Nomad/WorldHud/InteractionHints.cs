@@ -103,7 +103,7 @@ namespace Nomad.WorldHud
             Vector3 body = transform.TransformPoint(controller.center);
             Vector3 feet = transform.TransformPoint(controller.center - Vector3.up * (controller.height * .5f));
             var context = new InteractionContext(transform, inventory);
-            float nearest = 4f;
+            float nearest = 1f;
             float radius = Mathf.Max(2f, displayRadius);
             foreach (Collider collider in Physics.OverlapSphere(feet, radius, targetLayers, QueryTriggerInteraction.Collide))
             {
@@ -111,8 +111,11 @@ namespace Nomad.WorldHud
                 if (candidate is not MonoBehaviour owner || !owner.isActiveAndEnabled ||
                     owner.transform.IsChildOf(transform) || !seen.Add(owner)) continue;
 
-                float distance = (candidate.InteractionPoint - feet).sqrMagnitude;
-                if (string.IsNullOrWhiteSpace(candidate.InteractionId) || !(distance <= radius * radius) ||
+                // E 판정과 같게 대상별 범위로 나눈 비율을 씁니다. 표시 범위도 같은 비율만큼 넓힙니다.
+                float range = InteractionRange.Of(candidate);
+                float distance = (candidate.InteractionPoint - feet).sqrMagnitude / (range * range);
+                float shown = radius / InteractionRange.Default;
+                if (string.IsNullOrWhiteSpace(candidate.InteractionId) || !(distance <= shown * shown) ||
                     !candidate.CanInteract(context) || Obstructed(body, candidate.InteractionPoint, owner.transform)) continue;
 
                 candidates.Add(candidate);

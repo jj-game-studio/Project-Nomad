@@ -81,7 +81,7 @@ namespace Nomad.Interaction
         private IInteractable FindTarget(InteractionContext context, Vector3 body, Vector3 feet)
         {
             IInteractable best = null;
-            float bestDistance = Reach * Reach;
+            float bestDistance = 1f;
             string bestId = null;
             var seen = new HashSet<MonoBehaviour>();
 
@@ -94,7 +94,9 @@ namespace Nomad.Interaction
 
                 string id = candidate.InteractionId;
                 Vector3 point = candidate.InteractionPoint;
-                float distance = (point - feet).sqrMagnitude;
+                // 대상별 판정 거리로 나눈 비율로 비교합니다. 기본 2m 대상끼리는 기존 순서와 같습니다.
+                float range = InteractionRange.Of(candidate);
+                float distance = (point - feet).sqrMagnitude / (range * range);
                 if (string.IsNullOrWhiteSpace(id) || !(distance <= bestDistance) ||
                     (best != null && distance == bestDistance && string.CompareOrdinal(id, bestId) >= 0))
                     continue;

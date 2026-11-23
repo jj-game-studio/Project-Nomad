@@ -29,4 +29,18 @@ namespace Nomad.Interaction
     {
         string InteractionAction { get; }
     }
+
+    // 기본 2m보다 넓은 E 판정 거리가 필요한 큰 대상(예: 마을 기도 나무)이 구현합니다.
+    public interface IInteractionRange
+    {
+        float InteractionRange { get; }
+    }
+
+    public static class InteractionRange
+    {
+        public const float Default = 2f;
+
+        public static float Of(IInteractable target) =>
+            target is IInteractionRange ranged ? Mathf.Max(Default, ranged.InteractionRange) : Default;
+    }
 }
