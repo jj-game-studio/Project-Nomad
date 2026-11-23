@@ -37,6 +37,9 @@ namespace Nomad.Shop
         private Text tradeHeading;
         private Text unitPrice;
         private Text totalCaption;
+        private RectTransform saleNotification;
+        private Text saleNotificationText;
+        private float saleNotificationUntil;
         private RectTransform helpPanel;
         private Selectable[] popupControls;
         private int popupFocus = -1;
@@ -130,9 +133,9 @@ namespace Nomad.Shop
             ShopUi.Button(panel, "Close", "닫기", 1082, 25, 52, 48, Close);
             ShopUi.Heading(panel, "Player Heading", "내 가방", 28, 122, 340, 32, 23);
             ShopUi.Heading(panel, "Shop Heading", "상점 상품", 602, 122, 370, 32, 23);
-            capacity = ShopUi.Label(panel, "Capacity", "", 378, 128, 180, 24, 14, ShopUi.Muted);
+            capacity = ShopUi.Label(panel, "Capacity", "", 378, 128, 180, 24, 15, ShopUi.Ink);
             capacity.alignment = TextAnchor.MiddleRight;
-            restock = ShopUi.Label(panel, "Restock", "", 792, 77, 338, 17, 12, ShopUi.Canvas);
+            restock = ShopUi.Label(panel, "Restock", "", 792, 73, 338, 21, 14, Color.white);
             restock.alignment = TextAnchor.MiddleRight;
 
             string[] groups = { "All", "Materials", "Equipment", "Supplies" };
@@ -149,6 +152,14 @@ namespace Nomad.Shop
             merchantSlots = BuildSlots(ShopUi.Grid(panel, "Stock", 602, true, shop.Catalog.Count), shop.Catalog.Count, true);
             BuildTradePopup(panel);
             BuildHelp(panel);
+            saleNotification = ShopUi.Rect(panel, "Sale notification", 280, 596, 600, 32);
+            ShopUi.Rounded(saleNotification, ShopUi.Forest, 16, 1, ShopUi.Accent).raycastTarget = false;
+            saleNotificationText = ShopUi.Label(saleNotification, "Message", "", 12, 0, 576, 32, 16, Color.white);
+            saleNotificationText.alignment = TextAnchor.MiddleCenter;
+            saleNotificationText.resizeTextForBestFit = true;
+            saleNotificationText.resizeTextMinSize = 12;
+            saleNotificationText.resizeTextMaxSize = 16;
+            saleNotification.gameObject.SetActive(false);
         }
 
         private void BuildTradePopup(RectTransform panel)
@@ -356,7 +367,7 @@ namespace Nomad.Shop
             bool kept = wallet.IsSaleProtected(owned.Item);
             buy.gameObject.SetActive(merchantSelected);
             sell.gameObject.SetActive(!merchantSelected);
-            protection.gameObject.SetActive(!merchantSelected);
+            protection.gameObject.SetActive(!merchantSelected && owned.Item == popupItem && owned.Count > 0);
             protection.interactable = !merchantSelected && owned.Item != null;
             protection.GetComponentInChildren<Text>().text = kept ? "잠금 해제" : "판매 잠금";
             long buyTotal = (long)selected.BuyPrice * quantity;
@@ -556,22 +567,38 @@ namespace Nomad.Shop
                 return;
 
             lastTradeFrame = Time.frameCount;
+            int soldCount = quantity;
+            int previousGold = wallet.Gold;
             string message;
-            if (buying)
-                shop.TryBuy(inventory, merchantIndex, quantity, out message);
-            else
-                shop.TrySell(inventory, playerIndex, quantity, out message);
+            bool success = buying
+                ? shop.TryBuy(inventory, merchantIndex, quantity, out message)
+                : shop.TrySell(inventory, playerIndex, quantity, out message);
 
-            status.text = message;
+            status.text = success && !buying ? "" : message;
             EventSystem.current?.SetSelectedGameObject(null);
             Refresh();
+
+            if (success && !buying)
+            {
+                // Refresh는 잔량에 맞춰 수량을 바꾸므로 완료 금액은 실제 재화 증분으로 표시합니다.
+                string count = soldCount > 1 ? $" {soldCount:N0}개" : "";
+                saleNotificationText.text = $"{popupName}{count} 판매 +{wallet.Gold - previousGold:N0} G";
+                saleNotificationUntil = Time.unscaledTime + 3;
+                saleNotification.gameObject.SetActive(true);
+
+                PlayerInventory.ItemStack remaining = inventory.GetSlot(playerIndex);
+                if (remaining.Item != popupItem || remaining.Count == 0)
+                    ClosePopup();
+            }
         }
 
         private void Update()
         {
             if (closed)
                 return;
-            if (tradePopup == null || helpPanel == null || shop == null || inventory == null || !shop.CanAccess(inventory))
+            if (saleNotification != null && saleNotification.gameObject.activeSelf && Time.unscaledTime >= saleNotificationUntil)
+                saleNotification.gameObject.SetActive(false);
+            if (tradePopup == null || helpPanel == null || saleNotification == null || shop == null || inventory == null || !shop.CanAccess(inventory))
             {
                 Close();
                 return;

@@ -34,6 +34,8 @@ namespace Nomad.Shop.Editor
         private static Vector2 backpackPosition;
         private static Vector2 stockPosition;
         private static Vector3 slotPosition;
+        private static double notificationDeadline;
+        private static int remainingScrap;
 
         [MenuItem("Nomad/Shop/Verify Shop (batch only)")]
         public static void Run()
@@ -115,6 +117,12 @@ namespace Nomad.Shop.Editor
                         Require(panel != null && Read("Gold").Contains("1,000") && !Popup.activeSelf && Node("Trade tray") == null,
                             "상점 열기는 목록만 표시·하단 거래 제거");
                         Canvas.ForceUpdateCanvases();
+                        Require(Node("Paper").GetComponent<ShopRoundedRect>().color.grayscale -
+                            Node("Capacity").GetComponent<Text>().color.grayscale > 0.5f &&
+                            Node("Restock").GetComponent<Text>().color.grayscale -
+                            panel.transform.Find("Shop Window").GetComponent<ShopRoundedRect>().color.grayscale > 0.5f &&
+                            Node("Restock").GetComponent<Text>().fontSize >= 14,
+                            "가방 칸 수·재입고 보조 정보 대비와 크기");
                         Require(Node("Backpack hint") == null && Node("Keys") == null &&
                             Read("Stock/Content/Slot 0/Price") == "5 G" &&
                             !Node("Backpack/Content/Slot 0/Price").gameObject.activeSelf,
@@ -194,7 +202,8 @@ namespace Nomad.Shop.Editor
                         Queue(Key.V);
                         break;
                     case 17:
-                        Require(wallet.Gold == expectedGold && inventory.GetSlot(1).Count == 1, "판매 잠금 중 키 거래 차단");
+                        Require(wallet.Gold == expectedGold && inventory.GetSlot(1).Count == 1 &&
+                            !Node("Sale notification").gameObject.activeSelf, "판매 잠금 중 키 거래 차단·완료 알림 없음");
                         Queue();
                         break;
                     case 18: Queue(Key.L); break;
@@ -207,11 +216,12 @@ namespace Nomad.Shop.Editor
                     case 20: Pointer("Sell", false); break;
                     case 21:
                         expectedGold += 60;
-                        Require(wallet.Gold == expectedGold && inventory.GetSlot(1).Count == 0 && Quantity.text == "0" &&
-                            Slider.maxValue == 0 && !Slider.interactable && !Node("Sell").GetComponent<Button>().interactable &&
-                            Read("Item title") == "야전 나이프", "전량 판매 후 이미지 유지·수량/거래 비활성");
-                        Capture("shop-popup-sold.png");
-                        Queue(Key.Escape);
+                        Require(wallet.Gold == expectedGold && inventory.GetSlot(1).Count == 0 && !Popup.activeSelf &&
+                            Node("Sale notification").gameObject.activeSelf &&
+                            Read("Sale notification/Message") == "야전 나이프 판매 +60 G" &&
+                            !Node("Protection").gameObject.activeSelf, "전량 판매 후 팝업 닫기·실제 금액 알림·잠금 숨김");
+                        Capture("shop-sale-complete.png");
+                        Queue();
                         break;
                     case 22: Queue(); break;
                     case 23: Queue(Key.Tab); break;
@@ -349,13 +359,38 @@ namespace Nomad.Shop.Editor
                         break;
                     case 56:
                         Require(!Node("Shop Help").gameObject.activeSelf, "도움말 닫기 버튼");
+                        remainingScrap = inventory.GetSlot(0).Count;
+                        Pointer("Backpack/Content/Slot 0", true);
+                        break;
+                    case 57: Pointer("Backpack/Content/Slot 0", false); break;
+                    case 58:
+                        Require(Popup.activeSelf, "일부 판매 검사 팝업 열기");
+                        Quantity.text = "2";
+                        Node("Sell").GetComponent<Button>().onClick.Invoke();
+                        break;
+                    case 59:
+                        expectedGold += 4;
+                        Require(Popup.activeSelf && inventory.GetSlot(0).Count == remainingScrap - 2 &&
+                            wallet.Gold == expectedGold && Read("Sale notification/Message") == "고철 2개 판매 +4 G" &&
+                            Read("Status") == "" && Node("Protection").gameObject.activeSelf,
+                            "일부 판매는 팝업 유지·실제 금액 알림·팝업 완료 문구 제거");
+                        Capture("shop-sale-partial.png");
+                        notificationDeadline = EditorApplication.timeSinceStartup + 3.2;
+                        Queue();
+                        break;
+                    case 60:
+                        if (EditorApplication.timeSinceStartup < notificationDeadline) { stage--; break; }
+                        Require(!Node("Sale notification").gameObject.activeSelf, "판매 알림은 3초 후 숨김");
+                        Node("Cancel").GetComponent<Button>().onClick.Invoke();
+                        break;
+                    case 61:
                         inventory.GetComponent<Health>().TryApplyDamage(1000);
                         Queue();
                         break;
-                    case 57:
+                    case 62:
                         Require(Object.FindAnyObjectByType<ShopPanel>() == null && !shop.TryBuy(inventory, 0, 1, out _), "사망 시 닫기·거래 차단");
                         break;
-                    case 58:
+                    case 63:
                         if (!ShopRestockChecks.Step()) { stage--; break; }
                         Debug.Log($"SHOP_PLAYMODE_PASS transaction_checks={transactionChecks} ui_stages={stage}");
                         Finish(0);
