@@ -19,10 +19,11 @@ namespace Nomad.Monsters.Demo
         public static List<Health> Spawn(FieldGenerationResult field, Transform parent, MonsterActorFactory factory,
             Health player, int normalCount, int eliteCount, int bossCount, float safeRadius = 12)
         {
+            eliteCount = bossCount > 0 ? 1 : Mathf.Clamp(eliteCount, 0, 1);
             var actors = new List<Health>();
             var candidates = Routes(field).OrderBy(candidate => candidate.Distance).ToList();
             if (candidates.Count == 0)
-                return actors;
+                throw new InvalidOperationException("필수 조우를 놓을 수 있는 도달 가능 지점이 없습니다.");
 
             BossArena arena = bossCount > 0 ? CreateArena(candidates, field, parent) : null;
             float endDistance = arena != null ? PathLength(field.PlayerPosition, arena.Entrance) : candidates[^1].Distance;
@@ -39,6 +40,18 @@ namespace Nomad.Monsters.Demo
                 elites.Add(candidate);
                 reserved.Add(candidate.Point.Position);
             }
+
+            // 후반부 비율/큰 장식 여유 때문에 필수 엘리트가 빠지지 않게 실제 보행 공간까지 재확인합니다.
+            foreach (Candidate candidate in candidates.OrderByDescending(point => point.Distance))
+            {
+                if (elites.Count >= eliteCount) break;
+                if (candidate.Distance < safeRadius || !Separated(candidate.Point.Position, reserved, 3) ||
+                    NearArena(candidate.Point.Position, arena, 3) || !Clear(candidate.Point.Position, 0.4f, 2)) continue;
+                elites.Add(candidate);
+                reserved.Add(candidate.Point.Position);
+            }
+            if (elites.Count < eliteCount || (bossCount > 0 && arena == null))
+                throw new InvalidOperationException("필수 엘리트/보스 배치를 완료하지 못했습니다.");
 
             var random = new System.Random(field.Seed);
             var shuffled = candidates.ToList();
@@ -78,8 +91,12 @@ namespace Nomad.Monsters.Demo
             {
                 MonsterTestSettings settings = MonsterTestSettings.Defaults(MonsterRank.Boss);
                 settings.homeRange = BossArena.HalfSize - 2;
-                actors.Add(factory.CreateRanked(player, settings, MonsterRank.Boss, arena.Center, Quaternion.identity,
-                    "Boss - final arena", parent));
+                Health boss = factory.CreateRanked(player, settings, MonsterRank.Boss, arena.Center, Quaternion.identity,
+                    "Boss - final arena", parent);
+                actors.Add(boss);
+                arena.ObserveEncounter(player);
+                arena.RequireElite(actors.First(actor => actor.GetComponent<MonsterIdentity>().Rank == MonsterRank.Elite), boss);
+                arena.gameObject.AddComponent<BossRouteGuide>().Configure(arena, player, boss);
             }
             if (normals != normalCount || elites.Count != eliteCount || (bossCount > 0 && arena == null))
                 Debug.LogWarning($"안전한 조우 배치: 일반 {normals}/{normalCount}, 엘리트 {elites.Count}/{eliteCount}, 보스 {(arena != null ? 1 : 0)}/{bossCount}. 부족한 자리에 겹쳐 생성하지 않습니다.", parent);
@@ -93,6 +110,17 @@ namespace Nomad.Monsters.Demo
             {
                 float distance = PathLength(field.PlayerPosition, point.Position);
                 if (!float.IsInfinity(distance)) result.Add(new Candidate { Point = point, Distance = distance });
+            }
+            // 적 슬롯이 적은 seed에서도 이미 검증된 출구 접근 경로를 후보로 사용할 수 있습니다.
+            foreach (FieldSpawnPoint point in field.ExitPoints)
+            {
+                if (result.Count >= 3) break;
+                float distance = PathLength(field.PlayerPosition, point.ApproachPosition);
+                if (!float.IsInfinity(distance)) result.Add(new Candidate
+                {
+                    Point = new FieldSpawnPoint("approach-" + point.Id, point.ApproachPosition, point.Rotation, 0.6f, point.ApproachPosition),
+                    Distance = distance
+                });
             }
             return result;
         }
@@ -166,7 +194,23 @@ namespace Nomad.Monsters.Demo
                     UnityEngine.Object.Destroy(root);
                 }
             }
-            Debug.LogWarning($"보스 구역 후보: 외곽 {outerCandidates}, 통로 {clearCorridors}, 경로 생성 {meshAttempts}, 가림 {obstruction}", parent);
+            // 경사로가 막힌 seed도 보스를 생략하지 않습니다. 도달 가능한 진입문으로 외곽 구역을 연결합니다.
+            foreach (Candidate candidate in candidates.OrderByDescending(point => point.Distance))
+            {
+                if (field.ExitPoints.Any(exit => Horizontal(candidate.Point.Position, exit.Position) < 3) ||
+                    !Clear(candidate.Point.Position, 0.45f, 2)) continue;
+                Vector3 start = candidate.Point.Position;
+                float[] gaps = { start.x - bounds.min.x, bounds.max.x - start.x, start.z - bounds.min.z, bounds.max.z - start.z };
+                int side = Enumerable.Range(0, 4).OrderBy(index => gaps[index]).First();
+                Vector3 outward = side switch { 0 => Vector3.left, 1 => Vector3.right, 2 => Vector3.back, _ => Vector3.forward };
+                var root = new GameObject("Final Boss Arena");
+                root.transform.SetParent(parent, false);
+                BossArena arena = root.AddComponent<BossArena>();
+                if (arena.Build(start, outward, Mathf.Max(0, gaps[side]) + 3, start.y, true)) return arena;
+                root.SetActive(false);
+                UnityEngine.Object.Destroy(root);
+            }
+            Debug.LogWarning($"보스 구역 생성 실패: 외곽 {outerCandidates}, 통로 {clearCorridors}, 경로 생성 {meshAttempts}, 가림 {obstruction}", parent);
             return null;
         }
 

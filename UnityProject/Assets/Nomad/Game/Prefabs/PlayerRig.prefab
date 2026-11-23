@@ -228,6 +228,7 @@ GameObject:
   - component: {fileID: 974826207303630832}
   - component: {fileID: 8847001433168899962}
   - component: {fileID: 1507337849432345665}
+  - component: {fileID: 4474262064678552764}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -389,6 +390,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 37dc992ddaa8db546b23add71ec45427, type: 2}
   - {fileID: 11400000, guid: f1d57a9837fdcb0488fc2e51f4489b6d, type: 2}
   - {fileID: 11400000, guid: 22b6ab086a349a34a8cee1a4d23ae45f, type: 2}
+  - {fileID: 11400000, guid: 3c8f640aad1ef4340986c4cbaed4de2b, type: 2}
 --- !u!114 &4220240870187981097
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -644,6 +646,10 @@ MonoBehaviour:
     count: 1
     equip: 0
     slot: 0
+  - itemId: health-potion
+    count: 3
+    equip: 0
+    slot: 0
 --- !u!114 &974826207303630832
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -689,6 +695,19 @@ MonoBehaviour:
   baseCritEvasion: 0
   baseHealthRegen: 0
   incomingCritChance: 10
+--- !u!114 &4474262064678552764
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5530718413862153197}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ba6ce9e27d85edc46b3718dcfef44b91, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::Nomad.Consumables.PlayerHealing
+  healAmount: 40
 --- !u!1 &7897914465955937552
 GameObject:
   m_ObjectHideFlags: 0

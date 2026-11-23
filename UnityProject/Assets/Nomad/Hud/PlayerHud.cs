@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Nomad.Combat;
+using Nomad.Consumables;
 using Nomad.Equipment;
 using Nomad.Inventory;
 using Nomad.Player;
@@ -21,6 +22,10 @@ namespace Nomad.Hud
         private RectTransform healthFill;
         private TMP_Text healthText;
         private TMP_Text weaponText;
+        private TMP_Text attackStatusText;
+        private TMP_Text potionText;
+        private PlayerHealing healing;
+        private int shownPotions = -1;
         private TMP_FontAsset weaponFont;
         private HudArtwork manaRing;
         private HudArtwork staminaRing;
@@ -34,6 +39,8 @@ namespace Nomad.Hud
         private ItemDefinition shownWeapon;
         private int shownArrows = -1;
         private float shownMana = -1f;
+        private int shownAvailableMana = -1;
+        private int shownRequiredMana = -1;
         private readonly List<HudArtwork> surfaces = new List<HudArtwork>();
         private readonly List<GameObject> trims = new List<GameObject>();
         private HudArtwork selection;
@@ -56,6 +63,7 @@ namespace Nomad.Hud
         public float ManaFraction => manaRing == null ? 0f : manaRing.Fraction;
         public float StaminaFraction => staminaRing == null ? 0f : staminaRing.Fraction;
         public string HealthLabel => healthText == null ? string.Empty : healthText.text;
+        public string AttackStatus => attackStatusText == null ? string.Empty : attackStatusText.text;
 
         private static readonly Color Panel = new Color32(12, 17, 29, 225);
         private static readonly Color Red = new Color32(255, 104, 112, 255);
@@ -70,6 +78,7 @@ namespace Nomad.Hud
             mana = GetComponentInParent<PlayerMana>();
             stamina = GetComponentInParent<PlayerStamina>();
             combat = GetComponentInParent<PlayerEquipmentCombat>();
+            healing = GetComponentInParent<PlayerHealing>();
             PlayerInventory inventory = GetComponentInParent<PlayerInventory>();
             if (inventory != null)
             {
@@ -83,6 +92,8 @@ namespace Nomad.Hud
             {
                 weaponFont = TMP_FontAsset.CreateFontAsset(koreanFont);
                 weaponText.font = weaponFont;
+                attackStatusText.font = weaponFont;
+                potionText.font = weaponFont;
             }
 
             SetResources(0, 0, 0, 0);
@@ -110,6 +121,13 @@ namespace Nomad.Hud
 
         private void LateUpdate()
         {
+            potionText.gameObject.SetActive(healing != null);
+            if (healing != null && healing.Count != shownPotions)
+            {
+                shownPotions = healing.Count;
+                potionText.text = $"Q  회복약 ×{shownPotions}";
+                potionText.color = shownPotions > 0 ? Color.white : Red;
+            }
             if (mana != null && shownMana != mana.Current)
             {
                 shownMana = mana.Current;
@@ -125,6 +143,16 @@ namespace Nomad.Hud
             if (combat != null)
             {
                 ItemDefinition weapon = combat.CurrentWeapon;
+                int requiredMana = weapon?.AttackMode == WeaponAttackMode.Staff ? weapon.ManaCost : 0;
+                int availableMana = mana != null ? Mathf.FloorToInt(mana.Current) : 0;
+                if (requiredMana != shownRequiredMana || availableMana != shownAvailableMana)
+                {
+                    shownRequiredMana = requiredMana;
+                    shownAvailableMana = availableMana;
+                    bool insufficient = requiredMana > 0 && availableMana < requiredMana;
+                    attackStatusText.text = insufficient ? $"마나 부족 {availableMana}/{requiredMana}" : "CURRENT";
+                    attackStatusText.color = insufficient ? Red : Color.white;
+                }
                 int arrows = weapon?.AttackMode == WeaponAttackMode.Bow ? combat.ArrowCount : -1;
                 if (weapon != shownWeapon || arrows != shownArrows)
                 {
@@ -266,6 +294,7 @@ namespace Nomad.Hud
             healthFill.offsetMin = healthFill.offsetMax = Vector2.zero;
             healthText = Label("Health Value", track, "", new Vector2(210, 30), Vector2.zero, 21);
             Label("Health Caption", hp, "HEALTH", new Vector2(240, 20), new Vector2(0, -44), 12);
+            potionText = Label("Health Potion", hp, "", new Vector2(270, 22), new Vector2(0, 45), 14);
 
             manaRing = Resource(bar, "Mana", -157, Blue, HudArtwork.Shape.Crystal, out manaText);
             staminaRing = Resource(bar, "Stamina", -49, Amber, HudArtwork.Shape.Bolt, out staminaText);
@@ -288,7 +317,7 @@ namespace Nomad.Hud
                     Art("Weapon", empty, new Vector2(75, 65), new Vector2(0, 3), HudArtwork.Shape.Weapon, new Color32(217, 210, 190, 255));
                     Transform captionParent = combat != null ? slot : empty;
                     weaponText = Label("Weapon Name", captionParent, "", new Vector2(190, 26), new Vector2(0, 76), 16);
-                    Label("Current", captionParent, "CURRENT", new Vector2(120, 20), new Vector2(0, 55), 11);
+                    attackStatusText = Label("Current", captionParent, "CURRENT", new Vector2(190, 20), new Vector2(0, 55), 11);
                 }
                 else
                     Label("Empty", empty, "+", new Vector2(32, 32), Vector2.zero, 23).color = new Color32(94, 104, 121, 255);

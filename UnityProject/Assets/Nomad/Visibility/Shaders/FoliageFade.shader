@@ -101,8 +101,24 @@ Shader "Nomad/Visibility/Foliage Fade"
             ZWrite On
             ColorMask 0
             HLSLPROGRAM
-            #pragma vertex Vert
+            #pragma vertex ShadowVert
             #pragma fragment Depth
+            #pragma multi_compile_vertex _ _CASTING_PUNCTUAL_LIGHT_SHADOW
+            float3 _LightDirection;
+            float3 _LightPosition;
+            Varyings ShadowVert(Attributes input)
+            {
+                Varyings output = Vert(input);
+                #if _CASTING_PUNCTUAL_LIGHT_SHADOW
+                    float3 direction = normalize(_LightPosition - output.positionWS);
+                #else
+                    float3 direction = _LightDirection;
+                #endif
+                output.positionCS = TransformWorldToHClip(ApplyShadowBias(output.positionWS, output.normalWS, direction));
+                // 카메라 밖의 높은 물체도 광원 near plane에서 잘려 그림자가 없어지지 않게 합니다.
+                output.positionCS = ApplyShadowClamping(output.positionCS);
+                return output;
+            }
             half4 Depth(Varyings input) : SV_Target { Surface(input); return 0; }
             ENDHLSL
         }

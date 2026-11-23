@@ -56,7 +56,7 @@ namespace Nomad.Monsters.Demo
             }
             CapsuleCollider capsule = root.AddComponent<CapsuleCollider>();
             capsule.height = rank == MonsterRank.Boss ? 3.8f : rank == MonsterRank.Elite ? 3.2f : 1.8f;
-            capsule.radius = 0.35f;
+            capsule.radius = rank == MonsterRank.Boss ? 1.4f : 0.35f;
             capsule.center = Vector3.up * (capsule.height * 0.5f);
             NavMeshAgent agent = root.AddComponent<NavMeshAgent>();
             agent.radius = 0.35f;
@@ -75,6 +75,7 @@ namespace Nomad.Monsters.Demo
             bar.Boss = rank == MonsterRank.Boss;
             bar.WorldOffset = Vector3.up * (rank == MonsterRank.Elite ? 4.1f : 2.4f);
             root.AddComponent<MonsterDeathDrop>().Configure(parent != null ? parent : transform);
+            root.AddComponent<MonsterEquipmentLoot>().Configure(target.GetComponent<Nomad.Inventory.PlayerInventory>());
             root.AddComponent<MonsterHitFeedback>();
             if (prefab != null) root.AddComponent<MonsterAnimationDriver>();
             MonsterTracker tracker = root.AddComponent<MonsterTracker>();

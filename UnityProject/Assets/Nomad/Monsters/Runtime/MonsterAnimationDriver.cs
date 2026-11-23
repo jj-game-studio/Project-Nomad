@@ -13,6 +13,7 @@ namespace Nomad.Monsters
         private MonsterMeleeAttack attack;
         private string current;
         private float attackClipLength = 1f;
+        private int playedAttack = -1;
 
         private void Awake()
         {
@@ -33,16 +34,19 @@ namespace Nomad.Monsters
             if (GetComponent<MonsterTactics>()?.IsDashing == true) speed = 5f;
             string state = health.IsDead ? "Death_A" : feedback.IsFlashing ? "Hit_A" :
                 speed > 2.5f ? "Running_A" : speed > 0.1f ? "Walking_A" : "Idle_A";
-            if (!health.IsDead && attack != null && attack.Phase == MeleePhase.Windup &&
+            if (!health.IsDead && attack != null && (attack.Phase == MeleePhase.Windup ||
+                (attack.Phase == MeleePhase.Recovery && attack.RecoveryProgress < 0.5f)) &&
                 animator.HasState(0, Animator.StringToHash("Base Layer.Attack_A")))
                 state = "Attack_A";
             if (!animator.HasState(0, Animator.StringToHash("Base Layer." + state))) state = "Idle_A";
-            animator.speed = state == "Attack_A" ? Mathf.Clamp(attackClipLength * attack.AttackSpeed / attack.WindupDuration, 0.5f, 6f) : 1f;
-            if (state == current) return;
+            animator.speed = state == "Attack_A" ? Mathf.Clamp(attackClipLength /
+                (attack.WindupDuration / attack.AttackSpeed + 0.12f), 0.5f, 6f) : 1f;
+            if (state == current && (state != "Attack_A" || playedAttack == attack.AttackSequence)) return;
             int hash = Animator.StringToHash("Base Layer." + state);
             if (!animator.HasState(0, hash)) return;
             animator.applyRootMotion = false;
-            animator.CrossFadeInFixedTime(hash, 0.08f, 0);
+            animator.CrossFadeInFixedTime(hash, state == "Attack_A" ? 0.04f : 0.12f, 0);
+            if (state == "Attack_A") playedAttack = attack.AttackSequence;
             current = state;
         }
     }

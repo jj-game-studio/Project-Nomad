@@ -18,6 +18,7 @@ namespace Nomad.Monsters
         private Vector3 lastSeenPosition;
         private float unseenTime;
         private float nextPathTime;
+        private float combatStoppingDistance;
 
         public bool IsTracking { get; private set; }
         public bool HasLineOfSight { get; private set; }
@@ -182,6 +183,9 @@ namespace Nomad.Monsters
             {
                 agent.ResetPath();
                 nextPathTime = 0f;
+                combatStoppingDistance = agent.stoppingDistance;
+                // 공격 사거리의 정지 여유가 원점 도착 반경보다 크면 복귀가 끝나지 않습니다.
+                agent.stoppingDistance = Mathf.Min(combatStoppingDistance, 0.15f);
             }
             IsTracking = false;
             HasLineOfSight = false;
@@ -206,6 +210,7 @@ namespace Nomad.Monsters
 
         private void StopTracking()
         {
+            if (IsReturning && agent != null) agent.stoppingDistance = combatStoppingDistance;
             IsTracking = false;
             IsReturning = false;
             HasLineOfSight = false;

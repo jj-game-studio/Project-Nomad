@@ -187,7 +187,14 @@ namespace Nomad.Monsters.Tests
             }
             boss.GetComponent<Health>().TryApplyDamage(10000);
             yield return new WaitForSeconds(0.5f);
-            for (int i = 0; i < joints.Length; i++) Assert.That(Quaternion.Angle(reference[i], joints[i].localRotation), Is.LessThan(40f));
+            // 사망은 보행 각도 제한 대신 원본 클립을 유지합니다. 절차 보행이 그 포즈를 덮어쓰면 안 됩니다.
+            Animator animator = boss.GetComponentInChildren<Animator>();
+            Assert.That(animator.GetCurrentAnimatorStateInfo(0).IsName("Base Layer.Death_A"), Is.True);
+            Quaternion[] deathPose = joints.Select(joint => joint.localRotation).ToArray();
+            boss.GetComponent<DragonLegMotion>().enabled = false;
+            animator.Update(0);
+            for (int i = 0; i < joints.Length; i++)
+                Assert.That(Quaternion.Angle(deathPose[i], joints[i].localRotation), Is.LessThan(0.1f), "원본 사망 포즈 보존");
         }
 
         [Test]

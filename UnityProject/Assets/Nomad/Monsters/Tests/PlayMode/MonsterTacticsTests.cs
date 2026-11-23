@@ -87,10 +87,10 @@ namespace Nomad.Monsters.Tests
             Place(MonsterRank.Elite, 8f);
             yield return Until(() => player.CurrentHealth < 100, 4f);
             attack.enabled = false;
-            Assert.That(player.CurrentHealth, Is.EqualTo(60));
+            Assert.That(player.CurrentHealth, Is.EqualTo(65));
             Assert.That(actor.transform.position.z, Is.LessThan(8f));
             yield return new WaitForSeconds(0.4f);
-            Assert.That(player.CurrentHealth, Is.EqualTo(60));
+            Assert.That(player.CurrentHealth, Is.EqualTo(65));
         }
 
         [UnityTest]
@@ -129,9 +129,9 @@ namespace Nomad.Monsters.Tests
             Place(MonsterRank.Boss, 5f);
             yield return Until(() => tactics.AreasReleased == 1, 3f);
             attack.enabled = false;
-            Assert.That(player.CurrentHealth, Is.EqualTo(55));
+            Assert.That(player.CurrentHealth, Is.EqualTo(60));
             yield return new WaitForSeconds(0.3f);
-            Assert.That(player.CurrentHealth, Is.EqualTo(55));
+            Assert.That(player.CurrentHealth, Is.EqualTo(60));
         }
 
         [UnityTest]

@@ -110,7 +110,7 @@ namespace Nomad.Visibility.Editor
                     Check(Vector3.Dot(sight.Forward, Vector3.forward) > 0.99f, "actual mouse controls sight direction");
                     Evaluate();
                     Check(front.IsVisible && !behind.IsVisible && !rear.IsVisible, "front / wall / rear");
-                    Check(behind.GetComponentInChildren<Renderer>().forceRenderingOff, "hidden body");
+                    Check(behind.GetComponentInChildren<Renderer>().shadowCastingMode == UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly, "hidden body keeps shadow");
                     Check(!behind.GetComponent<SegmentedHealthBar>().enabled, "hidden health bar");
                     Collider behindBody = behind.GetComponent<Collider>();
                     Health behindHealth = behind.GetComponent<Health>();
@@ -180,7 +180,7 @@ namespace Nomad.Visibility.Editor
                     Check(!sight.ShowDebugRange && !sight.transform.Find("Visibility Debug Range").gameObject.activeSelf, "F3 hides debug range");
                     InputSystem.QueueStateEvent(keyboard, new KeyboardState());
                     sight.ShowDebugRange = true;
-                    Check(GameObject.Find("Late hidden effect").GetComponent<Renderer>().forceRenderingOff, "dynamic hidden renderer before draw");
+                    Check(GameObject.Find("Late hidden effect").GetComponent<Renderer>().shadowCastingMode == UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly, "dynamic hidden renderer keeps shadow");
                     Check(!front.GetComponent<SegmentedHealthBar>().enabled, "hidden HUD stays off");
 
                     Renderer body = rear.GetComponentInChildren<Renderer>();
@@ -361,7 +361,7 @@ namespace Nomad.Visibility.Editor
             Physics.SyncTransforms();
             corpse.Evaluate(sight);
             Renderer body = corpse.GetComponentInChildren<Renderer>();
-            Check(!corpse.IsVisible && body.forceRenderingOff, "living enemy behind wall hidden");
+            Check(!corpse.IsVisible && body.shadowCastingMode == UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly, "living enemy behind wall keeps shadow");
 
             corpse.GetComponent<Health>().TryApplyDamage(100000);
             corpse.Evaluate(sight);

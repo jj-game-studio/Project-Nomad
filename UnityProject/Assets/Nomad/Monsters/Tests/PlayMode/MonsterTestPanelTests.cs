@@ -154,9 +154,10 @@ namespace Nomad.Monsters.Tests
             Assert.That(bar.Boss, Is.True);
             boss.TryApplyDamage(250);
             yield return null;
-            Assert.That(bar.DamageTrailRatio, Is.GreaterThan(0.75f));
+            float remaining = 1f - 250f / boss.MaxHealth;
+            Assert.That(bar.DamageTrailRatio, Is.GreaterThan(remaining));
             yield return new WaitForSeconds(1.5f);
-            Assert.That(bar.DamageTrailRatio, Is.EqualTo(0.75f).Within(0.01f));
+            Assert.That(bar.DamageTrailRatio, Is.EqualTo(remaining).Within(0.01f));
         }
 
         [UnityTest]
@@ -178,7 +179,7 @@ namespace Nomad.Monsters.Tests
             Assert.That(normal.GetComponent<MonsterTracker>().HomeRange, Is.EqualTo(7f));
             Call("SetKind", 1);
             Health elite = (Health)Call("SpawnAt", new Vector3(5f, 0f, -2f));
-            Assert.That(elite.CurrentHealth, Is.EqualTo(250));
+            Assert.That(elite.CurrentHealth, Is.EqualTo(220));
             Assert.That(elite.GetComponent<MonsterTracker>().HomePosition.x, Is.EqualTo(5f).Within(0.1f));
             yield return null;
         }
@@ -189,7 +190,7 @@ namespace Nomad.Monsters.Tests
             Call("SetKind", 2);
             Health boss = (Health)Call("SpawnAt", new Vector3(3f, 0f, -2f));
             Assert.That(boss, Is.Not.Null);
-            Assert.That(boss.MaxHealth, Is.EqualTo(1000));
+            Assert.That(boss.MaxHealth, Is.EqualTo(850));
             Assert.That(boss.GetComponent<MonsterIdentity>().Rank, Is.EqualTo(MonsterRank.Boss));
             Assert.That(boss.GetComponentInChildren<SkinnedMeshRenderer>(), Is.Not.Null);
             Call("SetKind", 0);
@@ -197,6 +198,38 @@ namespace Nomad.Monsters.Tests
             Assert.That(Call("SpawnAt", player.transform.position), Is.Null);
             Assert.That(Call("SpawnAt", new Vector3(-3f, 0f, 0f)), Is.Null);
             yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator DragonWalkKeepsLegLengthsAndFootOrientationStable()
+        {
+            Call("SetKind", 2);
+            Health boss = (Health)Call("SpawnAt", new Vector3(3, 0, -2));
+            boss.GetComponent<MonsterMeleeAttack>().enabled = false;
+            boss.GetComponent<MonsterTracker>().enabled = false;
+            NavMeshAgent agent = boss.GetComponent<NavMeshAgent>();
+            Transform[] bones = boss.GetComponentsInChildren<Transform>();
+            Transform[] feet = Array.FindAll(bones, bone => bone.name.StartsWith("leg_") && bone.name.Contains("_foot."));
+            Assert.That(feet.Length, Is.EqualTo(4));
+            float[] lengths = Array.ConvertAll(feet, foot => Vector3.Distance(foot.parent.position, foot.position));
+            Quaternion[] previous = Array.ConvertAll(feet, foot => foot.rotation);
+            Assert.That(agent.SetDestination(new Vector3(3, 0, 4)), Is.True);
+            Vector3 start = boss.transform.position;
+            float peakGait = 0;
+            float deadline = Time.time + 1.5f;
+            while (Time.time < deadline)
+            {
+                yield return null;
+                peakGait = Mathf.Max(peakGait, boss.GetComponent<DragonLegMotion>().Gait);
+                for (int index = 0; index < feet.Length; index++)
+                {
+                    Assert.That(Vector3.Distance(feet[index].parent.position, feet[index].position), Is.EqualTo(lengths[index]).Within(0.03f), "정강이 길이 유지");
+                    Assert.That(Quaternion.Angle(previous[index], feet[index].rotation), Is.LessThan(50), "발의 순간 뒤집힘/회전 방지");
+                    previous[index] = feet[index].rotation;
+                }
+            }
+            Assert.That(Vector3.Distance(start, boss.transform.position), Is.GreaterThan(1), "실제 보행 중 검사");
+            Assert.That(peakGait, Is.GreaterThan(0.5f), "이동 중 보행 동작 활성화");
         }
 
         [UnityTest]
@@ -299,6 +332,61 @@ namespace Nomad.Monsters.Tests
                 yield return null;
             }
             Assert.That(Vector3.Distance(health.transform.position, tracker.HomePosition), Is.LessThan(0.7f));
+        }
+
+        [UnityTest]
+        public IEnumerator ReturnHomeWithNormalStoppingDistanceFinishesAndDetectsAgain()
+        {
+            Call("SetKind", 0);
+            object config = Settings(0);
+            Set(config, "homeRange", 2f);
+            Set(config, "ranged", false);
+            Set(config, "moveSpeed", 1.5f);
+            Call("SetInvincible", true);
+            player.transform.position = new Vector3(3, 0.05f, 5);
+            Health actor = (Health)Call("SpawnAt", new Vector3(3, 0, -2));
+            MonsterTracker tracker = actor.GetComponent<MonsterTracker>();
+            NavMeshAgent agent = actor.GetComponent<NavMeshAgent>();
+            float attackStop = agent.stoppingDistance;
+            Assert.That(attackStop, Is.GreaterThan(0.5f), "원점 도착 반경보다 큰 기본 정지거리 재현");
+            float deadline = Time.time + 8;
+            while (!tracker.IsReturning && Time.time < deadline) yield return null;
+            Assert.That(tracker.IsReturning, Is.True);
+            player.transform.position = new Vector3(3, 0.05f, 20);
+            while (tracker.IsReturning && Time.time < deadline) yield return null;
+            Assert.That(tracker.IsReturning, Is.False, "원점 근처에서 영구 복귀 상태에 머물지 않음");
+            Assert.That(Vector3.Distance(actor.transform.position, tracker.HomePosition), Is.LessThan(0.6f));
+            Assert.That(agent.stoppingDistance, Is.EqualTo(attackStop), "전투 정지거리 복원");
+            player.transform.position = actor.transform.position + Vector3.forward * 3;
+            Vector3 start = actor.transform.position;
+            deadline = Time.time + 2;
+            while (Vector3.Distance(start, actor.transform.position) < 0.5f && Time.time < deadline) yield return null;
+            Assert.That(tracker.IsTracking, Is.True, "복귀 후 다시 탐지");
+            Assert.That(Vector3.Distance(start, actor.transform.position), Is.GreaterThan(0.5f), "재추적 실제 이동");
+        }
+
+        [UnityTest]
+        public IEnumerator InterruptedAttackResumesPursuitAfterReactivation()
+        {
+            Call("SetKind", 0);
+            Set(Settings(0), "ranged", false);
+            Set(Settings(0), "skills", false);
+            player.transform.position = new Vector3(3, 0.05f, -0.7f);
+            Call("SetInvincible", true);
+            Health actor = (Health)Call("SpawnAt", new Vector3(3, 0, -2));
+            var attack = actor.GetComponent<MonsterMeleeAttack>();
+            float deadline = Time.time + 3;
+            while (attack.Phase != MeleePhase.Windup && Time.time < deadline) yield return null;
+            Assert.That(attack.Phase, Is.EqualTo(MeleePhase.Windup));
+            actor.gameObject.SetActive(false);
+            player.transform.position = new Vector3(3, 0.05f, 4);
+            actor.gameObject.SetActive(true);
+            Vector3 start = actor.transform.position;
+            deadline = Time.time + 2;
+            while (Vector3.Distance(start, actor.transform.position) < 0.5f && Time.time < deadline) yield return null;
+            Assert.That(actor.GetComponent<MonsterTracker>().enabled, Is.True, "공격 중 정지시킨 탐지 재개");
+            Assert.That(actor.GetComponent<NavMeshAgent>().isStopped, Is.False, "재활성화 후 남은 정지 상태 해제");
+            Assert.That(Vector3.Distance(start, actor.transform.position), Is.GreaterThan(0.5f), "실제 추격 이동 재개");
         }
 
         [UnityTest]

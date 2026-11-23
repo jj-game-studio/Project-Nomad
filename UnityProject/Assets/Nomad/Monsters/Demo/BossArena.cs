@@ -5,12 +5,15 @@ using UnityEngine.AI;
 namespace Nomad.Monsters.Demo
 {
     // 생성 필드 밖에 붙이는 작은 보스 전용 구역입니다. 원본 NavMesh·지형은 변경하지 않습니다.
-    public sealed class BossArena : MonoBehaviour
+    public sealed partial class BossArena : MonoBehaviour
     {
-        public const float HalfSize = 10f;
+        public const float HalfSize = 12f;
         public Vector3 Center { get; private set; }
         public Vector3 Entrance { get; private set; }
-        public bool Connected => link.valid && navigation.valid;
+        public bool UsesGate { get; private set; }
+        public Vector3 Forward { get; private set; }
+        public Vector3 Arrival => Center - Forward * (HalfSize - 3);
+        public bool Connected => navigation.valid && (UsesGate || link.valid);
 
         private NavMeshData data;
         private NavMeshDataInstance navigation;
@@ -18,56 +21,59 @@ namespace Nomad.Monsters.Demo
         private TextMesh sign;
         private readonly List<Material> materials = new();
 
-        public bool Build(Vector3 entrance, Vector3 outward, float edgeDistance, float floorHeight = float.NaN)
+        public bool Build(Vector3 entrance, Vector3 outward, float edgeDistance, float floorHeight = float.NaN, bool useGate = false)
         {
+            UsesGate = useGate;
             Entrance = entrance;
             outward = Vector3.ProjectOnPlane(outward, Vector3.up).normalized;
+            Forward = outward;
             Center = entrance + outward * (edgeDistance + 3f + HalfSize);
             Center = new Vector3(Center.x, float.IsNaN(floorHeight) ? entrance.y : floorHeight, Center.z);
             Material stone = Material(new Color(0.27f, 0.30f, 0.29f));
             Material trim = Material(new Color(0.61f, 0.49f, 0.27f));
             Quaternion rotation = Quaternion.LookRotation(outward);
-            Floor("Boss arena floor", Center, new Vector3(20, 0.6f, 20), rotation, stone);
+            Floor("Boss arena floor", Center, new Vector3(HalfSize * 2, 0.6f, HalfSize * 2), rotation, stone);
             Vector3 rampStart = entrance - outward * 0.5f;
             Vector3 rampEnd = entrance + outward * Mathf.Max(0.5f, edgeDistance - 0.5f);
             rampEnd.y = Center.y;
             Vector3 rampDirection = rampEnd - rampStart;
-            Floor("Approach ramp", (rampStart + rampEnd) * 0.5f,
+            if (!useGate) Floor("Approach ramp", (rampStart + rampEnd) * 0.5f,
                 new Vector3(4, 0.6f, rampDirection.magnitude), Quaternion.LookRotation(rampDirection), stone);
             Vector3 bridgeEnd = entrance + outward * (edgeDistance + 5f);
             bridgeEnd.y = Center.y;
-            Floor("Approach bridge", (rampEnd + bridgeEnd) * 0.5f,
+            if (!useGate) Floor("Approach bridge", (rampEnd + bridgeEnd) * 0.5f,
                 new Vector3(4, 0.6f, Vector3.Distance(rampEnd, bridgeEnd)), rotation, stone);
 
             // 경계 표식은 바닥 위 장식이며 진입·회피 동선을 막지 않습니다.
             Vector3 right = Vector3.Cross(Vector3.up, outward);
             for (int index = 0; index < 4; index++)
             {
-                Vector3 corner = Center + right * (index % 2 == 0 ? -9 : 9) + outward * (index < 2 ? -9 : 9);
+                Vector3 corner = Center + right * (index % 2 == 0 ? -11 : 11) + outward * (index < 2 ? -11 : 11);
                 Decor("Arena pillar", corner + Vector3.up * 1.2f, new Vector3(0.8f, 2.4f, 0.8f), rotation, trim);
             }
             for (int index = 0; index < 2; index++)
-                Decor("Entrance marker", Center - outward * 9f + right * (index == 0 ? -3 : 3) + Vector3.up * 1.5f,
+                Decor("Entrance marker", Center - outward * 11f + right * (index == 0 ? -3 : 3) + Vector3.up * 1.5f,
                     new Vector3(0.65f, 3, 0.65f), rotation, trim);
 
             sign = new GameObject("Boss arena sign").AddComponent<TextMesh>();
             sign.transform.SetParent(transform, false);
-            sign.transform.position = Center - outward * 9 + Vector3.up * 4;
-            sign.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            sign.transform.position = Center - outward * 11 + Vector3.up * 2.8f;
+            sign.font = Resources.Load<Font>("ShopFonts/Jua-Regular") ?? Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             sign.GetComponent<Renderer>().sharedMaterial = sign.font.material;
-            sign.text = "BOSS ARENA";
+            sign.text = "용의 제단";
             sign.anchor = TextAnchor.MiddleCenter;
             sign.fontSize = 48;
-            sign.characterSize = 0.05f;
+            sign.characterSize = 0.025f;
             sign.color = new Color(1, 0.85f, 0.5f);
+            Dress(rotation, stone, trim);
 
             // 통로의 필드 안쪽은 기존 NavMesh를 그대로 사용하고 외곽 부분만 별도로 굽습니다.
             var sources = new List<NavMeshBuildSource>();
-            sources.Add(BoxSource(Center, new Vector3(20, 0.6f, 20), rotation));
+            sources.Add(BoxSource(Center, new Vector3(HalfSize * 2, 0.6f, HalfSize * 2), rotation));
             float navLength = 4.4f;
             Vector3 navCenter = entrance + outward * (edgeDistance + 0.6f + navLength * 0.5f);
             navCenter.y = Center.y;
-            sources.Add(BoxSource(navCenter,
+            if (!useGate) sources.Add(BoxSource(navCenter,
                 new Vector3(4, 0.6f, navLength), rotation));
             NavMeshBuildSettings settings = NavMesh.GetSettingsByIndex(0);
             settings.agentRadius = 0.35f;
@@ -82,6 +88,15 @@ namespace Nomad.Monsters.Demo
                 return false;
 
             navigation = NavMesh.AddNavMeshData(data);
+            if (useGate)
+            {
+                if (!NavMesh.SamplePosition(Center, out NavMeshHit centerHit, 1f, NavMesh.AllAreas) ||
+                    !NavMesh.SamplePosition(entrance, out _, 1f, NavMesh.AllAreas)) return false;
+                Center = centerHit.position;
+                BossGate.Create(Entrance, Arrival, rotation, transform, "보스 구역 입장");
+                BossGate.Create(Arrival, Entrance, rotation * Quaternion.Euler(0, 180, 0), transform, "필드로 돌아가기");
+                return Connected;
+            }
             Vector3 outer = entrance + outward * (edgeDistance + 2f);
             outer.y = Center.y;
             if (!NavMesh.SamplePosition(entrance, out NavMeshHit start, 1f, NavMesh.AllAreas) ||
@@ -142,12 +157,15 @@ namespace Nomad.Monsters.Demo
 
         private void OnDisable()
         {
+            ClearEncounter();
             if (link.valid) link.Remove();
             if (navigation.valid) navigation.Remove();
         }
 
         private void OnDestroy()
         {
+            ClearProgression();
+            ClearEncounter();
             if (data != null) Destroy(data);
             foreach (Material material in materials) if (material != null) Destroy(material);
         }

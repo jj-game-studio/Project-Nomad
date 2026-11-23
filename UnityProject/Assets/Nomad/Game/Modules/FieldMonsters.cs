@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System;
 using Nomad.Combat;
 using Nomad.Monsters;
 using Nomad.Monsters.Demo;
@@ -9,12 +10,12 @@ namespace Nomad.Game.Modules
 {
     // Field 지역 모듈: 필드 생성이 끝나면 적 생성 지점에 몬스터를 배치하고, 다시 생성하면 이전 몬스터를 지웁니다.
     // 맵 전체에 고르게 퍼진 일반 몬스터, 먼 엘리트, 별도 보스 구역의 조우 배치를 사용합니다(#39, #154).
-    // 26×26칸 필드(검토 씬의 약 2배 면적)에 맞춰 일반·엘리트 수를 2배로 둡니다.
+    // 일반 몬스터와 별도로 엘리트1·보스1을 필수 배치합니다.
     [RequireComponent(typeof(MonsterActorFactory))]
     public sealed class FieldMonsters : MonoBehaviour
     {
-        [SerializeField, Min(0)] private int normalCount = 24;
-        [SerializeField, Min(0)] private int eliteCount = 2;
+        [SerializeField, Min(0)] private int normalCount = 12;
+        [SerializeField, Min(0)] private int eliteCount = 1;
         [SerializeField, Min(0)] private int bossCount = 1;
 
         [Tooltip("플레이어 시작점에서 이 거리 안의 생성 지점에는 배치하지 않습니다.")]
@@ -25,6 +26,10 @@ namespace Nomad.Game.Modules
         private FieldNavigation navigation;
         private GameObject enemyRoot;
         private string generationId;
+        private bool retryPending;
+        private bool entryFailed;
+        private int retries;
+        private bool restoreView;
 
         public IReadOnlyList<Health> Enemies => enemies;
 
@@ -75,8 +80,42 @@ namespace Nomad.Game.Modules
             enemyRoot = new GameObject("Field Enemies " + generationId);
             enemyRoot.transform.SetParent(transform, false);
 
-            enemies.AddRange(MonsterEncounterLayout.Spawn(field, enemyRoot.transform, factory,
-                target, normalCount, eliteCount, bossCount, safeRadius));
+            try
+            {
+                enemies.AddRange(MonsterEncounterLayout.Spawn(field, enemyRoot.transform, factory,
+                    target, normalCount, eliteCount, bossCount, safeRadius));
+                retries = 0;
+                retryPending = entryFailed = false;
+                // 실패 seed의 검토용 전체보기 시점이 정상 재생성 후 플레이에 남지 않게 합니다.
+                restoreView = true;
+            }
+            catch (InvalidOperationException exception)
+            {
+                Clear();
+                retryPending = ++retries <= 3;
+                entryFailed = !retryPending;
+                Debug.LogWarning("필수 조우 배치 실패. " + exception.Message, this);
+                if (entryFailed && navigation != null) GameManager.Instance?.ReportRegionEntryFailure(navigation.gameObject.scene);
+            }
+        }
+
+        private void Update()
+        {
+            if (restoreView && navigation != null && navigation.State == FieldGenerationState.Ready)
+            {
+                restoreView = false;
+                navigation.GetComponent<TerrainIntegrationControls>()?.SetView(0);
+            }
+            if (retryPending)
+            {
+                retryPending = false;
+                if (navigation != null) navigation.GetComponent<TerrainIntegrationControls>()?.Regenerate(true);
+            }
+            if (entryFailed && GameManager.Instance != null && !GameManager.Instance.IsLoading)
+            {
+                entryFailed = false;
+                GameManager.Instance.LoadRegion("Village");
+            }
         }
 
         // 지형이 교체되는 프레임에 이전 몬스터가 움직이지 않도록 바로 끄고 지웁니다.
