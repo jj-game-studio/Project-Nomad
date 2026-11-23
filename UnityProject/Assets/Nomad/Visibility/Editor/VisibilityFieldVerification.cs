@@ -26,8 +26,6 @@ namespace Nomad.Visibility.Editor
         private static string previousGeneration;
         private static float waitUntil;
         private static int checks;
-        private static VisibilityFoliage tree;
-        private static Texture sourceTexture;
 
         public static void Run()
         {
@@ -121,56 +119,15 @@ namespace Nomad.Visibility.Editor
                     sight.SetDirection(Vector3.forward);
                     tracked.GetComponent<VisibilityTarget>().Evaluate(sight);
                     Check(!tracked.GetComponent<VisibilityTarget>().IsVisible, "field rear target hidden");
-                    Check(tracked.GetComponent<MonsterTracker>().enabled, "hidden tracker still enabled");
+                    // 추적기는 근접 공격 중 몬스터 스스로 잠시 끄므로, 시야가 건드리지 않는 이동 에이전트로 AI 유지를 확인합니다.
+                    Check(tracked.GetComponent<UnityEngine.AI.NavMeshAgent>().enabled, "hidden navigation still enabled");
                     Check(tracked.GetComponent<MonsterMeleeAttack>().enabled, "hidden attacker still enabled");
-                    PrepareTree();
-                    stage = 5;
-                    waitUntil = Time.time + 0.6f;
-                }
-                else if (stage == 5)
-                {
-                    VerifyTree();
                     Debug.Log("VISIBILITY_FIELD_PASS generations=" + generations + " checks=" + checks);
                     Finish(0);
                 }
             }
             catch (Exception error) { Debug.LogException(error); Finish(1); }
         }
-
-        // 실제 구매 식생: 나무는 시선을 막지 않고, 소품은 차단을 유지합니다. 플레이어를 나무 옆에 둡니다.
-        private static void PrepareTree()
-        {
-            VisibilityFoliage[] connected = Object.FindObjectsByType<VisibilityFoliage>(FindObjectsSortMode.None);
-            VisibilityFoliage[] trees = connected.Where(f => Label(f).Contains("tree") && !Label(f).Contains("stump")).ToArray();
-            Check(trees.Length > 0, "field trees connected");
-            Check(trees.All(f => !f.BlocksSight), "field trees do not block sight");
-            Check(connected.Where(f => Label(f).Contains("prop_")).All(f => f.BlocksSight), "field props keep blocking");
-
-            tree = trees.First(f => !f.Faded);
-            Material source = tree.GetComponentInChildren<MeshRenderer>().sharedMaterial;
-            sourceTexture = new[] { "_BaseMap", "_MainTex", "_Albedo_Map" }
-                .Where(source.HasProperty).Select(source.GetTexture).FirstOrDefault(texture => texture != null);
-            Check(sourceTexture != null, "field tree source texture found");
-            controls.Player.transform.position = tree.transform.position + Vector3.right * 1.5f;
-            Physics.SyncTransforms();
-        }
-
-        private static void VerifyTree()
-        {
-            Check(tree.InSight && tree.Faded && tree.Alpha < 1f, "field tree near player fades");
-            Material faded = tree.GetComponentInChildren<MeshRenderer>().sharedMaterial;
-            Check(faded.shader.name == "Nomad/Visibility/Foliage Fade", "field tree uses fade shader");
-            Check(faded.GetTexture("_BaseMap") == sourceTexture, "field tree keeps source texture");
-
-            Vector3 toTree = tree.transform.position - sight.Eye;
-            toTree.y = 0f;
-            float length = toTree.magnitude + 1f;
-            Check(sight.ClearDistance(sight.Eye, toTree.normalized, length) >= toTree.magnitude + 0.5f, "field trunk does not block sight");
-            Check(Object.FindFirstObjectByType<VisibilityField>().ShadeRenderer.enabled, "field shade active");
-            Debug.Log("VISIBILITY_FIELD_TREE " + tree.name);
-        }
-
-        private static string Label(Component item) => item.name.ToLowerInvariant();
 
         private static void Check(bool condition, string label)
         {

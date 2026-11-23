@@ -46,7 +46,7 @@ namespace Nomad.Visibility
             if (!Application.isPlaying) return;
             distances = new Texture2D(Samples, 1, TextureFormat.RFloat, false, true)
             {
-                name = "Visibility ray distances", filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp
+                name = "Visibility ray distances", filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Repeat
             };
         }
 
@@ -69,23 +69,29 @@ namespace Nomad.Visibility
                 if (connectGeneratedFoliage && fadeShader != null) ConnectFoliage();
             }
             UpdateShade();
+            ScanDistances();
+            UpdateGlobals();
+
             if (Time.unscaledTime < nextMask) return;
             nextMask = Time.unscaledTime + 0.08f;
+            foreach (VisibilityFoliage foliage in VisibilityFoliage.Active) foliage.Evaluate(sight);
+        }
 
-            // 어둠은 눈높이 방사선의 도달 거리로 그립니다. 적은 별도의 3D 표본으로 판정합니다.
+        // 어둠이 끊기지 않도록 매 프레임 월드 기준 전 방향(+Z에서 시계 방향)으로 도달 거리를 잽니다.
+        // 조준 방향과 무관한 각도라 부채꼴 경계는 셰이더가 직접 부드럽게 처리합니다.
+        private void ScanDistances()
+        {
+            float range = Mathf.Max(sight.Distance, sight.NearbyRadius);
+            Vector3 eye = sight.Eye;
             for (int index = 0; index < Samples; index++)
             {
-                float degrees = -180f + 360f * index / (Samples - 1f);
-                Vector3 direction = Quaternion.AngleAxis(degrees, Vector3.up) * sight.Forward;
-                float range = sight.RangeAtAngle(degrees);
-                pixels[index] = range > 0f ? sight.ClearDistance(sight.Eye, direction, range) : 0f;
+                float radians = (-180f + 360f * (index + 0.5f) / Samples) * Mathf.Deg2Rad;
+                Vector3 direction = new Vector3(Mathf.Sin(radians), 0f, Mathf.Cos(radians));
+                pixels[index] = sight.ClearDistance(eye, direction, range);
             }
             distances.SetPixelData(pixels, 0);
             distances.Apply(false, false);
             Shader.SetGlobalTexture("_NomadVisibilityDistances", distances);
-            UpdateGlobals();
-
-            foreach (VisibilityFoliage foliage in VisibilityFoliage.Active) foliage.Evaluate(sight);
         }
 
         private void UpdateGlobals()

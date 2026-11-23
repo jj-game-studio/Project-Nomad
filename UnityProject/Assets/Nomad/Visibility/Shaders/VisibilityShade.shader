@@ -58,16 +58,29 @@ Shader "Nomad/Visibility/Shade"
                 #endif
                 float3 world = ComputeWorldSpacePosition(uv, depth, UNITY_MATRIX_I_VP);
 
-                // 식생 방사선과 같은 각도 규칙(전방 기준 시계 방향)으로 막히기 전 거리를 읽습니다.
                 float2 delta = world.xz - _NomadVisibilityEye.xz;
-                float2 forward = _NomadVisibilityForward.xz;
-                float signedAngle = atan2(forward.y * delta.x - forward.x * delta.y, dot(forward, delta));
-                float u = saturate((signedAngle + PI) / TWO_PI);
-                float stepSize = 1.0 / _NomadVisibilityParams.z;
-                float clear = min(RayDistance(u), min(RayDistance(saturate(u - stepSize)), RayDistance(saturate(u + stepSize))));
+                float span = length(delta);
+                float soft = max(_Softness, 0.001);
 
-                float hidden = smoothstep(clear, clear + max(_Softness, 0.001), length(delta));
-                return half4(_ShadeColor.rgb, _ShadeColor.a * hidden);
+                // 방사선은 월드 +Z 기준 시계 방향 각도로 저장되어 있습니다. 이웃 표본을 선형 보간합니다.
+                float u = (atan2(delta.x, delta.y) + PI) / TWO_PI;
+                float clear = RayDistance(u);
+                float open = 1.0 - smoothstep(clear, clear + soft, span);
+
+                // 주변 원형: 반경 경계를 안팎으로 부드럽게 넘깁니다.
+                float radius = _NomadVisibilityParams.w;
+                float nearby = radius > 0 ? 1.0 - smoothstep(radius - soft * 0.5, radius + soft * 0.5, span) : 0;
+
+                // 부채꼴: 좌우 경계선까지의 수직 거리와 끝 거리로 원형과 같은 폭만큼 부드럽게 넘깁니다.
+                float2 forward = _NomadVisibilityForward.xz;
+                float angle = abs(atan2(forward.y * delta.x - forward.x * delta.y, dot(forward, delta)));
+                float outside = max(angle - _NomadVisibilityParams.y * 0.5, 0);
+                float lateral = outside >= HALF_PI ? span : span * sin(outside);
+                float cone = (1.0 - smoothstep(0, soft, lateral)) *
+                    (1.0 - smoothstep(_NomadVisibilityParams.x - soft * 0.5, _NomadVisibilityParams.x + soft * 0.5, span));
+
+                float visible = open * max(nearby, cone);
+                return half4(_ShadeColor.rgb, _ShadeColor.a * (1.0 - visible));
             }
             ENDHLSL
         }

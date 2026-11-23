@@ -112,7 +112,10 @@ namespace Nomad.Visibility.Editor
                     Check(front.IsVisible && !behind.IsVisible && !rear.IsVisible, "front / wall / rear");
                     Check(behind.GetComponentInChildren<Renderer>().forceRenderingOff, "hidden body");
                     Check(!behind.GetComponent<SegmentedHealthBar>().enabled, "hidden health bar");
-                    Check(behind.GetComponent<Collider>().enabled && behind.GetComponent<Health>().enabled, "collision and health maintained");
+                    Collider behindBody = behind.GetComponent<Collider>();
+                    Health behindHealth = behind.GetComponent<Health>();
+                    Check(behindBody != null && behindHealth != null, $"enemy components exist collider={behindBody != null} health={behindHealth != null}");
+                    Check(behindBody.enabled && behindHealth.enabled, "collision and health maintained");
                     Check(!sight.InCone(player.position + Vector3.forward * 25f), "range boundary");
                     Check(sight.InCone(player.position + Vector3.forward * 23f), "inside range");
                     Check(!sight.InCone(player.position + Vector3.right * 5f), "outside cone");
