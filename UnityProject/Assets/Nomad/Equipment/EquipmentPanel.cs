@@ -373,14 +373,15 @@ namespace Nomad.Equipment
             for (int index = 0; index < 10; index++)
             {
                 ItemDefinition item = equipment.GetItem((EquipmentSlot)index);
-                names[index].text = item != null ? item.DisplayName : "—";
+                names[index].text = item == null ? "—" : item.Icon == null ? item.DisplayName : string.Empty;
                 icons[index].sprite = item?.Icon;
                 icons[index].enabled = item?.Icon != null;
                 icons[index].color = Color.white;
                 names[index].color = new Color32(238, 235, 222, 255);
                 backgrounds[index].color = new Color32(37, 55, 74, 255);
-                borders[index].effectColor = (int)equipment.ActiveWeaponSlot == index
-                    ? new Color32(238, 186, 88, 255) : new Color32(108, 128, 148, 255);
+                // 선택한 무기칸은 금색, 나머지는 장착 장비의 등급 색으로 테두리를 그립니다.
+                borders[index].effectColor = (int)equipment.ActiveWeaponSlot == index ? new Color32(238, 186, 88, 255)
+                    : item != null && item.Tier != ItemTier.None ? TierStyle.Color(item.Tier) : new Color32(108, 128, 148, 255);
             }
         }
 
@@ -465,7 +466,7 @@ namespace Nomad.Equipment
             backgrounds[target].color = CanDrop ? new Color32(42, 79, 76, 255) : new Color32(91, 45, 52, 255);
             if (!CanDrop) return;
 
-            names[target].text = selectedItem.DisplayName;
+            names[target].text = selectedItem.Icon == null ? selectedItem.DisplayName : string.Empty;
             names[target].color = new Color32(163, 242, 210, 210);
             icons[target].sprite = selectedItem.Icon;
             icons[target].enabled = selectedItem.Icon != null;

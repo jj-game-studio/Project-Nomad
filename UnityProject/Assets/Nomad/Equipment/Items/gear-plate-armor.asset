@@ -14,17 +14,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Inventory.ItemDefinition
   itemId: gear-plate-armor
   displayName: "\uD310\uAE08 \uAC11\uC637"
-  description: "\uBB34\uAC81\uC9C0\uB9CC \uAC00\uC7A5 \uD2BC\uD2BC\uD55C \uAC11\uC637\uC785\uB2C8\uB2E4."
+  description: "\uCD5C\uB300 \uCCB4\uB825\uC744 \uB298\uB9BD\uB2C8\uB2E4."
   icon: {fileID: 21300000, guid: 1158c00c65cf9d642a775872d54ac0da, type: 3}
   maxStack: 1
+  tier: 3
   equipmentType: 3
   attackPower: 0
-  defense: 6
+  defense: 4
   attackMode: 0
   attackRange: 0
   attackInterval: 0
   manaCost: 0
   stats:
   - Stat: 4
-    Value: 50
+    Value: 35
   equippedVisual: {fileID: 0}

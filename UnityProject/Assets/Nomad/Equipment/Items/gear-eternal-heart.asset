@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d9209f1a45eeaf4458396815df6300a9, type: 3}
+  m_Name: gear-eternal-heart
+  m_EditorClassIdentifier: Assembly-CSharp::Nomad.Inventory.ItemDefinition
+  itemId: gear-eternal-heart
+  displayName: "\uC601\uC6D0\uC758 \uC2EC\uC7A5"
+  description: "\uCCB4\uB825\uC774 \uCC9C\uCC9C\uD788 \uD68C\uBCF5\uB429\uB2C8\uB2E4."
+  icon: {fileID: 21300000, guid: d37d885be97e8404d8f85c5c93690fc4, type: 3}
+  maxStack: 1
+  tier: 6
+  equipmentType: 5
+  attackPower: 0
+  defense: 0
+  attackMode: 0
+  attackRange: 0
+  attackInterval: 0
+  manaCost: 0
+  stats:
+  - Stat: 7
+    Value: 4
+  equippedVisual: {fileID: 0}

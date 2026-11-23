@@ -63,6 +63,15 @@ namespace Nomad.Equipment
                 case "weapon-greatsword":
                     style = new WeaponVfxStyle(new Color(1f, 0.97f, 0.88f), new Color(1f, 0.55f, 0.15f), 1f, true);
                     return true;
+                case "weapon-rune-sword":
+                    style = new WeaponVfxStyle(new Color(0.9f, 0.85f, 1f), new Color(0.65f, 0.35f, 1f), 1f, true);
+                    return true;
+                case "weapon-dragonfang-blade":
+                    style = new WeaponVfxStyle(new Color(1f, 0.9f, 0.8f), new Color(1f, 0.3f, 0.1f), 1f, true);
+                    return true;
+                case "weapon-celestial-sword":
+                    style = new WeaponVfxStyle(Color.white, new Color(1f, 0.85f, 0.35f), 1.1f, true);
+                    return true;
             }
 
             // CSV에 새 지팡이를 추가해도 기본 마법 VFX가 나가도록 합니다.

@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d9209f1a45eeaf4458396815df6300a9, type: 3}
+  m_Name: gear-belt-pouch
+  m_EditorClassIdentifier: Assembly-CSharp::Nomad.Inventory.ItemDefinition
+  itemId: gear-belt-pouch
+  displayName: "\uD5C8\uB9AC \uC8FC\uBA38\uB2C8"
+  description: "\uAC00\uBC29 \uCE78\uC744 2\uCE78 \uB298\uB9BD\uB2C8\uB2E4."
+  icon: {fileID: 21300000, guid: 8e7ecd4b9b053774fb542b315daa6ac6, type: 3}
+  maxStack: 1
+  tier: 1
+  equipmentType: 7
+  attackPower: 0
+  defense: 0
+  attackMode: 0
+  attackRange: 0
+  attackInterval: 0
+  manaCost: 0
+  stats:
+  - Stat: 12
+    Value: 2
+  equippedVisual: {fileID: 0}

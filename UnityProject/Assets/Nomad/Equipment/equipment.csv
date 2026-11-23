@@ -1,41 +1,67 @@
-item_id,display_name,description,max_stack,equipment_type,attack_power,defense,attack_mode,attack_range,attack_interval,mana_cost,stats
-demo-unarmed,맨손,맨손 공격 설정용 데이터,1,Weapon,5,0,Melee,1.5,0.5,0,
-weapon-dagger,단검,사거리가 짧고 빠르게 휘두릅니다.,1,Weapon,20,0,Melee,1.25,0.3,0,
-demo-sword,장검,전방의 여러 대상을 타격하는 검,1,Weapon,25,0,Melee,2,0.6,0,
-weapon-greatsword,대검,넓은 범위를 강하게 베며 다음 공격까지 시간이 걸립니다.,1,Weapon,42,0,Melee,3.15,1.05,0,
-weapon-shortbow,단궁,가방의 화살 1개를 소모하여 빠르게 쏩니다.,1,Weapon,23,0,Bow,16,0.45,0,
-demo-bow,사냥활,가방의 화살 1개를 소모합니다.,1,Weapon,35,0,Bow,24,0.8,0,
-weapon-longbow,장궁,가방의 화살 1개를 소모하여 먼 거리까지 쏩니다.,1,Weapon,50,0,Bow,34,1.15,0,
-weapon-apprentice-staff,수련 지팡이,한 발에 마나 6을 소모합니다.,1,Weapon,16,0,Staff,16,0.28,6,
-weapon-crystal-staff,수정 지팡이,한 발에 마나 10을 소모합니다.,1,Weapon,27,0,Staff,22,0.46,10,
-weapon-archmage-staff,대마법사 지팡이,한 발에 마나 17을 소모합니다.,1,Weapon,44,0,Staff,28,0.75,17,
-weapon-arrow,화살,활을 한 번 쏠 때 하나씩 소모합니다.,99,None,0,0,None,0,0,0,
-demo-helmet,투구,검증용 머리 방어구,1,Head,0,10,None,0,0,0,
-demo-armor,갑옷,검증용 신체 방어구,1,Body,0,20,None,0,0,0,
-demo-charm,장신구,검증용 장신구,1,Accessory,0,5,None,0,0,0,
-demo-bag,가방,용량 확장 효과는 없는 검증용 장비,1,Bag,0,5,None,0,0,0,
-demo-armor-light,낡은 갑옷,감소 표시 비교용 방어력10 갑옷,1,Body,0,10,None,0,0,0,
-demo-armor-heavy,튼튼한 갑옷,증가 표시 비교용 방어력30 갑옷,1,Body,0,30,None,0,0,0,
-demo-helmet-light,낡은 투구,감소 표시 비교용 방어력5 투구,1,Head,0,5,None,0,0,0,
-demo-helmet-heavy,튼튼한 투구,증가 표시 비교용 방어력15 투구,1,Head,0,15,None,0,0,0,
-gear-leather-cap,가죽 모자,가볍게 머리를 보호합니다.,1,Head,0,1,None,0,0,0,CritEvasion=3
-gear-iron-helm,철 투구,급소를 노린 공격을 덜 받습니다.,1,Head,0,2,None,0,0,0,CritEvasion=6
-gear-knight-helm,기사 투구,두꺼운 철판으로 머리를 감쌉니다.,1,Head,0,3,None,0,0,0,CritEvasion=10
-gear-padded-armor,누비 갑옷,솜을 덧댄 가벼운 갑옷입니다.,1,Body,0,2,None,0,0,0,MaxHealth=15
-gear-chain-mail,사슬 갑옷,쇠고리를 엮어 몸을 지킵니다.,1,Body,0,4,None,0,0,0,MaxHealth=30
-gear-plate-armor,판금 갑옷,무겁지만 가장 튼튼한 갑옷입니다.,1,Body,0,6,None,0,0,0,MaxHealth=50
-gear-cloth-pants,천 바지,움직이기 편한 바지입니다.,1,Legs,0,1,None,0,0,0,Evasion=4
-gear-leather-pants,가죽 바지,질긴 가죽으로 만든 바지입니다.,1,Legs,0,2,None,0,0,0,Evasion=7
-gear-ranger-leggings,순찰자 각반,숲길을 누비는 순찰자의 각반입니다.,1,Legs,0,3,None,0,0,0,Evasion=10
-gear-leather-shoes,가죽 신발,발을 가볍게 감싸는 신발입니다.,1,Feet,0,1,None,0,0,0,MoveSpeed=5
-gear-travel-boots,여행자 장화,먼 길에 익숙한 장화입니다.,1,Feet,0,1,None,0,0,0,MoveSpeed=10
-gear-swift-boots,바람 장화,바람을 타듯 빠르게 걷습니다.,1,Feet,0,2,None,0,0,0,MoveSpeed=15
-gear-small-backpack,작은 배낭,가방 칸을 5칸 늘립니다.,1,Bag,0,0,None,0,0,0,InventorySlots=5
-gear-large-backpack,큰 배낭,가방 칸을 10칸 늘립니다.,1,Bag,0,0,None,0,0,0,InventorySlots=10
-gear-sapphire-pendant,청옥 목걸이,최대 마나가 늘어납니다.,1,Accessory,0,0,None,0,0,0,MaxMana=30
-gear-vigor-bracelet,활력 팔찌,최대 스태미나가 늘어납니다.,1,Accessory,0,0,None,0,0,0,MaxStamina=30
-gear-life-ring,생명의 반지,체력이 천천히 회복됩니다.,1,Accessory,0,0,None,0,0,0,HealthRegen=1
-gear-mana-ring,마나 반지,마나가 더 빨리 회복됩니다.,1,Accessory,0,0,None,0,0,0,ManaRegen=4
-gear-wind-charm,바람 부적,스태미나가 더 빨리 회복됩니다.,1,Accessory,0,0,None,0,0,0,StaminaRegen=10
-gear-hawk-earring,매의 귀걸이,치명타 확률이 올라갑니다.,1,Accessory,0,0,None,0,0,0,CritChance=8
-gear-guard-amulet,수호 부적,받는 치명타가 줄어듭니다.,1,Accessory,0,0,None,0,0,0,CritEvasion=8
+item_id,display_name,description,max_stack,equipment_type,attack_power,defense,attack_mode,attack_range,attack_interval,mana_cost,stats,tier
+demo-unarmed,맨손,맨손 공격 설정용 데이터,1,Weapon,5,0,Melee,1.5,0.5,0,,
+weapon-dagger,단검,사거리가 짧고 빠르게 휘두릅니다.,1,Weapon,20,0,Melee,1.25,0.3,0,,C
+demo-sword,장검,전방의 여러 대상을 타격하는 검,1,Weapon,25,0,Melee,2,0.6,0,,B
+weapon-greatsword,대검,넓은 범위를 강하게 베며 다음 공격까지 시간이 걸립니다.,1,Weapon,42,0,Melee,3.15,1.05,0,,A
+weapon-rune-sword,룬 장검,룬이 새겨진 검으로 빠르고 강하게 벱니다.,1,Weapon,38,0,Melee,2.3,0.55,0,,S
+weapon-dragonfang-blade,용아 대검,용의 송곳니로 만든 대검입니다. 넓게 베어 냅니다.,1,Weapon,60,0,Melee,3.2,0.95,0,,SS
+weapon-celestial-sword,성휘 검,별빛이 깃든 검으로 매우 빠르게 벱니다.,1,Weapon,55,0,Melee,2.6,0.45,0,,SSS
+weapon-shortbow,단궁,가방의 화살 1개를 소모하여 빠르게 쏩니다.,1,Weapon,23,0,Bow,16,0.45,0,,C
+demo-bow,사냥활,가방의 화살 1개를 소모합니다.,1,Weapon,35,0,Bow,24,0.8,0,,B
+weapon-longbow,장궁,가방의 화살 1개를 소모하여 먼 거리까지 쏩니다.,1,Weapon,50,0,Bow,34,1.15,0,,A
+weapon-elven-bow,엘프 활,가볍고 정확한 활입니다. 화살 1개를 소모합니다.,1,Weapon,48,0,Bow,28,0.6,0,,S
+weapon-dragonbone-bow,용골 장궁,용의 뼈로 만든 장궁입니다. 화살 1개를 소모합니다.,1,Weapon,72,0,Bow,36,0.95,0,,SS
+weapon-celestial-bow,성휘 활,별빛 화살을 빠르게 쏩니다. 화살 1개를 소모합니다.,1,Weapon,70,0,Bow,32,0.55,0,,SSS
+weapon-apprentice-staff,수련 지팡이,한 발에 마나 6을 소모합니다.,1,Weapon,16,0,Staff,16,0.28,6,,C
+weapon-crystal-staff,수정 지팡이,한 발에 마나 10을 소모합니다.,1,Weapon,27,0,Staff,22,0.46,10,,B
+weapon-archmage-staff,대마법사 지팡이,한 발에 마나 17을 소모합니다.,1,Weapon,44,0,Staff,28,0.75,17,,A
+weapon-rune-staff,룬 지팡이,한 발에 마나 12를 소모합니다.,1,Weapon,40,0,Staff,24,0.42,12,,S
+weapon-dragoneye-staff,용의 눈 지팡이,한 발에 마나 18을 소모합니다.,1,Weapon,62,0,Staff,30,0.65,18,,SS
+weapon-celestial-staff,성휘 지팡이,한 발에 마나 14를 소모합니다.,1,Weapon,60,0,Staff,30,0.4,14,,SSS
+weapon-arrow,화살,활을 한 번 쏠 때 하나씩 소모합니다.,99,None,0,0,None,0,0,0,,
+gear-leather-cap,가죽 모자,받는 치명타를 줄입니다.,1,Head,0,1,None,0,0,0,CritEvasion=3,C
+gear-iron-helm,철 투구,받는 치명타를 줄입니다.,1,Head,0,1,None,0,0,0,CritEvasion=5,B
+gear-knight-helm,기사 투구,받는 치명타를 줄입니다.,1,Head,0,2,None,0,0,0,CritEvasion=7,A
+gear-mithril-helm,미스릴 투구,받는 치명타를 줄입니다.,1,Head,0,3,None,0,0,0,CritEvasion=10,S
+gear-dragonscale-helm,용비늘 투구,받는 치명타를 줄입니다.,1,Head,0,4,None,0,0,0,CritEvasion=13,SS
+gear-celestial-crown,성휘 왕관,받는 치명타를 줄입니다.,1,Head,0,5,None,0,0,0,CritEvasion=16,SSS
+gear-padded-armor,누비 갑옷,최대 체력을 늘립니다.,1,Body,0,2,None,0,0,0,MaxHealth=15,C
+gear-chain-mail,사슬 갑옷,최대 체력을 늘립니다.,1,Body,0,3,None,0,0,0,MaxHealth=25,B
+gear-plate-armor,판금 갑옷,최대 체력을 늘립니다.,1,Body,0,4,None,0,0,0,MaxHealth=35,A
+gear-mithril-cuirass,미스릴 흉갑,최대 체력을 늘립니다.,1,Body,0,5,None,0,0,0,MaxHealth=50,S
+gear-dragonscale-armor,용비늘 갑옷,최대 체력을 늘립니다.,1,Body,0,6,None,0,0,0,MaxHealth=70,SS
+gear-celestial-plate,성휘 갑주,최대 체력을 늘립니다.,1,Body,0,8,None,0,0,0,MaxHealth=90,SSS
+gear-cloth-pants,천 바지,공격을 피할 확률을 높입니다.,1,Legs,0,1,None,0,0,0,Evasion=3,C
+gear-leather-pants,가죽 바지,공격을 피할 확률을 높입니다.,1,Legs,0,1,None,0,0,0,Evasion=5,B
+gear-ranger-leggings,순찰자 각반,공격을 피할 확률을 높입니다.,1,Legs,0,2,None,0,0,0,Evasion=7,A
+gear-mithril-greaves,미스릴 정강이받이,공격을 피할 확률을 높입니다.,1,Legs,0,2,None,0,0,0,Evasion=9,S
+gear-dragonscale-leggings,용비늘 각반,공격을 피할 확률을 높입니다.,1,Legs,0,3,None,0,0,0,Evasion=12,SS
+gear-celestial-greaves,성휘 각반,공격을 피할 확률을 높입니다.,1,Legs,0,4,None,0,0,0,Evasion=15,SSS
+gear-leather-shoes,가죽 신발,이동속도를 높입니다.,1,Feet,0,0,None,0,0,0,MoveSpeed=4,C
+gear-travel-boots,여행자 장화,이동속도를 높입니다.,1,Feet,0,1,None,0,0,0,MoveSpeed=6,B
+gear-swift-boots,바람 장화,이동속도를 높입니다.,1,Feet,0,1,None,0,0,0,MoveSpeed=8,A
+gear-pegasus-boots,천마 장화,이동속도를 높입니다.,1,Feet,0,2,None,0,0,0,MoveSpeed=11,S
+gear-dragonscale-boots,용비늘 장화,이동속도를 높입니다.,1,Feet,0,2,None,0,0,0,MoveSpeed=14,SS
+gear-celestial-boots,성휘 장화,이동속도를 높입니다.,1,Feet,0,3,None,0,0,0,MoveSpeed=18,SSS
+gear-belt-pouch,허리 주머니,가방 칸을 2칸 늘립니다.,1,Bag,0,0,None,0,0,0,InventorySlots=2,C
+gear-small-backpack,작은 배낭,가방 칸을 4칸 늘립니다.,1,Bag,0,0,None,0,0,0,InventorySlots=4,B
+gear-large-backpack,큰 배낭,가방 칸을 6칸 늘립니다.,1,Bag,0,0,None,0,0,0,InventorySlots=6,A
+gear-expedition-pack,원정 배낭,가방 칸을 8칸 늘립니다.,1,Bag,0,0,None,0,0,0,InventorySlots=8,S
+gear-dimension-bag,차원 가방,가방 칸을 10칸 늘립니다.,1,Bag,0,0,None,0,0,0,InventorySlots=10,SS
+gear-copper-ring,구리 반지,최대 마나가 늘어납니다.,1,Accessory,0,0,None,0,0,0,MaxMana=15,C
+gear-leather-bracelet,가죽 팔찌,최대 스태미나가 늘어납니다.,1,Accessory,0,0,None,0,0,0,MaxStamina=15,C
+gear-lucky-stone,행운의 돌,치명타 확률이 올라갑니다.,1,Accessory,0,0,None,0,0,0,CritChance=3,C
+gear-sapphire-pendant,청옥 목걸이,최대 마나가 늘어납니다.,1,Accessory,0,0,None,0,0,0,MaxMana=30,B
+gear-vigor-bracelet,활력 팔찌,최대 스태미나가 늘어납니다.,1,Accessory,0,0,None,0,0,0,MaxStamina=30,B
+gear-wind-charm,바람 부적,스태미나가 더 빨리 회복됩니다.,1,Accessory,0,0,None,0,0,0,StaminaRegen=6,B
+gear-mana-ring,마나 반지,마나가 더 빨리 회복됩니다.,1,Accessory,0,0,None,0,0,0,ManaRegen=3,B
+gear-life-ring,생명의 반지,체력이 천천히 회복됩니다.,1,Accessory,0,0,None,0,0,0,HealthRegen=1,A
+gear-hawk-earring,매의 귀걸이,치명타 확률이 올라갑니다.,1,Accessory,0,0,None,0,0,0,CritChance=8,A
+gear-guard-amulet,수호 부적,받는 치명타가 줄어듭니다.,1,Accessory,0,0,None,0,0,0,CritEvasion=8,A
+gear-sage-necklace,현자의 목걸이,최대 마나가 늘어납니다.,1,Accessory,0,0,None,0,0,0,MaxMana=60,S
+gear-titan-bracelet,거인의 팔찌,최대 스태미나가 늘어납니다.,1,Accessory,0,0,None,0,0,0,MaxStamina=60,S
+gear-phoenix-feather,불사조 깃털,체력이 천천히 회복됩니다.,1,Accessory,0,0,None,0,0,0,HealthRegen=2,S
+gear-starlight-ring,별빛 반지,마나가 더 빨리 회복됩니다.,1,Accessory,0,0,None,0,0,0,ManaRegen=8,SS
+gear-raptor-eye,맹금의 눈,치명타 확률이 올라갑니다.,1,Accessory,0,0,None,0,0,0,CritChance=15,SS
+gear-eternal-heart,영원의 심장,체력이 천천히 회복됩니다.,1,Accessory,0,0,None,0,0,0,HealthRegen=4,SSS
+gear-storm-seal,폭풍의 인장,스태미나가 더 빨리 회복됩니다.,1,Accessory,0,0,None,0,0,0,StaminaRegen=20,SSS

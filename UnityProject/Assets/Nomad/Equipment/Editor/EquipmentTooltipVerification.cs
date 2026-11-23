@@ -49,7 +49,7 @@ namespace Nomad.Equipment.Editor
 
             ItemDefinition armor = AssetDatabase.FindAssets("t:ItemDefinition", new[] { "Assets/Nomad/Equipment/Items" })
                 .Select(guid => AssetDatabase.LoadAssetAtPath<ItemDefinition>(AssetDatabase.GUIDToAssetPath(guid)))
-                .First(item => item.ItemId == "demo-armor");
+                .First(item => item.ItemId == "gear-chain-mail");
             var worn = UnityEngine.Object.Instantiate(armor);
             var other = UnityEngine.Object.Instantiate(armor);
             Set(worn, "displayName", "갑옷 B");
@@ -59,7 +59,7 @@ namespace Nomad.Equipment.Editor
             add.Invoke(bag, new object[] { empty[0], worn, 1 });
             add.Invoke(bag, new object[] { empty[1], other, 1 });
             player.TryEquip(empty[0], EquipmentSlot.Body);
-            Debug.Log("비교 샘플 준비: 갑옷 B(방어력20) 장착, 가방 갑옷 A(방어력30)에 커서를 올리세요. 원본 에셋은 변경하지 않습니다.");
+            Debug.Log("비교 샘플 준비: 갑옷 B(사슬 갑옷 사본) 장착, 가방 갑옷 A(방어력30)에 커서를 올리세요. 원본 에셋은 변경하지 않습니다.");
         }
 
         public static void Run()
@@ -195,7 +195,7 @@ namespace Nomad.Equipment.Editor
                         AddReviewSamples();
                         Check(inventory.UsedSlots == used + 2, "review sample menu preserves old gear");
                         Check(equipment.GetItem(EquipmentSlot.Body).DisplayName == "갑옷 B" &&
-                            equipment.GetItem(EquipmentSlot.Body).Defense == 20, "review sample B equipped");
+                            equipment.GetItem(EquipmentSlot.Body).Defense == 3, "review sample B equipped");
                         Check(Enumerable.Range(0, PlayerInventory.Capacity).Any(index => inventory.GetSlot(index).Item?.DisplayName == "갑옷 A" &&
                             inventory.GetSlot(index).Item.Defense == 30), "review sample A in bag");
                         Debug.Log($"EQUIPMENT_TOOLTIP_PASS: {checks} checks, single tooltip, delta/color, weapon deferred, lifecycle, 3 resolutions");
@@ -219,16 +219,16 @@ namespace Nomad.Equipment.Editor
             panel = UnityEngine.Object.FindAnyObjectByType<EquipmentPanel>();
             equipment = panel.GetComponent<PlayerEquipment>();
             inventory = panel.GetComponent<PlayerInventory>();
-            Check(Enumerable.Range(0, PlayerInventory.Capacity).Count(index => inventory.GetSlot(index).Item?.ItemId == "demo-armor") == 2, "demo starts with two armors for comparison");
-            Check(Enumerable.Range(0, PlayerInventory.Capacity).Count(index => inventory.GetSlot(index).Item?.ItemId == "demo-helmet") == 2, "demo starts with two helmets for comparison");
-            foreach (var sample in new[] { ("demo-armor-light", 10), ("demo-armor-heavy", 30),
-                         ("demo-helmet-light", 5), ("demo-helmet-heavy", 15) })
-                Check(inventory.GetSlot(Find(sample.Item1)).Item.Defense == sample.Item2, "different defense sample " + sample.Item1);
+            // 데모 가방에는 비교용으로 등급이 다른 갑옷·투구가 3개씩 있습니다.
+            foreach (var sample in new[] { ("gear-padded-armor", 2), ("gear-chain-mail", 3), ("gear-plate-armor", 4),
+                         ("gear-leather-cap", 1), ("gear-iron-helm", 1), ("gear-knight-helm", 2) })
+                Check(inventory.GetSlot(Find(sample.Item1)).Item.Defense == sample.Item2, "different tier sample " + sample.Item1);
             bagView = UnityEngine.Object.FindAnyObjectByType<InventoryPanel>();
             canvas = (RectTransform)bagView.GetComponent<Canvas>().transform;
-            equipped = UnityEngine.Object.Instantiate(inventory.GetSlot(Find("demo-armor")).Item);
+            equipped = UnityEngine.Object.Instantiate(inventory.GetSlot(Find("gear-chain-mail")).Item);
             Set(equipped, "displayName", "갑옷 B");
             candidate = UnityEngine.Object.Instantiate(equipped);
+            Set(equipped, "defense", 20);
             Set(candidate, "displayName", "갑옷 A");
             Set(candidate, "defense", 30);
             Transfer(18, equipped);
@@ -244,7 +244,7 @@ namespace Nomad.Equipment.Editor
 
         private static void SetupAccessories()
         {
-            candidate = UnityEngine.Object.Instantiate(inventory.GetSlot(Find("demo-charm")).Item);
+            candidate = UnityEngine.Object.Instantiate(inventory.GetSlot(Find("gear-copper-ring")).Item);
             Set(candidate, "displayName", "비교용 장신구");
             Transfer(19, candidate);
             Transfer(18, candidate);

@@ -17,6 +17,7 @@ MonoBehaviour:
   description: "\uAC00\uBC29\uC758 \uD654\uC0B4 1\uAC1C\uB97C \uC18C\uBAA8\uD569\uB2C8\uB2E4."
   icon: {fileID: 0}
   maxStack: 1
+  tier: 2
   equipmentType: 1
   attackPower: 35
   defense: 0
@@ -24,4 +25,5 @@ MonoBehaviour:
   attackRange: 24
   attackInterval: 0.8
   manaCost: 0
+  stats: []
   equippedVisual: {fileID: 1445000710448190, guid: 540a4181c60e5d24eb2e496a2cd4916c, type: 3}

@@ -567,7 +567,9 @@ namespace Nomad.Inventory
             private readonly UnityEngine.UI.Image icon;
             private readonly UnityEngine.UI.Text count;
             private readonly UnityEngine.UI.Text fallbackName;
+            private readonly UnityEngine.UI.Text tierBadge;
             private bool occupied;
+            private ItemTier tier;
 
             public RectTransform Rect => background.rectTransform;
             public CanvasGroup Group { get; }
@@ -594,6 +596,17 @@ namespace Nomad.Inventory
                 fallbackName.rectTransform.offsetMin = new Vector2(6, 23);
                 fallbackName.rectTransform.offsetMax = new Vector2(-6, -7);
 
+                // 왼쪽 위 등급 글자입니다. 테두리도 등급 색으로 바뀝니다.
+                tierBadge = Instantiate(count, slot.transform);
+                tierBadge.gameObject.name = "Tier";
+                tierBadge.alignment = TextAnchor.UpperLeft;
+                tierBadge.fontSize = 12;
+                tierBadge.fontStyle = FontStyle.Bold;
+                tierBadge.rectTransform.anchorMin = Vector2.zero;
+                tierBadge.rectTransform.anchorMax = Vector2.one;
+                tierBadge.rectTransform.offsetMin = new Vector2(5, 5);
+                tierBadge.rectTransform.offsetMax = new Vector2(-5, -3);
+
                 icon = new GameObject("Icon", typeof(RectTransform), typeof(UnityEngine.UI.Image))
                     .GetComponent<UnityEngine.UI.Image>();
                 icon.transform.SetParent(slot.transform, false);
@@ -617,11 +630,15 @@ namespace Nomad.Inventory
                 icon.enabled = sprite != null;
                 fallbackName.text = occupied && sprite == null ? stack.Item.DisplayName : string.Empty;
                 count.text = occupied && stack.Item.MaxStack > 1 && stack.Count > 1 ? $"×{stack.Count}" : string.Empty;
+                tier = occupied ? stack.Item.Tier : ItemTier.None;
+                tierBadge.text = TierStyle.Label(tier);
+                tierBadge.color = TierStyle.Color(tier);
+                SetHighlighted(occupied && highlighted);
             }
 
             public void SetHighlighted(bool highlighted)
             {
-                Color borderColor = occupied ? OccupiedBorder : EmptyBorder;
+                Color borderColor = !occupied ? EmptyBorder : tier != ItemTier.None ? TierStyle.Color(tier) : OccupiedBorder;
                 border.effectColor = highlighted ? HoverBorder : borderColor;
             }
         }

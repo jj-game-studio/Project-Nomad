@@ -18,6 +18,7 @@ namespace Nomad.Inventory
         [SerializeField, TextArea] private string description;
         [SerializeField] private Sprite icon;
         [SerializeField, Min(1)] private int maxStack = 99;
+        [SerializeField] private ItemTier tier;
         [SerializeField] private EquipmentType equipmentType;
         [SerializeField, Min(0)] private int attackPower;
         [SerializeField, Min(0)] private int defense;
@@ -33,6 +34,7 @@ namespace Nomad.Inventory
         public string Description => description;
         public Sprite Icon => icon;
         public int MaxStack => maxStack;
+        public ItemTier Tier => tier;
         public EquipmentType EquipmentType => equipmentType;
         public int AttackPower => attackPower;
         public int Defense => defense;
