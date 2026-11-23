@@ -39,9 +39,9 @@ function gh {
         ConvertTo-Json -Compress
 }
 
-function unity {
-    $global:NomadPrReviewUnityArguments = @($args)
-    $global:LASTEXITCODE = 0
+function Start-Process {
+    param($FilePath, $WorkingDirectory, $ArgumentList)
+    $global:NomadPrReviewUnityArguments = @($FilePath) + $ArgumentList
 }
 
 function Get-CimInstance { return @() }
@@ -56,6 +56,8 @@ try {
     New-Item -ItemType Directory -Path "$source/UnityProject/ProjectSettings" -Force | Out-Null
     Set-Content "$source/.gitignore" "Library/`nTemp/`nignored.txt"
     Set-Content "$source/UnityProject/ProjectSettings/ProjectVersion.txt" 'm_EditorVersion: 6000.6.9f1'
+    New-Item -ItemType Directory -Path "$source/UnityProject/Assets/Nomad/Game" -Force | Out-Null
+    Set-Content "$source/UnityProject/Assets/Nomad/Game/Game.unity" 'fixture scene'
     Run-Git init $source
     Run-Git -C $source config user.name 'PR review fixture'
     Run-Git -C $source config user.email 'fixture@example.invalid'
@@ -163,9 +165,19 @@ try {
     New-Item -ItemType Directory (Split-Path $fakeEditor) -Force | Out-Null
     New-Item -ItemType File $fakeEditor | Out-Null
     & $launcher -PrNumber 1
-    Assert-Equal $global:NomadPrReviewUnityArguments[0] 'open' 'Unity open 호출'
-    Assert-Equal $global:NomadPrReviewUnityArguments[1] $project '공백 포함 프로젝트 경로'
-    Assert-Equal $global:NomadPrReviewUnityArguments[3] $fakeEditor '지정 버전 Editor 경로'
+    Assert-Equal $global:NomadPrReviewUnityArguments[0] $fakeEditor '지정 버전 Editor 경로'
+    Assert-Equal $global:NomadPrReviewUnityArguments[1] '-projectPath' '공용 프로젝트 실행'
+    Assert-Equal $global:NomadPrReviewUnityArguments[2] ('"' + $project + '"') '공백 포함 프로젝트 경로'
+    Assert-Equal $global:NomadPrReviewUnityArguments[4] 'Nomad.Game.Editor.GameSceneAuthoring.Open' '항상 통합 Game 씬 열기'
+    $global:NomadPrReviewUnityArguments = @()
+    $entry = Join-Path $PSScriptRoot 'Open-GameInUnity.ps1'
+    $entryInfo = & $entry -CheckOnly
+    Assert-Equal $entryInfo.ProjectPath $project '조회와 실행은 같은 고정 경로'
+    Assert-Equal $global:NomadPrReviewUnityArguments.Count 0 '조회는 Editor를 실행하지 않음'
+    New-Item -ItemType File "$project/Temp/UnityLockfile" -Force | Out-Null
+    & $entry
+    Assert-Equal $global:NomadPrReviewUnityArguments.Count 0 '잠긴 프로젝트 중복 실행 방지'
+    Remove-Item -LiteralPath "$project/Temp/UnityLockfile"
     Write-Host 'PASS: 커밋 보존 / Unity 호출 인수'
 
     # 캐시를 추적하는 PR은 checkout 전에 거절해야 합니다.

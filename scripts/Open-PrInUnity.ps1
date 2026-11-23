@@ -137,10 +137,6 @@ Write-Host "검토 커밋: $($pr.headRefOid)"
 Write-Host "공용 프로젝트: $projectPath"
 if ($CheckOnly) { return }
 
-if (-not $PrepareOnly -and -not (Get-Command unity -ErrorAction SilentlyContinue)) {
-    throw 'Unity CLI가 필요합니다. 설치 후 다시 실행하거나 -PrepareOnly를 사용해 주세요.'
-}
-
 # 다른 PR을 동시에 준비하면서 동일 checkout을 바꾸지 않도록 직렬화합니다.
 $mutex = New-Object System.Threading.Mutex($false, 'Local\ProjectNomad.PRReview')
 $ownsMutex = $false
@@ -208,7 +204,7 @@ try {
     if ($PrepareOnly) { return }
 
     Assert-ProjectClosed
-    Invoke-Checked unity @('open', $projectPath, '--editor-path', $editorPath, '--non-interactive')
+    & (Join-Path $PSScriptRoot 'Open-GameInUnity.ps1')
 }
 finally {
     if ($ownsMutex) { $mutex.ReleaseMutex() }
