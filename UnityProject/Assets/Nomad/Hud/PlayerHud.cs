@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Nomad.Combat;
+using Nomad.Consumables;
 using Nomad.Equipment;
 using Nomad.Inventory;
 using Nomad.Player;
@@ -22,6 +23,9 @@ namespace Nomad.Hud
         private TMP_Text healthText;
         private TMP_Text weaponText;
         private TMP_Text attackStatusText;
+        private TMP_Text potionText;
+        private PlayerHealing healing;
+        private int shownPotions = -1;
         private TMP_FontAsset weaponFont;
         private HudArtwork manaRing;
         private HudArtwork staminaRing;
@@ -74,6 +78,7 @@ namespace Nomad.Hud
             mana = GetComponentInParent<PlayerMana>();
             stamina = GetComponentInParent<PlayerStamina>();
             combat = GetComponentInParent<PlayerEquipmentCombat>();
+            healing = GetComponentInParent<PlayerHealing>();
             PlayerInventory inventory = GetComponentInParent<PlayerInventory>();
             if (inventory != null)
             {
@@ -88,6 +93,7 @@ namespace Nomad.Hud
                 weaponFont = TMP_FontAsset.CreateFontAsset(koreanFont);
                 weaponText.font = weaponFont;
                 attackStatusText.font = weaponFont;
+                potionText.font = weaponFont;
             }
 
             SetResources(0, 0, 0, 0);
@@ -115,6 +121,13 @@ namespace Nomad.Hud
 
         private void LateUpdate()
         {
+            potionText.gameObject.SetActive(healing != null);
+            if (healing != null && healing.Count != shownPotions)
+            {
+                shownPotions = healing.Count;
+                potionText.text = $"Q  회복약 ×{shownPotions}";
+                potionText.color = shownPotions > 0 ? Color.white : Red;
+            }
             if (mana != null && shownMana != mana.Current)
             {
                 shownMana = mana.Current;
@@ -281,6 +294,7 @@ namespace Nomad.Hud
             healthFill.offsetMin = healthFill.offsetMax = Vector2.zero;
             healthText = Label("Health Value", track, "", new Vector2(210, 30), Vector2.zero, 21);
             Label("Health Caption", hp, "HEALTH", new Vector2(240, 20), new Vector2(0, -44), 12);
+            potionText = Label("Health Potion", hp, "", new Vector2(270, 22), new Vector2(0, 45), 14);
 
             manaRing = Resource(bar, "Mana", -157, Blue, HudArtwork.Shape.Crystal, out manaText);
             staminaRing = Resource(bar, "Stamina", -49, Amber, HudArtwork.Shape.Bolt, out staminaText);

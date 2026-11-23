@@ -157,6 +157,7 @@ namespace Nomad.Monsters.Demo
 
         private void OnDisable()
         {
+            ClearEncounter();
             if (link.valid) link.Remove();
             if (navigation.valid) navigation.Remove();
         }
@@ -164,6 +165,7 @@ namespace Nomad.Monsters.Demo
         private void OnDestroy()
         {
             ClearProgression();
+            ClearEncounter();
             if (data != null) Destroy(data);
             foreach (Material material in materials) if (material != null) Destroy(material);
         }

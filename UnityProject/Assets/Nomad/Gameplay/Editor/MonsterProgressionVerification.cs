@@ -205,6 +205,26 @@ namespace Nomad.Gameplay.Editor
             BossArena activeArena = Object.FindAnyObjectByType<BossArena>();
             Require(!activeArena.IsLocked && !Actors(controls).First(actor => actor.GetComponent<MonsterIdentity>().Rank == MonsterRank.Boss).IsCombatImmune,
                 "실제 필수 엘리트 처치 후 제단 개방");
+            var encounterSight = Object.FindAnyObjectByType<Nomad.Visibility.PlayerVisibility>();
+            if (encounterSight != null)
+            {
+                Vector3 beforeEncounter = player.transform.position;
+                MovePlayer(player, activeArena.Arrival);
+                yield return null;
+                yield return null;
+                Require(encounterSight.OpenAreaOwner == activeArena && !encounterSight.Available,
+                    "보스방 조우 중 시야 제한 개방");
+                var bossVisibility = Actors(controls).First(actor => actor.GetComponent<MonsterIdentity>().Rank == MonsterRank.Boss)
+                    .GetComponent<Nomad.Visibility.VisibilityTarget>();
+                Require(bossVisibility == null || bossVisibility.IsVisible, "등을 돌려도 보스 모델 표시");
+                Vector3 cameraPosition = Camera.main.transform.position;
+                Nomad.Minimap.Editor.MinimapVerification.Capture("boss-open-sight-185.png");
+                Require(Vector3.Distance(Camera.main.transform.position, cameraPosition) < 0.001f, "피격 충격 렌더 후 카메라 기준 위치 복원");
+                MovePlayer(player, beforeEncounter);
+                yield return null;
+                yield return null;
+                Require(encounterSight.OpenAreaOwner == null && encounterSight.Available, "보스방 퇴장 시 필드 시야 복구");
+            }
             PlaceholderEquipmentDrop drop = elite.GetComponent<MonsterDeathDrop>().SpawnedDrop;
             float until = Time.unscaledTime + 3;
             while (drop.GetComponent<LootChest>() == null && Time.unscaledTime < until) yield return null;

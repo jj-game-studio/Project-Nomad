@@ -358,6 +358,32 @@ namespace Nomad.Game.Tests
             Assert.That(exit, Is.Not.Null, "지역 출구");
             GameObject player = manager.Player;
             manager.PlacePlayer(exit.position + Vector3.up * 0.1f, Quaternion.identity);
+            if (exit.GetComponent("FieldExit") != null)
+            {
+                yield return new WaitForFixedUpdate();
+                yield return new WaitForFixedUpdate();
+                Assert.That(manager.IsLoading, Is.False, "전투 중 출구를 스쳐도 자동 귀환하지 않음");
+                InputSettings settings = InputSystem.settings;
+                var previousBackground = settings.backgroundBehavior;
+                var previousEditor = settings.editorInputBehaviorInPlayMode;
+                settings.backgroundBehavior = InputSettings.BackgroundBehavior.IgnoreFocus;
+                settings.editorInputBehaviorInPlayMode = InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
+                Keyboard keyboard = InputSystem.AddDevice<Keyboard>();
+                keyboard.MakeCurrent();
+                try
+                {
+                    InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.E));
+                    yield return null;
+                    InputSystem.QueueStateEvent(keyboard, new KeyboardState());
+                    yield return null;
+                }
+                finally
+                {
+                    InputSystem.RemoveDevice(keyboard);
+                    settings.backgroundBehavior = previousBackground;
+                    settings.editorInputBehaviorInPlayMode = previousEditor;
+                }
+            }
             float end = Time.realtimeSinceStartup + Timeout;
 
             while (!manager.IsLoading)

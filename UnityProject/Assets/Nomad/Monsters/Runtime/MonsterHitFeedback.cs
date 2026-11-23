@@ -15,7 +15,7 @@ namespace Nomad.Monsters
             public float age;
         }
 
-        private const float FlashDuration = 0.12f;
+        private const float FlashDuration = 0.16f;
         private const float NumberDuration = 0.8f;
         private readonly List<DamageNumber> numbers = new List<DamageNumber>(8);
         private Health health;
@@ -79,7 +79,10 @@ namespace Nomad.Monsters
 
             LastDamage = damage;
             if (flashEnabled)
+            {
                 flashRemaining = FlashDuration;
+                HitCameraImpulse.Pulse();
+            }
             if (numbersEnabled)
             {
                 if (numbers.Count == 8)
@@ -98,9 +101,9 @@ namespace Nomad.Monsters
 
             shards.transform.position = transform.position + Vector3.up;
             shards.Play();
-            for (int i = 0; i < 8; i++)
+            for (int i = 0; i < 12; i++)
             {
-                Vector3 velocity = Random.onUnitSphere * Random.Range(1.2f, 2.4f);
+                Vector3 velocity = Random.onUnitSphere * Random.Range(1.5f, 3f);
                 velocity.y = Mathf.Abs(velocity.y) + 1f;
                 shards.Emit(new ParticleSystem.EmitParams { velocity = velocity }, 1);
             }
@@ -118,7 +121,7 @@ namespace Nomad.Monsters
             main.duration = 0.65f;
             main.startLifetime = new ParticleSystem.MinMaxCurve(0.35f, 0.6f);
             main.startSpeed = 0f;
-            main.startSize = new ParticleSystem.MinMaxCurve(0.08f, 0.16f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.09f, 0.2f);
             main.gravityModifier = 1f;
             main.simulationSpace = ParticleSystemSimulationSpace.World;
             main.maxParticles = 48;
@@ -158,7 +161,8 @@ namespace Nomad.Monsters
                 if (screen.z <= 0f)
                     continue;
 
-                Rect rect = new Rect(screen.x - 40f, Screen.height - screen.y - 16f, 80f, 32f);
+                numberStyle.fontSize = Mathf.RoundToInt(Mathf.Lerp(30, 22, Mathf.Clamp01(number.age / 0.16f)));
+                Rect rect = new Rect(screen.x - 50f, Screen.height - screen.y - 20f, 100f, 40f);
                 string text = number.amount.ToString();
                 float alpha = 1f - number.age / NumberDuration;
                 numberStyle.normal.textColor = new Color(0f, 0f, 0f, alpha);
