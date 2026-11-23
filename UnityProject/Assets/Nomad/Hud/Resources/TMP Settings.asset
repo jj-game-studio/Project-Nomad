@@ -44,6 +44,6 @@ MonoBehaviour:
   m_defaultColorGradientPresetsPath:
   m_defaultStyleSheet: {fileID: 0}
   m_StyleSheetsResourcePath:
-  m_leadingCharacters: {fileID: 0}
-  m_followingCharacters: {fileID: 0}
+  m_leadingCharacters: {fileID: 4900000, guid: 121467418d0b7b84cbb60c2d19b5f2a4, type: 3}
+  m_followingCharacters: {fileID: 4900000, guid: 034dd6a747f09df46aad108ec5fd959f, type: 3}
   m_UseModernHangulLineBreakingRules: 0
