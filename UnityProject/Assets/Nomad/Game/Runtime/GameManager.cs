@@ -22,6 +22,7 @@ namespace Nomad.Game
 
         // 필드 선택창 상태입니다(#194). 후보는 마을에 머무는 동안 유지되고, 출발하면 다시 뽑습니다.
         private FieldSelectView fieldSelectView;
+        private Action fieldSelectCancelled;
         private List<FieldPreset> fieldChoices;
         private string fieldSelectTarget;
         private float fieldSelectTimeScale;
@@ -138,7 +139,7 @@ namespace Nomad.Game
         }
 
         // 필드 선택창을 열고 게임 시간을 멈춥니다. 고르면 그 필드로 출발하고, 취소하면 현재 지역에 남습니다.
-        public void OpenFieldSelect(string sceneName)
+        public void OpenFieldSelect(string sceneName, Action cancelled = null)
         {
             if (IsLoading || IsRestarting || IsChoosingField)
                 return;
@@ -146,10 +147,11 @@ namespace Nomad.Game
             var random = new System.Random();
             fieldChoices ??= FieldPreset.Roll(random.Next(3, 5), random);
             fieldSelectTarget = sceneName;
+            fieldSelectCancelled = cancelled;
             fieldSelectTimeScale = Time.timeScale;
             Time.timeScale = 0f;
 
-            fieldSelectView ??= new FieldSelectView(transform, CloseFieldSelect);
+            fieldSelectView ??= new FieldSelectView(transform, CancelFieldSelect);
             fieldSelectView.Show(fieldChoices, ChooseField);
         }
 
@@ -162,6 +164,16 @@ namespace Nomad.Game
             SelectedField = preset;
             if (LoadRegion(fieldSelectTarget))
                 fieldChoices = null;
+        }
+
+        // 취소하면 출구 트리거 밖으로 되돌려, 선택창 없이 출구를 지나 맵 밖으로 나가지 못하게 합니다.
+        private void CancelFieldSelect()
+        {
+            if (fieldSelectView == null || !fieldSelectView.IsOpen)
+                return;
+
+            CloseFieldSelect();
+            fieldSelectCancelled?.Invoke();
         }
 
         private void CloseFieldSelect()
@@ -186,7 +198,7 @@ namespace Nomad.Game
 
             if (keyboard.escapeKey.wasPressedThisFrame)
             {
-                CloseFieldSelect();
+                CancelFieldSelect();
                 return;
             }
 
