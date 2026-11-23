@@ -246,6 +246,26 @@ namespace Nomad.Equipment.Editor
                         Check(equipment.GetItem(EquipmentSlot.Weapon2)?.ItemId == "demo-sword" && inventory.GetSlot(source).Item?.ItemId == "demo-bow",
                             "장비→호환 가방 아이템 실제 교체");
                         Check(equipment.TryEquip(source, EquipmentSlot.Weapon2) && inventory.Remove("demo-sword", 1) == 1, "교체 소유 보존/검사 상태 복원");
+                        source = Find("demo-armor");
+                        Pointer(Bag(source), true);
+                        stage = 93;
+                        frame = Time.frameCount + 1;
+                        return;
+                    // 더블클릭은 0.3초 안에 끝나도록 한 프레임 간격으로 누르고 뗍니다.
+                    case 93: Pointer(Bag(source)); frame = Time.frameCount + 1; return;
+                    case 94: Pointer(Bag(source), true); frame = Time.frameCount + 1; return;
+                    case 95: Pointer(Bag(source)); break;
+                    case 96:
+                        Check(equipment.GetItem(EquipmentSlot.Body)?.ItemId == "demo-armor" && inventory.GetSlot(source).Item == null,
+                            "가방 더블클릭 장착");
+                        Pointer(Gear(EquipmentSlot.Body), true);
+                        frame = Time.frameCount + 1;
+                        return;
+                    case 97: Pointer(Gear(EquipmentSlot.Body)); frame = Time.frameCount + 1; return;
+                    case 98: Pointer(Gear(EquipmentSlot.Body), true); frame = Time.frameCount + 1; return;
+                    case 99: Pointer(Gear(EquipmentSlot.Body)); break;
+                    case 100:
+                        Check(equipment.GetItem(EquipmentSlot.Body) == null && Find("demo-armor") >= 0, "장비칸 더블클릭 해제");
                         Keys(UnityEngine.InputSystem.Key.Tab);
                         Pointer(Point(new Vector3(0, 1, 1.5f)));
                         stage = 13;

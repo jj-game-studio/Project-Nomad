@@ -95,6 +95,44 @@ namespace Nomad.Equipment
             return true;
         }
 
+        // 더블클릭 장착용입니다. 가방 칸의 장비를 알맞은 장비칸에 넣고, 이전 장비는 같은 가방 칸으로 돌아옵니다.
+        public bool TryEquipAuto(int inventorySlot)
+        {
+            if (inventory == null || (uint)inventorySlot >= inventory.SlotCount)
+                return false;
+
+            ItemDefinition item = inventory.GetSlot(inventorySlot).Item;
+            return item != null && TryGetAutoSlot(item.EquipmentType, out EquipmentSlot slot) && TryEquip(inventorySlot, slot);
+        }
+
+        // 무기는 빈 무기1→2, 모두 차 있으면 선택한 무기칸과 교체합니다. 장신구는 빈 1→2→3, 모두 차 있으면 장신구1과 교체합니다.
+        public bool TryGetAutoSlot(EquipmentType type, out EquipmentSlot slot)
+        {
+            switch (type)
+            {
+                case EquipmentType.Weapon:
+                    slot = FirstEmpty(EquipmentSlot.Weapon1, EquipmentSlot.Weapon2, ActiveWeaponSlot);
+                    return true;
+                case EquipmentType.Accessory:
+                    slot = FirstEmpty(EquipmentSlot.Accessory1, EquipmentSlot.Accessory3, EquipmentSlot.Accessory1);
+                    return true;
+                case EquipmentType.Head: slot = EquipmentSlot.Head; return true;
+                case EquipmentType.Body: slot = EquipmentSlot.Body; return true;
+                case EquipmentType.Legs: slot = EquipmentSlot.Legs; return true;
+                case EquipmentType.Feet: slot = EquipmentSlot.Feet; return true;
+                case EquipmentType.Bag: slot = EquipmentSlot.Bag; return true;
+                default: slot = default; return false;
+            }
+        }
+
+        private EquipmentSlot FirstEmpty(EquipmentSlot first, EquipmentSlot last, EquipmentSlot fallback)
+        {
+            for (EquipmentSlot slot = first; slot <= last; slot++)
+                if (items[(int)slot] == null)
+                    return slot;
+            return fallback;
+        }
+
         public bool TryUnequip(EquipmentSlot slot, int inventorySlot = -1)
         {
             if (!isActiveAndEnabled || changing || (uint)slot >= Capacity || items[(int)slot] == null)
