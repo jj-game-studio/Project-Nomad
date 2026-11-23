@@ -6,6 +6,19 @@ namespace Nomad.Minimap.Editor
     public sealed class MinimapProjectionTests
     {
         [Test]
+        public void LocalWindowTracksPlayerAndStaysInsideMap()
+        {
+            var full = new MinimapProjection(new Bounds(Vector3.zero, Vector3.one * 100));
+            var local = full.Window(new Vector3(10, 0, 20), 36);
+            Assert.That(local.Bounds.size.x, Is.EqualTo(36));
+            Assert.That(local.Normalize(new Vector3(10, 0, 20)), Is.EqualTo(Vector2.one * 0.5f));
+            Assert.That(local.Contains(new Vector3(40, 0, 20)), Is.False);
+            var edge = full.Window(Vector3.one * 1000, 36);
+            Assert.That(edge.Bounds.max.x, Is.EqualTo(full.Bounds.max.x));
+            Assert.That(full.Window(Vector3.zero, 1000).Bounds.size.x, Is.EqualTo(full.Bounds.size.x));
+        }
+
+        [Test]
         public void ProjectionKeepsCenterAspectAndNorth()
         {
             var map = new MinimapProjection(new Bounds(new Vector3(20, 3, -10), new Vector3(40, 2, 10)));

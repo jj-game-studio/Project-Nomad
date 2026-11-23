@@ -26,6 +26,7 @@ namespace Nomad.Minimap.Editor
         private static Vector3 playerStart;
         private static Quaternion playerRotation;
         private static Vector2 previousPlayer;
+        private static Rect previousUv;
         private static Keyboard keyboard;
         private static string error;
 
@@ -81,14 +82,16 @@ namespace Nomad.Minimap.Editor
                         playerStart = manager.Player.transform.position;
                         playerRotation = manager.Player.transform.rotation;
                         previousPlayer = minimap.PlayerPosition;
+                        previousUv = minimap.MapUvRect;
                         previousTexture = minimap.MapTexture;
                         revision = minimap.Revision;
                         manager.PlacePlayer(playerStart + Vector3.right * 2, Quaternion.Euler(0, 90, 0));
                         stage++;
                         break;
                     case 1:
-                        Require(minimap.PlayerPosition.x > previousPlayer.x && Mathf.Abs(minimap.PlayerPosition.y - previousPlayer.y) < 0.1f,
-                            "플레이어 이동 반영·북쪽 고정");
+                        Require(minimap.MapUvRect.x > previousUv.x && Mathf.Abs(minimap.MapUvRect.y - previousUv.y) < 0.001f &&
+                            Vector2.Distance(minimap.PlayerPosition, previousPlayer) < 0.1f && minimap.MapUvRect.width < 1,
+                            "주변 지도 이동·플레이어 중심·북쪽 고정");
                         float angle = minimap.GetComponentInChildren<MinimapArrow>().rectTransform.localEulerAngles.z;
                         Require(Mathf.Abs(Mathf.DeltaAngle(angle, -manager.Player.transform.eulerAngles.y)) < 1, "플레이어 방향 반영");
                         Require(minimap.MapTexture == previousTexture && minimap.Revision == revision, "매 프레임 지도 재생성 없음");

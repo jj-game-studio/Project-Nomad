@@ -13,6 +13,8 @@ namespace Nomad.Minimap
     public sealed class RegionMinimap : MonoBehaviour
     {
         private const float MapSize = 188;
+        [SerializeField, Min(8), Tooltip("지도 한 변의 거리(m)입니다. 36이면 주변 약 18m를 표시합니다.")]
+        private float mapDiameter = 36;
         private static RegionMinimap instance;
         private readonly List<(Transform world, RectTransform icon)> markers = new();
         private GameManager manager;
@@ -34,6 +36,7 @@ namespace Nomad.Minimap
         public int MarkerCount => markers.Count;
         public Texture MapTexture => map != null ? map.texture : null;
         public Vector2 PlayerPosition { get; private set; }
+        public Rect MapUvRect => map.uvRect;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void Reset()
@@ -91,11 +94,19 @@ namespace Nomad.Minimap
             view.gameObject.SetActive(visible);
             if (!visible) return;
 
-            PlayerPosition = projection.Marker(manager.Player.transform.position, MapSize);
+            MinimapProjection window = projection.Window(manager.Player.transform.position, mapDiameter);
+            Vector2 uv = projection.Normalize(window.Bounds.min);
+            float scale = window.Bounds.size.x / projection.Bounds.size.x;
+            map.uvRect = new Rect(uv.x, uv.y, scale, scale);
+            PlayerPosition = window.Marker(manager.Player.transform.position, MapSize);
             playerArrow.anchoredPosition = PlayerPosition;
             playerArrow.localRotation = Quaternion.Euler(0, 0, -manager.Player.transform.eulerAngles.y);
             foreach (var marker in markers)
-                if (marker.world != null) marker.icon.anchoredPosition = projection.Marker(marker.world.position, MapSize);
+                if (marker.world != null)
+                {
+                    marker.icon.gameObject.SetActive(window.Contains(marker.world.position));
+                    marker.icon.anchoredPosition = window.Marker(marker.world.position, MapSize);
+                }
         }
 
         private void BindRegion(Scene next)

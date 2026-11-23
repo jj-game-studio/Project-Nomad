@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Nomad.Combat;
 using Nomad.Monsters;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace Nomad.Visibility
 {
@@ -11,7 +12,7 @@ namespace Nomad.Visibility
         internal static readonly HashSet<VisibilityTarget> Active = new();
         public static int ActiveCount => Active.Count;
         [SerializeField, Range(0f, 0.2f)] private float hideDelay = 0.08f;
-        private readonly Dictionary<Renderer, bool> renderers = new();
+        private readonly Dictionary<Renderer, (bool hidden, ShadowCastingMode shadows)> renderers = new();
         private readonly Dictionary<Behaviour, bool> displays = new();
         private float lastSeen = float.NegativeInfinity;
         private PlayerVisibility owner;
@@ -47,10 +48,21 @@ namespace Nomad.Visibility
             Bounds bounds = new Bounds(transform.position + Vector3.up, new Vector3(0.6f, 1.8f, 0.6f));
             Collider body = GetComponent<Collider>();
             if (body != null) bounds = body.bounds;
+            bool foundModel = false;
+            Transform modelRoot = transform.Find("Body");
+            foreach (var item in renderers)
+            {
+                Renderer renderer = item.Key;
+                if (renderer == null || !renderer.enabled || !renderer.gameObject.activeInHierarchy || item.Value.hidden ||
+                    (modelRoot != null && !renderer.transform.IsChildOf(modelRoot)) ||
+                    (renderer is not MeshRenderer && renderer is not SkinnedMeshRenderer)) continue;
+                if (foundModel) bounds.Encapsulate(renderer.bounds);
+                else { bounds = renderer.bounds; foundModel = true; }
+            }
             Vector3 middle = bounds.center;
             Vector3 side = Vector3.Cross(Vector3.up, source.Forward).normalized * Mathf.Min(0.3f, bounds.extents.x);
             bool seen = source.CanSee(middle, transform) ||
-                source.CanSee(middle + Vector3.up * bounds.extents.y * 0.65f, transform) ||
+                source.CanSee(middle + Vector3.up * bounds.extents.y * 0.95f, transform) ||
                 source.CanSee(middle - side, transform) || source.CanSee(middle + side, transform);
             if (seen) lastSeen = Time.unscaledTime;
 
@@ -62,7 +74,7 @@ namespace Nomad.Visibility
         private void Capture()
         {
             foreach (Renderer renderer in GetComponentsInChildren<Renderer>(true))
-                if (!renderers.ContainsKey(renderer)) renderers.Add(renderer, renderer.forceRenderingOff);
+                if (!renderers.ContainsKey(renderer)) renderers.Add(renderer, (renderer.forceRenderingOff, renderer.shadowCastingMode));
             CaptureDisplay(GetComponent<SegmentedHealthBar>());
             CaptureDisplay(GetComponent<MonsterHitFeedback>());
         }
@@ -84,7 +96,13 @@ namespace Nomad.Visibility
         private void Apply()
         {
             foreach (var item in renderers)
-                if (item.Key != null) item.Key.forceRenderingOff = item.Value || !IsVisible;
+                if (item.Key != null)
+                {
+                    // 모델만 숨기고 화면 안으로 들어오는 그림자는 유지합니다.
+                    bool casts = item.Value.shadows != ShadowCastingMode.Off;
+                    item.Key.forceRenderingOff = item.Value.hidden || (!IsVisible && !casts);
+                    item.Key.shadowCastingMode = IsVisible || !casts ? item.Value.shadows : ShadowCastingMode.ShadowsOnly;
+                }
             foreach (var item in displays)
                 if (item.Key != null) item.Key.enabled = item.Value && IsVisible;
         }
@@ -92,7 +110,11 @@ namespace Nomad.Visibility
         public void Release()
         {
             foreach (var item in renderers)
-                if (item.Key != null) item.Key.forceRenderingOff = item.Value;
+                if (item.Key != null)
+                {
+                    item.Key.forceRenderingOff = item.Value.hidden;
+                    item.Key.shadowCastingMode = item.Value.shadows;
+                }
             foreach (var item in displays)
                 if (item.Key != null) item.Key.enabled = item.Value;
             renderers.Clear();

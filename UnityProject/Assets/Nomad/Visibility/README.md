@@ -71,3 +71,9 @@ PREVIEW 통과는 정식 등록 검증 통과와 구분합니다. 실제 구매 
 
 VisibilityBinding의 **Disabled Regions**(초기 Village) 지역에서는 시야가 쉬어 적 숨김·어둠·반투명을 모두 해제합니다. 필드로 가면 다시 켜집니다.
 `Verify Main Game`이 마을 진입·복귀·재시작 때 해제 상태를 검사합니다.
+
+## 렌더 누락 보정
+- 적 판정은 실제 Body 메시 외곽(상단 포함)을 사용하고 공격 표시·파편은 제외합니다. 충돌체만 낮은 울타리에 가려져도 머리가 보이면 표시합니다.
+- 시야 밖 모델은 ShadowsOnly로 그림자를 유지하고 원래 Off/forceRenderingOff 및 모듈 해제 시 원래 상태를 보존합니다.
+- Foliage Fade의 ShadowCaster는 URP shadow bias/near-plane clamping을 적용합니다.
+- 배치 Nomad.Visibility.Editor.RenderRegressionVerification.Run: 실제 해골·낮은 벽·완전 가림·복원 및 카메라 밖 물체가 화면 안에 드리운 실제 그림자 픽셀 검사.
