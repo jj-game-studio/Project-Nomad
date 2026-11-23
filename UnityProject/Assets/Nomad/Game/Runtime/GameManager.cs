@@ -153,7 +153,10 @@ namespace Nomad.Game
             fieldSelectView.Show(fieldChoices, ChooseField);
         }
 
-        private void ChooseField(FieldPreset preset)
+        // 테스트에서 선택창 후보를 확인하고 고를 때 사용합니다.
+        internal IReadOnlyList<FieldPreset> FieldChoices => fieldChoices;
+
+        internal void ChooseField(FieldPreset preset)
         {
             CloseFieldSelect();
             SelectedField = preset;
