@@ -6,7 +6,7 @@ namespace Nomad.Terrain
 {
     // 3m WFC 필드가 생성되면 식생·엄폐물·절벽 바위를 seed 기반으로 배치합니다.
     // 이동을 막는 물체는 BoxCollider만 가지며, 소품 소유자 하위에 두어 이후 경로 검사에 포함됩니다.
-    public sealed class FieldDressing : MonoBehaviour
+    public sealed partial class FieldDressing : MonoBehaviour
     {
         private static readonly int BaseColor = Shader.PropertyToID("_BaseColor");
 
@@ -30,6 +30,7 @@ namespace Nomad.Terrain
         public int Placed { get; private set; }
         public int Blockers => blockers.Count;
         public int RemovedBlockers { get; private set; }
+        public int RemovedStructureWalls { get; private set; }
         public int RidgeSegments { get; private set; }
         public int RidgeCandidates { get; private set; }
         public Transform Root => root != null ? root.transform : null;
@@ -91,6 +92,10 @@ namespace Nomad.Terrain
             // 군락 밀도와 테마는 seed별로 이동한 저주파 노이즈로 정해 이웃 타일끼리 비슷해지게 합니다.
             noiseOffset = new Vector2(Range(random, 0f, 1000f), Range(random, 0f, 1000f));
 
+            // 폐허 구조물을 먼저 짓고, 그 자리와 주변에는 식생·울타리를 두지 않습니다.
+            // 별도 난수를 써서 구조물이 없을 때의 기존 꾸밈 배치가 그대로 유지되게 합니다.
+            PlaceStructures(source, result.Pieces, new System.Random(unchecked(result.Seed * 4513 + 101)));
+
             foreach (TerrainPiece piece in result.Pieces)
             {
                 MicroTerrainTile tile = piece.GetComponent<MicroTerrainTile>();
@@ -102,6 +107,7 @@ namespace Nomad.Terrain
                 center.y = GroundY(center, center.y);
                 PlaceBorderWalls(source, center, tops);
                 if (ground == null && tile.IsStair) continue;
+                if (InStructure(center, 1.5f)) continue;
 
                 // Terrain 언덕에는 수직 절벽이 없으므로 절벽 바위는 타일 지면에서만 둡니다.
                 if (ground == null) PlaceCliffRocks(source, center, tops, random);
@@ -381,7 +387,7 @@ namespace Nomad.Terrain
 
                     // 다른 줄과 만나면 겹치지 않게 멈춥니다.
                     Vector3 middle = (current + next) * 0.5f;
-                    if (Near(traced, middle, length * 0.6f, start)) break;
+                    if (Near(traced, middle, length * 0.6f, start) || InStructure(middle, length * 0.5f + 0.5f)) break;
                     traced.Add(middle);
 
                     // 몇 조각마다 한 조각 길이를 통로로 비웁니다.
@@ -636,9 +642,15 @@ namespace Nomad.Terrain
         private void RepairPaths(TerrainGenerationResult result)
         {
             GameObject terrainRoot = result.Pieces[0].transform.parent.gameObject;
-            for (int attempt = 0; attempt < repairLimit && blockers.Count > 0; attempt++)
+
+            // 기준 크기(18×18=324칸)보다 큰 필드는 장애물도 많으므로 복구 횟수를 면적에 비례해 늘립니다.
+            int limit = Mathf.CeilToInt(repairLimit * Mathf.Max(1f, result.Pieces.Count / 324f));
+
+            // 장애물을 하나씩 지우며 다시 검사하므로, NavMesh를 유지해 지운 장애물 주변 타일만 다시 굽습니다.
+            using var cache = new WalkabilityCache();
+            for (int attempt = 0; attempt < limit && blockers.Count > 0; attempt++)
             {
-                if (MicroTerrainWalkability.Validate(terrainRoot, result.Pieces, out _, out _, root)) return;
+                if (MicroTerrainWalkability.Validate(terrainRoot, result.Pieces, out _, out _, root, cache)) return;
                 // 막힌 지점에서 가장 가까운 장애물 하나만 지웁니다. 한꺼번에 지우면 길을 막지 않은 담까지 사라집니다.
                 float nearest = float.PositiveInfinity;
                 foreach (GameObject blocker in blockers)
@@ -646,8 +658,11 @@ namespace Nomad.Terrain
                 RemoveBlockersNear(MicroTerrainWalkability.BlockedPoint, nearest + 0.01f);
             }
 
-            if (blockers.Count > 0 && !MicroTerrainWalkability.Validate(terrainRoot, result.Pieces, out _, out _, root))
+            if (blockers.Count > 0 && !MicroTerrainWalkability.Validate(terrainRoot, result.Pieces, out _, out string reason, root, cache))
+            {
+                Debug.LogWarning($"꾸밈 경로 복구 {limit}회 후에도 막혀 장애물을 모두 제거합니다: {reason}", this);
                 RemoveBlockersNear(Vector3.zero, float.PositiveInfinity);
+            }
         }
 
         private int RemoveBlockersNear(Vector3 point, float distance)
@@ -658,6 +673,7 @@ namespace Nomad.Terrain
                 if (FlatDistance(blockers[index].transform.position, point) > distance) continue;
 
                 // Destroy는 지연되므로 먼저 비활성화해 다음 검사에서 제외합니다.
+                if (blockers[index].name == "StructureWall") RemovedStructureWalls++;
                 blockers[index].SetActive(false);
                 Release(blockers[index]);
                 blockers.RemoveAt(index);
@@ -670,8 +686,10 @@ namespace Nomad.Terrain
         public void Clear()
         {
             blockers.Clear();
+            structureAreas.Clear();
             Placed = 0;
             RemovedBlockers = 0;
+            RemovedStructureWalls = 0;
             RidgeSegments = 0;
             RidgeCandidates = 0;
             surface.Release();

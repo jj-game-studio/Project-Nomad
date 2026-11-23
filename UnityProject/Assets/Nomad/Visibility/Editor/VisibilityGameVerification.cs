@@ -25,6 +25,8 @@ namespace Nomad.Visibility.Editor
         private static int checks;
         private static Transform observer;
         private static string generation;
+        private static VisibilityFoliage tree;
+        private static Texture sourceTexture;
 
         [MenuItem("Nomad/Visibility/Verify Main Game")]
         public static void Run() => Begin(false);
@@ -44,6 +46,7 @@ namespace Nomad.Visibility.Editor
             manager = null;
             sight = null;
             observer = null;
+            tree = null;
 
             EditorSceneManager.OpenScene("Assets/Nomad/Game/Game.unity");
             SessionState.SetBool(SessionKey, true);
@@ -86,7 +89,13 @@ namespace Nomad.Visibility.Editor
 
                 PlayerVisibility active = current.GetComponentInChildren<PlayerVisibility>();
                 Check(active != null, "GameManager owns visibility module");
-                if (active.Observer != current.Player.transform || !active.Available) return;
+                if (active.Observer != current.Player.transform) return;
+
+                // 마을에서는 시야가 쉬고, 필드에서는 켜진 뒤에 검사합니다.
+                bool village = current.CurrentRegion.name == "Village";
+                if (village != active.Suppressed) return;
+                if (village) CheckVillage(active);
+                else if (!active.Available) return;
 
                 if (stage == 0)
                 {
@@ -113,13 +122,19 @@ namespace Nomad.Visibility.Editor
                     Check(active.Observer == observer, "same persistent observer");
                     MonsterIdentity[] monsters = Object.FindObjectsByType<MonsterIdentity>();
                     Check(monsters.Length > 0, "Field contains monsters");
-                    Check(monsters.All(m => m.GetComponent<VisibilityTarget>()?.Controlled == true), "all monsters controlled");
+                    Check(monsters.All(m => m.GetComponent<Health>().IsDead || m.GetComponent<VisibilityTarget>()?.Controlled == true), "all monsters controlled");
                     Check(VisibilityTarget.ActiveCount == monsters.Length, "no stale targets");
                     Check(monsters.Any(m => !m.GetComponent<VisibilityTarget>().IsVisible), "hidden enemies exist");
                     Check(monsters.All(m => m.GetComponent<Health>().enabled && m.GetComponent<Collider>().enabled), "combat and collision retained");
 
-                    if (stage == 11)
+                    if (stage == 11 && tree == null)
                     {
+                        PrepareTree(current.Player);
+                        waitUntil = Time.unscaledTime + 0.6f;
+                    }
+                    else if (stage == 11)
+                    {
+                        VerifyTree(current.Player);
                         generation = controls.Navigation.LastResult.GenerationId;
                         controls.Regenerate(false);
                         stage = 2;
@@ -157,6 +172,53 @@ namespace Nomad.Visibility.Editor
                 }
             }
             catch (Exception error) { Debug.LogException(error); Finish(1); }
+        }
+
+        // 실제 구매 식생: 나무는 시선을 막지 않고 원본 텍스처로 반투명해지며, 소품은 차단을 유지합니다.
+        private static void PrepareTree(GameObject player)
+        {
+            VisibilityFoliage[] connected = Object.FindObjectsByType<VisibilityFoliage>();
+            VisibilityFoliage[] trees = connected.Where(f => Label(f).Contains("tree") && !Label(f).Contains("stump")).ToArray();
+            Check(trees.Length > 0, "field trees connected");
+            Check(trees.All(f => !f.BlocksSight), "field trees do not block sight");
+            Check(connected.Where(f => Label(f).Contains("prop_")).All(f => f.BlocksSight), "field props keep blocking");
+
+            tree = trees.First(f => !f.Faded);
+            Material source = tree.GetComponentInChildren<MeshRenderer>().sharedMaterial;
+            sourceTexture = new[] { "_BaseMap", "_MainTex", "_Albedo_Map" }
+                .Where(source.HasProperty).Select(source.GetTexture).FirstOrDefault(texture => texture != null);
+            Check(sourceTexture != null, "field tree source texture found");
+
+            // 이동 컴포넌트가 위치를 되돌리지 않도록 잠시 끄고 나무 옆으로 옮깁니다.
+            player.GetComponent<Nomad.Player.PlayerMovement>().enabled = false;
+            player.transform.position = tree.transform.position + Vector3.right * 1.5f;
+            Physics.SyncTransforms();
+        }
+
+        private static void VerifyTree(GameObject player)
+        {
+            Check(tree.InSight && tree.Faded && tree.Alpha < 1f, "field tree near player fades");
+            Material faded = tree.GetComponentInChildren<MeshRenderer>().sharedMaterial;
+            Check(faded.shader.name == "Nomad/Visibility/Foliage Fade", "field tree uses fade shader");
+            Check(faded.GetTexture("_BaseMap") == sourceTexture, "field tree keeps source texture");
+
+            Vector3 toTree = tree.transform.position - sight.Eye;
+            toTree.y = 0f;
+            Check(sight.ClearDistance(sight.Eye, toTree.normalized, toTree.magnitude + 1f) >= toTree.magnitude + 0.5f, "field trunk does not block sight");
+            Check(Object.FindFirstObjectByType<VisibilityField>().ShadeRenderer.enabled, "field shade active");
+            player.GetComponent<Nomad.Player.PlayerMovement>().enabled = true;
+            Debug.Log("VISIBILITY_GAME_TREE " + tree.name);
+        }
+
+        private static string Label(Component item) => item.name.ToLowerInvariant();
+
+        private static void CheckVillage(PlayerVisibility active)
+        {
+            Check(!active.Available, "visibility off in Village");
+            Check(Shader.GetGlobalFloat("_NomadVisibilityActive") == 0f, "no visibility mask in Village");
+            VisibilityField field = active.GetComponent<VisibilityField>();
+            Check(field.ShadeRenderer == null || !field.ShadeRenderer.enabled, "no shade in Village");
+            Check(Object.FindObjectsByType<VisibilityTarget>().All(t => !t.Controlled), "nothing hidden in Village");
         }
 
         private static void CheckModule(GameManager current)

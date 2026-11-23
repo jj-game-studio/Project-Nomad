@@ -178,6 +178,9 @@ namespace Nomad.Game.Editor
             data.FindProperty("status").objectReferenceValue = null;
             data.FindProperty("testControls").boolValue = false;
             data.FindProperty("newSeedOnStart").boolValue = true; // 진입마다 새 지형(#94 판단 5)
+            // 메인 게임 필드는 통합 씬(18×18)의 약 2배 면적인 26×26칸(약 78m)입니다(#154).
+            data.FindProperty("width").intValue = Nomad.Terrain.Editor.FieldDressingAuthoring.FieldSize;
+            data.FindProperty("height").intValue = Nomad.Terrain.Editor.FieldDressingAuthoring.FieldSize;
             data.ApplyModifiedPropertiesWithoutUndo();
 
             // 원본 카메라의 후처리·배경은 필드에 있는 동안 영속 카메라에 적용합니다.

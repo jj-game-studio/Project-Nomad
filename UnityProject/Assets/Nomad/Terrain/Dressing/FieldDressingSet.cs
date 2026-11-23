@@ -31,6 +31,17 @@ namespace Nomad.Terrain
         public GameObject[] fences;
         public GameObject[] borderWalls;
 
+        [Header("폐허 구조물 (Kingdom 집 조각을 조립, 지붕 없음)")]
+        [Tooltip("돌 기단 벽 (길이 2.5m)")]
+        public GameObject[] structureBases;
+        [Tooltip("기단 위에 올리는 목재 벽 (길이 2.5m)")]
+        public GameObject[] structureWalls;
+        public GameObject[] structureCorners;
+        [Tooltip("충돌 없는 바닥 판 (2.5×2.5m)")]
+        public GameObject[] structureFloors;
+        [Range(0, 6)] public int structureMin = 3;
+        [Range(0, 6)] public int structureMax = 4;
+
         [Header("밀도 (나무·엄폐물·울타리 확률은 군락 타일 기준)")]
         [Tooltip("군락 노이즈가 이 값보다 높은 타일에만 식생을 둡니다. 높을수록 빈터가 많아집니다.")]
         [Range(0f, 1f)] public float coverThreshold = 0.48f;
