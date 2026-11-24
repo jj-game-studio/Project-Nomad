@@ -64,6 +64,11 @@ namespace Nomad.Game.Tests
             yield return WaitForRegion(manager);
             Assert.That(manager.CurrentRegion.path, Is.EqualTo(VillagePath), "시작 지역");
             Assert.That(SceneManager.GetActiveScene(), Is.EqualTo(manager.CurrentRegion), "지역 씬이 활성 씬(조명)");
+            Assert.That(manager.Player.GetComponent("PlayerAnimation"), Is.Not.Null, "메인 플레이어 이동 애니메이션");
+            Assert.That(manager.Player.GetComponent("PlayerSwordAnimation"), Is.Not.Null, "기존 검 공격 애니메이션");
+            Assert.That(manager.Player.GetComponentsInChildren<SkinnedMeshRenderer>().Any(r => r.sharedMesh != null), Is.True,
+                "메인 씬 캐릭터 외형이 실제로 활성화되어 있음");
+            Assert.That(manager.Player.transform.Find("Player Body").gameObject.activeSelf, Is.False, "임시 캡슐 외형 숨김");
         }
 
         [UnityTest]
@@ -299,12 +304,17 @@ namespace Nomad.Game.Tests
                 chestType.GetMethod("Initialize").Invoke(chest, new object[] { "escape-test-chest", stacks });
                 panelType.GetMethod("ShowChest", internalMembers).Invoke(panel, new object[] { chest, interaction });
                 Assert.That(hasOpenChest.GetValue(panel), Is.True, "상자 파밍 창 열림");
+                yield return null;
+                AssertLootLayout(panel, manager.Player);
                 Assert.That(chestType.GetMethod("TryLoot").Invoke(chest, new object[] { inventory }), Is.EqualTo(2));
 
                 yield return PressEscape();
                 Assert.That(hasOpenChest.GetValue(panel), Is.False, "첫 Esc는 상자만 닫음");
                 var backpack = (GameObject)panelType.GetField("panel", internalMembers).GetValue(panel);
                 Assert.That(backpack.activeSelf, Is.False, "가방도 닫힘");
+                var equipmentPanel = manager.Player.GetComponent("EquipmentPanel");
+                Assert.That(((RectTransform)equipmentPanel.GetType().GetProperty("StatsPanel").GetValue(equipmentPanel))
+                    .gameObject.activeSelf, Is.True, "상자 닫은 뒤 스탯 창 복원");
                 Assert.That(Time.timeScale, Is.EqualTo(originalScale), "게임 진행 유지");
                 Assert.That(AudioListener.pause, Is.EqualTo(originalAudioPause));
                 Assert.That(interaction.enabled && panel.enabled, Is.True, "일시정지로 입력을 끄지 않음");
@@ -625,6 +635,24 @@ namespace Nomad.Game.Tests
 
             Assert.Fail("Field 생성 컨트롤");
             return 0;
+        }
+
+        private static void AssertLootLayout(Component inventoryPanel, GameObject player)
+        {
+            const System.Reflection.BindingFlags members = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+            var bag = (GameObject)inventoryPanel.GetType().GetField("panel", members).GetValue(inventoryPanel);
+            var chest = (RectTransform)GameObject.Find("ChestLootPanel").transform;
+            var bagCorners = new Vector3[4];
+            var chestCorners = new Vector3[4];
+            ((RectTransform)bag.transform).GetWorldCorners(bagCorners);
+            chest.GetWorldCorners(chestCorners);
+            Assert.That(bagCorners[3].x, Is.LessThan(chestCorners[0].x), "배율 적용 후 가방·상자 사이 여백");
+            Assert.That(bagCorners[0].x, Is.GreaterThanOrEqualTo(0), "가방 화면 내부");
+            Assert.That(chestCorners[3].x, Is.LessThanOrEqualTo(Screen.width), "상자 화면 내부");
+
+            var equipment = player.GetComponent("EquipmentPanel");
+            var stats = (RectTransform)equipment.GetType().GetProperty("StatsPanel").GetValue(equipment);
+            Assert.That(stats.gameObject.activeSelf, Is.False, "루팅 중 겹치는 스탯 창 숨김");
         }
 
         // 테스트 어셈블리는 Player 쪽 스크립트를 참조할 수 없어 이름으로 호출합니다.

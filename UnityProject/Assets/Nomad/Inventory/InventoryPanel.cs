@@ -47,6 +47,12 @@ namespace Nomad.Inventory
 
         internal bool HasOpenChest => chestPanel != null && chestPanel.IsOpen;
         internal LootChest OpenChest => chestPanel?.Chest;
+        internal float ChestLayoutWidth => chestPanel?.LayoutWidth ?? 0f;
+        internal void UpdateChestLayout()
+        {
+            if (HasOpenChest)
+                chestPanel.UpdateLayout((RectTransform)panel.transform);
+        }
         internal bool BlocksSplitInput => splitDialog != null && splitDialog.BlocksInput;
 
         internal static InventoryPanel GetOrCreate(PlayerInventory target)
@@ -185,6 +191,7 @@ namespace Nomad.Inventory
 
         private void LateUpdate()
         {
+            UpdateChestLayout();
             if (!panel.activeInHierarchy)
                 splitDialog?.Close();
 
@@ -245,6 +252,7 @@ namespace Nomad.Inventory
             }
 
             chestPanel.Show(chest, interaction);
+            UpdateChestLayout();
             Refresh();
         }
 

@@ -146,8 +146,11 @@ namespace Nomad.Equipment
 
             FitToCanvas();
             // 장비 창과 오른쪽 스탯 창을 합친 영역이 화면 가운데 오도록 옮깁니다. 상자 창이 열리면 가방 UI 배치를 따릅니다.
-            if (inventoryView != null && !inventoryView.HasOpenChest)
-                panel.anchoredPosition = new Vector2(-(StatsGap + StatsWidth) / 2f, 0);
+            bool looting = inventoryView != null && inventoryView.HasOpenChest;
+            if (statsPanel != null) statsPanel.gameObject.SetActive(!looting);
+            float extraWidth = looting ? inventoryView.ChestLayoutWidth : StatsGap + StatsWidth;
+            panel.anchoredPosition = new Vector2(-extraWidth * panel.localScale.x / 2f, 0);
+            inventoryView?.UpdateChestLayout();
 
             Mouse mouse = Mouse.current;
             if (combat != null) combat.EquipmentUiOpen = IsOpen ||
@@ -238,7 +241,8 @@ namespace Nomad.Equipment
             float height = canvas.pixelRect.height / canvas.scaleFactor;
             float width = canvas.pixelRect.width / canvas.scaleFactor;
             // 오른쪽 스탯 창까지 화면 안에 들어오도록 전체 너비로 배율을 정합니다.
-            float total = PanelWidth + StatsGap + StatsWidth;
+            float total = PanelWidth + (inventoryView != null && inventoryView.HasOpenChest
+                ? inventoryView.ChestLayoutWidth : StatsGap + StatsWidth);
             float scale = Mathf.Min(1f, (height - 48f) / panel.sizeDelta.y, (width - 32f) / total);
             panel.localScale = Vector3.one * Mathf.Max(0.1f, scale);
         }

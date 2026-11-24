@@ -7,6 +7,51 @@ namespace Nomad.Tests
 {
     public sealed class WfcTerrainTests
     {
+        [Test]
+        public void BoundaryWallCollider_BlocksAirbornePlayer_WithoutRaisingInteriorWalls()
+        {
+            var owner = new GameObject("Boundary regression");
+            var wall = new GameObject("Outer stone wall");
+            var interior = new GameObject("Interior stone wall");
+            var player = new GameObject("Jumping player");
+            try
+            {
+                var dressing = owner.AddComponent<FieldDressing>();
+                foreach (GameObject target in new[] { wall, interior })
+                {
+                    GameObject mesh = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    mesh.transform.SetParent(target.transform, false);
+                    mesh.transform.localScale = new Vector3(3f, 0.7f, 0.3f);
+                    mesh.transform.localPosition = Vector3.up * 0.35f;
+                    Object.DestroyImmediate(mesh.GetComponent<Collider>());
+                }
+
+                var add = typeof(FieldDressing).GetMethod("AddBlocker",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+                add.Invoke(dressing, new object[] { wall, false, false, false });
+                add.Invoke(dressing, new object[] { interior, false, true, false });
+                interior.transform.position = Vector3.right * 10f;
+                Physics.SyncTransforms();
+                Assert.That(wall.GetComponent<BoxCollider>().bounds.max.y, Is.GreaterThanOrEqualTo(4f));
+                Assert.That(interior.GetComponent<BoxCollider>().bounds.max.y, Is.LessThan(1f), "内部 돌담은 원래 높이 유지");
+
+                var body = player.AddComponent<CharacterController>();
+                body.height = 1.8f;
+                body.radius = 0.35f;
+                body.center = Vector3.up * 0.9f;
+                player.transform.position = new Vector3(0, 1.6f, -2f);
+                for (int step = 0; step < 50; step++) body.Move(Vector3.forward * 0.1f);
+                Assert.That(player.transform.position.z, Is.LessThan(0f), "점프 높이에서 경계 통과 차단");
+            }
+            finally
+            {
+                Object.DestroyImmediate(player);
+                Object.DestroyImmediate(interior);
+                Object.DestroyImmediate(wall);
+                Object.DestroyImmediate(owner);
+            }
+        }
+
         private const string CatalogPath = "Assets/Nomad/Terrain/Wfc/TerrainCatalog.asset";
         private const string MicroCatalogPath = "Assets/Nomad/Terrain/Micro/MicroCatalog.asset";
 
