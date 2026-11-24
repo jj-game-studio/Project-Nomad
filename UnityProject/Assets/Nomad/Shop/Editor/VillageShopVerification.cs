@@ -27,6 +27,7 @@ namespace Nomad.Shop.Editor
         private static int stage;
         private static int starterSlots;
         private static string tradeItemId;
+        private static int tradeStart;
         private static Vector3 stoppedAt;
         private static string unexpectedError;
 
@@ -94,9 +95,10 @@ namespace Nomad.Shop.Editor
                         return;
                     inventory = manager.Player.GetComponent<PlayerInventory>();
                     starterSlots = inventory.UsedSlots;
+                    // 시작 장비에 같은 아이템(화살)이 있을 수 있으므로 시작 수량을 기준으로 증감만 검사합니다.
                     tradeItemId = shop.Catalog.GetOffer(0).Item.ItemId;
-                    Require(inventory.GetCount(tradeItemId) == 0 && inventory.GetComponent<PlayerWallet>().Gold == 1000,
-                        "정식 시작 장비와 별개인 거래 아이템 및 초기 지갑");
+                    tradeStart = inventory.GetCount(tradeItemId);
+                    Require(inventory.GetComponent<PlayerWallet>().Gold == 1000, "초기 지갑");
                     Application.runInBackground = true;
                     InputSystem.settings.backgroundBehavior = InputSettings.BackgroundBehavior.IgnoreFocus;
                     InputSystem.settings.editorInputBehaviorInPlayMode = InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
@@ -133,71 +135,79 @@ namespace Nomad.Shop.Editor
                         Require(panel != null && panel.gameObject.scene == inventory.gameObject.scene &&
                             panel.transform.Find("Shop Window/Title").GetComponent<Text>().text == "마을 상점",
                             "Game에서 마을 E 상호작용으로 영속 플레이어의 한국어 UI 열기");
+                        // 목록에서 B는 거래 팝업만 열고, 팝업 안의 B가 실제 구매합니다.
                         Queue(Key.B);
                         break;
                     case 4:
-                        Require(wallet.Gold == 995 && inventory.GetCount(tradeItemId) == 1 && shop.StockAt(0) == 29,
+                        Require(panel.transform.Find("Shop Window/Trade Popup").gameObject.activeSelf && wallet.Gold == 1000,
+                            "목록 B는 구매 팝업만 열기");
+                        Queue();
+                        break;
+                    case 5: Queue(Key.B); break;
+                    case 6:
+                        Require(wallet.Gold == 995 && inventory.GetCount(tradeItemId) == tradeStart + 1 && shop.StockAt(0) == 29,
                             "마을 실제 가방으로 구매");
                         Queue(Key.Tab);
                         break;
-                    case 5:
+                    case 7:
+                        // 방금 구매한 칸을 팔도록 마지막 칸을 고릅니다.
                         int tradeSlot = Enumerable.Range(0, PlayerInventory.Capacity)
-                            .First(index => inventory.GetSlot(index).Item?.ItemId == tradeItemId);
+                            .Last(index => inventory.GetSlot(index).Item?.ItemId == tradeItemId);
                         panel.transform.Find($"Shop Window/Backpack/Content/Slot {tradeSlot}").GetComponent<Button>().onClick.Invoke();
                         Queue(Key.V);
                         break;
-                    case 6:
-                        Require(wallet.Gold == 997 && inventory.GetCount(tradeItemId) == 0 &&
+                    case 8:
+                        Require(wallet.Gold == 997 && inventory.GetCount(tradeItemId) == tradeStart &&
                             inventory.UsedSlots == starterSlots && shop.StockAt(0) == 30,
                             "마을 실제 가방으로 판매");
                         stoppedAt = inventory.transform.position;
                         Queue(Key.W);
                         break;
-                    case 7:
+                    case 9:
                         Require(Vector2.Distance(new Vector2(stoppedAt.x, stoppedAt.z),
                             new Vector2(inventory.transform.position.x, inventory.transform.position.z)) < 0.01f,
                             "상점 중 이동 차단");
                         ShopVerification.CaptureView("village-shop-ui.png", panel);
                         Queue(Key.Escape);
                         break;
-                    case 8:
+                    case 10:
                         Require(Object.FindAnyObjectByType<ShopPanel>() == null &&
                             manager.GetComponentInChildren<PauseMenu>()?.IsOpen == false,
                             "Esc로 상점만 닫고 일시정지 메뉴는 열리지 않음");
                         Queue();
                         break;
-                    case 9:
+                    case 11:
                         Require(shop.CanInteract(new InteractionContext(inventory.transform, inventory)), "닫기 후 거래 잠금 해제");
                         Queue(Key.E);
                         break;
-                    case 10:
+                    case 12:
                         panel = Object.FindAnyObjectByType<ShopPanel>();
                         Require(panel != null && wallet.Gold == 997 && shop.StockAt(0) == 30, "재열기 시 재화·재고 유지");
-                        Require(shop.TryBuy(inventory, 0, 1, out _), "지역 왕복 검증용 고철 구매");
+                        Require(shop.TryBuy(inventory, 0, 1, out _), "지역 왕복 검증용 상품 구매");
                         shop.gameObject.SetActive(false);
                         Queue();
                         break;
-                    case 11:
+                    case 13:
                         Require(Object.FindAnyObjectByType<ShopPanel>() == null, "상점 비활성화 시 UI 해제");
                         stoppedAt = inventory.transform.position;
                         Queue(Key.S);
                         break;
-                    case 12:
+                    case 14:
                         Require(Vector2.Distance(new Vector2(stoppedAt.x, stoppedAt.z),
                             new Vector2(inventory.transform.position.x, inventory.transform.position.z)) > 0.0001f,
                             "상점 종료 후 실제 이동 입력 복구");
                         Require(manager.LoadRegion("Field"), "실제 Game에서 Field 로드 시작");
                         break;
-                    case 13:
+                    case 15:
                         Require(manager.CurrentRegion.name == "Field" && manager.Player == inventory.gameObject &&
-                            wallet.Gold == 992 && inventory.GetCount(tradeItemId) == 1 &&
+                            wallet.Gold == 992 && inventory.GetCount(tradeItemId) == tradeStart + 1 &&
                             Object.FindAnyObjectByType<Shopkeeper>() == null, "Field에서 상점 언로드와 가방·지갑 유지");
                         Require(manager.LoadRegion("Village"), "실제 Game에서 Village 복귀 시작");
                         break;
-                    case 14:
+                    case 16:
                         Shopkeeper returnedShop = Object.FindAnyObjectByType<Shopkeeper>();
                         Require(manager.CurrentRegion.name == "Village" && manager.Player == inventory.gameObject &&
-                            wallet.Gold == 992 && inventory.GetCount(tradeItemId) == 1 &&
+                            wallet.Gold == 992 && inventory.GetCount(tradeItemId) == tradeStart + 1 &&
                             returnedShop != null && returnedShop != shop && returnedShop.StockAt(0) == 30,
                             "복귀 후 같은 가방·지갑과 새 지역 상점 재고");
                         Debug.Log("VILLAGE_SHOP_PLAYMODE_PASS game=main route=walk buy=pass sell=pass return=pass");
