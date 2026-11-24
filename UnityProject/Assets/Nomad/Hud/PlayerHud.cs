@@ -95,7 +95,7 @@ namespace Nomad.Hud
                 weaponText.font = weaponFont;
                 attackStatusText.font = weaponFont;
                 potionText.font = weaponFont;
-                chargeLabel.font = chargeHint.font = weaponFont;
+                chargeLabel.font = weaponFont;
             }
 
             SetResources(0, 0, 0, 0);
@@ -148,7 +148,7 @@ namespace Nomad.Hud
                 ItemDefinition weapon = combat.CurrentWeapon;
                 int requiredMana = weapon?.AttackMode == WeaponAttackMode.Staff ? weapon.ManaCost : 0;
                 int availableMana = mana != null ? Mathf.FloorToInt(mana.Current) : 0;
-                if (requiredMana != shownRequiredMana || availableMana != shownAvailableMana || attackStatusText.text.StartsWith("차징"))
+                if (requiredMana != shownRequiredMana || availableMana != shownAvailableMana || attackStatusText.text.Length == 0)
                 {
                     shownRequiredMana = requiredMana;
                     shownAvailableMana = availableMana;
@@ -158,7 +158,7 @@ namespace Nomad.Hud
                 }
                 if (combat.IsCharging)
                 {
-                    attackStatusText.text = $"차징 {Mathf.RoundToInt(combat.ChargeProgress * 100)}% · 좌클릭 놓기";
+                    attackStatusText.text = "";
                     attackStatusText.color = Amber;
                 }
                 int arrows = weapon?.AttackMode == WeaponAttackMode.Bow ? combat.ArrowCount : -1;

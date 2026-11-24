@@ -47,8 +47,12 @@ namespace Nomad.Equipment
             ItemDefinition weapon = chargeWeapon;
             float power = 1f + ChargeProgress * 1.5f;
             bool allowed = ChargeAllowed && CurrentWeapon == weapon && !IsOverUi(pointer) && TryGetAim(pointer, out _);
+            if (!allowed || !TryGetAim(pointer, out Vector3 aim)) { CancelCharge(); return false; }
+
+            // 발사 전에 자세를 취소하면 지팡이 손이 원위치로 돌아가 다른 쪽에서 탄이 나가 보입니다.
+            bool fired = TryFire(weapon, aim, power);
             CancelCharge();
-            if (!allowed || !TryGetAim(pointer, out Vector3 aim) || !TryFire(weapon, aim, power)) return false;
+            if (!fired) return false;
             AimPoint = aim;
             Attacked?.Invoke(weapon.AttackMode);
             return true;

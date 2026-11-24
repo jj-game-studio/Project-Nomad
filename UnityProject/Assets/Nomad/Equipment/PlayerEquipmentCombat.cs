@@ -66,7 +66,11 @@ namespace Nomad.Equipment
         }
         public bool IsMeleePending => pendingWeapon != null;
         public Vector3 AttackOrigin => transform.position + Vector3.up;
-        public Vector3 ProjectileOrigin => muzzle != null ? muzzle.position : AttackOrigin;
+        internal Transform StaffMuzzle { get; set; }
+        internal Vector3? PosedStaffOffset { get; set; }
+        public Vector3 ProjectileOrigin => CurrentWeapon?.AttackMode == WeaponAttackMode.Staff && StaffMuzzle != null
+            ? PosedStaffOffset.HasValue ? transform.position + PosedStaffOffset.Value : StaffMuzzle.position
+            : muzzle != null ? muzzle.position : AttackOrigin;
         public LayerMask CollisionLayers => collisionLayers;
         public ItemDefinition CurrentWeapon => equipment.ActiveWeapon != null ? equipment.ActiveWeapon : unarmedDefinition;
         public int ArrowCount => inventory != null ? inventory.GetCount(ArrowItemId) : 0;
@@ -228,7 +232,7 @@ namespace Nomad.Equipment
                 return false;
 
             Projectile shot = bow ? arrowProjectile : projectile;
-            if (!Projectile.TryLaunch(shot, transform, muzzle.position, aim, collisionLayers, 45f,
+            if (!Projectile.TryLaunch(shot, transform, ProjectileOrigin, aim, collisionLayers, 45f,
                     weapon.AttackRange, Mathf.Max(1, Mathf.RoundToInt(Damage(weapon) * power)), point => NotifyRangedImpact(point, weapon, power), out Projectile launched))
                 return false;
 

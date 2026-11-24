@@ -5,7 +5,16 @@ namespace Nomad.Equipment
 {
     public sealed partial class EquipmentCombatVisuals
     {
-        private LineRenderer chargeRing;
+        private ChargeGatherVfx chargeGather;
+        private Transform staffMuzzle;
+
+        private void LateUpdate()
+        {
+            // IK와 상체 방향 보정 후 실제 그려질 지팡이 위치를 보관합니다.
+            // 다음 프레임 애니메이터가 자세를 갱신하는 도중의 임시 위치에서 발사하지 않습니다.
+            if (staffMuzzle != null && combat.CurrentWeapon?.AttackMode == WeaponAttackMode.Staff)
+                combat.PosedStaffOffset = staffMuzzle.position - transform.position;
+        }
 
         private static WeaponVfxStyle RangedStyle(ItemDefinition weapon, float power)
         {
@@ -16,29 +25,17 @@ namespace Nomad.Equipment
                 style.Size * Mathf.Lerp(0.55f, 1.75f, charge));
         }
 
-        private void UpdateChargeVisual(ItemDefinition weapon)
+        private void ConfigureStaffMuzzle(ItemDefinition weapon)
         {
-            if (chargeRing == null)
-            {
-                chargeRing = Line("Charge Focus Ring", Color.white, 0.04f);
-                chargeRing.sharedMaterial = WeaponVfx.Beam;
-                chargeRing.positionCount = 33;
-            }
-            chargeRing.enabled = combat.IsCharging;
-            if (!combat.IsCharging) return;
+            if (weapon.AttackMode != WeaponAttackMode.Staff) return;
+            MeshFilter mesh = weaponModel.GetComponentInChildren<MeshFilter>();
+            if (mesh == null || mesh.sharedMesh == null) return;
 
-            float progress = combat.ChargeProgress;
-            WeaponVfxStyle style = RangedStyle(weapon, 1f + progress * 1.5f);
-            chargeRing.startColor = chargeRing.endColor = style.Glow;
-            chargeRing.widthMultiplier = 0.03f + progress * 0.07f;
-            Quaternion facing = Quaternion.LookRotation(direction);
-            float radius = 0.18f + progress * 0.28f + Mathf.Sin(Time.time * 18f) * progress * 0.03f;
-
-            for (int index = 0; index <= 32; index++)
-            {
-                float angle = index / 32f * Mathf.PI * 2 * Mathf.Max(0.05f, progress) + Time.time * 3f;
-                chargeRing.SetPosition(index, combat.ProjectileOrigin + facing * new Vector3(Mathf.Cos(angle), Mathf.Sin(angle), 0) * radius);
-            }
+            // 장착한 지팡이의 실제 끝을 따릅니다. 손 모션·무기 회전에 맞춰 함께 움직입니다.
+            Bounds bounds = mesh.sharedMesh.bounds;
+            staffMuzzle = new GameObject("Staff Tip Muzzle").transform;
+            staffMuzzle.SetParent(mesh.transform, false);
+            staffMuzzle.localPosition = new Vector3(bounds.center.x, bounds.max.y - 0.03f, bounds.center.z);
         }
 
         private void RangedImpact(Vector3 point, ItemDefinition weapon, float power)

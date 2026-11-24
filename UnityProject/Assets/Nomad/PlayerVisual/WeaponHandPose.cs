@@ -25,9 +25,9 @@ namespace Nomad.PlayerVisual
             Vector3 origin = Owner.transform.position;
             Quaternion facing = Owner.AttackFacing;
             Vector3 left = mode == WeaponAttackMode.Bow ? new Vector3(-0.15f, 1.38f, 0.55f) :
-                mode == WeaponAttackMode.Staff ? new Vector3(-0.24f, 1.3f, 0.5f) : new Vector3(-0.04f, 1.3f, 0.45f);
+                mode == WeaponAttackMode.Staff ? new Vector3(-0.24f, 1f, 0.12f) : new Vector3(-0.04f, 1.3f, 0.45f);
             Vector3 right = mode == WeaponAttackMode.Bow ? new Vector3(0.14f, 1.38f, 0.04f) :
-                mode == WeaponAttackMode.Staff ? new Vector3(0.28f, 1f, 0.2f) : new Vector3(0.17f, 1.35f, 0.44f);
+                mode == WeaponAttackMode.Staff ? new Vector3(0.24f, 1.36f, 0.52f) : new Vector3(0.17f, 1.35f, 0.44f);
             animator.SetIKPosition(AvatarIKGoal.LeftHand, origin + facing * left);
             animator.SetIKPosition(AvatarIKGoal.RightHand, origin + facing * right);
             animator.SetIKHintPosition(AvatarIKHint.LeftElbow, origin + facing * new Vector3(-0.45f, 1.15f, 0.22f));

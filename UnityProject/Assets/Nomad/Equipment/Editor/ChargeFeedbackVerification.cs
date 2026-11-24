@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Nomad.Game;
 using Nomad.Hud;
@@ -32,6 +33,7 @@ namespace Nomad.Equipment.Editor
         private static double deadline;
 
         private static string unexpectedError;
+        private static readonly List<InputDevice> mutedDevices = new();
 
         public static void Run()
         {
@@ -57,8 +59,13 @@ namespace Nomad.Equipment.Editor
         {
             try
             {
-                Require(EditorApplication.timeSinceStartup < deadline, "차징 화면 검증 시간 초과 stage=" + stage);
+                Require(EditorApplication.timeSinceStartup < deadline, $"차징 화면 검증 시간 초과 stage={stage} charging={combat?.IsCharging} progress={combat?.ChargeProgress} gauge={hud?.ChargeFraction} scale={Time.timeScale}");
                 Require(unexpectedError == null, "Unity 오류: " + unexpectedError);
+                if (EditorApplication.isPaused)
+                {
+                    Debug.LogWarning("CHARGE_VERIFY_ENVIRONMENT: 전용 배치 Editor의 일시정지를 해제합니다.");
+                    EditorApplication.isPaused = false;
+                }
                 if (!Application.isPlaying || Time.frameCount <= frame) return;
                 frame = Time.frameCount;
                 GameManager manager = GameManager.Instance;
@@ -71,8 +78,16 @@ namespace Nomad.Equipment.Editor
                     InputSystem.settings.editorInputBehaviorInPlayMode = InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
                     mouse = InputSystem.AddDevice<Mouse>();
                     mouse.MakeCurrent();
+                    // 다른 Editor에서 사람이 조작해도 이 배치 검증의 가상 입력을 빼앗지 않게 합니다.
+                    foreach (InputDevice device in InputSystem.devices.Where(device => device != mouse && (device is Mouse || device is Keyboard)).ToArray())
+                    {
+                        InputSystem.DisableDevice(device);
+                        mutedDevices.Add(device);
+                    }
+                    mouse.MakeCurrent();
 
                     combat = manager.Player.GetComponent<PlayerEquipmentCombat>();
+                    combat.Fired += VerifyStaffShot;
                     inventory = manager.Player.GetComponent<PlayerInventory>();
                     equipment = manager.Player.GetComponent<PlayerEquipment>();
                     hud = manager.Player.GetComponentInChildren<PlayerHud>();
@@ -127,9 +142,11 @@ namespace Nomad.Equipment.Editor
                 }
                 if (stage == 4)
                 {
+                    Require(combat.IsCharging, "검토용 좌클릭 유지 중 차징 취소됨 currentMouse=" + Mouse.current?.name);
                     // Editor update는 HUD LateUpdate보다 먼저 올 수 있으므로 그리기 완료까지 기다립니다.
-                    if (combat.ChargeProgress < 1 || hud.ChargeFraction < 1 || frame < changedFrame + 35) return;
+                    if (combat.ChargeProgress < 1 || hud.ChargeFraction < 0.999f || frame < changedFrame + 35) return;
                     Require(hud.ChargeGaugeVisible, "완충 게이지");
+                    Require(combat.GetComponentInChildren<ChargeGatherVfx>().ParticleCount > 10, "차징 주변 입자 축적");
                     Capture("full");
                     InputSystem.QueueStateEvent(mouse, new MouseState { position = pointer });
                     changedFrame = frame;
@@ -147,6 +164,17 @@ namespace Nomad.Equipment.Editor
         }
 
         private static void Capture(string state) => Nomad.Minimap.Editor.MinimapVerification.Capture("issue210-main-" + weaponIndex + "-" + state + ".png");
+        private static void VerifyStaffShot(Nomad.Combat.Projectile shot, ItemDefinition weapon)
+        {
+            if (weapon.AttackMode != WeaponAttackMode.Staff) return;
+            Transform tip = combat.GetComponent<EquipmentCombatVisuals>().WeaponModel.GetComponentsInChildren<Transform>()
+                .Single(node => node.name == "Staff Tip Muzzle");
+            Transform right = combat.GetComponentInChildren<Animator>().GetBoneTransform(HumanBodyBones.RightHand);
+            Require(tip.IsChildOf(right) && Vector3.Distance(shot.transform.position, combat.ProjectileOrigin) < 0.01f,
+                "실제 마법탄은 마지막으로 표시한 오른손 지팡이 끝에서 발사");
+            if (combat.LastShotPower > 1.1f)
+                Require(combat.IsCharging, "차징 자세를 해제하기 전에 지팡이 끝에서 발사");
+        }
         private static void OnLog(string message, string trace, LogType type)
         {
             if (type == LogType.Exception && trace.Contains("UnityEditor.Search.SearchDatabase") && !trace.Contains("Nomad.")) return;
@@ -159,6 +187,9 @@ namespace Nomad.Equipment.Editor
             EditorApplication.update -= Tick;
             Application.logMessageReceived -= OnLog;
             if (mouse != null) InputSystem.RemoveDevice(mouse);
+            if (combat != null) combat.Fired -= VerifyStaffShot;
+            foreach (InputDevice device in mutedDevices) InputSystem.EnableDevice(device);
+            mutedDevices.Clear();
             EditorApplication.Exit(code);
         }
     }

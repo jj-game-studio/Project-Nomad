@@ -7,6 +7,7 @@ using UnityEngine.InputSystem;
 namespace Nomad.Equipment
 {
     [RequireComponent(typeof(PlayerEquipmentCombat))]
+    [DefaultExecutionOrder(200)]
     public sealed partial class EquipmentCombatVisuals : MonoBehaviour
     {
         private sealed class Effect
@@ -18,6 +19,8 @@ namespace Nomad.Equipment
 
         private readonly List<Effect> effects = new();
         private PlayerEquipmentCombat combat;
+        private PlayerEquipment equipment;
+        private Transform weaponSocket;
         private LineRenderer rangeLine;
         private readonly Dictionary<Color, Material> materials = new();
         private Vector3 direction = Vector3.forward;
@@ -27,7 +30,19 @@ namespace Nomad.Equipment
         private float slashUntil;
 
         // 외형 모듈이 제공할 때만 손 뼈를 사용하며 기존 캡슐 플레이어는 기존 배치를 유지합니다.
-        public Transform WeaponSocket { get; set; }
+        public Transform WeaponSocket
+        {
+            get => weaponSocket;
+            set
+            {
+                if (weaponSocket == value) return;
+                weaponSocket = value;
+                if (value == null || weaponModel == null) return;
+                weaponModel.transform.SetParent(value, false);
+                weaponModel.transform.localPosition = Vector3.zero;
+                weaponModel.transform.localRotation = displayedWeapon.EquippedVisual.transform.localRotation;
+            }
+        }
         public GameObject WeaponModel => weaponModel;
         public bool ShowRange { get; set; }
         public LineRenderer RangeLine => rangeLine;
@@ -36,12 +51,19 @@ namespace Nomad.Equipment
         private void Awake()
         {
             combat = GetComponent<PlayerEquipmentCombat>();
+            equipment = GetComponent<PlayerEquipment>();
             rangeLine = Line("Attack Range", new Color(0.2f, 0.9f, 0.8f), 0.035f);
             rangeLine.enabled = false;
+            var gathering = new GameObject("Charge Gathering");
+            gathering.transform.SetParent(transform, false);
+            chargeGather = gathering.AddComponent<ChargeGatherVfx>();
+            chargeGather.Configure(combat);
         }
 
         private void OnEnable()
         {
+            chargeGather.enabled = true;
+            equipment.Changed += RefreshWeapon;
             combat.Attacked += Attack;
             combat.Fired += Fire;
             combat.WeaponImpacted += Impact;
@@ -51,10 +73,13 @@ namespace Nomad.Equipment
         private void OnDisable()
         {
             combat.Attacked -= Attack;
+            equipment.Changed -= RefreshWeapon;
             combat.Fired -= Fire;
             combat.WeaponImpacted -= Impact;
             combat.RangedImpacted -= RangedImpact;
-            if (chargeRing != null) chargeRing.enabled = false;
+            chargeGather.enabled = false;
+            combat.StaffMuzzle = null;
+            combat.PosedStaffOffset = null;
             rangeLine.enabled = false;
             foreach (Effect effect in effects) Destroy(effect.Line.gameObject);
             effects.Clear();
@@ -73,8 +98,7 @@ namespace Nomad.Equipment
             }
 
             ItemDefinition weapon = combat.CurrentWeapon;
-            UpdateChargeVisual(weapon);
-            UpdateWeaponModel(weapon);
+            RefreshWeapon();
             rangeLine.enabled = ShowRange && weapon != null;
             if (rangeLine.enabled)
             {
@@ -116,11 +140,21 @@ namespace Nomad.Equipment
             }
         }
 
+        private void RefreshWeapon()
+        {
+            ItemDefinition weapon = combat.CurrentWeapon;
+            UpdateWeaponModel(weapon);
+            combat.StaffMuzzle = weapon?.AttackMode == WeaponAttackMode.Staff ? staffMuzzle : null;
+        }
+
         private void UpdateWeaponModel(ItemDefinition weapon)
         {
             if (displayedWeapon != weapon)
             {
                 displayedWeapon = weapon;
+                staffMuzzle = null;
+                combat.StaffMuzzle = null;
+                combat.PosedStaffOffset = null;
                 slashUntil = 0f;
                 if (weaponModel != null)
                 {
@@ -135,6 +169,7 @@ namespace Nomad.Equipment
                     // 원본 배치용 콜라이더는 장착 외형의 물리 판정에 참여하지 않습니다.
                     foreach (Collider collider in weaponModel.GetComponentsInChildren<Collider>(true))
                         collider.enabled = false;
+                    ConfigureStaffMuzzle(weapon);
                 }
             }
 
@@ -226,8 +261,8 @@ namespace Nomad.Equipment
             }
             else if (mode == WeaponAttackMode.Staff && styled)
             {
-                // 지팡이 끝에서 작은 마법 섬광이 터집니다. 날아가는 탄은 Fire에서 붙입니다.
-                WeaponVfx.Burst(combat.ProjectileOrigin, RangedStyle(weapon, combat.LastShotPower), 0.25f);
+                // 시전 섬광도 Fire의 실제 발사 위치에서 생성합니다.
+                return;
             }
             else
             {
@@ -260,7 +295,8 @@ namespace Nomad.Equipment
             else if (weapon.AttackMode == WeaponAttackMode.Bow)
                 ArrowShotVfx.Attach(projectile.transform, style, power);
 
-            if (power > 1.1f) WeaponVfx.Burst(combat.ProjectileOrigin, style, 0.5f);
+            if (weapon.AttackMode == WeaponAttackMode.Staff || power > 1.1f)
+                WeaponVfx.Burst(projectile.transform.position, style, power > 1.1f ? 0.5f : 0.25f);
         }
 
         private void Impact(Vector3 point, ItemDefinition weapon)

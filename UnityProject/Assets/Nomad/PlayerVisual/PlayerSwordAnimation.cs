@@ -18,6 +18,7 @@ namespace Nomad.PlayerVisual
 
         private PlayerMovement movement;
         private PlayerEquipmentCombat combat;
+        private PlayerEquipment equipment;
         private EquipmentCombatVisuals visuals;
         private Animator animator;
         private Health health;
@@ -46,6 +47,7 @@ namespace Nomad.PlayerVisual
             visualRoot = transform.Find("Visual");
             if (visualRoot != null) restingRotation = visualRoot.localRotation;
             combat = GetComponent<PlayerEquipmentCombat>();
+            equipment = GetComponent<PlayerEquipment>();
             visuals = GetComponent<EquipmentCombatVisuals>();
             animator = GetComponentInChildren<Animator>();
             if (animator == null || !animator.isHuman || visuals == null || combat == null)
@@ -73,6 +75,7 @@ namespace Nomad.PlayerVisual
 
         private void OnEnable()
         {
+            if (equipment != null) equipment.Changed += SelectSocket;
             if (combat != null)
             {
                 combat.MeleeStarted += Attack;
@@ -86,6 +89,7 @@ namespace Nomad.PlayerVisual
 
         private void OnDisable()
         {
+            if (equipment != null) equipment.Changed -= SelectSocket;
             if (combat != null)
             {
                 combat.MeleeStarted -= Attack;
@@ -96,6 +100,12 @@ namespace Nomad.PlayerVisual
             }
             if (visuals != null && (visuals.WeaponSocket == socket || visuals.WeaponSocket == bowSocket)) visuals.WeaponSocket = null;
             Stop();
+        }
+
+        private void SelectSocket()
+        {
+            if (visuals != null)
+                visuals.WeaponSocket = combat.CurrentWeapon?.AttackMode == WeaponAttackMode.Bow && bowSocket != null ? bowSocket : socket;
         }
 
         public float GetWindup(ItemDefinition weapon) =>
@@ -139,7 +149,7 @@ namespace Nomad.PlayerVisual
                 Vector3 direction = Vector3.ProjectOnPlane(combat.AimPoint.Value - combat.AttackOrigin, Vector3.up);
                 if (direction.sqrMagnitude > 0.001f) attackFacing = Quaternion.LookRotation(direction);
             }
-            visuals.WeaponSocket = combat.CurrentWeapon?.AttackMode == WeaponAttackMode.Bow && bowSocket != null ? bowSocket : socket;
+            SelectSocket();
             if ((swinging && combat.CurrentWeapon != animatedWeapon) || movement.IsRolling ||
                 !combat.isActiveAndEnabled || combat.InputBlocked || combat.EquipmentUiOpen || health.IsDead ||
                 inventory?.BlocksTradeInput == true)

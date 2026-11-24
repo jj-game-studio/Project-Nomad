@@ -9,19 +9,17 @@ namespace Nomad.Hud
         private RectTransform chargeGauge;
         private RectTransform chargeFill;
         private TMP_Text chargeLabel;
-        private TMP_Text chargeHint;
         public bool ChargeGaugeVisible => chargeGauge != null && chargeGauge.gameObject.activeInHierarchy;
         public float ChargeFraction => chargeFill == null ? 0 : chargeFill.anchorMax.x;
 
         private void BuildChargeGauge()
         {
-            chargeGauge = Rect("Charge Gauge", root.transform, new Vector2(360, 80));
+            chargeGauge = Rect("Charge Gauge", root.transform, new Vector2(250, 30));
             chargeGauge.anchorMin = chargeGauge.anchorMax = new Vector2(0.5f, 0);
             chargeGauge.anchoredPosition = new Vector2(0, 265);
-            Surface("Charge Panel", chargeGauge, new Vector2(360, 80));
+            Surface("Charge Panel", chargeGauge, new Vector2(250, 30));
 
-            chargeLabel = Label("Charge Amount", chargeGauge, "", new Vector2(340, 25), new Vector2(0, 23), 19);
-            RectTransform track = Rect("Charge Track", chargeGauge, new Vector2(320, 18));
+            RectTransform track = Rect("Charge Track", chargeGauge, new Vector2(180, 16), new Vector2(-25, 0));
             Image background = track.gameObject.AddComponent<Image>();
             background.color = new Color32(43, 49, 57, 255);
             background.raycastTarget = false;
@@ -34,7 +32,7 @@ namespace Nomad.Hud
             fill.color = Amber;
             fill.raycastTarget = false;
 
-            chargeHint = Label("Charge Controls", chargeGauge, "좌클릭 놓아 발사 · 우클릭 약공격", new Vector2(340, 22), new Vector2(0, -24), 14);
+            chargeLabel = Label("Charge Amount", chargeGauge, "", new Vector2(40, 24), new Vector2(100, 0), 14);
             chargeGauge.gameObject.SetActive(false);
         }
 
@@ -47,8 +45,8 @@ namespace Nomad.Hud
             chargeFill.anchorMax = new Vector2(fraction, 1);
             bool full = fraction >= 1;
             chargeFill.GetComponent<Image>().color = full ? new Color(1f, 0.92f, 0.45f) : Amber;
-            chargeLabel.text = full ? "완충! · 놓아서 강력한 공격" : $"차징 {Mathf.RoundToInt(fraction * 100)}% · 이동 속도 45%";
-            chargeLabel.color = full ? Amber : Color.white;
+            chargeLabel.text = $"{Mathf.RoundToInt(fraction * 100)}%";
+            chargeLabel.color = Color.white;
         }
     }
 }

@@ -139,6 +139,9 @@ namespace Nomad.Tests
                     yield return null;
                     Assert.That(combat.IsCharging, Is.True, "완충 뒤에도 놓기 전에는 유지");
                     Assert.That(hud.ChargeFraction, Is.EqualTo(1f), "완충 게이지");
+                    var gauge = hud.Canvas.GetComponentsInChildren<TMPro.TMP_Text>().Where(label => label.transform.parent.name == "Charge Gauge").ToArray();
+                    Assert.That(gauge.Length, Is.EqualTo(1), "게이지 설명 제거");
+                    Assert.That(gauge[0].text, Is.EqualTo("100%"), "충전량만 표시");
                     Nomad.Minimap.Editor.MinimapVerification.Capture("issue210-charge-" + combat.CurrentWeapon.AttackMode + ".png");
 
                     movement.enabled = true;
@@ -149,6 +152,13 @@ namespace Nomad.Tests
                     for (int frame = 0; frame < 20; frame++) yield return null;
                     float slowDistance = Vector3.ProjectOnPlane(movement.transform.position - slowStart, Vector3.up).magnitude;
 
+                    var gathering = combat.GetComponentInChildren<ChargeGatherVfx>();
+                    Assert.That(gathering.ParticleCount, Is.GreaterThan(0), "주변 차징 입자 표시");
+                    var particleBuffer = new ParticleSystem.Particle[128];
+                    int particleCount = gathering.GetComponentInChildren<ParticleSystem>().GetParticles(particleBuffer);
+                    Assert.That(particleBuffer.Take(particleCount).Any(particle => particle.position.magnitude < 0.1f), Is.True, "입자가 중심에 쌓임");
+                    Assert.That(Vector3.Distance(gathering.transform.position, combat.ProjectileOrigin), Is.LessThan(0.1f), "입자가 실제 발사 위치에 모임");
+
                     InputSystem.QueueStateEvent(mouse, new MouseState { position = pointer });
                     yield return null;
                     yield return null;
@@ -156,6 +166,7 @@ namespace Nomad.Tests
                     Assert.That(combat.LastShotPower, Is.EqualTo(2.5f));
                     Assert.That(hud.ChargeGaugeVisible, Is.False, "발사 후 게이지 숨김");
                     Assert.That(movement.ChargeSpeedMultiplier, Is.EqualTo(1f), "발사 후 감속 복원");
+                    Assert.That(gathering.ParticleCount, Is.Zero, "발사 후 차징 입자 정리");
                     if (combat.CurrentWeapon.AttackMode == WeaponAttackMode.Bow)
                         Assert.That(Object.FindObjectsByType<ArrowShotVfx>(FindObjectsSortMode.None).Any(effect => effect.Charged), Is.True, "차징 화살 전용 궤적");
                     Vector3 normalStart = movement.transform.position;
