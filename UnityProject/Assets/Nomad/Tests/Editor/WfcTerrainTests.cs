@@ -8,6 +8,112 @@ namespace Nomad.Tests
     public sealed class WfcTerrainTests
     {
         [Test]
+        public void OuterForestExtendsGroundWithoutAddingNavigationColliders()
+        {
+            var owner = new GameObject("Outer forest fixture");
+            var data = new TerrainData { heightmapResolution = 33, size = new Vector3(18, 4, 18) };
+            var texture = new Texture2D(1, 1);
+            var layer = new TerrainLayer { diffuseTexture = texture };
+            data.terrainLayers = new[] { layer };
+            var ground = UnityEngine.Terrain.CreateTerrainGameObject(data);
+            ground.transform.position = new Vector3(1000, 0, 1000);
+            var tree = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            var set = ScriptableObject.CreateInstance<FieldDressingSet>();
+            set.trees = new[] { tree };
+            var dressing = owner.AddComponent<FieldDressing>();
+
+            try
+            {
+                var root = new GameObject("FieldDressing");
+                root.transform.SetParent(owner.transform);
+                TestKit.SetField(dressing, "root", root);
+                TestKit.SetField(dressing, "ground", ground.GetComponent<UnityEngine.Terrain>());
+                typeof(FieldDressing).GetMethod("PlaceOuterForest", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                    .Invoke(dressing, new object[] { set, 8080 });
+                Transform forest = root.transform.Find("Outer Forest");
+                Assert.That(forest, Is.Not.Null);
+                Assert.That(dressing.OuterTreeCount, Is.GreaterThan(100));
+                Assert.That(forest.GetComponentsInChildren<Collider>(), Is.Empty, "장식 숲은 내부 경로용 충돌을 늘리지 않음");
+                int patches = 0;
+                Bounds bounds = default;
+                foreach (Transform child in forest)
+                {
+                    if (child.name != "Forest Ground") continue;
+                    Bounds patch = child.GetComponent<MeshRenderer>().bounds;
+                    if (patches++ == 0) bounds = patch;
+                    else bounds.Encapsulate(patch);
+                    Vector3 center = patch.center;
+                    Assert.That(center.x < 1000 || center.x > 1018 || center.z < 1000 || center.z > 1018, Is.True);
+                }
+                Assert.That(patches, Is.EqualTo(4));
+                Assert.That(bounds.min.x, Is.EqualTo(982).Within(0.01f));
+                Assert.That(bounds.max.z, Is.EqualTo(1036).Within(0.01f));
+                dressing.Clear();
+                Assert.That(dressing.OuterTreeCount, Is.Zero);
+                Assert.That(root == null, Is.True, "재생성 때 이전 외곽 숲도 정리");
+            }
+            finally
+            {
+                Object.DestroyImmediate(owner);
+                Object.DestroyImmediate(ground);
+                Object.DestroyImmediate(data);
+                Object.DestroyImmediate(layer);
+                Object.DestroyImmediate(texture);
+                Object.DestroyImmediate(tree);
+                Object.DestroyImmediate(set);
+            }
+        }
+
+        [Test]
+        public void SavedVillageBoundaryBlocksAirborneTravelAndKeepsExitApproachOpen()
+        {
+            var scene = UnityEditor.SceneManagement.EditorSceneManager.OpenScene("Assets/Nomad/Village/Village.unity",
+                UnityEditor.SceneManagement.OpenSceneMode.Additive);
+            GameObject copy = null;
+            var player = new GameObject("Boundary player");
+            try
+            {
+                Transform boundary = null;
+                foreach (GameObject root in scene.GetRootGameObjects())
+                    if (root.name == "Village") boundary = root.transform.Find("Invisible Boundary");
+                Assert.That(boundary, Is.Not.Null, "실제 저장 마을에 투명 경계 존재");
+                copy = Object.Instantiate(boundary.gameObject, new Vector3(1000, 0, 1000), Quaternion.identity);
+                Assert.That(copy.GetComponentsInChildren<Renderer>(), Is.Empty);
+                Assert.That(copy.GetComponentsInChildren<BoxCollider>().Length, Is.EqualTo(8));
+                var body = player.AddComponent<CharacterController>();
+                body.height = 1.8f;
+                body.radius = 0.35f;
+                body.center = Vector3.up * 0.9f;
+
+                foreach (Vector3 direction in new[] { Vector3.forward, Vector3.right, Vector3.left })
+                foreach (float height in new[] { 1.6f, 8f })
+                {
+                    body.enabled = false;
+                    player.transform.position = copy.transform.position + direction * 31f + Vector3.up * height;
+                    body.enabled = true;
+                    Physics.SyncTransforms();
+                    for (int step = 0; step < 70; step++) body.Move(direction * 0.1f);
+                    Assert.That(Vector3.Dot(player.transform.position - copy.transform.position, direction), Is.LessThan(34f));
+                }
+
+                body.enabled = false;
+                player.transform.position = copy.transform.position + new Vector3(0, 0.1f, -32);
+                body.enabled = true;
+                Physics.SyncTransforms();
+                for (int step = 0; step < 40; step++) body.Move(Vector3.back * 0.1f);
+                Assert.That(player.transform.position.z - copy.transform.position.z, Is.LessThan(-35.5f), "정상 출구 트리거까지 접근 가능");
+                for (int step = 0; step < 50; step++) body.Move(Vector3.back * 0.1f);
+                Assert.That(player.transform.position.z - copy.transform.position.z, Is.GreaterThan(-38f), "출구 뒤로 이탈 불가");
+            }
+            finally
+            {
+                Object.DestroyImmediate(player);
+                if (copy != null) Object.DestroyImmediate(copy);
+                UnityEditor.SceneManagement.EditorSceneManager.CloseScene(scene, true);
+            }
+        }
+
+        [Test]
         public void BoundaryWallCollider_BlocksAirbornePlayer_WithoutRaisingInteriorWalls()
         {
             var owner = new GameObject("Boundary regression");

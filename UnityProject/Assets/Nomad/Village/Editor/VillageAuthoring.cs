@@ -31,6 +31,7 @@ namespace Nomad.Village.Editor
             CreatePlaza(root);
             CreateBuildings(root);
             CreateFence(root);
+            CreateBoundary(root);
             CreateFieldEntrance(root);
             CreateNature(root);
 
@@ -190,6 +191,41 @@ namespace Nomad.Village.Editor
                 if (Mathf.Abs(t) > GateHalfWidth + length * 0.5f)
                     Place(piece, fence, new Vector3(t, 0f, -Half), 0f, true, false);
             }
+        }
+
+        // 저장된 마을의 다른 배치를 재생성하지 않고 경계만 갱신합니다.
+        public static void UpdateBoundary()
+        {
+            Scene scene = EditorSceneManager.OpenScene(ScenePath);
+            CreateBoundary(GameObject.Find("Village").transform);
+            EditorSceneManager.SaveScene(scene);
+        }
+
+        private static void CreateBoundary(Transform root)
+        {
+            Transform previous = root.Find("Invisible Boundary");
+            if (previous != null) Object.DestroyImmediate(previous.gameObject);
+            Transform boundary = Group(root, "Invisible Boundary");
+
+            AddBoundaryWall(boundary, "North", new Vector3(0, 0, Half), new Vector3(70, 24, 1));
+            AddBoundaryWall(boundary, "West", new Vector3(-Half, 0, 0), new Vector3(1, 24, 70));
+            AddBoundaryWall(boundary, "East", new Vector3(Half, 0, 0), new Vector3(1, 24, 70));
+            float span = Half - GateHalfWidth;
+            AddBoundaryWall(boundary, "South West", new Vector3(-(Half + GateHalfWidth) / 2, 0, -Half), new Vector3(span, 24, 1));
+            AddBoundaryWall(boundary, "South East", new Vector3((Half + GateHalfWidth) / 2, 0, -Half), new Vector3(span, 24, 1));
+
+            // 남쪽 출구 트리거(-35.5m)까지는 열고, 그 뒤와 양옆은 막습니다.
+            AddBoundaryWall(boundary, "Gate End", new Vector3(0, 0, -Half - 4), new Vector3(9, 24, 1));
+            AddBoundaryWall(boundary, "Gate West", new Vector3(-GateHalfWidth, 0, -Half - 2), new Vector3(1, 24, 4));
+            AddBoundaryWall(boundary, "Gate East", new Vector3(GateHalfWidth, 0, -Half - 2), new Vector3(1, 24, 4));
+        }
+
+        private static void AddBoundaryWall(Transform parent, string name, Vector3 position, Vector3 size)
+        {
+            var wall = new GameObject(name);
+            wall.transform.SetParent(parent, false);
+            wall.transform.localPosition = position + Vector3.up * (size.y / 2f - 1f);
+            wall.AddComponent<BoxCollider>().size = size;
         }
 
         private static void CreateFieldEntrance(Transform root)

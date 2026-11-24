@@ -411,6 +411,13 @@ namespace Nomad.Game.Tests
                 int potionSlot = FindBagItem(inventory, "health-potion");
                 yield return DragItem(mouse, ScreenCenter((RectTransform)bag.GetChild(potionSlot)), ScreenCenter(quickRects[3]));
                 Assert.That(quick.GetType().GetMethod("GetCount").Invoke(quick, new object[] { 3 }), Is.EqualTo(3), "회복약 드래그 등록·잔량");
+                yield return DragItem(mouse, ScreenCenter(quickRects[0]), ScreenCenter(quickRects[1]));
+                Assert.That(quick.GetType().GetMethod("GetItem").Invoke(quick, new object[] { 0 }), Is.Null, "빈 퀵슬롯으로 이동");
+                yield return DragItem(mouse, ScreenCenter(quickRects[1]), ScreenCenter(quickRects[3]));
+                object swapped = quick.GetType().GetMethod("GetItem").Invoke(quick, new object[] { 1 });
+                Assert.That(swapped.GetType().GetProperty("ItemId").GetValue(swapped), Is.EqualTo("health-potion"), "장비·회복약 퀵슬롯 교환");
+                yield return DragItem(mouse, ScreenCenter(quickRects[3]), ScreenCenter(quickRects[0]));
+                yield return DragItem(mouse, ScreenCenter(quickRects[1]), ScreenCenter(quickRects[3]));
                 yield return PressKey(Key.Digit1);
                 Assert.That(equipment.GetType().GetMethod("GetItem").Invoke(equipment, new[] { body }), Is.Null, "열린 창에서 번호 사용 차단");
 
