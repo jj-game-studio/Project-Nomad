@@ -15,7 +15,7 @@ MonoBehaviour:
   itemId: gear-mithril-greaves
   displayName: "\uBBF8\uC2A4\uB9B4 \uC815\uAC15\uC774\uBC1B\uC774"
   description: "\uACF5\uACA9\uC744 \uD53C\uD560 \uD655\uB960\uC744 \uB192\uC785\uB2C8\uB2E4."
-  icon: {fileID: 21300000, guid: a4d5578dbbb64b34d9d9d709e1ea1372, type: 3}
+  icon: {fileID: 2854712381981838218, guid: bf7c6a6bc43c55f47b90e386aaca50c7, type: 3}
   maxStack: 1
   tier: 4
   equipmentType: 4

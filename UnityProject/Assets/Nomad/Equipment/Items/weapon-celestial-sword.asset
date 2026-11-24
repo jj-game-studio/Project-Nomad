@@ -15,7 +15,7 @@ MonoBehaviour:
   itemId: weapon-celestial-sword
   displayName: "\uC131\uD718 \uAC80"
   description: "\uBCC4\uBE5B\uC774 \uAE43\uB4E0 \uAC80\uC73C\uB85C \uB9E4\uC6B0 \uBE60\uB974\uAC8C \uBCB1\uB2C8\uB2E4."
-  icon: {fileID: 0}
+  icon: {fileID: 2330866738244189442, guid: 191211c9f62bcde4ca2119d09df21b97, type: 3}
   maxStack: 1
   tier: 6
   equipmentType: 1

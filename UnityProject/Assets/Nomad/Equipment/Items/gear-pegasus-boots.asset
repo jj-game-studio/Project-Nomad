@@ -15,7 +15,7 @@ MonoBehaviour:
   itemId: gear-pegasus-boots
   displayName: "\uCC9C\uB9C8 \uC7A5\uD654"
   description: "\uC774\uB3D9\uC18D\uB3C4\uB97C \uB192\uC785\uB2C8\uB2E4."
-  icon: {fileID: 21300000, guid: 1807f48ca9b366c42bc240627c78efd1, type: 3}
+  icon: {fileID: 5902393396461887421, guid: bf7c6a6bc43c55f47b90e386aaca50c7, type: 3}
   maxStack: 1
   tier: 4
   equipmentType: 6

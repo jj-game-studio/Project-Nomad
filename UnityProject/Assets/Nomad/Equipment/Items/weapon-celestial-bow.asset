@@ -15,7 +15,7 @@ MonoBehaviour:
   itemId: weapon-celestial-bow
   displayName: "\uC131\uD718 \uD65C"
   description: "\uBCC4\uBE5B \uD654\uC0B4\uC744 \uBE60\uB974\uAC8C \uC3E9\uB2C8\uB2E4. \uD654\uC0B4 1\uAC1C\uB97C \uC18C\uBAA8\uD569\uB2C8\uB2E4."
-  icon: {fileID: 0}
+  icon: {fileID: -9156558239948448363, guid: 191211c9f62bcde4ca2119d09df21b97, type: 3}
   maxStack: 1
   tier: 6
   equipmentType: 1

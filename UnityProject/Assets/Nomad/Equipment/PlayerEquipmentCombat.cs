@@ -61,7 +61,7 @@ namespace Nomad.Equipment
         }
         public bool EquipmentUiOpen
         {
-            get => equipmentUiOpen;
+            get => equipmentUiOpen || inventory?.Panel?.ConsumedCloseClick == true;
             internal set { equipmentUiOpen = value; if (value) CancelMelee(); }
         }
         public bool IsMeleePending => pendingWeapon != null;

@@ -15,7 +15,7 @@ MonoBehaviour:
   itemId: gear-mithril-cuirass
   displayName: "\uBBF8\uC2A4\uB9B4 \uD749\uAC11"
   description: "\uCD5C\uB300 \uCCB4\uB825\uC744 \uB298\uB9BD\uB2C8\uB2E4."
-  icon: {fileID: 21300000, guid: 9b5261ccf0bf2c14786de5b176ae7cbf, type: 3}
+  icon: {fileID: -5556603633244325958, guid: 191211c9f62bcde4ca2119d09df21b97, type: 3}
   maxStack: 1
   tier: 4
   equipmentType: 3

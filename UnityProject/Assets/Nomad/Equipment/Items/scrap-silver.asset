@@ -15,7 +15,7 @@ MonoBehaviour:
   itemId: scrap-silver
   displayName: "\uC740 \uC7A5\uC2DD"
   description: "\uC624\uB798\uB41C \uC740 \uC7A5\uC2DD\uC785\uB2C8\uB2E4. \uC0C1\uC810\uC5D0 \uD314 \uC218 \uC788\uC2B5\uB2C8\uB2E4."
-  icon: {fileID: 21300000, guid: c9b25715a6ff47d8b39922c12a3bd002, type: 3}
+  icon: {fileID: -472582248316616935, guid: 191211c9f62bcde4ca2119d09df21b97, type: 3}
   maxStack: 99
   tier: 3
   equipmentType: 0

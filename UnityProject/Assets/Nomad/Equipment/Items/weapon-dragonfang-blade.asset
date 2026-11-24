@@ -15,7 +15,7 @@ MonoBehaviour:
   itemId: weapon-dragonfang-blade
   displayName: "\uC6A9\uC544 \uB300\uAC80"
   description: "\uC6A9\uC758 \uC1A1\uACF3\uB2C8\uB85C \uB9CC\uB4E0 \uB300\uAC80\uC785\uB2C8\uB2E4. \uB113\uAC8C \uBCA0\uC5B4 \uB0C5\uB2C8\uB2E4."
-  icon: {fileID: 0}
+  icon: {fileID: 5739570364057737738, guid: 191211c9f62bcde4ca2119d09df21b97, type: 3}
   maxStack: 1
   tier: 5
   equipmentType: 1

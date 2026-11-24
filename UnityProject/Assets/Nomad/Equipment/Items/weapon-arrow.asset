@@ -15,8 +15,9 @@ MonoBehaviour:
   itemId: weapon-arrow
   displayName: "\uD654\uC0B4"
   description: "\uD65C\uC744 \uD55C \uBC88 \uC3E0 \uB54C \uD558\uB098\uC529 \uC18C\uBAA8\uD569\uB2C8\uB2E4."
-  icon: {fileID: 0}
+  icon: {fileID: -2043017983467968750, guid: 191211c9f62bcde4ca2119d09df21b97, type: 3}
   maxStack: 99
+  tier: 0
   equipmentType: 0
   attackPower: 0
   defense: 0
@@ -24,4 +25,5 @@ MonoBehaviour:
   attackRange: 0
   attackInterval: 0
   manaCost: 0
+  stats: []
   equippedVisual: {fileID: 0}

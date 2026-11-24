@@ -15,7 +15,7 @@ MonoBehaviour:
   itemId: weapon-rune-staff
   displayName: "\uB8EC \uC9C0\uD321\uC774"
   description: "\uD55C \uBC1C\uC5D0 \uB9C8\uB098 12\uB97C \uC18C\uBAA8\uD569\uB2C8\uB2E4."
-  icon: {fileID: 0}
+  icon: {fileID: 1185948300060004415, guid: 191211c9f62bcde4ca2119d09df21b97, type: 3}
   maxStack: 1
   tier: 4
   equipmentType: 1

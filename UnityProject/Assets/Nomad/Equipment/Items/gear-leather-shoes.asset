@@ -15,7 +15,7 @@ MonoBehaviour:
   itemId: gear-leather-shoes
   displayName: "\uAC00\uC8FD \uC2E0\uBC1C"
   description: "\uC774\uB3D9\uC18D\uB3C4\uB97C \uB192\uC785\uB2C8\uB2E4."
-  icon: {fileID: 21300000, guid: 45fb229d0b9bf85499653246080842b4, type: 3}
+  icon: {fileID: 5902393396461887421, guid: bf7c6a6bc43c55f47b90e386aaca50c7, type: 3}
   maxStack: 1
   tier: 1
   equipmentType: 6

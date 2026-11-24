@@ -15,7 +15,7 @@ MonoBehaviour:
   itemId: gear-small-backpack
   displayName: "\uC791\uC740 \uBC30\uB0AD"
   description: "\uAC00\uBC29 \uCE78\uC744 4\uCE78 \uB298\uB9BD\uB2C8\uB2E4."
-  icon: {fileID: 21300000, guid: d36578c313fd8e949807411206c9c4ec, type: 3}
+  icon: {fileID: 894945321173968318, guid: bf7c6a6bc43c55f47b90e386aaca50c7, type: 3}
   maxStack: 1
   tier: 2
   equipmentType: 7

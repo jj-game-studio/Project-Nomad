@@ -15,7 +15,7 @@ MonoBehaviour:
   itemId: weapon-shortbow
   displayName: "\uB2E8\uAD81"
   description: "\uAC00\uBC29\uC758 \uD654\uC0B4 1\uAC1C\uB97C \uC18C\uBAA8\uD558\uC5EC \uBE60\uB974\uAC8C \uC3E9\uB2C8\uB2E4."
-  icon: {fileID: 0}
+  icon: {fileID: -2665754087137349719, guid: 191211c9f62bcde4ca2119d09df21b97, type: 3}
   maxStack: 1
   tier: 1
   equipmentType: 1

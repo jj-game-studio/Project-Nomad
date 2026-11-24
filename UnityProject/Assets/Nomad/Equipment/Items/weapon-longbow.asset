@@ -15,7 +15,7 @@ MonoBehaviour:
   itemId: weapon-longbow
   displayName: "\uC7A5\uAD81"
   description: "\uAC00\uBC29\uC758 \uD654\uC0B4 1\uAC1C\uB97C \uC18C\uBAA8\uD558\uC5EC \uBA3C \uAC70\uB9AC\uAE4C\uC9C0 \uC3E9\uB2C8\uB2E4."
-  icon: {fileID: 0}
+  icon: {fileID: -5359319791165874960, guid: 191211c9f62bcde4ca2119d09df21b97, type: 3}
   maxStack: 1
   tier: 3
   equipmentType: 1

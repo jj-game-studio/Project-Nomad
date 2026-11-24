@@ -450,12 +450,15 @@ namespace Nomad.Equipment
             for (int index = 0; index < 10; index++)
             {
                 ItemDefinition item = equipment.GetItem((EquipmentSlot)index);
-                names[index].text = item == null ? "—" : item.Icon == null ? item.DisplayName : string.Empty;
-                icons[index].sprite = item?.Icon;
-                icons[index].enabled = item?.Icon != null;
-                icons[index].color = Color.white;
+                names[index].text = item != null && item.Icon == null ? item.DisplayName : string.Empty;
+                EquipmentType type = index < 2 ? EquipmentType.Weapon : index == 2 ? EquipmentType.Head :
+                    index == 3 ? EquipmentType.Body : index == 4 ? EquipmentType.Legs : index == 5 ? EquipmentType.Feet :
+                    index == 6 ? EquipmentType.Bag : EquipmentType.Accessory;
+                icons[index].sprite = item != null ? item.Icon : ItemUiStyle.Symbol(type);
+                icons[index].enabled = icons[index].sprite != null;
+                icons[index].color = item != null ? Color.white : new Color(1, 1, 1, 0.45f);
                 names[index].color = new Color32(238, 235, 222, 255);
-                backgrounds[index].color = new Color32(37, 55, 74, 255);
+                backgrounds[index].color = ItemUiStyle.SlotFill;
                 // 선택한 무기칸은 금색, 나머지는 장착 장비의 등급 색으로 테두리를 그립니다.
                 borders[index].effectColor = (int)equipment.ActiveWeaponSlot == index ? new Color32(238, 186, 88, 255)
                     : item != null && item.Tier != ItemTier.None ? TierStyle.Color(item.Tier) : new Color32(108, 128, 148, 255);
@@ -491,6 +494,7 @@ namespace Nomad.Equipment
             background.raycastTarget = false;
 
             var title = Text("Title", statsPanel, "스탯", new Vector2(220, 32), new Vector2(0, -26), 23);
+            ItemUiStyle.Frame(statsPanel);
             title.alignment = TextAnchor.MiddleLeft;
             for (int index = 0; index < StatCount; index++)
             {
@@ -554,12 +558,14 @@ namespace Nomad.Equipment
         {
             RectTransform slot = Rect("EquipmentSlot" + index, equipmentGrid, new Vector2(80, 88), Vector2.zero);
             var image = slot.gameObject.AddComponent<UnityEngine.UI.Image>();
+            image.sprite = ItemUiStyle.Rounded;
+            image.type = UnityEngine.UI.Image.Type.Sliced;
             backgrounds[index] = image;
             image.color = new Color32(37, 55, 74, 255);
             borders[index] = slot.gameObject.AddComponent<UnityEngine.UI.Outline>();
             borders[index].effectDistance = new Vector2(1, -1);
             borders[index].useGraphicAlpha = false;
-            var iconRect = Rect("Icon", slot, new Vector2(42, 42), new Vector2(0, -32));
+            var iconRect = Rect("Icon", slot, new Vector2(60, 58), new Vector2(0, -32));
             icons[index] = iconRect.gameObject.AddComponent<UnityEngine.UI.Image>();
             icons[index].preserveAspect = true;
             icons[index].raycastTarget = false;

@@ -137,7 +137,7 @@ namespace Nomad.Equipment
             if (weaponModel == null)
                 return;
 
-            if (WeaponSocket != null && weapon.ItemId == "demo-sword")
+            if (WeaponSocket != null)
             {
                 weaponModel.transform.SetParent(WeaponSocket, false);
                 weaponModel.transform.localPosition = Vector3.zero;

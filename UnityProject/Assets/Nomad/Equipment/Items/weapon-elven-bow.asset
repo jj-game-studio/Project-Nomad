@@ -15,7 +15,7 @@ MonoBehaviour:
   itemId: weapon-elven-bow
   displayName: "\uC5D8\uD504 \uD65C"
   description: "\uAC00\uBCCD\uACE0 \uC815\uD655\uD55C \uD65C\uC785\uB2C8\uB2E4. \uD654\uC0B4 1\uAC1C\uB97C \uC18C\uBAA8\uD569\uB2C8\uB2E4."
-  icon: {fileID: 0}
+  icon: {fileID: -9156558239948448363, guid: 191211c9f62bcde4ca2119d09df21b97, type: 3}
   maxStack: 1
   tier: 4
   equipmentType: 1
