@@ -118,11 +118,10 @@ namespace Nomad.Shop.Editor
                             "상점 열기는 목록만 표시·하단 거래 제거");
                         Canvas.ForceUpdateCanvases();
                         Require(Node("Paper").GetComponent<ShopRoundedRect>().color.grayscale -
-                            Node("Capacity").GetComponent<Text>().color.grayscale > 0.5f &&
-                            Node("Restock").GetComponent<Text>().color.grayscale -
-                            panel.transform.Find("Shop Window").GetComponent<ShopRoundedRect>().color.grayscale > 0.5f &&
-                            Node("Restock").GetComponent<Text>().fontSize >= 14,
-                            "가방 칸 수·재입고 보조 정보 대비와 크기");
+                            Node("Capacity").GetComponent<Text>().color.grayscale > 0.5f,
+                            "가방 칸 수 보조 정보 대비");
+                        Require(Node("Restock") == null && Node("Help") == null && Node("Shop Help") == null,
+                            "재입고 타이머·조작법 도움말 제거");
                         Require(Node("Backpack hint") == null && Node("Keys") == null &&
                             Read("Stock/Content/Slot 0/Price") == "5 G" &&
                             !Node("Backpack/Content/Slot 0/Price").gameObject.activeSelf,
@@ -307,11 +306,11 @@ namespace Nomad.Shop.Editor
                         Queue(Key.F1);
                         break;
                     case 44:
-                        Require(Node("Shop Help").gameObject.activeSelf && !Popup.activeSelf, "F1 기본 화면 도움말 열기");
-                        Queue(Key.Escape);
+                        Require(Node("Shop Help") == null && !Popup.activeSelf, "F1 기본 화면 도움말 없음");
+                        Queue();
                         break;
                     case 45:
-                        Require(!Node("Shop Help").gameObject.activeSelf && panel != null, "Esc는 도움말만 닫기");
+                        Require(Object.FindAnyObjectByType<ShopPanel>() == panel, "F1은 상점 창 유지");
                         Queue();
                         Pointer("Stock/Content/Slot 0", true);
                         break;
@@ -324,15 +323,16 @@ namespace Nomad.Shop.Editor
                         Queue(Key.F1);
                         break;
                     case 48:
-                        Require(Node("Shop Help").gameObject.activeSelf && Popup.activeSelf, "팝업 위 F1 도움말 열기");
-                        Queue(Key.Enter);
+                        Require(Node("Shop Help") == null && Node("Popup Help") == null && Popup.activeSelf,
+                            "팝업 위 F1·도움말 버튼 없음");
+                        Queue();
                         break;
                     case 49:
-                        Require(wallet.Gold == expectedGold, "도움말 뒤 거래 입력 차단");
-                        Queue(Key.Escape);
+                        Require(wallet.Gold == expectedGold, "F1은 거래하지 않음");
+                        Queue();
                         break;
                     case 50:
-                        Require(!Node("Shop Help").gameObject.activeSelf && Popup.activeSelf, "도움말 닫기 후 원래 팝업 유지");
+                        Require(Popup.activeSelf, "F1 뒤 원래 팝업 유지");
                         Queue(Key.Tab);
                         break;
                     case 51:
@@ -349,16 +349,10 @@ namespace Nomad.Shop.Editor
                         break;
                     case 54:
                         Require(!Popup.activeSelf && wallet.Gold == expectedGold, "Enter는 포커스된 취소 실행·구매하지 않음");
-                        Node("Help").GetComponent<Button>().onClick.Invoke();
-                        Capture("shop-help.png");
                         Queue();
                         break;
-                    case 55:
-                        Require(Node("Shop Help").gameObject.activeSelf, "물음표 버튼 도움말 열기");
-                        Node("Shop Help/Card/Close").GetComponent<Button>().onClick.Invoke();
-                        break;
+                    case 55: break;
                     case 56:
-                        Require(!Node("Shop Help").gameObject.activeSelf, "도움말 닫기 버튼");
                         remainingScrap = inventory.GetSlot(0).Count;
                         Pointer("Backpack/Content/Slot 0", true);
                         break;

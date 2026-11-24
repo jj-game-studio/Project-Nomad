@@ -40,7 +40,6 @@ namespace Nomad.Shop
         private RectTransform saleNotification;
         private Text saleNotificationText;
         private float saleNotificationUntil;
-        private RectTransform helpPanel;
         private Selectable[] popupControls;
         private int popupFocus = -1;
         private ItemDefinition popupItem;
@@ -51,10 +50,8 @@ namespace Nomad.Shop
         private Text readiness;
         private Text status;
         private Text capacity;
-        private Text restock;
         private Text balance;
         private Button protection;
-        private int shownRestockSeconds = -1;
         private InputField quantityInput;
         private Button less;
         private Button more;
@@ -130,14 +127,11 @@ namespace Nomad.Shop
             ShopUi.Heading(panel, "Wallet icon", "골드", 840, 32, 48, 34, 18, ShopUi.Canvas);
             gold = ShopUi.Heading(panel, "Gold", "", 889, 31, 96, 36, 25, ShopUi.Canvas);
             gold.alignment = TextAnchor.MiddleRight;
-            ShopUi.Button(panel, "Help", "?", 1030, 29, 42, 40, ToggleHelp);
             ShopUi.Button(panel, "Close", "닫기", 1082, 25, 52, 48, Close);
             ShopUi.Heading(panel, "Player Heading", "내 가방", 28, 122, 340, 32, 23);
             ShopUi.Heading(panel, "Shop Heading", "상점 상품", 602, 122, 370, 32, 23);
             capacity = ShopUi.Label(panel, "Capacity", "", 378, 128, 180, 24, 15, ShopUi.Ink);
             capacity.alignment = TextAnchor.MiddleRight;
-            restock = ShopUi.Label(panel, "Restock", "", 792, 73, 338, 21, 14, Color.white);
-            restock.alignment = TextAnchor.MiddleRight;
 
             string[] groups = { "All", "Materials", "Equipment", "Supplies" };
             string[] groupLabels = { "전체", "재료", "장비", "소모품" };
@@ -152,7 +146,6 @@ namespace Nomad.Shop
             playerSlots = BuildSlots(ShopUi.Grid(panel, "Backpack", 28), PlayerInventory.MaxCapacity, false);
             merchantSlots = BuildSlots(ShopUi.Grid(panel, "Stock", 602, true, shop.Catalog.Count), shop.Catalog.Count, true);
             BuildTradePopup(panel);
-            BuildHelp(panel);
             saleNotification = ShopUi.Rect(panel, "Sale notification", 280, 596, 600, 32);
             ShopUi.Rounded(saleNotification, ShopUi.Forest, 16, 1, ShopUi.Accent).raycastTarget = false;
             saleNotificationText = ShopUi.Label(saleNotification, "Message", "", 12, 0, 576, 32, 16, Color.white);
@@ -168,13 +161,9 @@ namespace Nomad.Shop
             tradePopup = ShopUi.Rect(panel, "Trade Popup", 0, 0, 1160, 630);
             ShopUi.Background(tradePopup, new Color(0.08f, 0.10f, 0.07f, 0.68f));
             RectTransform card = ShopUi.Rect(tradePopup, "Card", 160, 45, 840, 540);
-            tradePopup.gameObject.AddComponent<ShopPopupBackdrop>().Configure(card, () =>
-            {
-                if (!HelpOpen) ClosePopup();
-            });
+            tradePopup.gameObject.AddComponent<ShopPopupBackdrop>().Configure(card, ClosePopup);
             ShopUi.Shadow(ShopUi.Rounded(card, ShopUi.Canvas, 24, 2, ShopUi.Border), 6, 0.25f);
             tradeHeading = ShopUi.Heading(card, "Trade heading", "", 30, 20, 560, 36, 26, ShopUi.GoldInk);
-            ShopUi.Button(card, "Popup Help", "?", 718, 18, 36, 34, ToggleHelp);
             ShopUi.Button(card, "Popup Close", "×", 770, 18, 40, 34, ClosePopup);
             ShopUi.Rounded(ShopUi.Rect(card, "Selected icon frame", 30, 76, 140, 140), ShopUi.Slot, 20, 1);
             selectedIcon = ShopUi.Rect(card, "Selected icon", 42, 88, 116, 116).gameObject.AddComponent<Image>();
@@ -215,29 +204,6 @@ namespace Nomad.Shop
             status = ShopUi.Label(card, "Status", "", 30, 514, 780, 20, 13, ShopUi.GoldInk);
             popupControls = new Selectable[] { buy, sell, cancel, less, quantityInput, more, maximum, quantitySlider, protection };
             tradePopup.gameObject.SetActive(false);
-        }
-
-        private void BuildHelp(RectTransform panel)
-        {
-            helpPanel = ShopUi.Rect(panel, "Shop Help", 0, 0, 1160, 630);
-            ShopUi.Background(helpPanel, new Color(0.08f, 0.10f, 0.07f, 0.75f));
-            RectTransform card = ShopUi.Rect(helpPanel, "Card", 280, 75, 600, 480);
-            ShopUi.Rounded(card, ShopUi.Canvas, 24, 2, ShopUi.Border);
-            ShopUi.Heading(card, "Title", "상점 조작법", 30, 24, 490, 42, 28);
-            ShopUi.Button(card, "Close", "닫기", 480, 24, 90, 40, ToggleHelp);
-            ShopUi.Label(card, "Mouse", "좌클릭   아이템 거래 창 열기\nShift + 클릭   최대 수량 선택\n슬라이더 / 숫자 입력   거래 수량 조절\n우클릭   팝업 닫기", 30, 88, 540, 136, 18);
-            ShopUi.Label(card, "Keyboard", "방향키   목록에서 아이템 선택\nTab   목록 전환 / 팝업 안에서 버튼 이동\nEnter   열기 / 선택한 버튼 실행\nEsc   도움말 → 거래 창 → 상점 닫기", 30, 236, 540, 136, 18);
-            ShopUi.Label(card, "Extra", "F1 도움말   ·   Q 수량 입력   ·   +/− 수량 조절\nB 구매   ·   V 판매   ·   L 판매 잠금   ·   E 닫기", 30, 394, 540, 56, 15, ShopUi.Muted);
-            helpPanel.gameObject.SetActive(false);
-        }
-
-        private bool HelpOpen => helpPanel != null && helpPanel.gameObject.activeSelf;
-
-        private void ToggleHelp()
-        {
-            quantityInput.DeactivateInputField();
-            EventSystem.current?.SetSelectedGameObject(null);
-            helpPanel.gameObject.SetActive(!HelpOpen);
         }
 
         private void MovePopupFocus(bool backwards)
@@ -413,7 +379,6 @@ namespace Nomad.Shop
             balance.text = buy.interactable ? $"{wallet.Gold - buyTotal:N0} G"
                 : sell.interactable ? $"{wallet.Gold + (long)sellPrice * quantity:N0} G" : $"{wallet.Gold:N0} G";
             RefreshPopupFocus();
-            UpdateRestockLabel();
         }
 
         private static string CategoryName(ShopCatalog.Category category) => category switch
@@ -449,15 +414,6 @@ namespace Nomad.Shop
             if (wallet.SetSaleProtected(item, !wallet.IsSaleProtected(item)))
                 status.text = wallet.IsSaleProtected(item) ? "같은 아이템을 모두 판매 잠금했습니다." : "판매 잠금을 해제했습니다.";
             EventSystem.current?.SetSelectedGameObject(null);
-        }
-
-        private void UpdateRestockLabel()
-        {
-            int seconds = (int)System.Math.Min(int.MaxValue, System.Math.Ceiling(shop.RestockRemaining));
-            if (seconds == shownRestockSeconds)
-                return;
-            shownRestockSeconds = seconds;
-            restock.text = shop.Catalog.RestockSeconds > 0 ? $"재입고까지 {seconds / 60:00}:{seconds % 60:00}" : "자동 재입고 없음";
         }
 
         private bool PopupOpen => tradePopup.gameObject.activeSelf;
@@ -605,19 +561,15 @@ namespace Nomad.Shop
                 return;
             if (saleNotification != null && saleNotification.gameObject.activeSelf && Time.unscaledTime >= saleNotificationUntil)
                 saleNotification.gameObject.SetActive(false);
-            if (tradePopup == null || helpPanel == null || saleNotification == null || shop == null || inventory == null || !shop.CanAccess(inventory))
+            if (tradePopup == null || saleNotification == null || shop == null || inventory == null || !shop.CanAccess(inventory))
             {
                 Close();
                 return;
             }
-            UpdateRestockLabel();
 
-            if (Mouse.current?.rightButton.wasPressedThisFrame == true && (PopupOpen || HelpOpen))
+            if (Mouse.current?.rightButton.wasPressedThisFrame == true && PopupOpen)
             {
-                if (HelpOpen)
-                    ToggleHelp();
-                else
-                    ClosePopup();
+                ClosePopup();
                 return;
             }
 
@@ -625,24 +577,14 @@ namespace Nomad.Shop
             if (keys == null || Time.frameCount == openedFrame)
                 return;
 
-            if (keys.f1Key.wasPressedThisFrame)
-            {
-                ToggleHelp();
-                return;
-            }
-
             if (keys.escapeKey.wasPressedThisFrame || keys.eKey.wasPressedThisFrame)
             {
-                if (HelpOpen)
-                    ToggleHelp();
-                else if (PopupOpen)
+                if (PopupOpen)
                     ClosePopup();
                 else
                     Close();
                 return;
             }
-            if (HelpOpen)
-                return;
 
             // 팝업이 열린 동안에는 뒤쪽 목록의 선택·스크롤을 바꾸지 않습니다.
             if (PopupOpen)
