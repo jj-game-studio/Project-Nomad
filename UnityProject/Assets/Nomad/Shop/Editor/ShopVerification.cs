@@ -127,7 +127,8 @@ namespace Nomad.Shop.Editor
                             !Node("Backpack/Content/Slot 0/Price").gameObject.activeSelf,
                             "기본 화면 안내/반복 가격 제거·판매가는 팝업으로 이동");
                         Require(Node("Backpack").GetComponent<RectTransform>().rect.height == 392 &&
-                            Node("Stock").GetComponent<RectTransform>().rect.height == 212 &&
+                            Node("Stock").GetComponent<RectTransform>().rect.height ==
+                                Mathf.Min(392, 8 + Mathf.Max(1, Mathf.CeilToInt(shop.Catalog.Count / 3f)) * 204) &&
                             Node("Backpack/Content/Slot 0/Icon").GetComponent<RectTransform>().rect.width >= 44,
                             "목록 여백 축소·상품 수에 맞는 높이·가방 아이콘 확대");
                         backpackPosition = Node("Backpack/Content").GetComponent<RectTransform>().anchoredPosition;
