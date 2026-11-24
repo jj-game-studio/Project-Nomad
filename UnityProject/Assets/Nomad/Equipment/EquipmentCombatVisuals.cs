@@ -7,7 +7,7 @@ using UnityEngine.InputSystem;
 namespace Nomad.Equipment
 {
     [RequireComponent(typeof(PlayerEquipmentCombat))]
-    public sealed class EquipmentCombatVisuals : MonoBehaviour
+    public sealed partial class EquipmentCombatVisuals : MonoBehaviour
     {
         private sealed class Effect
         {
@@ -45,6 +45,7 @@ namespace Nomad.Equipment
             combat.Attacked += Attack;
             combat.Fired += Fire;
             combat.WeaponImpacted += Impact;
+            combat.RangedImpacted += RangedImpact;
         }
 
         private void OnDisable()
@@ -52,6 +53,8 @@ namespace Nomad.Equipment
             combat.Attacked -= Attack;
             combat.Fired -= Fire;
             combat.WeaponImpacted -= Impact;
+            combat.RangedImpacted -= RangedImpact;
+            if (chargeRing != null) chargeRing.enabled = false;
             rangeLine.enabled = false;
             foreach (Effect effect in effects) Destroy(effect.Line.gameObject);
             effects.Clear();
@@ -70,6 +73,7 @@ namespace Nomad.Equipment
             }
 
             ItemDefinition weapon = combat.CurrentWeapon;
+            UpdateChargeVisual(weapon);
             UpdateWeaponModel(weapon);
             rangeLine.enabled = ShowRange && weapon != null;
             if (rangeLine.enabled)
@@ -223,7 +227,7 @@ namespace Nomad.Equipment
             else if (mode == WeaponAttackMode.Staff && styled)
             {
                 // 지팡이 끝에서 작은 마법 섬광이 터집니다. 날아가는 탄은 Fire에서 붙입니다.
-                WeaponVfx.Burst(combat.ProjectileOrigin, style, 0.35f);
+                WeaponVfx.Burst(combat.ProjectileOrigin, RangedStyle(weapon, combat.LastShotPower), 0.25f);
             }
             else
             {
@@ -248,17 +252,20 @@ namespace Nomad.Equipment
 
         private void Fire(Projectile projectile, ItemDefinition weapon)
         {
-            if (projectile != null && weapon.AttackMode == WeaponAttackMode.Staff && WeaponVfx.TryGetStyle(weapon, out WeaponVfxStyle style))
+            if (projectile == null) return;
+            float power = combat.LastShotPower;
+            WeaponVfxStyle style = RangedStyle(weapon, power);
+            if (weapon.AttackMode == WeaponAttackMode.Staff)
                 MagicBoltVfx.Attach(projectile.transform, style);
+            else if (weapon.AttackMode == WeaponAttackMode.Bow)
+                ArrowShotVfx.Attach(projectile.transform, style, power);
+
+            if (power > 1.1f) WeaponVfx.Burst(combat.ProjectileOrigin, style, 0.5f);
         }
 
         private void Impact(Vector3 point, ItemDefinition weapon)
         {
-            if (weapon != null && weapon.AttackMode == WeaponAttackMode.Staff && WeaponVfx.TryGetStyle(weapon, out WeaponVfxStyle style))
-            {
-                WeaponVfx.Burst(point, style);
-                return;
-            }
+            if (weapon != null && (weapon.AttackMode == WeaponAttackMode.Staff || weapon.AttackMode == WeaponAttackMode.Bow)) return;
 
             AddEffect(new[] { point - Vector3.right * 0.16f, point + Vector3.right * 0.16f,
                 point, point - Vector3.up * 0.16f, point + Vector3.up * 0.16f }, new Color(1f, 0.9f, 0.5f), 0.2f);

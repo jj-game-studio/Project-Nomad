@@ -8,6 +8,8 @@ namespace Nomad.Equipment
     public sealed partial class PlayerEquipmentCombat
     {
         public const float FullChargeSeconds = 1f;
+        public const float QuickShotPower = 0.65f;
+        public const float ChargingMoveSpeed = 0.45f;
         private ItemDefinition chargeWeapon;
         private float chargeStarted;
         public bool IsCharging => chargeWeapon != null;
@@ -15,6 +17,7 @@ namespace Nomad.Equipment
         public float LastShotPower { get; private set; } = 1f;
         public event Action<ItemDefinition, Vector3> ChargeStarted;
         public event Action ChargeCancelled;
+        public event Action<Vector3, ItemDefinition, float> RangedImpacted;
 
         private bool ChargeAllowed => isActiveAndEnabled && equipment.isActiveAndEnabled && !InputBlocked && !EquipmentUiOpen &&
             inventory?.BlocksTradeInput != true && Time.timeScale > 0 && !health.IsDead && !movement.BlocksAttack &&
@@ -31,6 +34,7 @@ namespace Nomad.Equipment
 
             chargeWeapon = weapon;
             chargeStarted = Time.time;
+            movement.ChargeSpeedMultiplier = ChargingMoveSpeed;
             AimPoint = aim;
             Vector3 direction = Vector3.ProjectOnPlane(aim - AttackOrigin, Vector3.up);
             ChargeStarted?.Invoke(weapon, direction.sqrMagnitude > 0.001f ? direction.normalized : transform.forward);
@@ -54,7 +58,27 @@ namespace Nomad.Equipment
         {
             if (!IsCharging) return;
             chargeWeapon = null;
+            movement.ChargeSpeedMultiplier = 1f;
             ChargeCancelled?.Invoke();
+        }
+
+        public bool TryQuickShot(Vector2 pointer)
+        {
+            ItemDefinition weapon = CurrentWeapon;
+            if (IsCharging || !ChargeAllowed || weapon == null ||
+                (weapon.AttackMode != WeaponAttackMode.Bow && weapon.AttackMode != WeaponAttackMode.Staff) ||
+                IsOverUi(pointer) || !TryGetAim(pointer, out Vector3 aim) || !TryFire(weapon, aim, QuickShotPower)) return false;
+            AimPoint = aim;
+            Attacked?.Invoke(weapon.AttackMode);
+            return true;
+        }
+
+        private void NotifyRangedImpact(Vector3 point, ItemDefinition weapon, float power)
+        {
+            if (this == null) return;
+            NotifyImpact(point, weapon);
+            // 발사 당시 위력을 보관하므로 이후 발사나 무기 교체가 명중 연출을 바꾸지 않습니다.
+            RangedImpacted?.Invoke(point, weapon, power);
         }
 
         private bool UpdateCharge(Mouse mouse)
@@ -65,6 +89,9 @@ namespace Nomad.Equipment
             bool chargeInput = weapon != null &&
                 (weapon.AttackMode == WeaponAttackMode.Bow || weapon.AttackMode == WeaponAttackMode.Staff);
             if (!chargeInput) return false;
+
+            if (mouse.rightButton.wasPressedThisFrame && !mouse.leftButton.isPressed)
+                TryQuickShot(mouse.position.ReadValue());
 
             // 활·지팡이는 누를 때 발사하지 않고, 놓을 때 유지 시간에 맞춰 한 발만 발사합니다.
             if (mouse.leftButton.wasPressedThisFrame) TryBeginCharge(mouse.position.ReadValue());

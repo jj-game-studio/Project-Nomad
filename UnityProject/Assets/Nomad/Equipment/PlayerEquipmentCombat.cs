@@ -229,7 +229,7 @@ namespace Nomad.Equipment
 
             Projectile shot = bow ? arrowProjectile : projectile;
             if (!Projectile.TryLaunch(shot, transform, muzzle.position, aim, collisionLayers, 45f,
-                    weapon.AttackRange, Mathf.RoundToInt(Damage(weapon) * power), point => NotifyImpact(point, weapon), out Projectile launched))
+                    weapon.AttackRange, Mathf.Max(1, Mathf.RoundToInt(Damage(weapon) * power)), point => NotifyRangedImpact(point, weapon, power), out Projectile launched))
                 return false;
 
             // 막힌 발사구나 유효하지 않은 조준에는 재화나 공격 간격을 적용하지 않습니다.

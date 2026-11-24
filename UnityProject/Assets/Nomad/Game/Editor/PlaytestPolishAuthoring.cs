@@ -9,6 +9,15 @@ namespace Nomad.Game.Editor
 {
     public static class PlaytestPolishAuthoring
     {
+        public static void UpdateVillagePresentation()
+        {
+            var scene = EditorSceneManager.OpenScene("Assets/Nomad/Village/Village.unity");
+            VillageShopAuthoring.ApplyToScene(scene);
+            EditorSceneManager.SaveScene(scene);
+            AssetDatabase.SaveAssets();
+            Debug.Log("VILLAGE_GUIDE_SAVED");
+        }
+
         public static void Apply()
         {
             ProvidedItemArt.Apply();

@@ -10,7 +10,7 @@ using UnityEngine;
 namespace Nomad.Hud
 {
     [DisallowMultipleComponent]
-    public sealed class PlayerHud : MonoBehaviour
+    public sealed partial class PlayerHud : MonoBehaviour
     {
         public enum HudStyle { Original, Medieval }
 
@@ -88,12 +88,14 @@ namespace Nomad.Hud
             }
 
             Build();
+            BuildChargeGauge();
             if (combat != null && Resources.Load<Font>("ShopFonts/NanumGothic-Regular") is Font koreanFont)
             {
                 weaponFont = TMP_FontAsset.CreateFontAsset(koreanFont);
                 weaponText.font = weaponFont;
                 attackStatusText.font = weaponFont;
                 potionText.font = weaponFont;
+                chargeLabel.font = chargeHint.font = weaponFont;
             }
 
             SetResources(0, 0, 0, 0);
@@ -121,6 +123,7 @@ namespace Nomad.Hud
 
         private void LateUpdate()
         {
+            UpdateChargeGauge();
             potionText.gameObject.SetActive(healing != null);
             if (healing != null && healing.Count != shownPotions)
             {

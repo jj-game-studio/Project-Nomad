@@ -4,6 +4,7 @@ using System.Linq;
 using Nomad.Combat;
 using Nomad.Equipment;
 using Nomad.Inventory;
+using Nomad.Hud;
 using Nomad.Loot;
 using Nomad.Monsters;
 using Nomad.Monsters.Demo;
@@ -43,6 +44,10 @@ namespace Nomad.Tests
             Material monsterMaterial = null;
             Mouse previousMouse = Mouse.current;
             Mouse mouse = null;
+            Keyboard previousKeyboard = Keyboard.current;
+            Keyboard keyboard = null;
+            GameObject floor = null;
+            int captureRate = Time.captureFramerate;
             bool background = Application.runInBackground;
             var backgroundBehavior = InputSystem.settings.backgroundBehavior;
             var editorInput = InputSystem.settings.editorInputBehaviorInPlayMode;
@@ -53,18 +58,28 @@ namespace Nomad.Tests
                 InputSystem.settings.editorInputBehaviorInPlayMode = InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
                 mouse = InputSystem.AddDevice<Mouse>();
                 mouse.MakeCurrent();
+                keyboard = InputSystem.AddDevice<Keyboard>();
+                keyboard.MakeCurrent();
+                Time.captureFramerate = 60;
+                floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                floor.transform.position = Vector3.down * 0.5f;
+                floor.transform.localScale = new Vector3(100, 1, 100);
                 rig = Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Nomad/Game/Prefabs/PlayerRig.prefab"));
                 var combat = rig.GetComponentInChildren<PlayerEquipmentCombat>();
                 var inventory = combat.GetComponent<PlayerInventory>();
                 var equipment = combat.GetComponent<PlayerEquipment>();
                 var mana = combat.GetComponent<PlayerMana>();
-                combat.GetComponent<PlayerMovement>().enabled = false;
+                var movement = combat.GetComponent<PlayerMovement>();
+                var hud = rig.GetComponentInChildren<PlayerHud>();
+                movement.enabled = false;
                 foreach (Camera existing in rig.GetComponentsInChildren<Camera>()) existing.enabled = false;
                 cameraRoot = new GameObject("Charge test camera");
                 Camera camera = cameraRoot.AddComponent<Camera>();
+                camera.tag = "MainCamera";
                 camera.transform.position = new Vector3(0, 12, -8);
                 camera.transform.LookAt(Vector3.zero);
                 TestKit.SetField(combat, "viewCamera", camera);
+                TestKit.SetField(movement, "viewCamera", camera);
                 yield return null;
                 Vector2 pointer = camera.WorldToScreenPoint(new Vector3(0, 1, 6));
 
@@ -81,6 +96,7 @@ namespace Nomad.Tests
                     float beforeMana = mana.Current;
                     Assert.That(combat.TryBeginCharge(pointer), Is.True, id);
                     combat.CancelCharge();
+                    Assert.That(movement.ChargeSpeedMultiplier, Is.EqualTo(1f), "취소 시 감속 복원");
                     Assert.That(combat.ArrowCount, Is.EqualTo(arrows));
                     Assert.That(mana.Current, Is.EqualTo(beforeMana));
                     Assert.That(combat.TryBeginCharge(pointer), Is.True);
@@ -103,20 +119,52 @@ namespace Nomad.Tests
                     yield return null;
                     yield return null;
                     Assert.That(combat.IsCharging, Is.False, "우클릭은 차징하지 않음");
+
+                    Assert.That(combat.LastShotPower, Is.EqualTo(PlayerEquipmentCombat.QuickShotPower), "우클릭 약공격 즉시 발사");
+                    Assert.That(combat.ArrowCount, Is.EqualTo(arrows - (combat.CurrentWeapon.AttackMode == WeaponAttackMode.Bow ? 1 : 0)));
+                    Assert.That(mana.Current, Is.EqualTo(beforeMana - (combat.CurrentWeapon.AttackMode == WeaponAttackMode.Staff ? combat.CurrentWeapon.ManaCost : 0)));
+                    TestKit.SetField(combat, "nextAttackTime", 0f);
+                    arrows = combat.ArrowCount;
+                    beforeMana = mana.Current;
                     InputSystem.QueueStateEvent(mouse, new MouseState { position = pointer }.WithButton(MouseButton.Left));
                     yield return null;
                     yield return null;
                     Assert.That(combat.IsCharging, Is.True, "좌클릭 유지로 차징 시작");
+                    Assert.That(hud.ChargeGaugeVisible, Is.True, "차징 게이지 표시");
+                    Assert.That(movement.ChargeSpeedMultiplier, Is.EqualTo(PlayerEquipmentCombat.ChargingMoveSpeed));
+
                     Assert.That(combat.ArrowCount, Is.EqualTo(arrows), "누를 때 화살 발사 없음");
                     Assert.That(mana.Current, Is.EqualTo(beforeMana), "누를 때 마나 소모 없음");
                     TestKit.SetField(combat, "chargeStarted", Time.time - PlayerEquipmentCombat.FullChargeSeconds);
                     yield return null;
                     Assert.That(combat.IsCharging, Is.True, "완충 뒤에도 놓기 전에는 유지");
+                    Assert.That(hud.ChargeFraction, Is.EqualTo(1f), "완충 게이지");
+                    Nomad.Minimap.Editor.MinimapVerification.Capture("issue210-charge-" + combat.CurrentWeapon.AttackMode + ".png");
+
+                    movement.enabled = true;
+                    InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.W));
+                    yield return null;
+                    yield return null;
+                    Vector3 slowStart = movement.transform.position;
+                    for (int frame = 0; frame < 20; frame++) yield return null;
+                    float slowDistance = Vector3.ProjectOnPlane(movement.transform.position - slowStart, Vector3.up).magnitude;
+
                     InputSystem.QueueStateEvent(mouse, new MouseState { position = pointer });
                     yield return null;
                     yield return null;
                     Assert.That(combat.IsCharging, Is.False, "좌클릭 놓으면 발사");
                     Assert.That(combat.LastShotPower, Is.EqualTo(2.5f));
+                    Assert.That(hud.ChargeGaugeVisible, Is.False, "발사 후 게이지 숨김");
+                    Assert.That(movement.ChargeSpeedMultiplier, Is.EqualTo(1f), "발사 후 감속 복원");
+                    if (combat.CurrentWeapon.AttackMode == WeaponAttackMode.Bow)
+                        Assert.That(Object.FindObjectsByType<ArrowShotVfx>(FindObjectsSortMode.None).Any(effect => effect.Charged), Is.True, "차징 화살 전용 궤적");
+                    Vector3 normalStart = movement.transform.position;
+
+                    for (int frame = 0; frame < 20; frame++) yield return null;
+                    float normalDistance = Vector3.ProjectOnPlane(movement.transform.position - normalStart, Vector3.up).magnitude;
+                    Assert.That(slowDistance / normalDistance, Is.InRange(0.35f, 0.55f), "실제 걷기 이동 거리45%");
+                    movement.enabled = false;
+                    InputSystem.QueueStateEvent(keyboard, new KeyboardState());
                     Assert.That(combat.ArrowCount, Is.EqualTo(arrows - (combat.CurrentWeapon.AttackMode == WeaponAttackMode.Bow ? 1 : 0)));
                     Assert.That(mana.Current, Is.EqualTo(beforeMana - (combat.CurrentWeapon.AttackMode == WeaponAttackMode.Staff ? combat.CurrentWeapon.ManaCost : 0)));
                 }
@@ -146,7 +194,10 @@ namespace Nomad.Tests
             finally
             {
                 if (mouse != null) InputSystem.RemoveDevice(mouse);
+                if (keyboard != null) InputSystem.RemoveDevice(keyboard);
                 previousMouse?.MakeCurrent();
+                previousKeyboard?.MakeCurrent();
+                Time.captureFramerate = captureRate;
                 Application.runInBackground = background;
                 InputSystem.settings.backgroundBehavior = backgroundBehavior;
                 InputSystem.settings.editorInputBehaviorInPlayMode = editorInput;
@@ -154,6 +205,7 @@ namespace Nomad.Tests
                 if (monsterMaterial != null) Object.DestroyImmediate(monsterMaterial);
                 if (rig != null) Object.DestroyImmediate(rig);
                 if (cameraRoot != null) Object.DestroyImmediate(cameraRoot);
+                if (floor != null) Object.DestroyImmediate(floor);
             }
             if (EditorApplication.isPlaying) yield return new ExitPlayMode();
         }
