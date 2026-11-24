@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using Nomad.Combat;
 using Nomad.Monsters;
 using UnityEngine;
-using UnityEngine.Rendering;
 
 namespace Nomad.Visibility
 {
@@ -12,7 +11,7 @@ namespace Nomad.Visibility
         internal static readonly HashSet<VisibilityTarget> Active = new();
         public static int ActiveCount => Active.Count;
         [SerializeField, Range(0f, 0.2f)] private float hideDelay = 0.08f;
-        private readonly Dictionary<Renderer, (bool hidden, ShadowCastingMode shadows)> renderers = new();
+        private readonly Dictionary<Renderer, bool> renderers = new();
         private readonly Dictionary<Behaviour, bool> displays = new();
         private float lastSeen = float.NegativeInfinity;
         private PlayerVisibility owner;
@@ -53,7 +52,7 @@ namespace Nomad.Visibility
             foreach (var item in renderers)
             {
                 Renderer renderer = item.Key;
-                if (renderer == null || !renderer.enabled || !renderer.gameObject.activeInHierarchy || item.Value.hidden ||
+                if (renderer == null || !renderer.enabled || !renderer.gameObject.activeInHierarchy || item.Value ||
                     (modelRoot != null && !renderer.transform.IsChildOf(modelRoot)) ||
                     (renderer is not MeshRenderer && renderer is not SkinnedMeshRenderer)) continue;
                 if (foundModel) bounds.Encapsulate(renderer.bounds);
@@ -74,7 +73,7 @@ namespace Nomad.Visibility
         private void Capture()
         {
             foreach (Renderer renderer in GetComponentsInChildren<Renderer>(true))
-                if (!renderers.ContainsKey(renderer)) renderers.Add(renderer, (renderer.forceRenderingOff, renderer.shadowCastingMode));
+                if (!renderers.ContainsKey(renderer)) renderers.Add(renderer, renderer.forceRenderingOff);
             CaptureDisplay(GetComponent<SegmentedHealthBar>());
             CaptureDisplay(GetComponent<MonsterHitFeedback>());
         }
@@ -95,14 +94,9 @@ namespace Nomad.Visibility
 
         private void Apply()
         {
+            // 시야 밖 적은 그림자까지 완전히 숨겨 위치가 드러나지 않게 합니다.
             foreach (var item in renderers)
-                if (item.Key != null)
-                {
-                    // 모델만 숨기고 화면 안으로 들어오는 그림자는 유지합니다.
-                    bool casts = item.Value.shadows != ShadowCastingMode.Off;
-                    item.Key.forceRenderingOff = item.Value.hidden || (!IsVisible && !casts);
-                    item.Key.shadowCastingMode = IsVisible || !casts ? item.Value.shadows : ShadowCastingMode.ShadowsOnly;
-                }
+                if (item.Key != null) item.Key.forceRenderingOff = item.Value || !IsVisible;
             foreach (var item in displays)
                 if (item.Key != null) item.Key.enabled = item.Value && IsVisible;
         }
@@ -110,11 +104,7 @@ namespace Nomad.Visibility
         public void Release()
         {
             foreach (var item in renderers)
-                if (item.Key != null)
-                {
-                    item.Key.forceRenderingOff = item.Value.hidden;
-                    item.Key.shadowCastingMode = item.Value.shadows;
-                }
+                if (item.Key != null) item.Key.forceRenderingOff = item.Value;
             foreach (var item in displays)
                 if (item.Key != null) item.Key.enabled = item.Value;
             renderers.Clear();
