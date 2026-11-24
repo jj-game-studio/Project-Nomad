@@ -37,6 +37,15 @@ namespace Nomad.Loot
         public LootChest Chest { get; private set; }
         public bool IsOpen => root != null && root.gameObject.activeSelf;
         public float BackpackOffset => (Width + Gap) * 0.5f;
+        public float LayoutWidth => Width + Gap;
+
+        public void UpdateLayout(RectTransform backpack)
+        {
+            root.sizeDelta = new Vector2(Width, backpack.rect.height);
+            root.localScale = backpack.localScale;
+            root.position = backpack.TransformPoint(new Vector3(backpack.rect.xMax + Gap + Width * 0.5f,
+                backpack.rect.center.y, 0f));
+        }
 
         public ChestLootPanel(RectTransform backpack, Font font, PlayerInventory inventory, Action close)
         {

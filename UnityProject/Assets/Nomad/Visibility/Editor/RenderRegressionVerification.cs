@@ -72,11 +72,11 @@ namespace Nomad.Visibility.Editor
             effect.transform.localPosition = Vector3.back * 20;
             Physics.SyncTransforms();
             target.Evaluate(sight);
-            Require(!target.IsVisible && bodies.All(body => !body.forceRenderingOff &&
-                body.shadowCastingMode == ShadowCastingMode.ShadowsOnly), "완전히 가린 모델은 그림자만 유지");
+            Require(!target.IsVisible && bodies.All(body => body.forceRenderingOff &&
+                body.shadowCastingMode == ShadowCastingMode.On), "완전히 가린 모델은 그림자까지 숨김");
             sight.Suppressed = true;
             target.Evaluate(sight);
-            Require(!target.Controlled && bodies.All(body => body.shadowCastingMode == ShadowCastingMode.On), "숨김 해제 후 원래 모드 복원");
+            Require(!target.Controlled && bodies.All(body => !body.forceRenderingOff), "숨김 해제 후 원래 상태 복원");
         }
 
         private static void VerifyOffscreenShadow()

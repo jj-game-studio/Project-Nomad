@@ -10,6 +10,7 @@ using Nomad.Loot;
 using Nomad.Monsters;
 using Nomad.Monsters.Demo;
 using Nomad.Player;
+using Nomad.PlayerVisual;
 using Nomad.Terrain;
 using Nomad.Village.Editor;
 using Nomad.WorldHud;
@@ -130,11 +131,75 @@ namespace Nomad.Game.Editor
             eventSystem.transform.SetParent(rig.transform, false);
 
             AddPlayerComponents(player, camera, muzzle);
+            AddPlayerAppearance(player);
 
             Directory.CreateDirectory(Path.GetDirectoryName(PlayerPrefabPath));
             GameObject prefab = PrefabUtility.SaveAsPrefabAsset(rig, PlayerPrefabPath);
             Object.DestroyImmediate(rig);
             return prefab;
+        }
+
+        [MenuItem("Nomad/Game/Connect Player Appearance")]
+        public static void ConnectPlayerAppearance()
+        {
+            GameObject rig = PrefabUtility.LoadPrefabContents(PlayerPrefabPath);
+            try
+            {
+                AddPlayerAppearance(rig.GetComponentInChildren<PlayerMovement>().gameObject);
+                PrefabUtility.SaveAsPrefabAsset(rig, PlayerPrefabPath);
+            }
+            finally { PrefabUtility.UnloadPrefabContents(rig); }
+        }
+
+        public static void PrepareGameplayFixes()
+        {
+            ConnectPlayerAppearance();
+            foreach (string path in new[] { FieldPath, "Assets/Nomad/Terrain/Wfc/TerrainIntegration.unity" })
+            {
+                Scene scene = EditorSceneManager.OpenScene(path, OpenSceneMode.Single);
+                FieldDressing dressing = Object.FindAnyObjectByType<FieldDressing>();
+                if (dressing == null)
+                {
+                    TerrainGenerator generator = Object.FindAnyObjectByType<TerrainGenerator>();
+                    dressing = generator.gameObject.AddComponent<FieldDressing>();
+                    dressing.Configure(generator, Object.FindAnyObjectByType<Nomad.Props.PropScatter>());
+                }
+
+                var data = new SerializedObject(dressing);
+                data.FindProperty("boundaryWallHeight").floatValue = 4f;
+                data.ApplyModifiedPropertiesWithoutUndo();
+                EditorSceneManager.SaveScene(scene);
+            }
+
+            AssetDatabase.SaveAssets();
+            Debug.Log("GAMEPLAY_FIXES_PREPARED");
+        }
+
+        private static void AddPlayerAppearance(GameObject player)
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Nomad/PlayerVisual/KingdomSoldierVisual.prefab");
+            var controller = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>("Assets/Nomad/PlayerVisual/Animations/PlayerSword.controller");
+            if (prefab == null || controller == null)
+                throw new System.InvalidOperationException("기존 플레이어 외형 또는 애니메이션 컨트롤러가 없습니다.");
+
+            Transform visual = player.transform.Find("Visual");
+            if (visual == null)
+            {
+                visual = ((GameObject)PrefabUtility.InstantiatePrefab(prefab, player.transform)).transform;
+                visual.name = "Visual";
+                visual.localPosition = Vector3.zero;
+                visual.localRotation = Quaternion.identity;
+            }
+
+            Animator animator = visual.GetComponentInChildren<Animator>();
+            animator.runtimeAnimatorController = controller;
+            PrefabUtility.RecordPrefabInstancePropertyModifications(animator);
+            PlayerAnimation animation = player.GetComponent<PlayerAnimation>() ?? player.AddComponent<PlayerAnimation>();
+            Set(animation, "animator", animator);
+            if (player.GetComponent<PlayerSwordAnimation>() == null) player.AddComponent<PlayerSwordAnimation>();
+
+            Transform body = player.transform.Find("Player Body");
+            if (body != null) body.gameObject.SetActive(false);
         }
 
         private static void AddPlayerComponents(GameObject player, Camera camera, Transform muzzle)

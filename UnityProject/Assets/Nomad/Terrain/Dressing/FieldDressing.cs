@@ -20,6 +20,7 @@ namespace Nomad.Terrain
         [SerializeField, Range(0, 64)] private int repairLimit = 40;
         [Tooltip("켜면 타일 블록 대신 Unity Terrain을 지면·충돌·경로로 사용합니다(계단 칸은 경사로).")]
         [SerializeField] private bool terrainSurface = true;
+        [SerializeField, Min(3f)] private float boundaryWallHeight = 4f;
 
         private readonly List<GameObject> blockers = new List<GameObject>();
         private readonly FieldTerrainSurface surface = new FieldTerrainSurface();
@@ -613,6 +614,14 @@ namespace Nomad.Terrain
                 ? new Vector3(0.4f / scale.x, bounds.size.y, 0.4f / scale.z)
                 : bounds.size;
             if (trunkOnly) box.center = new Vector3(0f, box.center.y, 0f);
+
+            // 필드 외곽은 낮은 돌담 메시와 별개로 점프·발판을 통한 이탈을 막습니다.
+            if (!removable)
+            {
+                float height = Mathf.Max(bounds.size.y, boundaryWallHeight);
+                box.center = new Vector3(box.center.x, bounds.min.y + (height - 1f) * 0.5f, box.center.z);
+                box.size = new Vector3(box.size.x, height + 1f, box.size.z);
+            }
 
             // 외곽 벽처럼 경로 복구로 지우면 안 되는 물체는 목록에 넣지 않습니다.
             if (removable) blockers.Add(instance);

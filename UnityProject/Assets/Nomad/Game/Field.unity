@@ -650,6 +650,7 @@ MonoBehaviour:
   set: {fileID: 0}
   repairLimit: 40
   terrainSurface: 1
+  boundaryWallHeight: 4
 --- !u!114 &1930808197
 MonoBehaviour:
   m_ObjectHideFlags: 0

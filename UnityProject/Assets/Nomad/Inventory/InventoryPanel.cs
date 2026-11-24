@@ -45,8 +45,15 @@ namespace Nomad.Inventory
         private bool runtimeInstance;
         private PlayerHud dragHud;
 
+        public bool IsOpen => panel != null && panel.activeInHierarchy;
         internal bool HasOpenChest => chestPanel != null && chestPanel.IsOpen;
         internal LootChest OpenChest => chestPanel?.Chest;
+        internal float ChestLayoutWidth => chestPanel?.LayoutWidth ?? 0f;
+        internal void UpdateChestLayout()
+        {
+            if (HasOpenChest)
+                chestPanel.UpdateLayout((RectTransform)panel.transform);
+        }
         internal bool BlocksSplitInput => splitDialog != null && splitDialog.BlocksInput;
 
         internal static InventoryPanel GetOrCreate(PlayerInventory target)
@@ -170,6 +177,14 @@ namespace Nomad.Inventory
                 return;
             }
 
+            if (IsOpen && Keyboard.current?.escapeKey.wasPressedThisFrame == true)
+            {
+                CancelDrag();
+                hoveredIndex = -1;
+                panel.SetActive(false);
+                return;
+            }
+
             if (Keyboard.current?.tabKey.wasPressedThisFrame == true)
             {
                 CancelDrag();
@@ -185,6 +200,7 @@ namespace Nomad.Inventory
 
         private void LateUpdate()
         {
+            UpdateChestLayout();
             if (!panel.activeInHierarchy)
                 splitDialog?.Close();
 
@@ -245,6 +261,7 @@ namespace Nomad.Inventory
             }
 
             chestPanel.Show(chest, interaction);
+            UpdateChestLayout();
             Refresh();
         }
 
