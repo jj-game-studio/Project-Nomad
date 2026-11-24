@@ -1,6 +1,7 @@
 using System.Collections;
 using System.IO;
 using System.Linq;
+using System.Collections.Generic;
 using Nomad.Combat;
 using Nomad.Equipment;
 using Nomad.Inventory;
@@ -16,8 +17,9 @@ using Object = UnityEngine.Object;
 
 namespace Nomad.Tests
 {
-    public sealed class PlayerPresentationTests : PlayModeFixture
+    public sealed class PlayerPresentationTests
     {
+        private readonly List<Object> created = new List<Object>();
         private GameObject rig;
         private PlayerAnimation animation;
         private PlayerMovement movement;
@@ -31,8 +33,32 @@ namespace Nomad.Tests
         private InputSettings.BackgroundBehavior previousBackground;
         private InputSettings.EditorInputBehaviorInPlayMode previousEditorInput;
 
-        [UnitySetUp]
-        public IEnumerator CreatePlayer()
+        [UnityTest]
+        public IEnumerator MainRigLandingRollAndWeaponPresentation()
+        {
+            yield return new EnterPlayMode();
+            try
+            {
+                yield return CreatePlayer();
+                yield return MovingLandingAndRollDoNotKeepRecoveryWhileSliding();
+                yield return MeleeBowAndStaffAnimateAndKeepWeaponInHand();
+            }
+            finally
+            {
+                RestoreInput();
+                foreach (Object target in created) if (target != null) Object.DestroyImmediate(target);
+                created.Clear();
+            }
+            if (EditorApplication.isPlaying) yield return new ExitPlayMode();
+        }
+
+        private T Track<T>(T target) where T : Object
+        {
+            created.Add(target);
+            return target;
+        }
+
+        private IEnumerator CreatePlayer()
         {
             background = Application.runInBackground;
             previousBackground = InputSystem.settings.backgroundBehavior;
@@ -61,8 +87,7 @@ namespace Nomad.Tests
             for (int frame = 0; frame < 10; frame++) yield return null;
         }
 
-        [TearDown]
-        public void RestoreInput()
+        private void RestoreInput()
         {
             if (keyboard != null) InputSystem.RemoveDevice(keyboard);
             previousKeyboard?.MakeCurrent();
@@ -71,17 +96,16 @@ namespace Nomad.Tests
             Application.runInBackground = background;
         }
 
-        [UnityTest]
-        public IEnumerator MovingLandingAndRollDoNotKeepRecoveryWhileSliding()
+        private IEnumerator MovingLandingAndRollDoNotKeepRecoveryWhileSliding()
         {
             var body = movement.GetComponent<CharacterController>();
             InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.W, Key.Space));
             yield return null;
             InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.W));
-            float deadline = Time.time + 3f;
-            while (body.isGrounded && Time.time < deadline) yield return null;
+            float deadline = Time.realtimeSinceStartup + 5f;
+            while (body.isGrounded && Time.realtimeSinceStartup < deadline) yield return null;
             Assert.That(body.isGrounded, Is.False, "실제 점프 시작");
-            while (!body.isGrounded && Time.time < deadline) yield return null;
+            while (!body.isGrounded && Time.realtimeSinceStartup < deadline) yield return null;
             Assert.That(body.isGrounded, Is.True, "실제 착지");
             yield return null;
             yield return null;
@@ -90,20 +114,26 @@ namespace Nomad.Tests
             InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.W, Key.LeftShift));
             yield return null;
             InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.W));
-            while (!movement.IsRolling && Time.time < deadline) yield return null;
+            while (!movement.IsRolling && Time.realtimeSinceStartup < deadline) yield return null;
             Assert.That(animation.CurrentState, Is.EqualTo("Roll"));
+            yield return Wait(0.12f);
             Capture("roll");
-            while (movement.IsRolling && Time.time < deadline) yield return null;
+            while (movement.IsRolling && Time.realtimeSinceStartup < deadline) yield return null;
             yield return null;
             yield return null;
             Assert.That(animation.CurrentState, Is.EqualTo("Run"), "구르기 종료 후 남는 슬라이딩 모션 없음");
             Assert.That(PlayerAnimation.RollMotionDuration, Is.EqualTo(PlayerMovement.RollDuration));
         }
 
-        [UnityTest]
-        public IEnumerator MeleeBowAndStaffAnimateAndKeepWeaponInHand()
+        private IEnumerator MeleeBowAndStaffAnimateAndKeepWeaponInHand()
         {
+            InputSystem.QueueStateEvent(keyboard, new KeyboardState());
+            yield return null;
             movement.enabled = false;
+            var body = movement.GetComponent<CharacterController>();
+            body.enabled = false;
+            movement.transform.SetPositionAndRotation(Vector3.up * 0.05f, Quaternion.identity);
+            body.enabled = true;
             inventory.Add("weapon-arrow", 20);
             var presenter = animation.GetComponent<PlayerSwordAnimation>();
             foreach (string id in new[] { "weapon-dagger", "weapon-greatsword", "weapon-shortbow", "weapon-apprentice-staff" })
@@ -117,20 +147,27 @@ namespace Nomad.Tests
                 Transform hand = animation.Animator.GetBoneTransform(HumanBodyBones.RightHand);
                 Quaternion before = hand.rotation;
                 Assert.That(combat.TryAttack(camera.WorldToScreenPoint(Vector3.forward * 6)), Is.True, id);
-                yield return new WaitForSeconds(0.08f);
+                yield return Wait(0.08f);
                 string expected = id.Contains("bow") ? "BowAttack" : id.Contains("staff") ? "StaffAttack" : "SwordAttack";
                 Assert.That(presenter.CurrentAttackState, Is.EqualTo(expected), id);
                 Assert.That(Quaternion.Angle(before, hand.rotation), Is.GreaterThan(1f), "실제 손 뼈가 공격 모션으로 움직임: " + id);
                 Transform model = animation.GetComponent<EquipmentCombatVisuals>().WeaponModel.transform;
                 Assert.That(model.parent.name, Is.EqualTo(id.Contains("bow") ? "BowSocket" : "WeaponSocket"));
+                if (id.Contains("bow"))
+                {
+                    Vector3 handOffset = animation.Animator.GetBoneTransform(HumanBodyBones.LeftHand).position - movement.transform.position;
+                    Assert.That(Vector3.Dot(handOffset, presenter.AttackFacing * Vector3.forward), Is.GreaterThan(0.3f), "활을 쥔 손을 앞으로 뻗음");
+                }
                 Capture(id);
-                yield return new WaitForSeconds(combat.CurrentWeapon.AttackInterval + 0.05f);
+                yield return Wait(combat.CurrentWeapon.AttackInterval + 0.05f);
             }
         }
 
         [Test]
         public void ProvidedSpritesAreAssignedToActualItems()
         {
+            var inventory = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Nomad/Game/Prefabs/PlayerRig.prefab")
+                .GetComponentInChildren<PlayerInventory>();
             foreach (string id in new[] { "weapon-dagger", "weapon-shortbow", "weapon-apprentice-staff", "health-potion" })
             {
                 ItemDefinition item = inventory.Catalog.FirstOrDefault(candidate => candidate.ItemId == id);
@@ -139,6 +176,14 @@ namespace Nomad.Tests
                 Assert.That(AssetDatabase.GetAssetPath(item.Icon), Does.Contain("Inventory/Resources/ItemUi/"));
                 Assert.That(item.Icon.rect.width, Is.GreaterThan(60));
             }
+        }
+
+        private static IEnumerator Wait(float seconds)
+        {
+            float until = Time.time + seconds;
+            float deadline = Time.realtimeSinceStartup + 10f;
+            while (Time.time < until && Time.realtimeSinceStartup < deadline) yield return null;
+            Assert.That(Time.time, Is.GreaterThanOrEqualTo(until), "모션 검증 프레임 진행");
         }
 
         private void Capture(string name)

@@ -107,6 +107,9 @@ namespace Nomad.Equipment
             title.font = font;
             title.text = "장비";
             title.fontSize = 23;
+            title.color = new Color32(244, 237, 215, 255);
+            title.fontStyle = FontStyle.Bold;
+            title.alignment = TextAnchor.MiddleLeft;
             Place(capacity.rectTransform, new Vector2(432, 30), new Vector2(0, -264));
             capacity.font = font;
             details = panel.Find("ItemDetails").GetComponent<UnityEngine.UI.Text>();
@@ -148,6 +151,7 @@ namespace Nomad.Equipment
                 return;
 
             FitToCanvas();
+            toolbar.gameObject.SetActive(!IsOpen);
             // 장비 창과 오른쪽 스탯 창을 합친 영역이 화면 가운데 오도록 옮깁니다. 상자 창이 열리면 가방 UI 배치를 따릅니다.
             bool looting = inventoryView != null && inventoryView.HasOpenChest;
             if (statsPanel != null) statsPanel.gameObject.SetActive(!looting);

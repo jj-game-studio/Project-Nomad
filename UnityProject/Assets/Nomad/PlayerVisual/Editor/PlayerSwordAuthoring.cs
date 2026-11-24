@@ -81,6 +81,7 @@ namespace Nomad.PlayerVisual.Editor
             EditorUtility.SetDirty(mask);
             EditorUtility.SetDirty(clip);
             AssetDatabase.SaveAssets();
+            PlayerMotionAuthoring.ApplyAnimationControllers();
 
             var rig = (GameObject)PrefabUtility.InstantiatePrefab(
                 AssetDatabase.LoadAssetAtPath<GameObject>(PlayerVisualAuthoring.RigPath));

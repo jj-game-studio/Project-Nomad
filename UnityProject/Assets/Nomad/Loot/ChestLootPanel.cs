@@ -67,7 +67,7 @@ namespace Nomad.Loot
             Text title = AddLabel(root, "Title", "LOOT", 27, Ink, TextAnchor.MiddleLeft);
             title.fontStyle = FontStyle.Bold;
             Dock(title.rectTransform, 22, 72, -56, -14, 1);
-            Button closeButton = AddButton(root, "Close", "Close", Muted, close);
+            Button closeButton = AddButton(root, "Close", "닫기", Muted, close);
             Dock((RectTransform)closeButton.transform, Width - 78, 18, -50, -22, 1);
 
             summary = AddLabel(root, "Summary", "", 15, Muted, TextAnchor.MiddleLeft);
@@ -139,7 +139,7 @@ namespace Nomad.Loot
             Chest = chest;
             interaction = owner;
             Chest.Changed += Refresh;
-            feedback.text = "가방: 더블클릭 1개 · Shift 클릭 전체";
+            feedback.text = "Shift 클릭 전체 · 바깥 클릭 닫기";
             backdrop.gameObject.SetActive(true);
             root.gameObject.SetActive(true);
             Refresh();

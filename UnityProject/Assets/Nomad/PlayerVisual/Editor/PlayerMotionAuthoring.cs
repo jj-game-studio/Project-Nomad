@@ -15,6 +15,12 @@ namespace Nomad.PlayerVisual.Editor
         public static void Apply()
         {
             ProvidedItemArt.Apply();
+            ApplyAnimationControllers();
+            Debug.Log("PLAYER_MOTION_AND_UI_APPLIED");
+        }
+
+        internal static void ApplyAnimationControllers()
+        {
             AnimationClip roll = BuildRoll();
             AnimationClip bow = Pose("BowAttack",
                 ("Left Arm Front-Back", 0.85f, 0.85f), ("Left Arm Down-Up", 0f, -0.1f),
@@ -32,6 +38,7 @@ namespace Nomad.PlayerVisual.Editor
             foreach (string name in new[] { "PlayerLocomotion", "PlayerSword" })
             {
                 var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(Folder + name + ".controller");
+                if (controller == null) continue;
                 foreach (var child in controller.layers[0].stateMachine.states)
                 {
                     if (child.state.name == "Roll") { child.state.motion = roll; child.state.speed = roll.length / PlayerAnimation.RollMotionDuration; }
@@ -39,6 +46,9 @@ namespace Nomad.PlayerVisual.Editor
                 }
                 if (controller.layers.Length > 1)
                 {
+                    var layers = controller.layers;
+                    layers[1].iKPass = true;
+                    controller.layers = layers;
                     foreach (AnimationClip clip in new[] { bow, staff, ranged })
                     {
                         var machine = controller.layers[1].stateMachine;
@@ -52,7 +62,6 @@ namespace Nomad.PlayerVisual.Editor
                 EditorUtility.SetDirty(controller);
             }
             AssetDatabase.SaveAssets();
-            Debug.Log("PLAYER_MOTION_AND_UI_APPLIED");
         }
 
         private static AnimationClip BuildRoll()

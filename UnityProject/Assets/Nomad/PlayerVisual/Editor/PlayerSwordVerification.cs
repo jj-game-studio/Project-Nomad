@@ -35,6 +35,10 @@ namespace Nomad.PlayerVisual.Editor
         public static void Run()
         {
             EditorSceneManager.OpenScene(PlayerSwordAuthoring.ScenePath);
+            // 과거 Variant의 중복 외형 대신 실제 메인 PlayerRig로 검증합니다. 테스트 바닥·벽·표적은 유지합니다.
+            var previous = Object.FindAnyObjectByType<PlayerAnimation>();
+            Object.DestroyImmediate(previous.transform.root.gameObject);
+            Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(PlayerVisualAuthoring.BaseRigPath));
             SessionState.SetBool(Session, true);
             Resume();
             EditorApplication.EnterPlaymode();

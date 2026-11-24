@@ -139,6 +139,7 @@ namespace Nomad.Equipment.Editor
                 data.FindProperty("icon").objectReferenceValue = Load<Sprite>(path);
                 data.ApplyModifiedPropertiesWithoutUndo();
             }
+            Nomad.Inventory.Editor.ProvidedItemArt.Apply();
         }
 
         // 무기 VFX 재질입니다. Resources에 두어 플레이어 빌드에도 입자 셰이더가 포함되게 합니다.

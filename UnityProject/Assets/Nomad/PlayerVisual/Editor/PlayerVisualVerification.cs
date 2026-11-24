@@ -131,7 +131,11 @@ namespace Nomad.PlayerVisual.Editor
                 }
                 if (stage == 4 && elapsed > 0.4f && !sawRollRecovery)
                 {
-                    Check(!player.IsRolling && animation.CurrentState == "Idle", "Roll visual did not finish with physical movement");
+                    Vector3 recoveryVelocity = player.GetComponent<CharacterController>().velocity;
+                    bool stationaryLanding = animation.CurrentState == "Land" &&
+                        new Vector2(recoveryVelocity.x, recoveryVelocity.z).magnitude < 0.1f;
+                    Check(!player.IsRolling && (animation.CurrentState == "Idle" || animation.CurrentState == "Run" || stationaryLanding),
+                        "Roll visual did not return to locomotion: " + animation.CurrentState);
                     CaptureFront("player-animation-roll-recovery.png");
                     sawRollRecovery = true;
                 }

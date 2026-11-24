@@ -35,6 +35,8 @@ namespace Nomad.PlayerVisual
         public Transform Socket => socket;
         public bool IsSwinging => swinging;
         public string CurrentAttackState { get; private set; }
+        public WeaponAttackMode AnimatedMode => animatedWeapon != null ? animatedWeapon.AttackMode : WeaponAttackMode.None;
+        public Quaternion AttackFacing => attackFacing;
 
         private void Awake()
         {
@@ -57,6 +59,8 @@ namespace Nomad.PlayerVisual
             socket.SetParent(hand, false);
             socket.localPosition = new Vector3(0.02f, -0.015f, 0.015f);
             socket.localRotation = Quaternion.Euler(-90f, 0f, 0f);
+            var handPose = animator.GetComponent<WeaponHandPose>() ?? animator.gameObject.AddComponent<WeaponHandPose>();
+            handPose.Owner = this;
             Transform left = animator.GetBoneTransform(HumanBodyBones.LeftHand);
             if (left != null)
             {
@@ -134,6 +138,8 @@ namespace Nomad.PlayerVisual
             animator.SetLayerWeight(layer, weight);
             if (visualRoot != null)
                 visualRoot.localRotation = weight > 0.01f ? Quaternion.Inverse(transform.rotation) * attackFacing : restingRotation;
+            if (visuals.WeaponModel != null && (combat.CurrentWeapon?.AttackMode == WeaponAttackMode.Bow || combat.CurrentWeapon?.AttackMode == WeaponAttackMode.Staff))
+                visuals.WeaponModel.transform.rotation = (weight > 0.01f ? attackFacing : transform.rotation) * combat.CurrentWeapon.EquippedVisual.transform.localRotation;
         }
 
         private void Stop()
