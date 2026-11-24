@@ -1249,6 +1249,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7faae0a8d72c06a4d80fcbe596ae2e49, type: 3}
   m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Terrain.FieldDressing
+  structureWallBay: 2.5
   generator: {fileID: 1613374919}
   obstacleOwner: {fileID: 1751394749}
   set: {fileID: 0}

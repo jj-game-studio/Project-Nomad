@@ -12,7 +12,7 @@ namespace Nomad.Equipment
     [DisallowMultipleComponent]
     [RequireComponent(typeof(PlayerEquipment), typeof(PlayerMovement), typeof(Health))]
     [DefaultExecutionOrder(100)]
-    public sealed class PlayerEquipmentCombat : MonoBehaviour
+    public sealed partial class PlayerEquipmentCombat : MonoBehaviour
     {
         public const string ArrowItemId = "weapon-arrow";
         public const float MeleeHalfAngle = 60f;
@@ -57,12 +57,12 @@ namespace Nomad.Equipment
         public bool InputBlocked
         {
             get => inputBlocked;
-            set { inputBlocked = value; if (value) CancelMelee(); }
+            set { inputBlocked = value; if (value) { CancelMelee(); CancelCharge(); } }
         }
         public bool EquipmentUiOpen
         {
             get => equipmentUiOpen || inventory?.Panel?.ConsumedCloseClick == true;
-            internal set { equipmentUiOpen = value; if (value) CancelMelee(); }
+            internal set { equipmentUiOpen = value; if (value) { CancelMelee(); CancelCharge(); } }
         }
         public bool IsMeleePending => pendingWeapon != null;
         public Vector3 AttackOrigin => transform.position + Vector3.up;
@@ -99,6 +99,7 @@ namespace Nomad.Equipment
             equipment.Changed -= EquipmentChanged;
             health.Died -= OnDied;
             CancelMelee();
+            CancelCharge();
             if (restoreLegacy && legacyCombat != null)
                 legacyCombat.enabled = true;
         }
@@ -107,6 +108,7 @@ namespace Nomad.Equipment
         {
             ResolveMelee();
             Mouse mouse = Mouse.current;
+            if (UpdateCharge(mouse)) { holdingAttack = false; return; }
             if (mouse == null || !mouse.leftButton.isPressed)
             {
                 holdingAttack = false;
@@ -209,13 +211,14 @@ namespace Nomad.Equipment
 
         private void EquipmentChanged()
         {
+            if (IsCharging && CurrentWeapon != chargeWeapon) CancelCharge();
             if (IsMeleePending && (CurrentWeapon != pendingWeapon || equipment.ActiveWeaponSlot != pendingSlot))
                 CancelMelee();
         }
 
-        private void OnDied(Health _) => CancelMelee();
+        private void OnDied(Health _) { CancelMelee(); CancelCharge(); }
 
-        private bool TryFire(ItemDefinition weapon, Vector3 aim)
+        private bool TryFire(ItemDefinition weapon, Vector3 aim, float power = 1f)
         {
             WeaponAttackMode mode = weapon.AttackMode;
             bool bow = mode == WeaponAttackMode.Bow;
@@ -226,11 +229,13 @@ namespace Nomad.Equipment
 
             Projectile shot = bow ? arrowProjectile : projectile;
             if (!Projectile.TryLaunch(shot, transform, muzzle.position, aim, collisionLayers, 45f,
-                    weapon.AttackRange, Damage(weapon), point => NotifyImpact(point, weapon), out Projectile launched))
+                    weapon.AttackRange, Mathf.RoundToInt(Damage(weapon) * power), point => NotifyImpact(point, weapon), out Projectile launched))
                 return false;
 
             // 막힌 발사구나 유효하지 않은 조준에는 재화나 공격 간격을 적용하지 않습니다.
             nextAttackTime = Time.time + weapon.AttackInterval;
+            LastShotPower = power;
+            launched.transform.localScale *= Mathf.Lerp(1f, 1.5f, (power - 1f) / 1.5f);
             if (bow)
                 inventory.Remove(ArrowItemId, 1);
             else if (staff)

@@ -96,7 +96,6 @@ namespace Nomad.Monsters.Demo
                 actors.Add(boss);
                 arena.ObserveEncounter(player);
                 arena.RequireElite(actors.First(actor => actor.GetComponent<MonsterIdentity>().Rank == MonsterRank.Elite), boss);
-                arena.gameObject.AddComponent<BossRouteGuide>().Configure(arena, player, boss);
             }
             if (normals != normalCount || elites.Count != eliteCount || (bossCount > 0 && arena == null))
                 Debug.LogWarning($"안전한 조우 배치: 일반 {normals}/{normalCount}, 엘리트 {elites.Count}/{eliteCount}, 보스 {(arena != null ? 1 : 0)}/{bossCount}. 부족한 자리에 겹쳐 생성하지 않습니다.", parent);

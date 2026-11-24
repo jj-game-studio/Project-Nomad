@@ -126,7 +126,7 @@ namespace Nomad.Minimap.Editor
                         int exits = manager.CurrentRegion.GetRootGameObjects().Sum(root => root.GetComponentsInChildren<FieldExit>().Length);
                         Require(exits > 0 && minimap.MarkerCount == exits,
                             "필드의 실제 출구 수 반영·상점 잔상 없음");
-                        Require(minimap.EnemyMarkerCount > 0, "필드의 생존 적 위치 수집");
+                        Require(minimap.EnemyMarkerCount == 0, "필드 적 마커 표시 안 함");
                         Require(((Texture2D)minimap.MapTexture).GetPixels32().Distinct().Count() > 1, "NavMesh 지도 생성");
                         Capture("minimap-field.png");
                         previousTexture = minimap.MapTexture;
@@ -141,7 +141,7 @@ namespace Nomad.Minimap.Editor
                         if (!Ready("Field") || minimap.Revision == revision) return;
                         Require(previousTexture == null, "이전 세대 Texture 해제");
                         Require(Object.FindObjectsByType<RegionMinimap>(FindObjectsSortMode.None).Length == 1, "HUD 중복 없음");
-                        Require(minimap.EnemyMarkerCount > 0, "재생성 후 새 적 마커 수집");
+                        Require(minimap.EnemyMarkerCount == 0, "재생성 후에도 적 마커 없음");
                         Capture("minimap-field-regenerated.png");
                         previousTexture = minimap.MapTexture;
                         Require(manager.LoadRegion("Village"), "마을 복귀 요청");

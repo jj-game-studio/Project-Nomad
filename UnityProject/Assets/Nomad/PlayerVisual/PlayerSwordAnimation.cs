@@ -78,6 +78,8 @@ namespace Nomad.PlayerVisual
                 combat.MeleeStarted += Attack;
                 combat.MeleeCancelled += Stop;
                 combat.Attacked += OtherWeaponAttack;
+                combat.ChargeStarted += ChargePose;
+                combat.ChargeCancelled += Stop;
             }
             if (socket != null && visuals != null) visuals.WeaponSocket = socket;
         }
@@ -89,6 +91,8 @@ namespace Nomad.PlayerVisual
                 combat.MeleeStarted -= Attack;
                 combat.MeleeCancelled -= Stop;
                 combat.Attacked -= OtherWeaponAttack;
+                combat.ChargeStarted -= ChargePose;
+                combat.ChargeCancelled -= Stop;
             }
             if (visuals != null && (visuals.WeaponSocket == socket || visuals.WeaponSocket == bowSocket)) visuals.WeaponSocket = null;
             Stop();
@@ -112,6 +116,12 @@ namespace Nomad.PlayerVisual
             swinging = true;
         }
 
+        private void ChargePose(ItemDefinition weapon, Vector3 direction)
+        {
+            Attack(weapon, direction);
+            until = float.PositiveInfinity;
+        }
+
         private void OtherWeaponAttack(WeaponAttackMode mode)
         {
             ItemDefinition weapon = combat.CurrentWeapon;
@@ -124,6 +134,11 @@ namespace Nomad.PlayerVisual
         private void LateUpdate()
         {
             if (layer < 0) return;
+            if (combat.IsCharging && combat.AimPoint.HasValue)
+            {
+                Vector3 direction = Vector3.ProjectOnPlane(combat.AimPoint.Value - combat.AttackOrigin, Vector3.up);
+                if (direction.sqrMagnitude > 0.001f) attackFacing = Quaternion.LookRotation(direction);
+            }
             visuals.WeaponSocket = combat.CurrentWeapon?.AttackMode == WeaponAttackMode.Bow && bowSocket != null ? bowSocket : socket;
             if ((swinging && combat.CurrentWeapon != animatedWeapon) || movement.IsRolling ||
                 !combat.isActiveAndEnabled || combat.InputBlocked || combat.EquipmentUiOpen || health.IsDead ||

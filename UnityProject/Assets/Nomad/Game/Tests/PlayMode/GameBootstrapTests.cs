@@ -755,10 +755,22 @@ namespace Nomad.Game.Tests
 
             var positions = ((IEnumerable)scatterType.GetProperty("Positions").GetValue(scatter)).Cast<Vector3>().ToArray();
             Component[] chests = roots.SelectMany(root => root.GetComponentsInChildren(chestType)).ToArray();
-            Assert.That(chests.Length, Is.EqualTo(positions.Length), "구형 큐브 자리마다 신규 상자 1개");
+            Assert.That(chests.Length, Is.GreaterThan(0), "필드 파밍 상자 생성");
             foreach (Component chest in chests)
-                Assert.That(positions.Any(position => (position - chest.transform.position).sqrMagnitude < 0.0001f),
+                Assert.That(chest.name.Contains("/building-") || positions.Any(position => (position - chest.transform.position).sqrMagnitude < 0.0001f),
                     Is.True, "돌담·나무 등 다른 꾸밈에는 상자가 생기지 않음");
+
+            for (int i = 0; i < chests.Length; i++)
+            for (int j = i + 1; j < chests.Length; j++)
+                Assert.That(Vector3.ProjectOnPlane(chests[i].transform.position - chests[j].transform.position, Vector3.up).magnitude,
+                    Is.GreaterThanOrEqualTo(2.5f), "파밍 상자 간격");
+
+            System.Type dressingType = System.Type.GetType("Nomad.Terrain.FieldDressing, Assembly-CSharp");
+            Component dressing = roots.SelectMany(root => root.GetComponentsInChildren(dressingType)).Single();
+            var areas = ((IEnumerable)dressingType.GetProperty("StructureAreas").GetValue(dressing)).Cast<Rect>();
+            foreach (Rect area in areas)
+                Assert.That(chests.Any(chest => area.Contains(new Vector2(chest.transform.position.x, chest.transform.position.z))),
+                    Is.True, "모든 건물 안에 상자 보장");
         }
 
         private static System.Type DeathRestartType => System.Type.GetType("Nomad.Game.Modules.DeathRestart, Assembly-CSharp");

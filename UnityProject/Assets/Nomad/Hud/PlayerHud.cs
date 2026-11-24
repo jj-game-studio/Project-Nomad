@@ -145,13 +145,18 @@ namespace Nomad.Hud
                 ItemDefinition weapon = combat.CurrentWeapon;
                 int requiredMana = weapon?.AttackMode == WeaponAttackMode.Staff ? weapon.ManaCost : 0;
                 int availableMana = mana != null ? Mathf.FloorToInt(mana.Current) : 0;
-                if (requiredMana != shownRequiredMana || availableMana != shownAvailableMana)
+                if (requiredMana != shownRequiredMana || availableMana != shownAvailableMana || attackStatusText.text.StartsWith("차징"))
                 {
                     shownRequiredMana = requiredMana;
                     shownAvailableMana = availableMana;
                     bool insufficient = requiredMana > 0 && availableMana < requiredMana;
                     attackStatusText.text = insufficient ? $"마나 부족 {availableMana}/{requiredMana}" : "CURRENT";
                     attackStatusText.color = insufficient ? Red : Color.white;
+                }
+                if (combat.IsCharging)
+                {
+                    attackStatusText.text = $"차징 {Mathf.RoundToInt(combat.ChargeProgress * 100)}% · 우클릭 놓기";
+                    attackStatusText.color = Amber;
                 }
                 int arrows = weapon?.AttackMode == WeaponAttackMode.Bow ? combat.ArrowCount : -1;
                 if (weapon != shownWeapon || arrows != shownArrows)

@@ -93,6 +93,8 @@ namespace Nomad.Terrain
             else if (success)
                 AddScatteredChestPoints(start, scatteredChestPositions, chests);
 
+            if (success) success = ReserveBuildingChests(terrain, obstacles, start, chests, out reason);
+
             if (success)
             {
                 // 4면 출구를 먼저 정하고, 그중 하나의 안쪽을 실제 시작점으로 옮깁니다.
@@ -137,6 +139,53 @@ namespace Nomad.Terrain
 
             if (chests.Count == 0) Bake(terrain, obstacles, chests);
             return ValidateRoutes(terrain, start, obstacles, chests, out reason);
+        }
+
+        private bool ReserveBuildingChests(TerrainGenerationResult terrain, GameObject obstacles, Vector3 start,
+            List<FieldSpawnPoint> chests, out string reason)
+        {
+            reason = string.Empty;
+            FieldDressing dressing = GetComponent<FieldDressing>();
+            if (dressing == null) return true;
+            UnityEngine.Terrain ground = FieldGround.FindTerrain(terrain.Pieces[0]);
+            int room = 0;
+            foreach (Rect area in dressing.StructureAreas)
+            {
+                string id = "building-" + room++;
+                int existing = chests.FindIndex(point => area.Contains(new Vector2(point.Position.x, point.Position.z)));
+                if (existing >= 0)
+                {
+                    FieldSpawnPoint point = chests[existing];
+                    chests[existing] = new FieldSpawnPoint(id, point.Position, point.Rotation, point.Radius, point.ApproachPosition);
+                    continue;
+                }
+
+                bool placed = false;
+                var candidates = new List<Vector3>();
+                for (float x = Mathf.Ceil((area.xMin + 1) / 3f) * 3; x < area.xMax - 1; x += 3)
+                for (float z = Mathf.Ceil((area.yMin + 1) / 3f) * 3; z < area.yMax - 1; z += 3)
+                    candidates.Add(new Vector3(x, 0, z));
+                foreach (Vector3 candidate in candidates.OrderBy(p => Vector2.Distance(new Vector2(p.x, p.z), area.center)))
+                {
+                    Vector3 floor = candidate;
+                    floor.y = FieldGround.SurfaceHeight(ground, floor, 0);
+                    if (chests.Any(point => Vector3.Distance(point.Position, floor) < 2.5f) ||
+                        Physics.CheckBox(floor + Vector3.up * 0.5f, new Vector3(0.55f, 0.4f, 0.45f), Quaternion.identity,
+                            Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore)) continue;
+                    for (int side = 0; side < 4 && !placed; side++)
+                    {
+                        Vector3 offset = Quaternion.Euler(0, side * 90, 0) * Vector3.forward * 1.4f;
+                        if (!Sample(floor + offset, out Vector3 approach) || !Reachable(start, approach)) continue;
+                        chests.Add(new FieldSpawnPoint(id, floor, Quaternion.identity, 0.65f, approach));
+                        Bake(terrain, obstacles, chests);
+                        placed = ValidateRoutes(terrain, start, obstacles, chests, out _) && ReachAll(start, chests);
+                        if (!placed) { chests.RemoveAt(chests.Count - 1); Bake(terrain, obstacles, chests); }
+                    }
+                    if (placed) break;
+                }
+                if (!placed) { reason = "건물 내부의 안전한 필수 상자 지점을 찾지 못했습니다: " + id; return false; }
+            }
+            return true;
         }
 
         private void AddScatteredChestPoints(Vector3 start, IReadOnlyList<Vector3> positions, List<FieldSpawnPoint> chests)
