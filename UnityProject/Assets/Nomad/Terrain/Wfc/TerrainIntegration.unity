@@ -1255,6 +1255,7 @@ MonoBehaviour:
   repairLimit: 40
   terrainSurface: 1
   boundaryWallHeight: 4
+  outerForestWidth: 18
 --- !u!1 &1656767680
 GameObject:
   m_ObjectHideFlags: 0

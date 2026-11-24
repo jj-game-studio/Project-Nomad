@@ -381,14 +381,19 @@ namespace Nomad.Inventory
 
             if (preview.activeSelf)
                 PositionDragPreview(position);
+            int target = preview.activeSelf ? dragHud.FindQuickSlot(position) : -1;
+            dragHud.HighlightQuickSlot(target);
             if (mouse.leftButton.isPressed)
                 return;
 
             // 바로가기만 해제하므로 가방의 빈 공간이나 대상 칸의 아이템과 관계없습니다.
             int source = quickDragSource;
-            bool unregister = mouse.leftButton.wasReleasedThisFrame && preview.activeSelf && ContainsBackpack(position);
+            bool released = mouse.leftButton.wasReleasedThisFrame && preview.activeSelf;
+            bool unregister = released && target < 0 && ContainsBackpack(position);
             CancelDrag();
-            if (unregister)
+            if (released && target >= 0)
+                dragHud.QuickSlots.Move(source, target);
+            else if (unregister)
                 dragHud.QuickSlots.Unregister(source);
         }
 

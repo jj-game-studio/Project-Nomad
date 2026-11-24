@@ -96,6 +96,41 @@ namespace Nomad.Tests
         }
 
         [Test]
+        public void MoveToEmptySlotAndSwapPreserveBothItemsAndCounts()
+        {
+            inventory.Add("potion", 2);
+            inventory.Add("sword", 1);
+            quickSlots.Register(0, 0);
+            quickSlots.Register(1, 3);
+            int changes = 0;
+            quickSlots.Changed += () => changes++;
+
+            Assert.That(quickSlots.Move(0, 1), Is.True);
+            Assert.That(quickSlots.GetItem(0), Is.Null);
+            Assert.That(quickSlots.GetItem(1), Is.SameAs(potion));
+            Assert.That(quickSlots.Move(1, 3), Is.True);
+            Assert.That(quickSlots.GetItem(1), Is.SameAs(sword));
+            Assert.That(quickSlots.GetItem(3), Is.SameAs(potion));
+            Assert.That(quickSlots.GetCount(3), Is.EqualTo(2));
+            Assert.That(changes, Is.EqualTo(2));
+            Assert.That(inventory.GetCount("potion"), Is.EqualTo(2));
+            Assert.That(quickSlots.TryUse(1), Is.True, "교환된 번호로 장착");
+            Assert.That(equipment.ActiveWeapon, Is.SameAs(sword));
+        }
+
+        [TestCase(-1, 0)]
+        [TestCase(0, 4)]
+        [TestCase(0, 0)]
+        [TestCase(1, 0)]
+        public void MoveRejectsInvalidEmptyOrSameSlot(int source, int target)
+        {
+            inventory.Add("potion", 1);
+            quickSlots.Register(0, 0);
+            Assert.That(quickSlots.Move(source, target), Is.False);
+            Assert.That(quickSlots.GetItem(0), Is.SameAs(potion));
+        }
+
+        [Test]
         public void UseEquipsAndSelectsWeaponAndKeepsRegistration()
         {
             inventory.Add("sword", 1);

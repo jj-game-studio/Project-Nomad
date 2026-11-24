@@ -136,6 +136,16 @@ namespace Nomad.Inventory
             return true;
         }
 
+        public bool Move(int source, int target)
+        {
+            if ((uint)source >= Capacity || (uint)target >= Capacity || source == target || items[source] == null)
+                return false;
+
+            (items[source], items[target]) = (items[target], items[source]);
+            Changed?.Invoke();
+            return true;
+        }
+
         public bool Unregister(int index)
         {
             if ((uint)index >= Capacity || items[index] == null)

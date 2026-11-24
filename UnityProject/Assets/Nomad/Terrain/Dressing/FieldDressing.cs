@@ -21,6 +21,7 @@ namespace Nomad.Terrain
         [Tooltip("켜면 타일 블록 대신 Unity Terrain을 지면·충돌·경로로 사용합니다(계단 칸은 경사로).")]
         [SerializeField] private bool terrainSurface = true;
         [SerializeField, Min(3f)] private float boundaryWallHeight = 4f;
+        [SerializeField, Range(0f, 30f)] private float outerForestWidth = 18f;
 
         private readonly List<GameObject> blockers = new List<GameObject>();
         private readonly FieldTerrainSurface surface = new FieldTerrainSurface();
@@ -124,6 +125,7 @@ namespace Nomad.Terrain
             }
 
             if (ground != null) PlaceRidges(source, result.Pieces);
+            if (ground != null) PlaceOuterForest(source, result.Seed);
 
             Physics.SyncTransforms();
             RepairPaths(result);
@@ -694,6 +696,7 @@ namespace Nomad.Terrain
 
         public void Clear()
         {
+            ClearOuterForest();
             blockers.Clear();
             structureAreas.Clear();
             Placed = 0;
