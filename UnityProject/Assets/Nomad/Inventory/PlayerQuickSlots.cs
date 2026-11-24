@@ -105,7 +105,17 @@ namespace Nomad.Inventory
                 return false;
 
             ItemDefinition item = inventory.GetSlot(inventorySlot).Item;
-            if (item == null)
+            return RegisterItem(item, quickSlot);
+        }
+
+        public bool RegisterEquipped(EquipmentSlot equipmentSlot, int quickSlot)
+        {
+            return RegisterItem(equipment != null ? equipment.GetItem(equipmentSlot) : null, quickSlot);
+        }
+
+        private bool RegisterItem(ItemDefinition item, int quickSlot)
+        {
+            if (item == null || (uint)quickSlot >= Capacity)
                 return false;
 
             bool changed = items[quickSlot] != item;

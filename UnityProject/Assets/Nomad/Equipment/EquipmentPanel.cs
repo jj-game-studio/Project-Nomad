@@ -1,4 +1,5 @@
 using Nomad.Inventory;
+using Nomad.Hud;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -59,6 +60,7 @@ namespace Nomad.Equipment
         private const float StatsGap = 12f;
         private readonly UnityEngine.UI.Text[] statValues = new UnityEngine.UI.Text[StatCount];
         private PlayerStats stats;
+        private PlayerHud hud;
         private RectTransform statsPanel;
         private UnityEngine.UI.Text details;
         private int laidOutSlots = -1;
@@ -85,6 +87,7 @@ namespace Nomad.Equipment
             combat = GetComponent<PlayerEquipmentCombat>();
             visuals = GetComponent<EquipmentCombatVisuals>();
             stats = GetComponent<PlayerStats>();
+            hud = GetComponentInChildren<PlayerHud>();
             var view = InventoryPanel.GetOrCreate(inventory);
             inventoryView = view;
             tooltipCanvas = (RectTransform)view.GetComponent<Canvas>().transform;
@@ -323,6 +326,11 @@ namespace Nomad.Equipment
                 notice.text = equipment.TryEquip(selected, (EquipmentSlot)gearSlot) ? "장착했습니다." : "이 칸에 장착할 수 없는 아이템입니다.";
                 CancelSelection();
             }
+            else if (dragEquipment >= 0 && equipmentDragging && hud != null && hud.FindQuickSlot(point) >= 0)
+            {
+                hud.QuickSlots.RegisterEquipped((EquipmentSlot)dragEquipment, hud.FindQuickSlot(point));
+                CancelSelection();
+            }
             else if (bagSlot >= 0 && dragEquipment >= 0 && equipmentDragging)
             {
                 bool changed = inventory.GetSlot(bagSlot).Item == null
@@ -377,6 +385,7 @@ namespace Nomad.Equipment
             Vector2 point = mouse.position.ReadValue();
             if (!equipmentDragging) return;
 
+            hud?.HighlightQuickSlot(hud.FindQuickSlot(point));
             equipmentDragPreview.gameObject.SetActive(true);
             BindPreview(equipmentDragName, equipmentDragIcon, draggedEquipmentItem);
             PositionPreview(equipmentDragPreview, point);
@@ -599,6 +608,7 @@ namespace Nomad.Equipment
         private void CancelSelection()
         {
             bool restore = PreviewSlot >= 0 || dragEquipment >= 0;
+            if (dragEquipment >= 0) hud?.HighlightQuickSlot(-1);
             selected = -1;
             selectedItem = null;
             dragEquipment = -1;

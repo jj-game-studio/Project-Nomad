@@ -368,7 +368,144 @@ namespace Nomad.Game.Tests
             AssertAtEntrance(next, null);
         }
 
-        private static IEnumerator PressEscape()
+        [UnityTest]
+        public IEnumerator EquipmentInput_DragRegisterNumberUseRightClickAndEscape()
+        {
+            yield return EditorSceneManager.LoadSceneAsyncInPlayMode(GameScenePath,
+                new LoadSceneParameters(LoadSceneMode.Additive));
+            GameManager manager = GameManager.Instance;
+            yield return WaitForRegion(manager);
+            GameObject player = manager.Player;
+            Component inventory = player.GetComponent("PlayerInventory");
+            Component equipment = player.GetComponent("PlayerEquipment");
+            Component panel = player.GetComponent("EquipmentPanel");
+            Component quick = player.GetComponent("PlayerQuickSlots");
+            var fields = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+            Component hud = player.GetComponentInChildren(System.Type.GetType("Nomad.Hud.PlayerHud, Assembly-CSharp"));
+            var quickRects = (RectTransform[])hud.GetType().GetField("quickRects", fields).GetValue(hud);
+            var bag = (RectTransform)panel.GetType().GetProperty("BagGrid").GetValue(panel);
+            var gear = (RectTransform)panel.GetType().GetProperty("EquipmentGrid").GetValue(panel);
+            System.Type slotType = System.Type.GetType("Nomad.Equipment.EquipmentSlot, Assembly-CSharp");
+            object body = System.Enum.ToObject(slotType, 3);
+
+            bool background = Application.runInBackground;
+            var behavior = InputSystem.settings.backgroundBehavior;
+            var editorInput = InputSystem.settings.editorInputBehaviorInPlayMode;
+            Mouse previousMouse = Mouse.current;
+            Application.runInBackground = true;
+            InputSystem.settings.backgroundBehavior = InputSettings.BackgroundBehavior.IgnoreFocus;
+            InputSystem.settings.editorInputBehaviorInPlayMode = InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
+            Mouse mouse = InputSystem.AddDevice<Mouse>();
+            mouse.MakeCurrent();
+
+            try
+            {
+                Assert.That(CallInventory(player, "Add", "gear-chain-mail", 1), Is.EqualTo(1));
+                yield return PressKey(Key.Tab);
+                Assert.That(panel.GetType().GetProperty("IsOpen").GetValue(panel), Is.True);
+                Canvas.ForceUpdateCanvases();
+                int armorSlot = FindBagItem(inventory, "gear-chain-mail");
+                yield return DragItem(mouse, ScreenCenter((RectTransform)bag.GetChild(armorSlot)), ScreenCenter(quickRects[0]));
+                Assert.That(quick.GetType().GetMethod("GetItem").Invoke(quick, new object[] { 0 }), Is.Not.Null, "장비 드래그 등록");
+
+                int potionSlot = FindBagItem(inventory, "health-potion");
+                yield return DragItem(mouse, ScreenCenter((RectTransform)bag.GetChild(potionSlot)), ScreenCenter(quickRects[3]));
+                Assert.That(quick.GetType().GetMethod("GetCount").Invoke(quick, new object[] { 3 }), Is.EqualTo(3), "회복약 드래그 등록·잔량");
+                yield return PressKey(Key.Digit1);
+                Assert.That(equipment.GetType().GetMethod("GetItem").Invoke(equipment, new[] { body }), Is.Null, "열린 창에서 번호 사용 차단");
+
+                yield return PressEscape();
+                Assert.That(panel.GetType().GetProperty("IsOpen").GetValue(panel), Is.False);
+                Assert.That(Time.timeScale, Is.EqualTo(1f), "첫 Esc는 장비만 닫음");
+                Assert.That(manager.transform.Find("PauseMenu/PauseCanvas/Backdrop"), Is.Null, "퍼즈 생성 안 함");
+                yield return PressKey(Key.Digit1);
+                var armor = (Object)quick.GetType().GetMethod("GetItem").Invoke(quick, new object[] { 0 });
+                Assert.That(equipment.GetType().GetMethod("GetItem").Invoke(equipment, new[] { body }), Is.SameAs(armor), "번호키 장착·등록 유지");
+
+                Component health = player.GetComponent("Health");
+                var damage = health.GetType().GetMethod("TryApplyDamage");
+                damage.Invoke(health, new[] { (object)60, System.Enum.ToObject(damage.GetParameters()[1].ParameterType, 1) });
+                int before = (int)health.GetType().GetProperty("CurrentHealth").GetValue(health);
+                yield return PressKey(Key.Digit4);
+                Assert.That(health.GetType().GetProperty("CurrentHealth").GetValue(health), Is.EqualTo(before + 40), "4번 회복약 사용");
+                Assert.That(quick.GetType().GetMethod("GetCount").Invoke(quick, new object[] { 3 }), Is.EqualTo(2));
+
+                yield return PressKey(Key.Tab);
+                Canvas.ForceUpdateCanvases();
+                // 장착 칸 우클릭으로 해제한 다음 가방에서 우클릭 한 번으로 다시 장착합니다.
+                yield return RightClick(mouse, ScreenCenter((RectTransform)gear.GetChild(3)));
+                Assert.That(equipment.GetType().GetMethod("GetItem").Invoke(equipment, new[] { body }), Is.Null);
+                armorSlot = FindBagItem(inventory, "gear-chain-mail");
+                yield return RightClick(mouse, ScreenCenter((RectTransform)bag.GetChild(armorSlot)));
+                Assert.That(equipment.GetType().GetMethod("GetItem").Invoke(equipment, new[] { body }), Is.SameAs(armor), "우클릭 한 번 장착");
+                yield return DragItem(mouse, ScreenCenter((RectTransform)gear.GetChild(3)), ScreenCenter(quickRects[1]));
+                Assert.That(quick.GetType().GetMethod("GetItem").Invoke(quick, new object[] { 0 }), Is.Null, "같은 장비 등록 위치 이동");
+                Assert.That(quick.GetType().GetMethod("GetItem").Invoke(quick, new object[] { 1 }), Is.SameAs(armor), "장착 칸에서도 직접 퀵슬롯 등록");
+                Assert.That(equipment.GetType().GetMethod("GetItem").Invoke(equipment, new[] { body }), Is.SameAs(armor), "등록은 장비를 해제하지 않음");
+                Assert.That(CallInventory(player, "Add", "gear-padded-armor", 1), Is.EqualTo(1));
+                int replacementSlot = FindBagItem(inventory, "gear-padded-armor");
+                yield return RightClick(mouse, ScreenCenter((RectTransform)bag.GetChild(replacementSlot)));
+                object replacement = equipment.GetType().GetMethod("GetItem").Invoke(equipment, new[] { body });
+                Assert.That(replacement.GetType().GetProperty("ItemId").GetValue(replacement), Is.EqualTo("gear-padded-armor"), "우클릭 한 번으로 기존 장비 교체");
+                Assert.That(FindBagItem(inventory, "gear-chain-mail"), Is.GreaterThanOrEqualTo(0));
+                yield return PressEscape();
+                yield return PressKey(Key.Digit2);
+                Assert.That(equipment.GetType().GetMethod("GetItem").Invoke(equipment, new[] { body }), Is.SameAs(armor), "교체 후 번호키로 재장착");
+                yield return PressEscape();
+                Assert.That(Time.timeScale, Is.Zero, "창 없는 다음 Esc는 퍼즈");
+                yield return PressEscape();
+                Assert.That(Time.timeScale, Is.EqualTo(1f));
+            }
+            finally
+            {
+                InputSystem.RemoveDevice(mouse);
+                previousMouse?.MakeCurrent();
+                InputSystem.settings.backgroundBehavior = behavior;
+                InputSystem.settings.editorInputBehaviorInPlayMode = editorInput;
+                Application.runInBackground = background;
+            }
+        }
+
+        private static int FindBagItem(Component inventory, string id)
+        {
+            int count = (int)inventory.GetType().GetProperty("SlotCount").GetValue(inventory);
+            for (int slot = 0; slot < count; slot++)
+            {
+                object stack = inventory.GetType().GetMethod("GetSlot").Invoke(inventory, new object[] { slot });
+                object item = stack.GetType().GetProperty("Item").GetValue(stack);
+                if (item != null && (string)item.GetType().GetProperty("ItemId").GetValue(item) == id) return slot;
+            }
+            Assert.Fail("가방에 없는 검증 아이템: " + id);
+            return -1;
+        }
+
+        private static Vector2 ScreenCenter(RectTransform rect) =>
+            RectTransformUtility.WorldToScreenPoint(null, rect.TransformPoint(rect.rect.center));
+
+        private static IEnumerator DragItem(Mouse mouse, Vector2 source, Vector2 target)
+        {
+            InputSystem.QueueStateEvent(mouse, new MouseState { position = source }.WithButton(MouseButton.Left));
+            yield return null;
+            yield return null;
+            InputSystem.QueueStateEvent(mouse, new MouseState { position = target }.WithButton(MouseButton.Left));
+            yield return null;
+            yield return null;
+            InputSystem.QueueStateEvent(mouse, new MouseState { position = target });
+            yield return null;
+            yield return null;
+        }
+
+        private static IEnumerator RightClick(Mouse mouse, Vector2 point)
+        {
+            InputSystem.QueueStateEvent(mouse, new MouseState { position = point }.WithButton(MouseButton.Right));
+            yield return null;
+            InputSystem.QueueStateEvent(mouse, new MouseState { position = point });
+            yield return null;
+        }
+
+        private static IEnumerator PressEscape() => PressKey(Key.Escape);
+
+        private static IEnumerator PressKey(Key key)
         {
             bool previousRunInBackground = Application.runInBackground;
             InputSettings settings = InputSystem.settings;
@@ -385,9 +522,9 @@ namespace Nomad.Game.Tests
 
             try
             {
-                InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.Escape));
+                InputSystem.QueueStateEvent(keyboard, new KeyboardState(key));
                 yield return null;
-                Assert.That(keyboard.escapeKey.isPressed, Is.True, "가상 ESC가 Input System에 도달");
+                Assert.That(keyboard[key].isPressed, Is.True, "가상 키가 Input System에 도달");
                 InputSystem.QueueStateEvent(keyboard, new KeyboardState());
                 yield return null;
             }

@@ -133,7 +133,7 @@ namespace Nomad.Tests
         }
 
         [Test]
-        public void UseRejectsPauseTradeAndUnsupportedItems()
+        public void UseRejectsPauseAndUnsupportedItems()
         {
             inventory.Add("ore", 1);
             quickSlots.Register(0, 0);
