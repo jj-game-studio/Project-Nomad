@@ -38,6 +38,8 @@ namespace Nomad.Shop.Editor
 
             var scene = EditorSceneManager.OpenScene(VillageShopAuthoring.ScenePath);
             Require(Object.FindObjectsByType<Shopkeeper>(FindObjectsSortMode.None).Length == 1, "저장된 마을 상점 하나");
+            Require(GameObject.Find("Merchant NPC") != null && GameObject.Find("Field Exit Guide") != null,
+                "NPC와 필드 출구 안내가 저장 씬에 존재");
             int roots = scene.rootCount;
             VillageShopAuthoring.ApplyToScene(scene);
             VillageShopAuthoring.ApplyToScene(scene);

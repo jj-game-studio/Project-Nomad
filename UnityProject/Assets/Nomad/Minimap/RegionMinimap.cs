@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using Nomad.Game;
 using Nomad.Shop;
 using Nomad.Terrain;
-
-
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;

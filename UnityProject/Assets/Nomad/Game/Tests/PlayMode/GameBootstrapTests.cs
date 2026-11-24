@@ -767,10 +767,11 @@ namespace Nomad.Game.Tests
 
             System.Type dressingType = System.Type.GetType("Nomad.Terrain.FieldDressing, Assembly-CSharp");
             Component dressing = roots.SelectMany(root => root.GetComponentsInChildren(dressingType)).Single();
-            var areas = ((IEnumerable)dressingType.GetProperty("StructureAreas").GetValue(dressing)).Cast<Rect>();
+            var areas = ((IEnumerable)dressingType.GetProperty("StructureAreas").GetValue(dressing)).Cast<Rect>().ToArray();
+            Assert.That(areas.Length, Is.GreaterThan(0), "건물 자체도 생성됨");
             foreach (Rect area in areas)
                 Assert.That(chests.Any(chest => area.Contains(new Vector2(chest.transform.position.x, chest.transform.position.z))),
-                    Is.True, "모든 건물 안에 상자 보장");
+                    Is.True, "모든 건물 안에 상자 보장 area=" + area + " chests=" + string.Join(",", chests.Select(chest => chest.name + chest.transform.position)));
         }
 
         private static System.Type DeathRestartType => System.Type.GetType("Nomad.Game.Modules.DeathRestart, Assembly-CSharp");

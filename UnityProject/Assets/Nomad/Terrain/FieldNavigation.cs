@@ -145,7 +145,8 @@ namespace Nomad.Terrain
             List<FieldSpawnPoint> chests, out string reason)
         {
             reason = string.Empty;
-            FieldDressing dressing = GetComponent<FieldDressing>();
+            // 게임 필드는 제어기, 통합 검토 씬은 생성기에 꾸밈이 붙어 있습니다.
+            FieldDressing dressing = GetComponent<FieldDressing>() ?? generator.GetComponent<FieldDressing>();
             if (dressing == null) return true;
             UnityEngine.Terrain ground = FieldGround.FindTerrain(terrain.Pieces[0]);
             int room = 0;

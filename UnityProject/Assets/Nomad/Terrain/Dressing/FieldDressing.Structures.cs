@@ -134,7 +134,9 @@ namespace Nomad.Terrain
 
                     Vector3 a = Vector3.Lerp(from, to, index / (float)count);
                     Vector3 b = Vector3.Lerp(from, to, (index + 1) / (float)count);
-                    GameObject timber = Pick(source.structureWalls, random);
+                    // 폐허용 잘린 벽·창틀·뼈대 대신 빈틈 없는 기본 벽을 사용합니다.
+                    GameObject timber = System.Array.Find(source.structureWalls,
+                        prefab => prefab != null && prefab.name == "SM_Bld_House_Wall_01") ?? Pick(source.structureWalls, random);
                     PlaceStructureWall(Pick(source.structureBases, random), timber, a, b);
                 }
             }
@@ -195,6 +197,7 @@ namespace Nomad.Terrain
         {
             corner.y = GroundY(corner, corner.y) - 0.05f;
             GameObject pillar = Spawn(prefab, corner, 0f, 1f);
+            pillar.name = "StructurePillar";
             pillar.transform.position = corner;
 
             var box = pillar.AddComponent<BoxCollider>();

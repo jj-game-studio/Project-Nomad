@@ -127,6 +127,8 @@ namespace Nomad.Minimap.Editor
                         Require(exits > 0 && minimap.MarkerCount == exits,
                             "필드의 실제 출구 수 반영·상점 잔상 없음");
                         Require(minimap.EnemyMarkerCount == 0, "필드 적 마커 표시 안 함");
+                        Require(Object.FindObjectsByType<Nomad.Monsters.Demo.BossRouteGuide>(FindObjectsSortMode.None).Length == 0,
+                            "보스 위치 바닥 화살표 생성 안 함");
                         Require(((Texture2D)minimap.MapTexture).GetPixels32().Distinct().Count() > 1, "NavMesh 지도 생성");
                         Capture("minimap-field.png");
                         previousTexture = minimap.MapTexture;
