@@ -155,7 +155,7 @@ namespace Nomad.Hud
                 }
                 if (combat.IsCharging)
                 {
-                    attackStatusText.text = $"차징 {Mathf.RoundToInt(combat.ChargeProgress * 100)}% · 우클릭 놓기";
+                    attackStatusText.text = $"차징 {Mathf.RoundToInt(combat.ChargeProgress * 100)}% · 좌클릭 놓기";
                     attackStatusText.color = Amber;
                 }
                 int arrows = weapon?.AttackMode == WeaponAttackMode.Bow ? combat.ArrowCount : -1;

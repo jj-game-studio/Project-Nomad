@@ -61,10 +61,16 @@ namespace Nomad.Equipment
         {
             if (IsCharging && (!ChargeAllowed || CurrentWeapon != chargeWeapon || mouse == null)) CancelCharge();
             if (mouse == null) return false;
-            if (mouse.rightButton.wasPressedThisFrame) TryBeginCharge(mouse.position.ReadValue());
-            if (!IsCharging) return false;
-            if (mouse.rightButton.wasReleasedThisFrame) TryReleaseCharge(mouse.position.ReadValue());
-            else if (!mouse.rightButton.isPressed) CancelCharge();
+            ItemDefinition weapon = CurrentWeapon;
+            bool chargeInput = weapon != null &&
+                (weapon.AttackMode == WeaponAttackMode.Bow || weapon.AttackMode == WeaponAttackMode.Staff);
+            if (!chargeInput) return false;
+
+            // 활·지팡이는 누를 때 발사하지 않고, 놓을 때 유지 시간에 맞춰 한 발만 발사합니다.
+            if (mouse.leftButton.wasPressedThisFrame) TryBeginCharge(mouse.position.ReadValue());
+            if (!IsCharging) return true;
+            if (mouse.leftButton.wasReleasedThisFrame) TryReleaseCharge(mouse.position.ReadValue());
+            else if (!mouse.leftButton.isPressed) CancelCharge();
             else if (TryGetAim(mouse.position.ReadValue(), out Vector3 aim)) AimPoint = aim;
             return true;
         }

@@ -120,7 +120,7 @@ namespace Nomad.Equipment
             if (mouse.leftButton.wasPressedThisFrame)
                 holdingAttack = !InputBlocked && !EquipmentUiOpen && inventory?.BlocksTradeInput != true && !IsOverUi(pointer);
 
-            // 모든 무기는 누르고 있는 동안 공격 간격마다 계속 공격합니다.
+            // 차징을 사용하지 않는 무기는 누르고 있는 동안 공격 간격마다 계속 공격합니다.
             if (holdingAttack)
                 TryAttack(pointer);
         }

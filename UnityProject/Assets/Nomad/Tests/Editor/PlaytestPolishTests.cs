@@ -11,6 +11,8 @@ using Nomad.Player;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.LowLevel;
 using UnityEngine.TestTools;
 
 namespace Nomad.Tests
@@ -39,8 +41,18 @@ namespace Nomad.Tests
             GameObject cameraRoot = null;
             GameObject monsters = null;
             Material monsterMaterial = null;
+            Mouse previousMouse = Mouse.current;
+            Mouse mouse = null;
+            bool background = Application.runInBackground;
+            var backgroundBehavior = InputSystem.settings.backgroundBehavior;
+            var editorInput = InputSystem.settings.editorInputBehaviorInPlayMode;
             try
             {
+                Application.runInBackground = true;
+                InputSystem.settings.backgroundBehavior = InputSettings.BackgroundBehavior.IgnoreFocus;
+                InputSystem.settings.editorInputBehaviorInPlayMode = InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
+                mouse = InputSystem.AddDevice<Mouse>();
+                mouse.MakeCurrent();
                 rig = Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Nomad/Game/Prefabs/PlayerRig.prefab"));
                 var combat = rig.GetComponentInChildren<PlayerEquipmentCombat>();
                 var inventory = combat.GetComponent<PlayerInventory>();
@@ -82,6 +94,31 @@ namespace Nomad.Tests
                     combat.InputBlocked = true;
                     Assert.That(combat.IsCharging, Is.False, "UI/퍼즈 입력 차단 시 차징 취소");
                     combat.InputBlocked = false;
+
+                    // 실제 마우스 입력에서도 누르는 순간 일반 공격이 먼저 발사되지 않아야 합니다.
+                    TestKit.SetField(combat, "nextAttackTime", 0f);
+                    arrows = combat.ArrowCount;
+                    beforeMana = mana.Current;
+                    InputSystem.QueueStateEvent(mouse, new MouseState { position = pointer }.WithButton(MouseButton.Right));
+                    yield return null;
+                    yield return null;
+                    Assert.That(combat.IsCharging, Is.False, "우클릭은 차징하지 않음");
+                    InputSystem.QueueStateEvent(mouse, new MouseState { position = pointer }.WithButton(MouseButton.Left));
+                    yield return null;
+                    yield return null;
+                    Assert.That(combat.IsCharging, Is.True, "좌클릭 유지로 차징 시작");
+                    Assert.That(combat.ArrowCount, Is.EqualTo(arrows), "누를 때 화살 발사 없음");
+                    Assert.That(mana.Current, Is.EqualTo(beforeMana), "누를 때 마나 소모 없음");
+                    TestKit.SetField(combat, "chargeStarted", Time.time - PlayerEquipmentCombat.FullChargeSeconds);
+                    yield return null;
+                    Assert.That(combat.IsCharging, Is.True, "완충 뒤에도 놓기 전에는 유지");
+                    InputSystem.QueueStateEvent(mouse, new MouseState { position = pointer });
+                    yield return null;
+                    yield return null;
+                    Assert.That(combat.IsCharging, Is.False, "좌클릭 놓으면 발사");
+                    Assert.That(combat.LastShotPower, Is.EqualTo(2.5f));
+                    Assert.That(combat.ArrowCount, Is.EqualTo(arrows - (combat.CurrentWeapon.AttackMode == WeaponAttackMode.Bow ? 1 : 0)));
+                    Assert.That(mana.Current, Is.EqualTo(beforeMana - (combat.CurrentWeapon.AttackMode == WeaponAttackMode.Staff ? combat.CurrentWeapon.ManaCost : 0)));
                 }
 
                 monsters = new GameObject("Loot rank test");
@@ -108,6 +145,11 @@ namespace Nomad.Tests
             }
             finally
             {
+                if (mouse != null) InputSystem.RemoveDevice(mouse);
+                previousMouse?.MakeCurrent();
+                Application.runInBackground = background;
+                InputSystem.settings.backgroundBehavior = backgroundBehavior;
+                InputSystem.settings.editorInputBehaviorInPlayMode = editorInput;
                 if (monsters != null) Object.DestroyImmediate(monsters);
                 if (monsterMaterial != null) Object.DestroyImmediate(monsterMaterial);
                 if (rig != null) Object.DestroyImmediate(rig);
