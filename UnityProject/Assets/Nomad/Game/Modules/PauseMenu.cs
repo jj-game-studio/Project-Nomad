@@ -38,8 +38,8 @@ namespace Nomad.Game.Modules
             if (Keyboard.current?.escapeKey.wasPressedThisFrame != true)
                 return;
 
-            // 열린 상자의 Esc 처리는 InventoryPanel에 맡겨 일시정지까지 이어지지 않게 합니다.
-            if (!IsOpen && manager.Player.GetComponent<PlayerInventory>()?.Panel?.HasOpenChest == true)
+            // 열린 장비·가방·상자의 Esc는 창 닫기에만 사용합니다.
+            if (!IsOpen && manager.Player.GetComponent<PlayerInventory>()?.Panel?.IsOpen == true)
                 return;
 
             if (showingSettings)

@@ -252,6 +252,14 @@ namespace Nomad.Equipment
             Vector2 point = mouse.position.ReadValue();
             int bagSlot = Find(bag, point);
             int gearSlot = Find(equipmentGrid, point);
+            if (mouse.rightButton.wasPressedThisFrame && bagSlot >= 0)
+            {
+                notice.text = equipment.TryEquipAuto(bagSlot) ? "장착했습니다." : "장착할 수 없는 아이템입니다.";
+                CancelSelection();
+                ResetClick();
+                return;
+            }
+
             if (mouse.rightButton.wasPressedThisFrame && gearSlot >= 0)
             {
                 bool removed = equipment.TryUnequip((EquipmentSlot)gearSlot);

@@ -45,6 +45,7 @@ namespace Nomad.Inventory
         private bool runtimeInstance;
         private PlayerHud dragHud;
 
+        public bool IsOpen => panel != null && panel.activeInHierarchy;
         internal bool HasOpenChest => chestPanel != null && chestPanel.IsOpen;
         internal LootChest OpenChest => chestPanel?.Chest;
         internal float ChestLayoutWidth => chestPanel?.LayoutWidth ?? 0f;
@@ -173,6 +174,14 @@ namespace Nomad.Inventory
                                  Keyboard.current?.escapeKey.wasPressedThisFrame == true))
             {
                 CloseChest();
+                return;
+            }
+
+            if (IsOpen && Keyboard.current?.escapeKey.wasPressedThisFrame == true)
+            {
+                CancelDrag();
+                hoveredIndex = -1;
+                panel.SetActive(false);
                 return;
             }
 
