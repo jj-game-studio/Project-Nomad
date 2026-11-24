@@ -15,7 +15,7 @@ MonoBehaviour:
   itemId: weapon-dragonbone-bow
   displayName: "\uC6A9\uACE8 \uC7A5\uAD81"
   description: "\uC6A9\uC758 \uBF08\uB85C \uB9CC\uB4E0 \uC7A5\uAD81\uC785\uB2C8\uB2E4. \uD654\uC0B4 1\uAC1C\uB97C \uC18C\uBAA8\uD569\uB2C8\uB2E4."
-  icon: {fileID: 0}
+  icon: {fileID: -9156558239948448363, guid: 191211c9f62bcde4ca2119d09df21b97, type: 3}
   maxStack: 1
   tier: 5
   equipmentType: 1

@@ -62,11 +62,12 @@ namespace Nomad.Loot
             root.sizeDelta = new Vector2(Width, height);
             root.anchoredPosition = backpack.anchoredPosition + Vector2.right * (backpack.rect.width + Gap) * 0.5f;
             root.gameObject.AddComponent<Image>().color = Background;
+            ItemUiStyle.Frame(root);
 
-            Text title = AddLabel(root, "Title", "Loot", 29, Ink, TextAnchor.MiddleLeft);
+            Text title = AddLabel(root, "Title", "LOOT", 27, Ink, TextAnchor.MiddleLeft);
             title.fontStyle = FontStyle.Bold;
             Dock(title.rectTransform, 22, 72, -56, -14, 1);
-            Button closeButton = AddButton(root, "Close", "Close", Muted, close);
+            Button closeButton = AddButton(root, "Close", "닫기", Muted, close);
             Dock((RectTransform)closeButton.transform, Width - 78, 18, -50, -22, 1);
 
             summary = AddLabel(root, "Summary", "", 15, Muted, TextAnchor.MiddleLeft);
@@ -138,7 +139,7 @@ namespace Nomad.Loot
             Chest = chest;
             interaction = owner;
             Chest.Changed += Refresh;
-            feedback.text = "Backpack: double-click 1 · Shift-click stack";
+            feedback.text = "Shift 클릭 전체 · 바깥 클릭 닫기";
             backdrop.gameObject.SetActive(true);
             root.gameObject.SetActive(true);
             Refresh();
@@ -185,9 +186,12 @@ namespace Nomad.Loot
                 row.Count.text = $"×{stack.Count}";
             }
 
-            summary.text = remainingStacks == 0 ? "Empty chest  ·  Drag here to store" : $"{remainingStacks} stacks  ·  Drag or double-click";
+            summary.text = remainingStacks == 0 ? "빈 상자 · 끌어 놓아 보관" : $"아이템 {remainingStacks}종 · 드래그 / 더블클릭";
             takeAll.interactable = remainingStacks > 0;
         }
+
+        public bool Contains(Vector2 screenPosition, Camera eventCamera) => IsOpen &&
+            RectTransformUtility.RectangleContainsScreenPoint(root, screenPosition, eventCamera);
 
         public bool ContainsDropPoint(Vector2 screenPosition, Camera eventCamera)
         {
@@ -290,7 +294,9 @@ namespace Nomad.Loot
             RectTransform row = CreateRect($"Loot Stack {index}", content);
             row.gameObject.AddComponent<LayoutElement>().preferredHeight = 52f;
             Image surface = row.gameObject.AddComponent<Image>();
-            surface.color = new Color32(45, 48, 49, 255);
+            surface.sprite = ItemUiStyle.Rounded;
+            surface.type = Image.Type.Sliced;
+            surface.color = ItemUiStyle.SlotFill;
             LootStackButton button = row.gameObject.AddComponent<LootStackButton>();
             button.targetGraphic = surface;
             var colors = button.colors;
@@ -311,6 +317,7 @@ namespace Nomad.Loot
             Dock(name.rectTransform, 54, 62, 0, 0);
             Text count = AddLabel(row, "Count", "", 17, Accent, TextAnchor.MiddleRight);
             Dock(count.rectTransform, Width - 102, 12, 0, 0);
+            ItemUiStyle.AddCountBadge(count);
             return new Row(row.gameObject, icon, name, count);
         }
 
@@ -318,7 +325,9 @@ namespace Nomad.Loot
         {
             RectTransform rect = CreateRect(name, parent);
             Image image = rect.gameObject.AddComponent<Image>();
-            image.color = new Color32(55, 58, 57, 255);
+            image.sprite = ItemUiStyle.Rounded;
+            image.type = Image.Type.Sliced;
+            image.color = new Color32(61, 66, 48, 255);
             Button button = rect.gameObject.AddComponent<Button>();
             button.targetGraphic = image;
             button.onClick.AddListener(() => click());

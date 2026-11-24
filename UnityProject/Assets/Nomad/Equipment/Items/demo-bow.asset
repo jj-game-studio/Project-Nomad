@@ -15,7 +15,7 @@ MonoBehaviour:
   itemId: demo-bow
   displayName: "\uC0AC\uB0E5\uD65C"
   description: "\uAC00\uBC29\uC758 \uD654\uC0B4 1\uAC1C\uB97C \uC18C\uBAA8\uD569\uB2C8\uB2E4."
-  icon: {fileID: 0}
+  icon: {fileID: -9156558239948448363, guid: 191211c9f62bcde4ca2119d09df21b97, type: 3}
   maxStack: 1
   tier: 2
   equipmentType: 1

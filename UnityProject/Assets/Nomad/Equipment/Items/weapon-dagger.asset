@@ -15,7 +15,7 @@ MonoBehaviour:
   itemId: weapon-dagger
   displayName: "\uB2E8\uAC80"
   description: "\uC0AC\uAC70\uB9AC\uAC00 \uC9E7\uACE0 \uBE60\uB974\uAC8C \uD718\uB450\uB985\uB2C8\uB2E4."
-  icon: {fileID: 0}
+  icon: {fileID: -2629470278661546997, guid: 191211c9f62bcde4ca2119d09df21b97, type: 3}
   maxStack: 1
   tier: 1
   equipmentType: 1

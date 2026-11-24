@@ -110,7 +110,7 @@ namespace Nomad.PlayerVisual.Editor
                     CaptureFront("player-animation-fall.png");
                     sawFall = true;
                 }
-                if (stage == 3 && elapsed > 0.85f && !sawLanding)
+                if (stage == 3 && animation.CurrentState == "Land" && !sawLanding)
                 {
                     Check(animation.CurrentState == "Land" && player.GetComponent<CharacterController>().isGrounded,
                         "Landing pose does not follow actual ground contact");
@@ -131,8 +131,11 @@ namespace Nomad.PlayerVisual.Editor
                 }
                 if (stage == 4 && elapsed > 0.4f && !sawRollRecovery)
                 {
-                    Check(!player.IsRolling && animation.CurrentState == "Roll", "Roll visual recovery changed physical timing or was cut");
-                    Check(animation.Animator.GetCurrentAnimatorStateInfo(0).normalizedTime < 0.7f, "Roll animation still plays too fast");
+                    Vector3 recoveryVelocity = player.GetComponent<CharacterController>().velocity;
+                    bool stationaryLanding = animation.CurrentState == "Land" &&
+                        new Vector2(recoveryVelocity.x, recoveryVelocity.z).magnitude < 0.1f;
+                    Check(!player.IsRolling && (animation.CurrentState == "Idle" || animation.CurrentState == "Run" || stationaryLanding),
+                        "Roll visual did not return to locomotion: " + animation.CurrentState);
                     CaptureFront("player-animation-roll-recovery.png");
                     sawRollRecovery = true;
                 }
@@ -182,7 +185,7 @@ namespace Nomad.PlayerVisual.Editor
                         Check(player.transform.position.z < 3.5f, "Wall collision regression");
                         InputSystem.QueueStateEvent(keyboard, new KeyboardState());
                         Check(sawRun && sawJump && sawFall && sawLanding && sawRoll, "Missing animation state evidence");
-                        Debug.Log($"PLAYER_VISUAL_PLAY_PASS: frame={Time.frameCount}, model, animated feet, idle loop, run leg motion, rise/fall/landing once each, pose continuity, unchanged roll recovery and physics, movement, facing, jump, roll, wall");
+                        Debug.Log($"PLAYER_VISUAL_PLAY_PASS: frame={Time.frameCount}, model, animated feet, idle loop, run leg motion, rise/fall/landing once each, pose continuity, synchronized roll, unchanged physics, movement, facing, jump, roll, wall");
                         Finish(0);
                         break;
                 }

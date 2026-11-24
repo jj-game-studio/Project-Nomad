@@ -302,13 +302,20 @@ namespace Nomad.Game.Tests
                 System.Array stacks = System.Array.CreateInstance(stackType, 1);
                 stacks.SetValue(System.Activator.CreateInstance(stackType, new object[] { "scrap", 2 }), 0);
                 chestType.GetMethod("Initialize").Invoke(chest, new object[] { "escape-test-chest", stacks });
-                panelType.GetMethod("ShowChest", internalMembers).Invoke(panel, new object[] { chest, interaction });
+                chestObject.AddComponent<BoxCollider>().isTrigger = true;
+                Physics.SyncTransforms();
+                yield return PressKey(Key.E);
                 Assert.That(hasOpenChest.GetValue(panel), Is.True, "상자 파밍 창 열림");
                 yield return null;
                 AssertLootLayout(panel, manager.Player);
                 System.Type.GetType("Nomad.Loot.Editor.ChestInteractionVerification, Assembly-CSharp-Editor")
                     .GetMethod("Capture", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)
-                    .Invoke(null, new object[] { "issue200-main-loot" });
+                    .Invoke(null, new object[] { "issue206-main-loot" });
+                yield return ClickOutsideLoot(panel, manager.Player);
+                Assert.That(hasOpenChest.GetValue(panel), Is.False, "바깥 클릭으로 LOOT 닫기");
+                Assert.That(Time.timeScale, Is.EqualTo(originalScale), "일시정지하지 않음");
+                yield return PressKey(Key.E);
+                Assert.That(hasOpenChest.GetValue(panel), Is.True, "E로 다시 열기");
                 Assert.That(chestType.GetMethod("TryLoot").Invoke(chest, new object[] { inventory }), Is.EqualTo(2));
 
                 yield return PressEscape();
@@ -508,6 +515,38 @@ namespace Nomad.Game.Tests
             yield return null;
             InputSystem.QueueStateEvent(mouse, new MouseState { position = point });
             yield return null;
+        }
+
+        private static IEnumerator ClickOutsideLoot(Component panel, GameObject player)
+        {
+            bool background = Application.runInBackground;
+            var behavior = InputSystem.settings.backgroundBehavior;
+            var editorInput = InputSystem.settings.editorInputBehaviorInPlayMode;
+            Mouse previous = Mouse.current;
+            Application.runInBackground = true;
+            InputSystem.settings.backgroundBehavior = InputSettings.BackgroundBehavior.IgnoreFocus;
+            InputSystem.settings.editorInputBehaviorInPlayMode = InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
+            Mouse mouse = InputSystem.AddDevice<Mouse>();
+            mouse.MakeCurrent();
+            try
+            {
+                Vector2 point = new Vector2(Screen.width - 3, Screen.height - 3);
+                InputSystem.QueueStateEvent(mouse, new MouseState { position = point }.WithButton(MouseButton.Left));
+                yield return null;
+                Assert.That(panel.GetType().GetProperty("IsOpen").GetValue(panel), Is.False);
+                Component combat = player.GetComponent("PlayerEquipmentCombat");
+                Assert.That(combat.GetType().GetProperty("EquipmentUiOpen").GetValue(combat), Is.True, "닫기 클릭의 월드 공격 차단");
+                InputSystem.QueueStateEvent(mouse, new MouseState { position = point });
+                yield return null;
+            }
+            finally
+            {
+                InputSystem.RemoveDevice(mouse);
+                previous?.MakeCurrent();
+                InputSystem.settings.backgroundBehavior = behavior;
+                InputSystem.settings.editorInputBehaviorInPlayMode = editorInput;
+                Application.runInBackground = background;
+            }
         }
 
         private static IEnumerator PressEscape() => PressKey(Key.Escape);

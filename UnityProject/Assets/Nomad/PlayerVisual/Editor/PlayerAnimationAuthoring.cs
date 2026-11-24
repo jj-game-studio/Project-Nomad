@@ -37,6 +37,7 @@ namespace Nomad.PlayerVisual.Editor
             AddState(machine, "Roll", roll, roll.length / PlayerAnimation.RollMotionDuration);
             EditorUtility.SetDirty(controller);
             AssetDatabase.SaveAssets();
+            PlayerMotionAuthoring.ApplyAnimationControllers();
             return controller;
         }
 

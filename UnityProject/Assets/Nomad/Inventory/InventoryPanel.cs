@@ -44,8 +44,10 @@ namespace Nomad.Inventory
         private Vector2 backpackPosition;
         private bool runtimeInstance;
         private PlayerHud dragHud;
+        private int chestClosedFrame = -1;
 
         public bool IsOpen => panel != null && panel.activeInHierarchy;
+        internal bool ConsumedCloseClick => Time.frameCount == chestClosedFrame;
         internal bool HasOpenChest => chestPanel != null && chestPanel.IsOpen;
         internal LootChest OpenChest => chestPanel?.Chest;
         internal float ChestLayoutWidth => chestPanel?.LayoutWidth ?? 0f;
@@ -84,6 +86,7 @@ namespace Nomad.Inventory
         private void Awake()
         {
             canvas = grid.GetComponentInParent<Canvas>(true);
+            ItemUiStyle.Frame((RectTransform)panel.transform);
             backpackPosition = ((RectTransform)panel.transform).anchoredPosition;
             tooltip = new InventoryTooltip((RectTransform)canvas.transform, capacity.font);
             for (int index = 0; index < slots.Length; index++)
@@ -169,6 +172,14 @@ namespace Nomad.Inventory
             }
             if (BlocksSplitInput)
                 return;
+
+            Mouse pointer = Mouse.current;
+            if (HasOpenChest && pointer?.leftButton.wasPressedThisFrame == true &&
+                !ContainsBackpack(pointer.position.ReadValue()) && !chestPanel.Contains(pointer.position.ReadValue(), EventCamera))
+            {
+                CloseChest();
+                return;
+            }
 
             if (HasOpenChest && (Keyboard.current?.tabKey.wasPressedThisFrame == true ||
                                  Keyboard.current?.escapeKey.wasPressedThisFrame == true))
@@ -271,6 +282,7 @@ namespace Nomad.Inventory
                 return;
 
             chestPanel.Hide();
+            chestClosedFrame = Time.frameCount;
             CancelDrag();
             hoveredIndex = -1;
             ((RectTransform)panel.transform).anchoredPosition = backpackPosition;
@@ -578,8 +590,8 @@ namespace Nomad.Inventory
 
         private sealed class SlotView
         {
-            private static readonly Color EmptyFill = new Color32(26, 28, 30, 235);
-            private static readonly Color OccupiedFill = new Color32(44, 47, 48, 255);
+            private static readonly Color EmptyFill = new Color32(31, 39, 41, 235);
+            private static readonly Color OccupiedFill = ItemUiStyle.SlotFill;
             private static readonly Color EmptyBorder = new Color32(66, 69, 68, 255);
             private static readonly Color OccupiedBorder = new Color32(101, 107, 103, 255);
             private static readonly Color HoverBorder = new Color32(224, 182, 104, 255);
@@ -590,6 +602,7 @@ namespace Nomad.Inventory
             private readonly UnityEngine.UI.Text count;
             private readonly UnityEngine.UI.Text fallbackName;
             private readonly UnityEngine.UI.Text tierBadge;
+            private readonly UnityEngine.UI.Image countBadge;
             private bool occupied;
             private ItemTier tier;
 
@@ -599,6 +612,8 @@ namespace Nomad.Inventory
             public SlotView(GameObject slot)
             {
                 background = slot.GetComponent<UnityEngine.UI.Image>();
+                background.sprite = ItemUiStyle.Rounded;
+                background.type = UnityEngine.UI.Image.Type.Sliced;
                 Group = slot.AddComponent<CanvasGroup>();
                 border = slot.AddComponent<UnityEngine.UI.Outline>();
                 border.effectDistance = new Vector2(1, -1);
@@ -639,6 +654,7 @@ namespace Nomad.Inventory
                 icon.rectTransform.anchorMax = Vector2.one;
                 icon.rectTransform.offsetMin = new Vector2(10, 16);
                 icon.rectTransform.offsetMax = new Vector2(-10, -6);
+                countBadge = ItemUiStyle.AddCountBadge(count);
             }
 
             public void Bind(PlayerInventory.ItemStack stack, bool highlighted)
@@ -651,7 +667,8 @@ namespace Nomad.Inventory
                 icon.sprite = sprite;
                 icon.enabled = sprite != null;
                 fallbackName.text = occupied && sprite == null ? stack.Item.DisplayName : string.Empty;
-                count.text = occupied && stack.Item.MaxStack > 1 && stack.Count > 1 ? $"×{stack.Count}" : string.Empty;
+                count.text = occupied && stack.Item.MaxStack > 1 ? $"×{stack.Count}" : string.Empty;
+                countBadge.enabled = !string.IsNullOrEmpty(count.text);
                 tier = occupied ? stack.Item.Tier : ItemTier.None;
                 tierBadge.text = TierStyle.Label(tier);
                 tierBadge.color = TierStyle.Color(tier);

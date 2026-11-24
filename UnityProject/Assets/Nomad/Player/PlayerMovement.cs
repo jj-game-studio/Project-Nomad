@@ -13,7 +13,7 @@ namespace Nomad.Player
         private const float Gravity = 20f;
         private const float JumpHeight = 1.2f;
         private const float GroundSpeed = -2f;
-        private const float RollDuration = 0.3f;
+        public const float RollDuration = 0.3f;
         private const float RollSpeed = 3f / RollDuration;
         private const float RollCooldown = 1f;
         private const float MaxStepTime = 1f / 60f;

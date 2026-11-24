@@ -15,7 +15,7 @@ MonoBehaviour:
   itemId: gear-raptor-eye
   displayName: "\uB9F9\uAE08\uC758 \uB208"
   description: "\uCE58\uBA85\uD0C0 \uD655\uB960\uC774 \uC62C\uB77C\uAC11\uB2C8\uB2E4."
-  icon: {fileID: 21300000, guid: 415aa6b414836db4dbe62a05b49fbf72, type: 3}
+  icon: {fileID: -8113943000017674609, guid: bf7c6a6bc43c55f47b90e386aaca50c7, type: 3}
   maxStack: 1
   tier: 5
   equipmentType: 5

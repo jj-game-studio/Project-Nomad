@@ -15,7 +15,7 @@ MonoBehaviour:
   itemId: gear-belt-pouch
   displayName: "\uD5C8\uB9AC \uC8FC\uBA38\uB2C8"
   description: "\uAC00\uBC29 \uCE78\uC744 2\uCE78 \uB298\uB9BD\uB2C8\uB2E4."
-  icon: {fileID: 21300000, guid: 8e7ecd4b9b053774fb542b315daa6ac6, type: 3}
+  icon: {fileID: 894945321173968318, guid: bf7c6a6bc43c55f47b90e386aaca50c7, type: 3}
   maxStack: 1
   tier: 1
   equipmentType: 7

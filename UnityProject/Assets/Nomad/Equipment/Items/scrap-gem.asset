@@ -15,7 +15,7 @@ MonoBehaviour:
   itemId: scrap-gem
   displayName: "\uC6D0\uC11D"
   description: "\uBE5B\uB098\uB294 \uBCF4\uC11D \uC6D0\uC11D\uC785\uB2C8\uB2E4. \uC0C1\uC810\uC5D0 \uBE44\uC2F8\uAC8C \uD314 \uC218 \uC788\uC2B5\uB2C8\uB2E4."
-  icon: {fileID: 21300000, guid: 6350ae57c20f433ca666b486ae6f0159, type: 3}
+  icon: {fileID: -472582248316616935, guid: 191211c9f62bcde4ca2119d09df21b97, type: 3}
   maxStack: 99
   tier: 5
   equipmentType: 0

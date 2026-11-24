@@ -15,7 +15,7 @@ MonoBehaviour:
   itemId: gear-padded-armor
   displayName: "\uB204\uBE44 \uAC11\uC637"
   description: "\uCD5C\uB300 \uCCB4\uB825\uC744 \uB298\uB9BD\uB2C8\uB2E4."
-  icon: {fileID: 21300000, guid: e63890f4df82e2446aa57b9da413a3ba, type: 3}
+  icon: {fileID: -5556603633244325958, guid: 191211c9f62bcde4ca2119d09df21b97, type: 3}
   maxStack: 1
   tier: 1
   equipmentType: 3

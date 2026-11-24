@@ -15,7 +15,7 @@ MonoBehaviour:
   itemId: gear-dragonscale-armor
   displayName: "\uC6A9\uBE44\uB298 \uAC11\uC637"
   description: "\uCD5C\uB300 \uCCB4\uB825\uC744 \uB298\uB9BD\uB2C8\uB2E4."
-  icon: {fileID: 21300000, guid: 70dd4d937f2a5ab4291add49c2a6f8c9, type: 3}
+  icon: {fileID: -5556603633244325958, guid: 191211c9f62bcde4ca2119d09df21b97, type: 3}
   maxStack: 1
   tier: 5
   equipmentType: 3

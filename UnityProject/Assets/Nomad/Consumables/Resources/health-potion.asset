@@ -15,7 +15,7 @@ MonoBehaviour:
   itemId: health-potion
   displayName: "\uCCB4\uB825 \uD68C\uBCF5\uC57D"
   description: "Q\uB85C \uC0AC\uC6A9\uD569\uB2C8\uB2E4. \uCCB4\uB825 40 \uD68C\uBCF5. \uCCB4\uB825\uC774 \uAC00\uB4DD \uCC28\uBA74 \uC18C\uBAA8\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4."
-  icon: {fileID: -2007373494811564851, guid: c54f6d8a78405704ca4cdf1361ea2a8c, type: 3}
+  icon: {fileID: 8481099087013723534, guid: bf7c6a6bc43c55f47b90e386aaca50c7, type: 3}
   maxStack: 10
   tier: 1
   equipmentType: 0

@@ -12,8 +12,8 @@ namespace Nomad.PlayerVisual
         // 외형 재생 시간이며 PlayerMovement의 이동·판정 시간과는 독립입니다.
         public const float JumpRiseDuration = 0.35f;
         public const float JumpFallDuration = 0.35f;
-        public const float LandingMotionDuration = 0.55f;
-        public const float RollMotionDuration = 0.8f;
+        public const float LandingMotionDuration = 0.12f;
+        public const float RollMotionDuration = PlayerMovement.RollDuration;
 
         [SerializeField] private Animator animator;
         private PlayerMovement movement;
@@ -66,18 +66,18 @@ namespace Nomad.PlayerVisual
             wasRolling = movement.IsRolling;
             wasGrounded = controller.isGrounded;
 
-            // 점프는 실제 상승·낙하·착지를 따르고, 구르기와 착지 마무리만 끝까지 재생합니다.
+            // 착지 중에도 움직이면 달리기로 전환하고, 구르기는 실제 이동이 끝나면 복귀합니다.
             if (rollStarted || jumpStarted)
             {
                 next = rollStarted ? "Roll" : "Jump";
                 motionUntil = rollStarted ? Time.time + RollMotionDuration : 0f;
             }
-            else if (landed)
+            else if (landed && speed <= 0.1f)
             {
                 next = "Land";
                 motionUntil = Time.time + LandingMotionDuration;
             }
-            else if ((state == "Roll" || (state == "Land" && controller.isGrounded)) && Time.time < motionUntil)
+            else if (state == "Land" && controller.isGrounded && speed <= 0.1f && Time.time < motionUntil)
                 next = state;
 
             float runSpeed = next == "Run" ? Mathf.Clamp(speed / 5f, 0.15f, 2f) : 1f;
