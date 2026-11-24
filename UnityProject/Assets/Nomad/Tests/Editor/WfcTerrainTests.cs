@@ -30,18 +30,22 @@ namespace Nomad.Tests
                     System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
                 add.Invoke(dressing, new object[] { wall, false, false, false });
                 add.Invoke(dressing, new object[] { interior, false, true, false });
-                interior.transform.position = Vector3.right * 10f;
+                wall.transform.position = new Vector3(1000f, 0f, 1000f);
+                interior.transform.position = new Vector3(1010f, 0f, 1000f);
                 Physics.SyncTransforms();
                 Assert.That(wall.GetComponent<BoxCollider>().bounds.max.y, Is.GreaterThanOrEqualTo(4f));
-                Assert.That(interior.GetComponent<BoxCollider>().bounds.max.y, Is.LessThan(1f), "内部 돌담은 원래 높이 유지");
+                Assert.That(interior.GetComponent<BoxCollider>().bounds.max.y, Is.LessThan(1f), "내부 돌담은 원래 높이 유지");
 
                 var body = player.AddComponent<CharacterController>();
                 body.height = 1.8f;
                 body.radius = 0.35f;
                 body.center = Vector3.up * 0.9f;
-                player.transform.position = new Vector3(0, 1.6f, -2f);
+                body.enabled = false;
+                player.transform.position = wall.transform.position + new Vector3(0, 1.6f, -2f);
+                body.enabled = true;
+                Physics.SyncTransforms();
                 for (int step = 0; step < 50; step++) body.Move(Vector3.forward * 0.1f);
-                Assert.That(player.transform.position.z, Is.LessThan(0f), "점프 높이에서 경계 통과 차단");
+                Assert.That(player.transform.position.z, Is.LessThan(wall.transform.position.z), "점프 높이에서 경계 통과 차단");
             }
             finally
             {

@@ -306,6 +306,9 @@ namespace Nomad.Game.Tests
                 Assert.That(hasOpenChest.GetValue(panel), Is.True, "상자 파밍 창 열림");
                 yield return null;
                 AssertLootLayout(panel, manager.Player);
+                System.Type.GetType("Nomad.Loot.Editor.ChestInteractionVerification, Assembly-CSharp-Editor")
+                    .GetMethod("Capture", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)
+                    .Invoke(null, new object[] { "issue200-main-loot" });
                 Assert.That(chestType.GetMethod("TryLoot").Invoke(chest, new object[] { inventory }), Is.EqualTo(2));
 
                 yield return PressEscape();
