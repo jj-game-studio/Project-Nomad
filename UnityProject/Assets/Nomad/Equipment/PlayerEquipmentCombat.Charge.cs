@@ -8,7 +8,6 @@ namespace Nomad.Equipment
     public sealed partial class PlayerEquipmentCombat
     {
         public const float FullChargeSeconds = 1f;
-        public const float QuickShotPower = 0.65f;
         public const float ChargingMoveSpeed = 0.45f;
         private ItemDefinition chargeWeapon;
         private float chargeStarted;
@@ -35,7 +34,7 @@ namespace Nomad.Equipment
             chargeWeapon = weapon;
             chargeStarted = Time.time;
             movement.ChargeSpeedMultiplier = ChargingMoveSpeed;
-            AimPoint = aim;
+            SetChargeAim(aim);
             Vector3 direction = Vector3.ProjectOnPlane(aim - AttackOrigin, Vector3.up);
             ChargeStarted?.Invoke(weapon, direction.sqrMagnitude > 0.001f ? direction.normalized : transform.forward);
             return true;
@@ -46,8 +45,9 @@ namespace Nomad.Equipment
             if (!IsCharging) return false;
             ItemDefinition weapon = chargeWeapon;
             float power = 1f + ChargeProgress * 1.5f;
-            bool allowed = ChargeAllowed && CurrentWeapon == weapon && !IsOverUi(pointer) && TryGetAim(pointer, out _);
-            if (!allowed || !TryGetAim(pointer, out Vector3 aim)) { CancelCharge(); return false; }
+            bool allowed = ChargeAllowed && CurrentWeapon == weapon && !IsOverUi(pointer) && AimPoint.HasValue;
+            if (!allowed) { CancelCharge(); return false; }
+            Vector3 aim = AimPoint.Value;
 
             // 발사 전에 자세를 취소하면 지팡이 손이 원위치로 돌아가 다른 쪽에서 탄이 나가 보입니다.
             bool fired = TryFire(weapon, aim, power);
@@ -63,18 +63,17 @@ namespace Nomad.Equipment
             if (!IsCharging) return;
             chargeWeapon = null;
             movement.ChargeSpeedMultiplier = 1f;
+            movement.AimFacing = null;
             ChargeCancelled?.Invoke();
         }
 
-        public bool TryQuickShot(Vector2 pointer)
+        private void SetChargeAim(Vector3 aim)
         {
-            ItemDefinition weapon = CurrentWeapon;
-            if (IsCharging || !ChargeAllowed || weapon == null ||
-                (weapon.AttackMode != WeaponAttackMode.Bow && weapon.AttackMode != WeaponAttackMode.Staff) ||
-                IsOverUi(pointer) || !TryGetAim(pointer, out Vector3 aim) || !TryFire(weapon, aim, QuickShotPower)) return false;
             AimPoint = aim;
-            Attacked?.Invoke(weapon.AttackMode);
-            return true;
+            Vector3 facing = Vector3.ProjectOnPlane(aim - AttackOrigin, Vector3.up);
+            if (facing.sqrMagnitude < 0.001f) return;
+            movement.AimFacing = facing.normalized;
+            transform.rotation = Quaternion.LookRotation(facing);
         }
 
         private void NotifyRangedImpact(Vector3 point, ItemDefinition weapon, float power)
@@ -94,15 +93,11 @@ namespace Nomad.Equipment
                 (weapon.AttackMode == WeaponAttackMode.Bow || weapon.AttackMode == WeaponAttackMode.Staff);
             if (!chargeInput) return false;
 
-            if (mouse.rightButton.wasPressedThisFrame && !mouse.leftButton.isPressed)
-                TryQuickShot(mouse.position.ReadValue());
-
             // 활·지팡이는 누를 때 발사하지 않고, 놓을 때 유지 시간에 맞춰 한 발만 발사합니다.
             if (mouse.leftButton.wasPressedThisFrame) TryBeginCharge(mouse.position.ReadValue());
             if (!IsCharging) return true;
             if (mouse.leftButton.wasReleasedThisFrame) TryReleaseCharge(mouse.position.ReadValue());
             else if (!mouse.leftButton.isPressed) CancelCharge();
-            else if (TryGetAim(mouse.position.ReadValue(), out Vector3 aim)) AimPoint = aim;
             return true;
         }
 

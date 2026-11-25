@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace Nomad.PlayerVisual
 {
-    // 무기 판정은 기존 전투가 담당하며 이 컴포넌트는 손과 상체의 표현만 담당합니다.
+    // 이동·피해 판정은 기존 시스템이 담당하며 조준 중 몸 방향과 손·상체 자세를 맞춥니다.
     [DefaultExecutionOrder(150)]
     [DisallowMultipleComponent]
     [RequireComponent(typeof(PlayerAnimation))]
@@ -37,7 +37,16 @@ namespace Nomad.PlayerVisual
         public bool IsSwinging => swinging;
         public string CurrentAttackState { get; private set; }
         public WeaponAttackMode AnimatedMode => animatedWeapon != null ? animatedWeapon.AttackMode : WeaponAttackMode.None;
-        public Quaternion AttackFacing => attackFacing;
+        public Quaternion AttackFacing
+        {
+            get
+            {
+                if (!combat.IsCharging || !combat.AimPoint.HasValue) return attackFacing;
+                Vector3 facing = Vector3.ProjectOnPlane(combat.AimPoint.Value - transform.position, Vector3.up);
+                return facing.sqrMagnitude > 0.001f ? Quaternion.LookRotation(facing) : attackFacing;
+            }
+        }
+        private bool RangedPose => AnimatedMode == WeaponAttackMode.Bow || AnimatedMode == WeaponAttackMode.Staff || AnimatedMode == WeaponAttackMode.Ranged;
 
         private void Awake()
         {
@@ -124,6 +133,12 @@ namespace Nomad.PlayerVisual
             animator.SetLayerWeight(layer, 1f);
             until = Time.time + weapon.AttackInterval;
             swinging = true;
+            if (RangedPose)
+            {
+                movement.AimFacing = direction;
+                transform.rotation = attackFacing;
+                if (visualRoot != null) visualRoot.localRotation = restingRotation;
+            }
         }
 
         private void ChargePose(ItemDefinition weapon, Vector3 direction)
@@ -141,13 +156,26 @@ namespace Nomad.PlayerVisual
             Attack(weapon, direction.sqrMagnitude > 0.001f ? direction.normalized : transform.forward);
         }
 
+        private void Update()
+        {
+            // 몸을 IK 평가 전에 돌립니다. IK 뒤에 외형을 다시 회전시키지 않습니다.
+            if (layer < 0 || !swinging || !RangedPose) return;
+            if (!combat.IsCharging && Time.time >= until)
+            {
+                movement.AimFacing = null;
+                return;
+            }
+            movement.AimFacing = AttackFacing * Vector3.forward;
+            transform.rotation = AttackFacing;
+            if (visualRoot != null) visualRoot.localRotation = restingRotation;
+        }
+
         private void LateUpdate()
         {
             if (layer < 0) return;
             if (combat.IsCharging && combat.AimPoint.HasValue)
             {
-                Vector3 direction = Vector3.ProjectOnPlane(combat.AimPoint.Value - combat.AttackOrigin, Vector3.up);
-                if (direction.sqrMagnitude > 0.001f) attackFacing = Quaternion.LookRotation(direction);
+                attackFacing = AttackFacing;
             }
             SelectSocket();
             if ((swinging && combat.CurrentWeapon != animatedWeapon) || movement.IsRolling ||
@@ -158,17 +186,22 @@ namespace Nomad.PlayerVisual
                 return;
             }
 
-            if (swinging && Time.time >= until) swinging = false;
+            if (swinging && Time.time >= until)
+            {
+                swinging = false;
+                if (RangedPose) movement.AimFacing = null;
+            }
             float weight = swinging ? 1f : Mathf.MoveTowards(animator.GetLayerWeight(layer), 0f, Time.deltaTime * 12f);
             animator.SetLayerWeight(layer, weight);
             if (visualRoot != null)
-                visualRoot.localRotation = weight > 0.01f ? Quaternion.Inverse(transform.rotation) * attackFacing : restingRotation;
+                visualRoot.localRotation = !RangedPose && weight > 0.01f ? Quaternion.Inverse(transform.rotation) * attackFacing : restingRotation;
             if (visuals.WeaponModel != null && (combat.CurrentWeapon?.AttackMode == WeaponAttackMode.Bow || combat.CurrentWeapon?.AttackMode == WeaponAttackMode.Staff))
-                visuals.WeaponModel.transform.rotation = (weight > 0.01f ? attackFacing : transform.rotation) * combat.CurrentWeapon.EquippedVisual.transform.localRotation;
+                visuals.WeaponModel.transform.rotation = (weight > 0.01f ? AttackFacing : transform.rotation) * combat.CurrentWeapon.EquippedVisual.transform.localRotation;
         }
 
         private void Stop()
         {
+            movement.AimFacing = null;
             swinging = false;
             animatedWeapon = null;
             CurrentAttackState = null;

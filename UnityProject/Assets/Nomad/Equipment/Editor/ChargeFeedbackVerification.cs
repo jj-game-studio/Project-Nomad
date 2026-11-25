@@ -115,8 +115,8 @@ namespace Nomad.Equipment.Editor
                 }
                 if (stage == 1)
                 {
-                    if (!combat.TryQuickShot(pointer)) return;
-                    Require(combat.LastShotPower == PlayerEquipmentCombat.QuickShotPower, "우클릭 위력");
+                    if (!combat.TryBeginCharge(pointer)) return;
+                    Require(combat.TryReleaseCharge(pointer) && combat.LastShotPower == 1f, "좌클릭 짧게 누른 일반 위력 발사");
                     changedFrame = frame;
                     firedAt = Time.time;
                     weakCaptured = false;
@@ -157,7 +157,7 @@ namespace Nomad.Equipment.Editor
                 Require(!combat.IsCharging && combat.LastShotPower == 2.5f && !hud.ChargeGaugeVisible, "놓기 발사·게이지 정리");
                 Capture("strong");
                 if (++weaponIndex < Weapons.Length) { stage = 0; changedFrame = frame; return; }
-                Debug.Log("CHARGE_FEEDBACK_PLAY_PASS weak=0.65 full=2.5 gauge=pass bow,staff=pass captures=8");
+                Debug.Log("CHARGE_FEEDBACK_PLAY_PASS leftTap=1 full=2.5 gauge=pass bow,staff=pass captures=8");
                 Finish(0);
             }
             catch (Exception error) { Debug.LogException(error); Finish(1); }

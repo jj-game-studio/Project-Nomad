@@ -12,7 +12,12 @@ namespace Nomad.Equipment
         private float pending;
         public int ParticleCount => particles == null ? 0 : particles.particleCount;
 
-        public void Configure(PlayerEquipmentCombat source) => combat = source;
+        public void Configure(PlayerEquipmentCombat source)
+        {
+            if (combat != null) combat.ChargeCancelled -= Clear;
+            combat = source;
+            combat.ChargeCancelled += Clear;
+        }
 
         private void Awake()
         {
@@ -64,6 +69,7 @@ namespace Nomad.Equipment
         }
 
         private void OnDisable() => Clear();
+        private void OnDestroy() { if (combat != null) combat.ChargeCancelled -= Clear; }
 
         private void Clear()
         {

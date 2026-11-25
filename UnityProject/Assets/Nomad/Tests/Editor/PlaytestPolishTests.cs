@@ -120,9 +120,8 @@ namespace Nomad.Tests
                     yield return null;
                     Assert.That(combat.IsCharging, Is.False, "우클릭은 차징하지 않음");
 
-                    Assert.That(combat.LastShotPower, Is.EqualTo(PlayerEquipmentCombat.QuickShotPower), "우클릭 약공격 즉시 발사");
-                    Assert.That(combat.ArrowCount, Is.EqualTo(arrows - (combat.CurrentWeapon.AttackMode == WeaponAttackMode.Bow ? 1 : 0)));
-                    Assert.That(mana.Current, Is.EqualTo(beforeMana - (combat.CurrentWeapon.AttackMode == WeaponAttackMode.Staff ? combat.CurrentWeapon.ManaCost : 0)));
+                    Assert.That(combat.ArrowCount, Is.EqualTo(arrows), "우클릭 공격 삭제·화살 소모 없음");
+                    Assert.That(mana.Current, Is.EqualTo(beforeMana), "우클릭 마나 소모 없음");
                     TestKit.SetField(combat, "nextAttackTime", 0f);
                     arrows = combat.ArrowCount;
                     beforeMana = mana.Current;

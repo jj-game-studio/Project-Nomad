@@ -24,14 +24,16 @@ namespace Nomad.PlayerVisual
 
             Vector3 origin = Owner.transform.position;
             Quaternion facing = Owner.AttackFacing;
-            Vector3 left = mode == WeaponAttackMode.Bow ? new Vector3(-0.15f, 1.38f, 0.55f) :
-                mode == WeaponAttackMode.Staff ? new Vector3(-0.24f, 1f, 0.12f) : new Vector3(-0.04f, 1.3f, 0.45f);
-            Vector3 right = mode == WeaponAttackMode.Bow ? new Vector3(0.14f, 1.38f, 0.04f) :
-                mode == WeaponAttackMode.Staff ? new Vector3(0.24f, 1.36f, 0.52f) : new Vector3(0.17f, 1.35f, 0.44f);
+            Vector3 left = mode == WeaponAttackMode.Bow ? new Vector3(-0.12f, 1.38f, 0.52f) :
+                mode == WeaponAttackMode.Staff ? new Vector3(-0.28f, 0.95f, 0.08f) : new Vector3(-0.04f, 1.3f, 0.45f);
+            Vector3 right = mode == WeaponAttackMode.Bow ? new Vector3(0.18f, 1.43f, 0.1f) :
+                mode == WeaponAttackMode.Staff ? new Vector3(0.22f, 1.28f, 0.4f) : new Vector3(0.17f, 1.35f, 0.44f);
             animator.SetIKPosition(AvatarIKGoal.LeftHand, origin + facing * left);
             animator.SetIKPosition(AvatarIKGoal.RightHand, origin + facing * right);
-            animator.SetIKHintPosition(AvatarIKHint.LeftElbow, origin + facing * new Vector3(-0.45f, 1.15f, 0.22f));
-            animator.SetIKHintPosition(AvatarIKHint.RightElbow, origin + facing * new Vector3(0.5f, 1.35f, -0.1f));
+            Vector3 leftElbow = mode == WeaponAttackMode.Bow ? new Vector3(-0.28f, 1.2f, 0.24f) : new Vector3(-0.28f, 1.17f, -0.06f);
+            Vector3 rightElbow = mode == WeaponAttackMode.Bow ? new Vector3(0.48f, 1.38f, -0.2f) : new Vector3(0.36f, 1.1f, 0.1f);
+            animator.SetIKHintPosition(AvatarIKHint.LeftElbow, origin + facing * leftElbow);
+            animator.SetIKHintPosition(AvatarIKHint.RightElbow, origin + facing * rightElbow);
         }
     }
 }

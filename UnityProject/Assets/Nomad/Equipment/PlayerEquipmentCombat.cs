@@ -11,7 +11,7 @@ namespace Nomad.Equipment
 {
     [DisallowMultipleComponent]
     [RequireComponent(typeof(PlayerEquipment), typeof(PlayerMovement), typeof(Health))]
-    [DefaultExecutionOrder(100)]
+    [DefaultExecutionOrder(300)]
     public sealed partial class PlayerEquipmentCombat : MonoBehaviour
     {
         public const string ArrowItemId = "weapon-arrow";
@@ -66,11 +66,8 @@ namespace Nomad.Equipment
         }
         public bool IsMeleePending => pendingWeapon != null;
         public Vector3 AttackOrigin => transform.position + Vector3.up;
-        internal Transform StaffMuzzle { get; set; }
-        internal Vector3? PosedStaffOffset { get; set; }
-        public Vector3 ProjectileOrigin => CurrentWeapon?.AttackMode == WeaponAttackMode.Staff && StaffMuzzle != null
-            ? PosedStaffOffset.HasValue ? transform.position + PosedStaffOffset.Value : StaffMuzzle.position
-            : muzzle != null ? muzzle.position : AttackOrigin;
+        internal Transform WeaponMuzzle { get; set; }
+        public Vector3 ProjectileOrigin => WeaponMuzzle != null ? WeaponMuzzle.position : muzzle != null ? muzzle.position : AttackOrigin;
         public LayerMask CollisionLayers => collisionLayers;
         public ItemDefinition CurrentWeapon => equipment.ActiveWeapon != null ? equipment.ActiveWeapon : unarmedDefinition;
         public int ArrowCount => inventory != null ? inventory.GetCount(ArrowItemId) : 0;
@@ -106,6 +103,13 @@ namespace Nomad.Equipment
             CancelCharge();
             if (restoreLegacy && legacyCombat != null)
                 legacyCombat.enabled = true;
+        }
+
+        private void Update()
+        {
+            // Animator IK 전에 조준·몸 방향을 갱신하고, LateUpdate에서는 완성된 포즈에서 발사합니다.
+            if (IsCharging && Mouse.current != null && TryGetAim(Mouse.current.position.ReadValue(), out Vector3 aim))
+                SetChargeAim(aim);
         }
 
         private void LateUpdate()

@@ -78,8 +78,7 @@ namespace Nomad.Equipment
             combat.WeaponImpacted -= Impact;
             combat.RangedImpacted -= RangedImpact;
             chargeGather.enabled = false;
-            combat.StaffMuzzle = null;
-            combat.PosedStaffOffset = null;
+            combat.WeaponMuzzle = null;
             rangeLine.enabled = false;
             foreach (Effect effect in effects) Destroy(effect.Line.gameObject);
             effects.Clear();
@@ -144,7 +143,7 @@ namespace Nomad.Equipment
         {
             ItemDefinition weapon = combat.CurrentWeapon;
             UpdateWeaponModel(weapon);
-            combat.StaffMuzzle = weapon?.AttackMode == WeaponAttackMode.Staff ? staffMuzzle : null;
+            combat.WeaponMuzzle = weaponMuzzle;
         }
 
         private void UpdateWeaponModel(ItemDefinition weapon)
@@ -152,9 +151,8 @@ namespace Nomad.Equipment
             if (displayedWeapon != weapon)
             {
                 displayedWeapon = weapon;
-                staffMuzzle = null;
-                combat.StaffMuzzle = null;
-                combat.PosedStaffOffset = null;
+                weaponMuzzle = null;
+                combat.WeaponMuzzle = null;
                 slashUntil = 0f;
                 if (weaponModel != null)
                 {
@@ -169,7 +167,7 @@ namespace Nomad.Equipment
                     // 원본 배치용 콜라이더는 장착 외형의 물리 판정에 참여하지 않습니다.
                     foreach (Collider collider in weaponModel.GetComponentsInChildren<Collider>(true))
                         collider.enabled = false;
-                    ConfigureStaffMuzzle(weapon);
+                    ConfigureWeaponMuzzle(weapon);
                 }
             }
 
