@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Nomad.Game;
@@ -15,11 +14,13 @@ namespace Nomad.Monsters.Demo
         private MonsterDeathDrop death;
         private PlayerInventory recipient;
         private MonsterEquipmentDropTable table;
+        private Vector3 spawnPosition;
 
         public void Configure(PlayerInventory inventory)
         {
             recipient = inventory;
             table = Resources.Load<MonsterEquipmentDropTable>("MonsterEquipmentDrops");
+            spawnPosition = transform.position;
         }
 
         private void Awake() => death = GetComponent<MonsterDeathDrop>();
@@ -41,9 +42,22 @@ namespace Nomad.Monsters.Demo
                     contents = contents.Append(new LootStack(bonus.ItemId, 1)).ToArray();
             }
 
-            if (contents.Length == 0) return;
-            drop.name = "Dropped equipment - " + drop.SourceRank;
-            StartCoroutine(Activate(drop, contents));
+            if (drop.SourceRank == MonsterRank.Boss)
+                ChestSpawner.CreateBossReward(transform.parent, spawnPosition, "boss-reward-" + GetEntityId().GetHashCode(), contents);
+            else
+            {
+                // 시체 자체가 루팅 대상입니다. 낙하 상자는 숨기고 사망한 몸의 충돌을 상호작용 트리거로 바꿉니다.
+                foreach (Collider collider in GetComponents<Collider>()) collider.enabled = false;
+                var trigger = gameObject.AddComponent<BoxCollider>();
+                trigger.isTrigger = true;
+                trigger.center = Vector3.up * 0.3f;
+                trigger.size = new Vector3(1.1f, 0.6f, 1.1f);
+                LootChest chest = gameObject.AddComponent<LootChest>();
+                chest.Initialize("corpse-" + GetEntityId().GetHashCode(), contents);
+                chest.ConfigureVisuals(transform, null, null, null);
+            }
+            drop.gameObject.SetActive(false);
+            Destroy(drop.gameObject);
         }
 
         // 프리셋 무기 비율로 무기·방어구 중 하나를 정하고, 확정 티어 이상 장비 중 균등하게 고릅니다.
@@ -69,17 +83,5 @@ namespace Nomad.Monsters.Demo
             return pool[random.Next(pool.Count)];
         }
 
-        private static IEnumerator Activate(PlaceholderEquipmentDrop drop, LootStack[] contents)
-        {
-            while (drop != null && !drop.Landed) yield return null;
-            if (drop == null) yield break;
-            var trigger = drop.gameObject.AddComponent<BoxCollider>();
-            trigger.isTrigger = true;
-            trigger.center = Vector3.up * 0.25f;
-            trigger.size = new Vector3(0.8f, 0.5f, 0.8f);
-            LootChest chest = drop.gameObject.AddComponent<LootChest>();
-            chest.Initialize("monster-drop-" + drop.GetEntityId().GetHashCode(), contents);
-            chest.ConfigureVisuals(drop.transform, null, null, null);
-        }
     }
 }

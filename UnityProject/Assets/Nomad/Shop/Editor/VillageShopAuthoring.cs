@@ -51,6 +51,7 @@ namespace Nomad.Shop.Editor
                 Transform placed = existing.Find("Trade sign");
                 if (placed != null)
                     PlaceSign(placed.GetComponent<TextMesh>());
+                VillagePresentationAuthoring.Apply(scene);
                 return;
             }
 
@@ -89,6 +90,7 @@ namespace Nomad.Shop.Editor
             sign.fontSize = 60;
             sign.characterSize = 0.045f;
             sign.color = new Color(1, 0.9f, 0.6f);
+            VillagePresentationAuthoring.Apply(scene);
         }
 
         // E 안내는 공용 상호작용 UI가 맡으므로 간판은 이름만 두고, 그 UI와 겹치지 않게 위로 올립니다.

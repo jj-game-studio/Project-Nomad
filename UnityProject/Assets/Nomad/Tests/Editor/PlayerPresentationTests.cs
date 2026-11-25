@@ -158,6 +158,15 @@ namespace Nomad.Tests
                     Vector3 handOffset = animation.Animator.GetBoneTransform(HumanBodyBones.LeftHand).position - movement.transform.position;
                     Assert.That(Vector3.Dot(handOffset, presenter.AttackFacing * Vector3.forward), Is.GreaterThan(0.3f), "활을 쥔 손을 앞으로 뻗음");
                 }
+                if (id.Contains("staff"))
+                {
+                    Transform left = animation.Animator.GetBoneTransform(HumanBodyBones.LeftHand);
+                    Vector3 forward = presenter.AttackFacing * Vector3.forward;
+                    Assert.That(Vector3.Dot(hand.position - left.position, forward), Is.GreaterThan(0.2f), "지팡이 든 오른손으로 시전");
+                    Transform tip = model.GetComponentsInChildren<Transform>().Single(node => node.name == "Staff Tip Muzzle");
+                    Assert.That(tip.IsChildOf(hand), Is.True, "발사 위치도 지팡이를 든 손에 연결");
+                    Assert.That(Vector3.Distance(combat.ProjectileOrigin, tip.position), Is.LessThan(0.001f));
+                }
                 Capture(id);
                 yield return Wait(combat.CurrentWeapon.AttackInterval + 0.05f);
             }

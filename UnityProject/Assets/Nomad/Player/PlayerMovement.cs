@@ -26,6 +26,10 @@ namespace Nomad.Player
         public float SpeedMultiplier { get; set; } = 1f;
         // 장비 이동속도 배율입니다. 마을 배율(SpeedMultiplier)과 곱해집니다.
         public float StatSpeedMultiplier { get; set; } = 1f;
+        // 차징의 걷기 감속입니다. 지역·장비 배율과 별도로 복구합니다.
+        public float ChargeSpeedMultiplier { get; internal set; } = 1f;
+        // 조준 중에는 이동 방향 대신 커서 쪽을 보며 옆걸음·뒷걸음으로 이동합니다.
+        public Vector3? AimFacing { get; internal set; }
 
         private CharacterController controller;
         private Health health;
@@ -155,11 +159,11 @@ namespace Nomad.Player
                 verticalSpeed -= Gravity * deltaTime;
             }
 
-            Vector3 planarVelocity = direction * (MoveSpeed * SpeedMultiplier * StatSpeedMultiplier);
+            Vector3 planarVelocity = direction * (MoveSpeed * SpeedMultiplier * StatSpeedMultiplier * ChargeSpeedMultiplier);
             if (IsRolling)
                 planarVelocity = rollBlocked ? Vector3.zero : rollDirection * RollSpeed;
-            else if (direction.sqrMagnitude > 0f)
-                transform.rotation = Quaternion.LookRotation(direction);
+            else if (AimFacing.HasValue || direction.sqrMagnitude > 0f)
+                transform.rotation = Quaternion.LookRotation(AimFacing ?? direction);
 
             Vector3 displacement = planarVelocity * deltaTime + Vector3.up * verticalDistance;
             float previousHeight = transform.position.y;

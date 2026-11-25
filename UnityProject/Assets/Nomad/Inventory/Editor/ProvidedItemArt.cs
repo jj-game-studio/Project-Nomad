@@ -26,7 +26,7 @@ namespace Nomad.Inventory.Editor
                 Icon("potion", 42, 237, 108, 102), Icon("helmet", 1100, 68, 102, 100),
                 Icon("boots", 1298, 74, 103, 92), Icon("accessory", 1413, 74, 105, 91),
                 Icon("bag", 34, 925, 80, 69), Icon("wood", 708, 418, 106, 88),
-                Icon("cloth", 965, 410, 100, 94), Icon("ring", 343, 582, 109, 103),
+                Icon("cloth", 965, 410, 100, 94), Icon("ring", 343, 582, 99, 103),
                 Icon("slot-weapon", 35, 760, 64, 62), Icon("slot-head", 220, 760, 60, 61),
                 Icon("slot-body", 309, 760, 64, 61), Icon("slot-legs", 402, 760, 66, 61),
                 Icon("slot-feet", 586, 760, 68, 61), Icon("slot-bag", 128, 760, 61, 61),

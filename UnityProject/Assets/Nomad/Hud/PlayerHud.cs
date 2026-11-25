@@ -10,7 +10,7 @@ using UnityEngine;
 namespace Nomad.Hud
 {
     [DisallowMultipleComponent]
-    public sealed class PlayerHud : MonoBehaviour
+    public sealed partial class PlayerHud : MonoBehaviour
     {
         public enum HudStyle { Original, Medieval }
 
@@ -88,12 +88,14 @@ namespace Nomad.Hud
             }
 
             Build();
+            BuildChargeGauge();
             if (combat != null && Resources.Load<Font>("ShopFonts/NanumGothic-Regular") is Font koreanFont)
             {
                 weaponFont = TMP_FontAsset.CreateFontAsset(koreanFont);
                 weaponText.font = weaponFont;
                 attackStatusText.font = weaponFont;
                 potionText.font = weaponFont;
+                chargeLabel.font = weaponFont;
             }
 
             SetResources(0, 0, 0, 0);
@@ -121,6 +123,7 @@ namespace Nomad.Hud
 
         private void LateUpdate()
         {
+            UpdateChargeGauge();
             potionText.gameObject.SetActive(healing != null);
             if (healing != null && healing.Count != shownPotions)
             {
@@ -145,13 +148,18 @@ namespace Nomad.Hud
                 ItemDefinition weapon = combat.CurrentWeapon;
                 int requiredMana = weapon?.AttackMode == WeaponAttackMode.Staff ? weapon.ManaCost : 0;
                 int availableMana = mana != null ? Mathf.FloorToInt(mana.Current) : 0;
-                if (requiredMana != shownRequiredMana || availableMana != shownAvailableMana)
+                if (requiredMana != shownRequiredMana || availableMana != shownAvailableMana || attackStatusText.text.Length == 0)
                 {
                     shownRequiredMana = requiredMana;
                     shownAvailableMana = availableMana;
                     bool insufficient = requiredMana > 0 && availableMana < requiredMana;
                     attackStatusText.text = insufficient ? $"마나 부족 {availableMana}/{requiredMana}" : "CURRENT";
                     attackStatusText.color = insufficient ? Red : Color.white;
+                }
+                if (combat.IsCharging)
+                {
+                    attackStatusText.text = "";
+                    attackStatusText.color = Amber;
                 }
                 int arrows = weapon?.AttackMode == WeaponAttackMode.Bow ? combat.ArrowCount : -1;
                 if (weapon != shownWeapon || arrows != shownArrows)

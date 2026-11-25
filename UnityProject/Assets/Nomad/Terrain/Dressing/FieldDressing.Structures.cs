@@ -11,8 +11,9 @@ namespace Nomad.Terrain
         private const float StructureLine = 0.55f;
         private const float StructureWallThickness = 0.3f;
         private const float StructureWallHeight = 2.2f;
-        private const float StructureMaxRelief = 0.45f;
+        private const float StructureMaxRelief = 0.12f;
         private const int StructureAttempts = 400;
+        [SerializeField, Min(1.5f)] private float structureWallBay = 2.5f;
 
         // 칸 단위 크기 (가로, 세로). 3칸은 약 7.1m, 4칸은 약 10.1m 폭입니다.
         private static readonly Vector2Int[] StructureSizes = { new Vector2Int(3, 3), new Vector2Int(4, 3), new Vector2Int(3, 4) };
@@ -118,26 +119,24 @@ namespace Nomad.Terrain
                 new Vector3(area.xMax, 0f, area.yMax), new Vector3(area.xMin, 0f, area.yMax),
             };
 
-            // 변 순서: 남(카메라 쪽), 동, 북, 서. 입구 하나는 반드시 비우고, 가끔 무너진 틈을 하나 더 둡니다.
+            // 서로 반대편의 열린 문 두 곳만 비우고, 나머지 면은 벽으로 마감합니다.
             int door = random.Next(4);
-            int breach = random.NextDouble() < 0.4 ? (door + 1 + random.Next(3)) % 4 : -1;
+            int exit = (door + 2) % 4;
             for (int side = 0; side < 4; side++)
             {
                 Vector3 from = corners[side];
                 Vector3 to = corners[(side + 1) % 4];
-                int count = Mathf.Max(1, Mathf.RoundToInt(Vector3.Distance(from, to) / 2.5f));
-                int doorIndex = side == door ? random.Next(count) : -1;
-                int breachIndex = side == breach ? random.Next(count) : -1;
-
-                // 카메라 쪽(남쪽) 벽은 내부를 가리지 않도록 목재 벽을 거의 올리지 않습니다.
-                double timberChance = side == 0 ? 0.15 : 0.6;
+                int count = Mathf.Max(1, Mathf.RoundToInt(Vector3.Distance(from, to) / structureWallBay));
+                int doorIndex = side == door || side == exit ? count / 2 : -1;
                 for (int index = 0; index < count; index++)
                 {
-                    if (index == doorIndex || index == breachIndex) continue;
+                    if (index == doorIndex) continue;
 
                     Vector3 a = Vector3.Lerp(from, to, index / (float)count);
                     Vector3 b = Vector3.Lerp(from, to, (index + 1) / (float)count);
-                    GameObject timber = random.NextDouble() < timberChance ? Pick(source.structureWalls, random) : null;
+                    // 폐허용 잘린 벽·창틀·뼈대 대신 빈틈 없는 기본 벽을 사용합니다.
+                    GameObject timber = System.Array.Find(source.structureWalls,
+                        prefab => prefab != null && prefab.name == "SM_Bld_House_Wall_01") ?? Pick(source.structureWalls, random);
                     PlaceStructureWall(Pick(source.structureBases, random), timber, a, b);
                 }
             }
@@ -151,7 +150,7 @@ namespace Nomad.Terrain
         }
 
         // 한 칸의 벽은 충돌 상자를 가진 빈 부모 아래에 돌 기단과 (있으면) 그 위 목재 벽을 붙인 묶음입니다.
-        // 경로를 막으면 복구 단계에서 이 묶음 단위로 무너뜨립니다.
+        // 열린 문 외의 벽은 경로 복구 단계에서도 유지합니다.
         private void PlaceStructureWall(GameObject basePrefab, GameObject timberPrefab, Vector3 a, Vector3 b)
         {
             if (basePrefab == null) return;
@@ -174,7 +173,7 @@ namespace Nomad.Terrain
             var box = wall.AddComponent<BoxCollider>();
             box.size = new Vector3(along.magnitude, StructureWallHeight, StructureWallThickness);
             box.center = new Vector3(0f, StructureWallHeight * 0.5f, 0f);
-            blockers.Add(wall);
+            // 완성 벽은 경로 복구가 임의로 허물지 않습니다. 문을 통한 도달성은 최종 검사에서 확인합니다.
         }
 
         // 프리팹의 긴 변을 부모의 x축 length에 맞추고, 밑면을 height에 둡니다. 두께는 depthScale만큼 줄입니다.
@@ -198,15 +197,15 @@ namespace Nomad.Terrain
         {
             corner.y = GroundY(corner, corner.y) - 0.05f;
             GameObject pillar = Spawn(prefab, corner, 0f, 1f);
+            pillar.name = "StructurePillar";
             pillar.transform.position = corner;
 
             var box = pillar.AddComponent<BoxCollider>();
             box.size = new Vector3(0.5f, StructureWallHeight, 0.5f);
             box.center = new Vector3(0f, StructureWallHeight * 0.5f, 0f);
-            blockers.Add(pillar);
         }
 
-        // 충돌 없는 나무 바닥입니다. 일부 판을 빼서 낡은 바닥처럼 보이게 합니다.
+        // 모든 판을 깔아 내부 바닥을 빈틈 없이 메웁니다. 실제 보행 충돌은 아래 Terrain을 유지합니다.
         private void PlaceStructureFloor(FieldDressingSet source, Rect area, float floor, System.Random random)
         {
             GameObject prefab = Pick(source.structureFloors, random);
@@ -219,8 +218,6 @@ namespace Nomad.Terrain
             for (int x = 0; x < columns; x++)
             for (int z = 0; z < rows; z++)
             {
-                if (random.NextDouble() < 0.18) continue;
-
                 var cell = new Vector3(inner.xMin + (x + 0.5f) * inner.width / columns, 0f,
                     inner.yMin + (z + 0.5f) * inner.height / rows);
                 GameObject board = Spawn(prefab, cell, 0f, 1f);

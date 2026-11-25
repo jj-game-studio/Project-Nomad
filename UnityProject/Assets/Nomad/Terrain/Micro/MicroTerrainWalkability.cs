@@ -188,7 +188,7 @@ namespace Nomad.Terrain
                     // 상자 자체가 차지한 중앙은 보행 면이 아닙니다. 주변 8개 지점은 계속 검사합니다.
                     if (extraObstacles != null && !profile.IsStair && Mathf.Abs(x) < 0.1f && Mathf.Abs(z) < 0.1f
                         && System.Array.Exists(boxes, box => box.bounds.Contains(point + Vector3.up * 0.1f))) continue;
-                    if (Reserved(point, reservations)) continue;
+                    if (StructureOccupies(point, boxes) || Reserved(point, reservations)) continue;
                     if (!NavMesh.SamplePosition(point, out NavMeshHit hit, 0.4f, NavMesh.AllAreas)
                         || Mathf.Abs(hit.position.y - point.y) > 0.3f
                         || !NavMesh.CalculatePath(origin.position, hit.position, NavMesh.AllAreas, path)
@@ -198,6 +198,20 @@ namespace Nomad.Terrain
                 }
             }
             return true;
+        }
+
+        private static bool StructureOccupies(Vector3 point, BoxCollider[] boxes)
+        {
+            foreach (BoxCollider box in boxes)
+            {
+                if (!box.enabled || (box.name != "StructureWall" && box.name != "StructurePillar")) continue;
+                Vector3 local = box.transform.InverseTransformPoint(point) - box.center;
+                // 벽·기둥과 플레이어 반경이 겹치는 곳은 원래 걸을 수 없는 공간입니다.
+                if (Mathf.Abs(local.x) < box.size.x * 0.5f + 0.35f &&
+                    Mathf.Abs(local.z) < box.size.z * 0.5f + 0.35f &&
+                    Mathf.Abs(local.y) < box.size.y * 0.5f + 0.3f) return true;
+            }
+            return false;
         }
 
         private static bool Reserved(Vector3 point, IReadOnlyList<FieldSpawnPoint> reservations)

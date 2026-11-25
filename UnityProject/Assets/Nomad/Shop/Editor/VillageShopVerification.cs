@@ -38,6 +38,8 @@ namespace Nomad.Shop.Editor
 
             var scene = EditorSceneManager.OpenScene(VillageShopAuthoring.ScenePath);
             Require(Object.FindObjectsByType<Shopkeeper>(FindObjectsSortMode.None).Length == 1, "저장된 마을 상점 하나");
+            Require(GameObject.Find("Merchant NPC") != null && GameObject.Find("Field Exit Guide") != null,
+                "NPC와 필드 출구 안내가 저장 씬에 존재");
             int roots = scene.rootCount;
             VillageShopAuthoring.ApplyToScene(scene);
             VillageShopAuthoring.ApplyToScene(scene);
@@ -106,6 +108,7 @@ namespace Nomad.Shop.Editor
                     keyboard.MakeCurrent();
                     Queue();
                     Debug.Log($"VILLAGE_SHOP_ROUTE spawn={inventory.transform.position} shop={shop.transform.position}");
+                    VerifyFieldGuide();
                 }
 
                 if (stage < 2)
@@ -223,6 +226,37 @@ namespace Nomad.Shop.Editor
         }
 
         private static void Queue(params Key[] keys) => InputSystem.QueueStateEvent(keyboard, new KeyboardState(keys));
+
+        private static void VerifyFieldGuide()
+        {
+            Transform guide = GameObject.Find("Field Exit Guide").transform;
+            MeshFilter[] arrows = guide.GetComponentsInChildren<MeshFilter>().Where(mesh => mesh.name == "To Field").ToArray();
+            Require(arrows.Length == 3 && guide.Find("Field Entrance Label") != null, "큰 채움 화살표3개와 실제 입구 표지판");
+            Transform exit = GameObject.Find("Field Exit Trigger").transform;
+            foreach (MeshFilter arrow in arrows)
+            {
+                Vector3 tip = arrow.transform.TransformPoint(new Vector3(0, 0, -1.6f));
+                Vector3 tail = arrow.transform.TransformPoint(new Vector3(0, 0, 1.1f));
+                Require(Vector3.Distance(tip, exit.position) < Vector3.Distance(tail, exit.position), "화살표는 실제 필드 입구를 가리킴");
+            }
+            Require(guide.GetComponentsInChildren<Collider>().Length == 0, "안내가 통행을 막지 않음");
+            Camera camera = Camera.main;
+            Vector3 position = camera.transform.position;
+            Quaternion rotation = camera.transform.rotation;
+            float size = camera.orthographicSize;
+            try
+            {
+                camera.transform.position = new Vector3(10, 20, -43);
+                camera.transform.LookAt(new Vector3(0, 0, -24));
+                camera.orthographicSize = 14;
+                Nomad.Minimap.Editor.MinimapVerification.Capture("issue210-field-entrance-guide.png");
+            }
+            finally
+            {
+                camera.transform.SetPositionAndRotation(position, rotation);
+                camera.orthographicSize = size;
+            }
+        }
 
         private static void Require(bool condition, string message)
         {

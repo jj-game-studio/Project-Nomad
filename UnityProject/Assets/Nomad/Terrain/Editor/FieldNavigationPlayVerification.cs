@@ -102,8 +102,16 @@ namespace Nomad.Terrain.Editor
                     return;
                 }
                 Require(controls.Player.activeSelf && controls.Navigation.HasNavigation, "new generation remains playable");
+                FieldDressing dressing = controls.Generator.GetComponent<FieldDressing>();
+                Require(dressing.Structures > 0, "generated buildings remain present");
+                foreach (Rect area in dressing.StructureAreas)
+                    Require(controls.Navigation.LastResult.ChestPoints.Any(point => point.Id.StartsWith("building-") &&
+                        area.Contains(new Vector2(point.Position.x, point.Position.z))), "mandatory chest in every building");
                 TerrainIntegrationValidation.Capture(controls, 1, "field-navigation-play-overview");
                 TerrainIntegrationValidation.Capture(controls, 0, "field-navigation-play-player");
+                Rect room = dressing.StructureAreas[0];
+                TerrainIntegrationValidation.Capture(controls, 2, "issue210-building", new Vector3(room.center.x, 0, room.center.y));
+                Debug.Log($"BUILDING_CHESTS_PASS buildings={dressing.Structures} reserved={controls.Navigation.LastResult.ChestPoints.Count}");
                 string report = $"FIELD_NAVIGATION_PLAY_PASS frame={Time.frameCount} time={Time.time:F2}: real agent reached destination, complete path, regeneration/replacement, active player, persistent mesh, disable/re-enable/stale rejection";
                 File.WriteAllText("Artifacts/field-navigation-play-results.txt", report);
                 Debug.Log(report);

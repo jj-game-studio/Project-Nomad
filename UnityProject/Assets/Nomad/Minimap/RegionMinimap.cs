@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using Nomad.Game;
 using Nomad.Shop;
 using Nomad.Terrain;
-using Nomad.Monsters;
-using Nomad.Combat;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
@@ -19,7 +17,7 @@ namespace Nomad.Minimap
         private float mapDiameter = 36;
         private static RegionMinimap instance;
         private readonly List<(Transform world, RectTransform icon)> markers = new();
-        private readonly List<(Health health, RectTransform icon)> enemies = new();
+
         private GameManager manager;
         private FieldNavigation navigation;
         private Scene region;
@@ -31,15 +29,15 @@ namespace Nomad.Minimap
         private Font font;
         private MinimapProjection projection;
         private Coroutine rebuild;
-        private float nextEnemyScan;
+
 
         public bool MapReady => map != null && map.texture != null;
         public bool IsVisible => view != null && view.gameObject.activeSelf;
         public string RegionName { get; private set; }
         public int Revision { get; private set; }
         public int MarkerCount => markers.Count;
-        public int EnemyMarkerCount => enemies.Count;
-        public int VisibleEnemyMarkerCount => enemies.FindAll(marker => marker.icon.gameObject.activeSelf).Count;
+        public int EnemyMarkerCount => 0;
+        public int VisibleEnemyMarkerCount => 0;
         public Texture MapTexture => map != null ? map.texture : null;
         public Vector2 PlayerPosition { get; private set; }
         public Rect MapUvRect => map.uvRect;
@@ -113,20 +111,6 @@ namespace Nomad.Minimap
                     marker.icon.gameObject.SetActive(window.Contains(marker.world.position));
                     marker.icon.anchoredPosition = window.Marker(marker.world.position, MapSize);
                 }
-            if (Time.unscaledTime >= nextEnemyScan) CollectEnemies();
-            for (int index = enemies.Count - 1; index >= 0; index--)
-            {
-                var enemy = enemies[index];
-                if (enemy.health == null || enemy.health.IsDead)
-                {
-                    Destroy(enemy.icon.gameObject);
-                    enemies.RemoveAt(index);
-                    continue;
-                }
-                bool nearby = enemy.health.gameObject.activeInHierarchy && window.Contains(enemy.health.transform.position);
-                enemy.icon.gameObject.SetActive(nearby);
-                if (nearby) enemy.icon.anchoredPosition = window.Marker(enemy.health.transform.position, MapSize, 7);
-            }
         }
 
         private void BindRegion(Scene next)
@@ -184,34 +168,6 @@ namespace Nomad.Minimap
                     if (shop.enabled) { AddMarker(shop.transform, new Color(1, 0.77f, 0.32f), false); hasShop = true; }
             }
             legend.text = "▲ 나  <color=#59CCFF>◆ 출구</color>" + (hasShop ? "  <color=#FFC452>■ 상점</color>" : "");
-            CollectEnemies();
-            if (enemies.Count > 0) legend.text += "\n<color=#E87878>● 일반</color>  <color=#F5B34D>◆ 엘리트</color>  <color=#EE4545>◆ 보스</color>";
-            playerArrow.SetAsLastSibling();
-        }
-
-        private void CollectEnemies()
-        {
-            nextEnemyScan = Time.unscaledTime + 1;
-            if (!region.IsValid() || !region.isLoaded) return;
-            foreach (GameObject root in region.GetRootGameObjects())
-            foreach (MonsterIdentity identity in root.GetComponentsInChildren<MonsterIdentity>())
-            {
-                Health health = identity.GetComponent<Health>();
-                if (health == null || health.IsDead || enemies.Exists(marker => marker.health == health)) continue;
-                bool normal = identity.Rank == MonsterRank.Normal;
-                float size = normal ? 5 : identity.Rank == MonsterRank.Elite ? 8 : 11;
-                RectTransform icon = Rect(map.transform, "Enemy " + identity.Rank, 0, 0, size, size);
-                icon.anchorMin = icon.anchorMax = Vector2.zero;
-                icon.pivot = Vector2.one * 0.5f;
-                var graphic = icon.gameObject.AddComponent<ShopRoundedRect>();
-                graphic.color = normal ? new Color(0.91f, 0.47f, 0.47f) : identity.Rank == MonsterRank.Elite ?
-                    new Color(0.96f, 0.70f, 0.30f) : new Color(0.93f, 0.27f, 0.27f);
-                graphic.Style(normal ? size * 0.5f : 1, 0, Color.clear);
-                graphic.raycastTarget = false;
-                if (!normal) icon.localRotation = Quaternion.Euler(0, 0, 45);
-                icon.gameObject.SetActive(false);
-                enemies.Add((health, icon));
-            }
             playerArrow.SetAsLastSibling();
         }
 
@@ -239,8 +195,6 @@ namespace Nomad.Minimap
             }
             foreach (var marker in markers) if (marker.icon != null) Destroy(marker.icon.gameObject);
             markers.Clear();
-            foreach (var enemy in enemies) if (enemy.icon != null) Destroy(enemy.icon.gameObject);
-            enemies.Clear();
             if (view != null) view.gameObject.SetActive(false);
         }
 

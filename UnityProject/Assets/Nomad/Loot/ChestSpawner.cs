@@ -106,16 +106,28 @@ namespace Nomad.Loot
 
             preset = GameManager.Instance != null ? GameManager.Instance.SelectedField : null;
             var random = new System.Random(unchecked(seed * 7919 + 20));
-            int[] order = Shuffle(points.Count, random);
+            int[] order = Shuffle(points.Count, random).OrderBy(index => points[index].Id.StartsWith("building-") ? 0 : 1).ToArray();
             int count = fillAllPoints ? points.Count
                 : random.Next(Mathf.CeilToInt(points.Count * minimumFill), points.Count + 1);
+
+            count = Mathf.Max(count, points.Count(point => point.Id.StartsWith("building-")));
+            var selected = new List<FieldSpawnPoint>();
+            foreach (int index in order)
+            {
+                FieldSpawnPoint point = points[index];
+                if (selected.Any(other => Vector2.Distance(new Vector2(point.Position.x, point.Position.z),
+                    new Vector2(other.Position.x, other.Position.z)) < 2.5f)) continue;
+                selected.Add(point);
+                if (selected.Count >= count) break;
+            }
+            count = selected.Count;
 
             int bonusIndex = preset != null && count > 0 ? random.Next(count) : -1;
             root = new GameObject("FieldChests");
             root.transform.SetParent(transform, false);
             for (int i = 0; i < count; i++)
             {
-                FieldSpawnPoint point = points[order[i]];
+                FieldSpawnPoint point = selected[i];
                 Quaternion rotation = point.Rotation * Quaternion.Euler(0f, random.Next(4) * 90f, 0f);
                 LootChest chest = CreateChest($"{generationId}/{point.Id}", point.Position, rotation);
                 LootStack[] contents = Roll(random);
@@ -133,6 +145,21 @@ namespace Nomad.Loot
             }
 
             return chests;
+        }
+
+        public static LootChest CreateBossReward(Transform parent, Vector3 position, string id, LootStack[] contents)
+        {
+            var owner = new GameObject("Boss Reward Chest");
+            owner.transform.SetParent(parent, false);
+            var spawner = owner.AddComponent<ChestSpawner>();
+            spawner.root = new GameObject("Reward");
+            spawner.root.transform.SetParent(owner.transform, false);
+            spawner.bodyMaterial = CreateMaterial(new Color(0.22f, 0.12f, 0.42f));
+            spawner.lidMaterial = CreateMaterial(new Color(1f, 0.75f, 0.12f));
+            LootChest chest = spawner.CreateChest(id, position, Quaternion.identity);
+            chest.transform.localScale = Vector3.one * 1.4f;
+            chest.Initialize(id, contents);
+            return chest;
         }
 
         public void Clear()
@@ -154,7 +181,11 @@ namespace Nomad.Loot
             Clear();
             foreach (Material material in new[] { bodyMaterial, lidMaterial, emptyMaterial })
             {
-                if (material != null) Destroy(material);
+                if (material != null)
+                {
+                    if (Application.isPlaying) Destroy(material);
+                    else DestroyImmediate(material);
+                }
             }
         }
 
