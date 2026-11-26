@@ -74,7 +74,7 @@ namespace Nomad.Tests
                 inventory.Add(PlayerEquipmentCombat.ArrowItemId, 30);
                 yield return null;
 
-                foreach (string id in new[] { "weapon-shortbow", "weapon-apprentice-staff" })
+                foreach (string id in new[] { "weapon-shortbow", "weapon-apprentice-staff", "weapon-crystal-staff", "weapon-archmage-staff" })
                 {
                     inventory.Add(id, 1);
                     int slot = Enumerable.Range(0, PlayerInventory.Capacity).First(index => inventory.GetSlot(index).Item?.ItemId == id);
@@ -181,7 +181,9 @@ namespace Nomad.Tests
         private static void AssertStaffGrip(PlayerEquipmentCombat combat, EquipmentCombatVisuals visuals, bool casting)
         {
             Transform hand = combat.GetComponentInChildren<Animator>().GetBoneTransform(HumanBodyBones.RightHand);
-            Assert.That(Vector3.Distance(visuals.WeaponModel.transform.position, hand.position), Is.LessThan(0.06f), "손잡이가 실제 오른손에 붙음");
+            MeshFilter mesh = visuals.WeaponModel.GetComponentInChildren<MeshFilter>();
+            Vector3 middle = mesh.transform.TransformPoint(mesh.sharedMesh.bounds.center);
+            Assert.That(Vector3.Distance(middle, hand.position), Is.LessThan(0.06f), "지팡이 중간을 실제 오른손으로 잡음");
             Vector3 shaft = combat.transform.rotation * Quaternion.Euler(casting ? 65 : 15, 0, 0) * Vector3.up;
             Assert.That(Vector3.Angle(visuals.WeaponModel.transform.up, shaft), Is.LessThan(8), "손목과 연결된 지팡이 기울기");
         }
