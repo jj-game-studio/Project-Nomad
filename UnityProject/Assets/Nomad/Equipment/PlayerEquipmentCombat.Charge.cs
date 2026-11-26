@@ -14,6 +14,7 @@ namespace Nomad.Equipment
         public bool IsCharging => chargeWeapon != null;
         public float ChargeProgress => IsCharging ? Mathf.Clamp01((Time.time - chargeStarted) / FullChargeSeconds) : 0;
         public float LastShotPower { get; private set; } = 1f;
+        public Quaternion AimFacingRotation { get; private set; } = Quaternion.identity;
         public event Action<ItemDefinition, Vector3> ChargeStarted;
         public event Action ChargeCancelled;
         public event Action<Vector3, ItemDefinition, float> RangedImpacted;
@@ -35,8 +36,7 @@ namespace Nomad.Equipment
             chargeStarted = Time.time;
             movement.ChargeSpeedMultiplier = ChargingMoveSpeed;
             SetChargeAim(aim);
-            Vector3 direction = Vector3.ProjectOnPlane(aim - AttackOrigin, Vector3.up);
-            ChargeStarted?.Invoke(weapon, direction.sqrMagnitude > 0.001f ? direction.normalized : transform.forward);
+            ChargeStarted?.Invoke(weapon, transform.forward);
             return true;
         }
 
@@ -53,7 +53,6 @@ namespace Nomad.Equipment
             bool fired = TryFire(weapon, aim, power);
             CancelCharge();
             if (!fired) return false;
-            AimPoint = aim;
             Attacked?.Invoke(weapon.AttackMode);
             return true;
         }
@@ -70,10 +69,21 @@ namespace Nomad.Equipment
         private void SetChargeAim(Vector3 aim)
         {
             AimPoint = aim;
+            FaceRangedAim(aim);
+        }
+
+        private void FaceRangedAim(Vector3 aim)
+        {
             Vector3 facing = Vector3.ProjectOnPlane(aim - AttackOrigin, Vector3.up);
-            if (facing.sqrMagnitude < 0.001f) return;
-            movement.AimFacing = facing.normalized;
-            transform.rotation = Quaternion.LookRotation(facing);
+            if (facing.magnitude >= 0.5f)
+            {
+                // 몸 중앙과 손의 좌우 차이를 보정해 몸의 정면과 실제 탄의 수평 방향을 맞춥니다.
+                float side = transform.InverseTransformPoint(ProjectileOrigin).x;
+                float correction = Mathf.Asin(Mathf.Clamp(side / facing.magnitude, -0.95f, 0.95f)) * Mathf.Rad2Deg;
+                transform.rotation = Quaternion.LookRotation(facing) * Quaternion.Euler(0, -correction, 0);
+            }
+            AimFacingRotation = transform.rotation;
+            movement.AimFacing = transform.forward;
         }
 
         private void NotifyRangedImpact(Vector3 point, ItemDefinition weapon, float power)

@@ -89,7 +89,7 @@ namespace Nomad.Tests
                         Vector3 expected = combat.AimPoint.Value;
                         Assert.That(Vector3.Angle(shot.transform.forward, expected - shot.transform.position), Is.LessThan(0.1f), "커서 조준 지점으로 실제 발사");
                         Assert.That(Vector3.Distance(shot.transform.position, combat.ProjectileOrigin), Is.LessThan(0.001f), "현재 프레임 무기 위치에서 발사");
-                        Assert.That(Vector3.Angle(combat.transform.forward, Flat(expected - combat.transform.position)), Is.LessThan(2f), "발사 시 몸도 커서 방향");
+                        Assert.That(Vector3.Angle(combat.transform.forward, Flat(shot.transform.forward)), Is.LessThan(0.2f), "발사 시 몸도 커서 방향");
                     };
                     combat.Fired += onFire;
 
@@ -158,8 +158,8 @@ namespace Nomad.Tests
         private static void AssertAligned(PlayerEquipmentCombat combat, Transform visual, EquipmentCombatVisuals visuals)
         {
             Assert.That(combat.IsCharging, Is.True);
-            Vector3 aim = Flat(combat.AimPoint.Value - combat.transform.position);
-            Assert.That(Vector3.Angle(combat.transform.forward, aim), Is.LessThan(2f), "키보드 이동과 무관하게 몸은 커서 조준");
+            Vector3 aim = Flat(combat.AimPoint.Value - combat.ProjectileOrigin);
+            Assert.That(Vector3.Angle(combat.transform.forward, aim), Is.LessThan(1f), "키보드 이동과 무관하게 몸과 발사구 조준 일치");
             Assert.That(Vector3.Angle(visual.forward, combat.transform.forward), Is.LessThan(2f), "몸과 상체 방향 일치");
             Assert.That(Vector3.Distance(combat.GetComponentInChildren<ChargeGatherVfx>().transform.position, combat.ProjectileOrigin), Is.LessThan(0.15f), "차징 입자는 현재 무기를 따라감");
             string name = combat.CurrentWeapon.AttackMode == WeaponAttackMode.Bow ? "Bow Muzzle" : "Staff Tip Muzzle";

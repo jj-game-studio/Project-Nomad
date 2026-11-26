@@ -35,18 +35,26 @@ namespace Nomad.PlayerVisual
 
         public Transform Socket => socket;
         public bool IsSwinging => swinging;
+        public bool HoldingStaff => isActiveAndEnabled && combat.CurrentWeapon?.AttackMode == WeaponAttackMode.Staff && !movement.IsRolling && !health.IsDead;
         public string CurrentAttackState { get; private set; }
         public WeaponAttackMode AnimatedMode => animatedWeapon != null ? animatedWeapon.AttackMode : WeaponAttackMode.None;
         public Quaternion AttackFacing
         {
             get
             {
-                if (!combat.IsCharging || !combat.AimPoint.HasValue) return attackFacing;
-                Vector3 facing = Vector3.ProjectOnPlane(combat.AimPoint.Value - transform.position, Vector3.up);
-                return facing.sqrMagnitude > 0.001f ? Quaternion.LookRotation(facing) : attackFacing;
+                return combat.IsCharging ? combat.AimFacingRotation : attackFacing;
             }
         }
         private bool RangedPose => AnimatedMode == WeaponAttackMode.Bow || AnimatedMode == WeaponAttackMode.Staff || AnimatedMode == WeaponAttackMode.Ranged;
+
+        public Quaternion StaffGripRotation(Quaternion handRotation, float castBlend)
+        {
+            Quaternion grip = socket.localRotation * combat.CurrentWeapon.EquippedVisual.transform.localRotation;
+            Vector3 currentShaft = handRotation * grip * Vector3.up;
+            Quaternion facing = IsSwinging ? AttackFacing : transform.rotation;
+            Vector3 heldShaft = facing * Quaternion.Euler(Mathf.Lerp(15f, 65f, castBlend), 0, 0) * Vector3.up;
+            return Quaternion.FromToRotation(currentShaft, heldShaft) * handRotation;
+        }
 
         private void Awake()
         {
@@ -152,7 +160,9 @@ namespace Nomad.PlayerVisual
             ItemDefinition weapon = combat.CurrentWeapon;
             if (layer < 0 || weapon == null || weapon.ItemId == SwordId) return;
             Vector3 aim = combat.AimPoint ?? combat.AttackOrigin + transform.forward;
-            Vector3 direction = Vector3.ProjectOnPlane(aim - combat.AttackOrigin, Vector3.up);
+            Vector3 direction = mode == WeaponAttackMode.Melee
+                ? Vector3.ProjectOnPlane(aim - combat.AttackOrigin, Vector3.up)
+                : combat.AimFacingRotation * Vector3.forward;
             Attack(weapon, direction.sqrMagnitude > 0.001f ? direction.normalized : transform.forward);
         }
 
@@ -195,7 +205,8 @@ namespace Nomad.PlayerVisual
             animator.SetLayerWeight(layer, weight);
             if (visualRoot != null)
                 visualRoot.localRotation = !RangedPose && weight > 0.01f ? Quaternion.Inverse(transform.rotation) * attackFacing : restingRotation;
-            if (visuals.WeaponModel != null && (combat.CurrentWeapon?.AttackMode == WeaponAttackMode.Bow || combat.CurrentWeapon?.AttackMode == WeaponAttackMode.Staff))
+            // 지팡이는 손목 IK와 소켓을 그대로 따라가야 손에서 분리돼 보이지 않습니다.
+            if (visuals.WeaponModel != null && combat.CurrentWeapon?.AttackMode == WeaponAttackMode.Bow)
                 visuals.WeaponModel.transform.rotation = (weight > 0.01f ? AttackFacing : transform.rotation) * combat.CurrentWeapon.EquippedVisual.transform.localRotation;
         }
 
