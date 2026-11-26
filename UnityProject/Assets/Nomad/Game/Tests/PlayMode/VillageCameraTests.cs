@@ -24,11 +24,13 @@ namespace Nomad.Game.Tests
         private bool hadPreference;
         private int oldPreference;
         private bool oldBackground;
+        private float previousCaptureDelta;
         private InputSettings.BackgroundBehavior background;
         private InputSettings.EditorInputBehaviorInPlayMode editorInput;
         private Scene previousScene;
         private bool oldCursorVisible;
         private CursorLockMode oldCursorLock;
+        private Canvas.WillRenderCanvases eyeObserver;
 
         [UnitySetUp]
         public IEnumerator SetUp()
@@ -41,6 +43,8 @@ namespace Nomad.Game.Tests
             oldCursorVisible = Cursor.visible;
             oldCursorLock = Cursor.lockState;
 
+            previousCaptureDelta = Time.captureDeltaTime;
+            Time.captureDeltaTime = 1f / 60f;
             oldBackground = Application.runInBackground;
             background = InputSystem.settings.backgroundBehavior;
             editorInput = InputSystem.settings.editorInputBehaviorInPlayMode;
@@ -62,6 +66,8 @@ namespace Nomad.Game.Tests
         [UnityTearDown]
         public IEnumerator TearDown()
         {
+            if (eyeObserver != null) Canvas.willRenderCanvases -= eyeObserver;
+            eyeObserver = null;
             Time.timeScale = 1f;
             AudioListener.pause = false;
             if (GameManager.Instance != null) Object.Destroy(GameManager.Instance.gameObject);
@@ -82,6 +88,7 @@ namespace Nomad.Game.Tests
             InputSystem.settings.backgroundBehavior = background;
             InputSystem.settings.editorInputBehaviorInPlayMode = editorInput;
             Application.runInBackground = oldBackground;
+            Time.captureDeltaTime = previousCaptureDelta;
             Cursor.lockState = oldCursorLock;
             Cursor.visible = oldCursorVisible;
             if (hadPreference) PlayerPrefs.SetInt(VillageViewSettings.PreferenceKey, oldPreference);
@@ -142,8 +149,11 @@ namespace Nomad.Game.Tests
             Assert.That(Vector3.Dot(game.Player.transform.position - start, right), Is.GreaterThan(0.1f));
             Assert.That(Vector3.Angle(game.Player.transform.forward, Vector3.ProjectOnPlane(camera.transform.forward, Vector3.up)), Is.LessThan(1f));
 
+            float renderedEyeOffset = float.NaN;
+            eyeObserver = () => { if (camera != null && game.Player != null) renderedEyeOffset = camera.transform.position.y - game.Player.transform.position.y; };
+            Canvas.willRenderCanvases += eyeObserver;
             yield return KeyPress(Key.Space);
-            Assert.That(camera.transform.position.y - game.Player.transform.position.y, Is.EqualTo(1.65f).Within(0.01f));
+            Assert.That(renderedEyeOffset, Is.EqualTo(1.65f).Within(0.01f), "렌더 직전 점프 눈높이");
             Assert.That(Vector3.Angle(camera.transform.up, Vector3.up), Is.LessThan(0.1f), "점프 모션에 시점이 흔들리지 않음");
             yield return new WaitForSeconds(0.8f);
             yield return KeyPress(Key.LeftShift);
@@ -257,7 +267,7 @@ namespace Nomad.Game.Tests
             Assert.That((bool)presenter.GetType().GetProperty("HasArms").GetValue(presenter), Is.True);
             SkinnedMeshRenderer[] arms = camera.GetComponentsInChildren<SkinnedMeshRenderer>();
             Assert.That(arms.Length, Is.GreaterThan(0));
-            Assert.That(arms.Sum(r => r.sharedMesh.triangles.Length), Is.GreaterThan(0));
+            Assert.That(arms.All(r => r.sharedMesh.subMeshCount > 0 && r.sharedMesh.GetIndexCount(0) > 0), Is.True);
 
             Component equipment = game.Player.GetComponent("PlayerEquipment");
             Component inventory = game.Player.GetComponent("PlayerInventory");
@@ -273,8 +283,21 @@ namespace Nomad.Game.Tests
                     object item = stack.GetType().GetProperty("Item").GetValue(stack);
                     if (item != null && (string)item.GetType().GetProperty("ItemId").GetValue(item) == id) { found = i; break; }
                 }
-                // 시작 장검은 이미 장착되어 있습니다.
-                if (found >= 0) Assert.That((bool)equipment.GetType().GetMethod("TryEquip").Invoke(equipment, new[] { (object)found, slot }), Is.True);
+                if (found >= 0)
+                {
+                    Assert.That((bool)equipment.GetType().GetMethod("TryEquip").Invoke(equipment, new[] { (object)found, slot }), Is.True);
+                    equipment.GetType().GetMethod("SelectWeapon").Invoke(equipment, new[] { slot });
+                }
+                else
+                {
+                    for (int i = 0; i < 2; i++)
+                    {
+                        object equippedSlot = Enum.ToObject(slot.GetType(), i);
+                        object current = equipment.GetType().GetMethod("GetItem").Invoke(equipment, new[] { equippedSlot });
+                        if (current != null && (string)current.GetType().GetProperty("ItemId").GetValue(current) == id)
+                            equipment.GetType().GetMethod("SelectWeapon").Invoke(equipment, new[] { equippedSlot });
+                    }
+                }
                 yield return Frames();
                 GameObject model = (GameObject)presenter.GetType().GetProperty("WeaponModel").GetValue(presenter);
                 Assert.That(model != null && model.activeInHierarchy && model.name.Contains(id), Is.True, id + " 실제 장착 외형");
@@ -283,7 +306,11 @@ namespace Nomad.Game.Tests
                 if (id == "demo-sword")
                 {
                     Assert.That((bool)combat.GetType().GetMethod("TryAttack").Invoke(combat, new object[] { center }), Is.True);
-                    yield return new WaitForSeconds(0.22f);
+                    Quaternion idleRotation = model.transform.rotation;
+                    yield return new WaitForSeconds(0.12f);
+                    Capture(id + "-windup");
+                    Assert.That(Quaternion.Angle(model.transform.rotation, idleRotation), Is.GreaterThan(1f), "준비 모션이 보이는 무기에 반영");
+                    yield return new WaitForSeconds(0.1f);
                     Capture(id + "-attack");
                     Component slash = Object.FindAnyObjectByType(RuntimeType("Nomad.Equipment.SwordSlashVfx")) as Component;
                     if (slash != null) Assert.That(slash.GetComponent<MeshRenderer>().enabled, Is.False, "탑다운용 넓은 베기 면 숨김");
@@ -291,13 +318,23 @@ namespace Nomad.Game.Tests
                 }
                 else
                 {
-                    Assert.That((bool)combat.GetType().GetMethod("TryBeginCharge").Invoke(combat, new object[] { center }), Is.True);
+                    int arrows = (int)combat.GetType().GetProperty("ArrowCount").GetValue(combat);
+                    InputSystem.QueueStateEvent(mouse, new MouseState { position = center }.WithButton(MouseButton.Left, true));
+                    yield return Frames();
+                    Assert.That((bool)combat.GetType().GetProperty("IsCharging").GetValue(combat), Is.True, "실제 좌클릭 유지 차징");
                     yield return new WaitForSeconds(0.6f);
+                    Assert.That((bool)combat.GetType().GetProperty("IsCharging").GetValue(combat), Is.True, "차징 유지 중 조기 취소 없음");
+                    ParticleSystem handCharge = camera.GetComponentsInChildren<ParticleSystem>().First(p => p.name == "Hand Charge");
+                    Assert.That(handCharge.particleCount, Is.GreaterThan(0), "표시 무기 끝의 차징 입자");
                     Capture(id + "-charge");
                     Transform tip = model.GetComponentsInChildren<Transform>().First(t => t.name == "View Weapon Tip");
                     Vector3 origin = (Vector3)combat.GetType().GetProperty("ProjectileOrigin").GetValue(combat);
                     Assert.That(Vector3.Distance(tip.position, origin), Is.LessThan(0.001f), "보이는 발사구와 실제 발사 위치");
-                    Assert.That((bool)combat.GetType().GetMethod("TryReleaseCharge").Invoke(combat, new object[] { center }), Is.True);
+                    InputSystem.QueueStateEvent(mouse, new MouseState { position = center });
+                    yield return Frames();
+                    Assert.That((bool)combat.GetType().GetProperty("IsCharging").GetValue(combat), Is.False);
+                    Assert.That((float)combat.GetType().GetProperty("LastShotPower").GetValue(combat), Is.GreaterThan(1.5f), "실제 차징 발사");
+                    if (id == "demo-bow") Assert.That((int)combat.GetType().GetProperty("ArrowCount").GetValue(combat), Is.EqualTo(arrows - 1));
                     yield return new WaitForSeconds(0.9f);
                 }
             }
@@ -317,6 +354,52 @@ namespace Nomad.Game.Tests
             yield return Frames();
             Assert.That(sign.GetComponent<Renderer>().enabled, Is.True, "탑다운 전환 시 원래 월드 글자 복원");
             Assert.That(camera.GetComponentsInChildren<SkinnedMeshRenderer>().Length, Is.EqualTo(0), "1인칭 전용 팔 숨김");
+        }
+
+        [UnityTest]
+        public IEnumerator FirstPersonChestUsesVisibleTargetAndRestoresInput()
+        {
+            VillageViewSettings.SetFirstPerson(true);
+            yield return Load("Game");
+            yield return WaitRegion();
+            Controller().SendMessage("OnApplicationFocus", true);
+            yield return Frames();
+            GameObject player = GameManager.Instance.Player;
+            Camera camera = GameManager.Instance.GetComponentInChildren<Camera>();
+            Vector3 forward = Vector3.ProjectOnPlane(camera.transform.forward, Vector3.up).normalized;
+            var chestObject = new GameObject("First Person Chest Test");
+            try
+            {
+                chestObject.transform.position = player.transform.position + forward * 1.2f + Vector3.up;
+                Component chest = chestObject.AddComponent(RuntimeType("Nomad.Loot.LootChest"));
+                Type stackType = RuntimeType("Nomad.Loot.LootStack");
+                Array stacks = Array.CreateInstance(stackType, 1);
+                stacks.SetValue(Activator.CreateInstance(stackType, new object[] { "scrap", 1 }), 0);
+                chest.GetType().GetMethod("Initialize").Invoke(chest, new object[] { "first-person-chest", stacks });
+                chestObject.AddComponent<BoxCollider>().isTrigger = true;
+                Physics.SyncTransforms();
+                // 눈높이 아래의 상자를 실제로 바라봅니다. 앞쪽의 기도 나무보다 중앙에 오도록 합니다.
+                InputSystem.QueueDeltaStateEvent(mouse.delta, new Vector2(0, -235));
+                yield return Frames();
+                Component hints = player.GetComponent(RuntimeType("Nomad.WorldHud.InteractionHints"));
+                Assert.That(hints.GetType().GetProperty("Selected").GetValue(hints), Is.SameAs(chest));
+                yield return KeyPress(Key.E);
+                var flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+                Component inventory = player.GetComponent("PlayerInventory");
+                Component panel = (Component)inventory.GetType().GetProperty("Panel", flags).GetValue(inventory);
+                Assert.That((bool)panel.GetType().GetProperty("HasOpenChest", flags).GetValue(panel), Is.True, "앞의 상자 E로 열기");
+                Assert.That(State("InputBlocked"), Is.True);
+                yield return KeyPress(Key.Escape);
+                Assert.That((bool)panel.GetType().GetProperty("HasOpenChest", flags).GetValue(panel), Is.False);
+                Assert.That(State("InputBlocked"), Is.False);
+
+                chestObject.transform.position = player.transform.position - forward * 1.2f + Vector3.up;
+                Physics.SyncTransforms();
+                yield return Frames();
+                yield return KeyPress(Key.E);
+                Assert.That((bool)panel.GetType().GetProperty("HasOpenChest", flags).GetValue(panel), Is.False, "등 뒤 상자는 선택하지 않음");
+            }
+            finally { Object.Destroy(chestObject); }
         }
 
         private static Type RuntimeType(string name) => Type.GetType(name + ", Assembly-CSharp", true);
@@ -373,7 +456,7 @@ namespace Nomad.Game.Tests
                 {
                     canvas.renderMode = RenderMode.ScreenSpaceCamera;
                     canvas.worldCamera = camera;
-                    canvas.planeDistance = 1f;
+                    canvas.planeDistance = camera.nearClipPlane + 0.01f;
                 }
                 Canvas.ForceUpdateCanvases();
                 camera.Render();

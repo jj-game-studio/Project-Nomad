@@ -32,6 +32,7 @@ namespace Nomad.Player
             GameManager game = GameManager.Instance;
             if (game == null) return;
             if (canvas == null) canvas = WorldHudCanvas.Create("First Person Landmarks", transform);
+            canvas.gameObject.SetActive(true);
             if (region != game.CurrentRegion)
             {
                 Restore();
@@ -48,19 +49,20 @@ namespace Nomad.Player
                     var rect = (RectTransform)new GameObject("Field Entrance Hint", typeof(RectTransform)).transform;
                     rect.SetParent(canvas.transform, false);
                     rect.sizeDelta = new Vector2(220, 40);
+
                     TMP_Text text = rect.gameObject.AddComponent<TextMeshProUGUI>();
                     text.font = InteractionHints.LabelFont();
                     text.text = "필드 출입구";
                     text.fontSize = 23;
                     text.alignment = TextAlignmentOptions.Center;
                     text.color = new Color(1f, 0.9f, 0.65f);
+
                     text.outlineWidth = 0.2f;
                     text.outlineColor = Color.black;
                     text.raycastTarget = false;
                     labels.Add(new Label { Source = source, Text = text });
                 }
             }
-            canvas.gameObject.SetActive(true);
             foreach (var pair in originals) if (pair.Key != null) pair.Key.enabled = false;
             foreach (Label label in labels)
             {

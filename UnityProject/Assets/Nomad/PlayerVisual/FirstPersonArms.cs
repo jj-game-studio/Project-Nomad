@@ -16,7 +16,8 @@ namespace Nomad.PlayerVisual
         {
             root = Object.Instantiate(prefab, parent, false).transform;
             root.name = "First Person Arms";
-            root.localPosition = new Vector3(0, -1.45f, -0.15f);
+            root.localPosition = new Vector3(0, -1.25f, 0.05f);
+
             animator = root.GetComponentInChildren<Animator>();
             RightHand = animator.GetBoneTransform(HumanBodyBones.RightHand);
             LeftHand = animator.GetBoneTransform(HumanBodyBones.LeftHand);
@@ -38,15 +39,36 @@ namespace Nomad.PlayerVisual
             Transform lower = animator.GetBoneTransform(lowerId);
             float a = Vector3.Distance(upper.position, lower.position);
             float b = Vector3.Distance(lower.position, hand.position);
+
             Vector3 direction = (target - upper.position).normalized;
             float distance = Mathf.Clamp(Vector3.Distance(target, upper.position), Mathf.Abs(a - b) + 0.001f, a + b - 0.001f);
             Vector3 bend = Vector3.ProjectOnPlane(hint - upper.position, direction).normalized;
             float cosine = Mathf.Clamp((a * a + distance * distance - b * b) / (2f * a * distance), -1f, 1f);
             Vector3 elbow = upper.position + direction * (a * cosine) + bend * (a * Mathf.Sqrt(1f - cosine * cosine));
+
             upper.rotation = Quaternion.FromToRotation(lower.position - upper.position, elbow - upper.position) * upper.rotation;
             lower.rotation = Quaternion.FromToRotation(hand.position - lower.position, target - lower.position) * lower.rotation;
         }
 
-        public void Release() { if (root != null) Object.Destroy(root.gameObject); }
+        public void Grip(Transform camera, Quaternion pose, bool bow, bool staff)
+        {
+            RightHand.rotation = camera.rotation * pose * Quaternion.Euler(90, 0, 0);
+            LeftHand.rotation = camera.rotation * (bow ? pose : Quaternion.identity) * Quaternion.Euler(90, 0, 0);
+            Curl(RightHand, true);
+            Curl(LeftHand, bow || !staff);
+        }
+
+        private static void Curl(Transform hand, bool closed)
+        {
+            if (!closed) return;
+            float sign = hand == null || hand.name.Contains("_L") ? -1f : 1f;
+            foreach (Transform finger in hand.GetComponentsInChildren<Transform>())
+            {
+                if ((finger.name.StartsWith("IndexFinger_") || finger.name.StartsWith("Finger_")) && !finger.name.Contains("04"))
+                    finger.localRotation *= Quaternion.Euler(0, 0, sign * (finger.name.Contains("01") ? 65f : 50f));
+                else if (finger.name.StartsWith("Thumb_")) finger.localRotation *= Quaternion.Euler(0, 0, sign * 25f);
+            }
+        }
+
     }
 }

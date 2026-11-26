@@ -42,7 +42,7 @@ namespace Nomad.Interaction
             }
 
             // 이동 Update가 이번 프레임의 위치와 구르기 상태를 갱신한 뒤 입력을 처리합니다.
-            if (Keyboard.current?.eKey.wasPressedThisFrame != true || !CanInteract())
+            if (Keyboard.current?.eKey.wasPressedThisFrame != true || !CanInteract() || movement.ViewInputBlocked)
                 return;
 
             var context = new InteractionContext(transform, inventory);
@@ -63,6 +63,7 @@ namespace Nomad.Interaction
 
         internal bool CanAccessChest(LootChest chest)
         {
+            // 열린 상자가 잠근 시선 입력과 접근 유효성은 별개입니다. 거리·벽·행동 상태는 계속 검사합니다.
             if (!isActiveAndEnabled || chest == null || !chest.isActiveAndEnabled || !CanInteract())
                 return false;
 
@@ -74,7 +75,7 @@ namespace Nomad.Interaction
 
         private bool CanInteract()
         {
-            return movement != null && movement.isActiveAndEnabled && !movement.IsRolling && !movement.ViewInputBlocked &&
+            return movement != null && movement.isActiveAndEnabled && !movement.IsRolling &&
                    inventory != null && inventory.isActiveAndEnabled && controller != null && controller.enabled;
         }
 

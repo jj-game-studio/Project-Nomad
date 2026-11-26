@@ -29,10 +29,23 @@ namespace Nomad.PlayerVisual.Editor
                 animator.Update(0f);
                 Transform left = animator.GetBoneTransform(HumanBodyBones.LeftUpperArm);
                 Transform right = animator.GetBoneTransform(HumanBodyBones.RightUpperArm);
+                var excluded = new HashSet<Renderer>();
+                foreach (LODGroup group in root.GetComponentsInChildren<LODGroup>(true))
+                {
+                    LOD[] levels = group.GetLODs();
+                    for (int level = 1; level < levels.Length; level++)
+                        foreach (Renderer renderer in levels[level].renderers) excluded.Add(renderer);
+                    Object.DestroyImmediate(group);
+                }
                 int count = 0;
                 int triangles = 0;
                 foreach (SkinnedMeshRenderer renderer in root.GetComponentsInChildren<SkinnedMeshRenderer>(true))
                 {
+                    if (!renderer.enabled || !renderer.gameObject.activeInHierarchy || excluded.Contains(renderer))
+                    {
+                        Object.DestroyImmediate(renderer);
+                        continue;
+                    }
                     Mesh original = renderer.sharedMesh;
                     if (original == null) continue;
                     BoneWeight[] weights = original.boneWeights;
@@ -92,6 +105,11 @@ namespace Nomad.PlayerVisual.Editor
                 foreach (Collider collider in root.GetComponentsInChildren<Collider>(true)) Object.DestroyImmediate(collider);
                 if (triangles == 0) throw new InvalidOperationException("팔 메시 삼각형이 없습니다.");
 
+                foreach (string oldPath in Directory.GetFiles(Folder, "FirstPersonArmsMesh*.asset"))
+                {
+                    string number = Path.GetFileNameWithoutExtension(oldPath).Replace("FirstPersonArmsMesh", "");
+                    if (int.TryParse(number, out int index) && index >= count) AssetDatabase.DeleteAsset(oldPath.Replace('\\', '/'));
+                }
                 animator.runtimeAnimatorController = null;
                 animator.enabled = false;
                 PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
