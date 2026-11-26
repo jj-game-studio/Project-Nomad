@@ -83,7 +83,7 @@ namespace Nomad.Equipment
                 transform.rotation = Quaternion.LookRotation(facing) * Quaternion.Euler(0, -correction, 0);
             }
             AimFacingRotation = transform.rotation;
-            movement.AimFacing = transform.forward;
+            if (IsCharging) movement.AimFacing = transform.forward;
         }
 
         private void NotifyRangedImpact(Vector3 point, ItemDefinition weapon, float power)

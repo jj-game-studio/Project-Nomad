@@ -47,13 +47,13 @@ namespace Nomad.PlayerVisual
         }
         private bool RangedPose => AnimatedMode == WeaponAttackMode.Bow || AnimatedMode == WeaponAttackMode.Staff || AnimatedMode == WeaponAttackMode.Ranged;
 
-        public Quaternion StaffGripRotation(Quaternion handRotation, float castBlend)
+        public Quaternion StaffGripRotation(Quaternion handRotation, Quaternion goalRotation, float castBlend)
         {
             Quaternion grip = socket.localRotation * combat.CurrentWeapon.EquippedVisual.transform.localRotation;
             Vector3 currentShaft = handRotation * grip * Vector3.up;
             Quaternion facing = IsSwinging ? AttackFacing : transform.rotation;
             Vector3 heldShaft = facing * Quaternion.Euler(Mathf.Lerp(15f, 65f, castBlend), 0, 0) * Vector3.up;
-            return Quaternion.FromToRotation(currentShaft, heldShaft) * handRotation;
+            return Quaternion.FromToRotation(currentShaft, heldShaft) * goalRotation;
         }
 
         private void Awake()

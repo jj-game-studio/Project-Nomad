@@ -235,7 +235,6 @@ namespace Nomad.Shop.Editor
             Require(guide.GetComponentsInChildren<Nomad.Village.FieldGatewayFlame>().Length == 2, "화로 두 개");
             Transform exit = GameObject.Find("Field Exit Trigger").transform;
             Require(exit.GetComponent<BoxCollider>().isTrigger && Mathf.Abs(exit.position.z + 35.5f) < 0.01f, "출격 트리거 보존");
-            Require(!Physics.CheckBox(guide.position + Vector3.up, new Vector3(1, 0.8f, 0.4f), Quaternion.identity, ~0, QueryTriggerInteraction.Ignore), "관문 중앙 통행 가능");
             Camera camera = Camera.main;
             Vector3 position = camera.transform.position;
             Quaternion rotation = camera.transform.rotation;
@@ -246,6 +245,17 @@ namespace Nomad.Shop.Editor
                 camera.transform.LookAt(new Vector3(0, 2, -34));
                 camera.orthographicSize = 8;
                 Nomad.Minimap.Editor.MinimapVerification.Capture("issue212-field-gateway.png");
+                CharacterController controller = GameManager.Instance.Player.GetComponent<CharacterController>();
+                Vector3 start = controller.transform.position;
+                controller.enabled = false;
+                controller.transform.position = guide.position + new Vector3(0, 0.5f, 2);
+                controller.enabled = true;
+                Physics.SyncTransforms();
+                for (int step = 0; step < 60; step++) controller.Move(new Vector3(0, -0.05f, -0.04f));
+                Require(controller.transform.position.z < guide.position.z - 0.3f, "실제 플레이어가 관문 중앙 통과");
+                controller.enabled = false;
+                controller.transform.position = start;
+                controller.enabled = true;
             }
             finally
             {

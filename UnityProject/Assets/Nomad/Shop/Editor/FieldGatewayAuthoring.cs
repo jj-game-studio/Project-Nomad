@@ -29,8 +29,8 @@ namespace Nomad.Shop.Editor
                 // 아치 안쪽에는 충돌체를 두지 않습니다.
                 var pillar = new GameObject("Gate Pillar");
                 pillar.transform.SetParent(root.transform, false);
-                pillar.transform.localPosition = new Vector3(side * 3.1f, 2.4f, 0);
-                pillar.AddComponent<BoxCollider>().size = new Vector3(1, 4.8f, 1.2f);
+                pillar.transform.localPosition = new Vector3(side * 2.7f, 2.2f, 0);
+                pillar.AddComponent<BoxCollider>().size = new Vector3(1.8f, 4.4f, 1.2f);
 
                 Model(root.transform, "Gate Banner", "Props/Banners/SM_Prop_Flag_Horizontal_03",
                     new Vector3(side * 2.7f, 3.2f, -0.75f), new Vector3(0.75f, 1.5f, 0.15f));
