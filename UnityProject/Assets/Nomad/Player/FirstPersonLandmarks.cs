@@ -18,7 +18,7 @@ namespace Nomad.Player
         private readonly Dictionary<Renderer, bool> originals = new();
         private VillageFirstPersonCamera owner;
         private Canvas canvas;
-        private int region;
+        private UnityEngine.SceneManagement.Scene region;
         public void Initialize(VillageFirstPersonCamera cameraOwner) => owner = cameraOwner;
 
         private void LateUpdate()
@@ -32,12 +32,12 @@ namespace Nomad.Player
             GameManager game = GameManager.Instance;
             if (game == null) return;
             if (canvas == null) canvas = WorldHudCanvas.Create("First Person Landmarks", transform);
-            if (region != game.CurrentRegion.handle)
+            if (region != game.CurrentRegion)
             {
                 Restore();
                 foreach (Label label in labels) if (label.Text != null) Destroy(label.Text.gameObject);
                 labels.Clear();
-                region = game.CurrentRegion.handle;
+                region = game.CurrentRegion;
                 foreach (GameObject root in game.CurrentRegion.GetRootGameObjects())
                 foreach (TextMesh source in root.GetComponentsInChildren<TextMesh>())
                 {

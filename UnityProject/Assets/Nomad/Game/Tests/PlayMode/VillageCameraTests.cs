@@ -217,9 +217,14 @@ namespace Nomad.Game.Tests
             game.PlacePlayer(position, Quaternion.LookRotation(forward));
             yield return Frames();
             Assert.That(Mathf.DeltaAngle(0f, camera.transform.eulerAngles.x), Is.EqualTo(0f).Within(0.1f), "배치 직후 커서 delta 억제");
-            InputSystem.QueueDeltaStateEvent(mouse.delta, new Vector2(0, -375));
-            yield return Frames();
-            Assert.That(Mathf.DeltaAngle(0f, camera.transform.eulerAngles.x), Is.EqualTo(45f).Within(0.1f));
+            Component hints = game.Player.GetComponent(RuntimeType("Nomad.WorldHud.InteractionHints"));
+            Assert.That(hints.GetType().GetProperty("Selected").GetValue(hints), Is.SameAs(shop), "몸을 바라보면 상점 선택");
+            Transform head = shop.GetComponentInChildren<Animator>().GetBoneTransform(HumanBodyBones.Head);
+            RectTransform key = Object.FindObjectsByType<RectTransform>(FindObjectsSortMode.None)
+                .First(t => t.name == "E Key" && t.gameObject.activeInHierarchy);
+            Assert.That(RectTransformUtility.WorldToScreenPoint(null, key.position).y,
+                Is.GreaterThan(camera.WorldToScreenPoint(head.position).y), "E 거래 안내는 NPC 머리 위");
+            Capture("npc-head-hint");
             yield return KeyPress(Key.E);
             Component panel = Object.FindAnyObjectByType(RuntimeType("Nomad.Shop.ShopPanel")) as Component;
             Assert.That(panel, Is.Not.Null, "화면 중앙의 실제 상점 E 거래");
@@ -236,6 +241,82 @@ namespace Nomad.Game.Tests
             yield return null;
             yield return WaitRegion();
             Assert.That(State("IsActive"), Is.True, "재시작에서도 저장된 선택");
+        }
+
+        [UnityTest]
+        public IEnumerator ArmsWeaponsAndLandmarksFollowFirstPersonCamera()
+        {
+            VillageViewSettings.SetFirstPerson(true);
+            yield return Load("Game");
+            yield return WaitRegion();
+            Controller().SendMessage("OnApplicationFocus", true);
+            yield return Frames();
+            GameManager game = GameManager.Instance;
+            Camera camera = game.GetComponentInChildren<Camera>();
+            Component presenter = camera.GetComponent(RuntimeType("Nomad.PlayerVisual.FirstPersonWeaponView"));
+            Assert.That((bool)presenter.GetType().GetProperty("HasArms").GetValue(presenter), Is.True);
+            SkinnedMeshRenderer[] arms = camera.GetComponentsInChildren<SkinnedMeshRenderer>();
+            Assert.That(arms.Length, Is.GreaterThan(0));
+            Assert.That(arms.Sum(r => r.sharedMesh.triangles.Length), Is.GreaterThan(0));
+
+            Component equipment = game.Player.GetComponent("PlayerEquipment");
+            Component inventory = game.Player.GetComponent("PlayerInventory");
+            Component combat = game.Player.GetComponent("PlayerEquipmentCombat");
+            object slot = Enum.ToObject(RuntimeType("Nomad.Equipment.EquipmentSlot"), 0);
+            Vector2 center = camera.pixelRect.center;
+            foreach (string id in new[] { "demo-sword", "demo-bow", "weapon-apprentice-staff" })
+            {
+                int found = -1;
+                for (int i = 0; i < 20; i++)
+                {
+                    object stack = inventory.GetType().GetMethod("GetSlot").Invoke(inventory, new object[] { i });
+                    object item = stack.GetType().GetProperty("Item").GetValue(stack);
+                    if (item != null && (string)item.GetType().GetProperty("ItemId").GetValue(item) == id) { found = i; break; }
+                }
+                // 시작 장검은 이미 장착되어 있습니다.
+                if (found >= 0) Assert.That((bool)equipment.GetType().GetMethod("TryEquip").Invoke(equipment, new[] { (object)found, slot }), Is.True);
+                yield return Frames();
+                GameObject model = (GameObject)presenter.GetType().GetProperty("WeaponModel").GetValue(presenter);
+                Assert.That(model != null && model.activeInHierarchy && model.name.Contains(id), Is.True, id + " 실제 장착 외형");
+                Assert.That(model.GetComponentsInChildren<Collider>().All(c => !c.enabled), Is.True);
+                Capture(id + "-idle");
+                if (id == "demo-sword")
+                {
+                    Assert.That((bool)combat.GetType().GetMethod("TryAttack").Invoke(combat, new object[] { center }), Is.True);
+                    yield return new WaitForSeconds(0.22f);
+                    Capture(id + "-attack");
+                    Component slash = Object.FindAnyObjectByType(RuntimeType("Nomad.Equipment.SwordSlashVfx")) as Component;
+                    if (slash != null) Assert.That(slash.GetComponent<MeshRenderer>().enabled, Is.False, "탑다운용 넓은 베기 면 숨김");
+                    yield return new WaitForSeconds(0.9f);
+                }
+                else
+                {
+                    Assert.That((bool)combat.GetType().GetMethod("TryBeginCharge").Invoke(combat, new object[] { center }), Is.True);
+                    yield return new WaitForSeconds(0.6f);
+                    Capture(id + "-charge");
+                    Transform tip = model.GetComponentsInChildren<Transform>().First(t => t.name == "View Weapon Tip");
+                    Vector3 origin = (Vector3)combat.GetType().GetProperty("ProjectileOrigin").GetValue(combat);
+                    Assert.That(Vector3.Distance(tip.position, origin), Is.LessThan(0.001f), "보이는 발사구와 실제 발사 위치");
+                    Assert.That((bool)combat.GetType().GetMethod("TryReleaseCharge").Invoke(combat, new object[] { center }), Is.True);
+                    yield return new WaitForSeconds(0.9f);
+                }
+            }
+
+            TextMesh sign = Object.FindObjectsByType<TextMesh>(FindObjectsSortMode.None).First(t => t.name == "Field direction");
+            Vector3 stand = sign.transform.position + Vector3.back * 3f;
+            stand.y = 0.05f;
+            game.PlacePlayer(stand, Quaternion.identity);
+            yield return Frames();
+            InputSystem.QueueDeltaStateEvent(mouse.delta, new Vector2(150, 70));
+            yield return Frames();
+            RectTransform label = Object.FindObjectsByType<RectTransform>(FindObjectsSortMode.None).First(t => t.name == "Field Entrance Hint");
+            Assert.That(Quaternion.Angle(label.rotation, Quaternion.identity), Is.LessThan(0.01f), "카메라 회전에도 화면 안내는 수평");
+            Assert.That(sign.GetComponent<Renderer>().enabled, Is.False);
+            Capture("first-person-landmark");
+            VillageViewSettings.SetFirstPerson(false);
+            yield return Frames();
+            Assert.That(sign.GetComponent<Renderer>().enabled, Is.True, "탑다운 전환 시 원래 월드 글자 복원");
+            Assert.That(camera.GetComponentsInChildren<SkinnedMeshRenderer>().Length, Is.EqualTo(0), "1인칭 전용 팔 숨김");
         }
 
         private static Type RuntimeType(string name) => Type.GetType(name + ", Assembly-CSharp", true);
