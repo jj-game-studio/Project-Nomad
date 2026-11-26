@@ -10,9 +10,10 @@ namespace Nomad.Monsters.Demo
     [DefaultExecutionOrder(120)]
     public sealed partial class DragonBossCombat : MonoBehaviour
     {
-        public const int RainWaves = 24;
+        public const int RainWaves = 20;
         public const int RainPerWave = 3;
-        public const float RainInterval = 0.3f;
+        public const float RainInterval = 0.35f;
+        public const float CircleRadius = 9.5f;
         public const float RainDuration = 8.3f;
         public bool AutomaticPatterns { get; set; } = true;
         public int AttacksStarted { get; private set; }
@@ -37,7 +38,7 @@ namespace Nomad.Monsters.Demo
         private bool crossed75, crossed50;
         private TextMesh status;
         private static readonly DragonPattern[] Rotation = { DragonPattern.Circle, DragonPattern.TripleFireball,
-            DragonPattern.Basic, DragonPattern.Breath, DragonPattern.FirePool, DragonPattern.Charge, DragonPattern.Rain };
+            DragonPattern.Basic, DragonPattern.Breath, DragonPattern.FirePool, DragonPattern.Rain };
 
         public void Configure(BossArena room, Health victim)
         {
@@ -51,8 +52,9 @@ namespace Nomad.Monsters.Demo
             GetComponent<MonsterMeleeAttack>().enabled = false;
             tactics.Configure(target, 0, 14, 15, 6, 6.5f, 8, 0.8f, 0.1f, 28);
             agent.speed = 6;
-            agent.acceleration = 40;
-            agent.angularSpeed = 720;
+            agent.acceleration = 18;
+            agent.angularSpeed = TurnSpeed;
+            agent.updateRotation = false;
             agent.stoppingDistance = 3.2f;
             ConfigurePresentation();
             effects = new GameObject("Dragon encounter effects").transform;
@@ -87,6 +89,7 @@ namespace Nomad.Monsters.Demo
             }
             if (arena.IsLocked || !PlayerInside)
             {
+                engaged = false;
                 if (Phase != DragonPhase.Waiting) StopEncounter();
                 Phase = DragonPhase.Waiting;
                 Pause();
@@ -100,6 +103,7 @@ namespace Nomad.Monsters.Demo
                 Recover();
                 return;
             }
+            UpdateFacing();
             if (Phase == DragonPhase.Active && Pattern == DragonPattern.Charge)
             {
                 if (HitRock()) return;
@@ -137,19 +141,21 @@ namespace Nomad.Monsters.Demo
             aim = ClampPoint(target.transform.position);
             direction = Vector3.ProjectOnPlane(aim - transform.position, Vector3.up).normalized;
             if (direction.sqrMagnitude < 0.01f) direction = transform.forward;
-            transform.rotation = Quaternion.LookRotation(direction);
+            ChargeAimLocked = false;
             float windup = pattern == DragonPattern.Circle ? 1.6f : pattern == DragonPattern.Basic ? 0.45f :
-                pattern == DragonPattern.TripleFireball ? 0.55f : pattern == DragonPattern.Charge ? 0.8f :
-                pattern == DragonPattern.Rain ? 0.7f : 0.9f;
+                pattern == DragonPattern.TripleFireball ? 0.55f : pattern == DragonPattern.Charge ? 1.5f :
+                pattern == DragonPattern.Rain ? 0.7f : pattern == DragonPattern.Breath ? 1.6f : 0.9f;
+            float turning = Vector3.Angle(transform.forward, direction) / (pattern == DragonPattern.Charge ? ChargeTurnSpeed : TurnSpeed);
+            windup = Mathf.Max(windup, turning + (pattern == DragonPattern.Charge ? ChargeLockSeconds : 0.12f));
             until = Time.time + windup;
             phaseStarted = Time.time;
             phaseDuration = windup;
             SetMotion("Attack_A", 1f / (windup + 0.5f));
             status.text = pattern == DragonPattern.TripleFireball ? "" : pattern == DragonPattern.Charge ? "돌진 준비" :
                 pattern == DragonPattern.Breath ? "브레스 준비" : pattern == DragonPattern.Rain ? "화염우" : "";
-            if (pattern == DragonPattern.Circle) Area(transform.position, 6.5f, 360, windup, 0.12f, 32);
+            if (pattern == DragonPattern.Circle) Area(transform.position, CircleRadius, 360, windup, 0.12f, 32);
             if (pattern == DragonPattern.Basic) Area(transform.position, 4, 110, windup, 0.12f, 18);
-            if (pattern == DragonPattern.Breath) Area(transform.position, 9, 70, windup, 1.5f, 12, 0.5f);
+            if (pattern == DragonPattern.Breath) Area(transform.position, 9, 70, windup, 2.4f, 12, 0.8f);
             if (pattern == DragonPattern.FirePool)
             {
                 Area(aim, 2.4f, 360, windup + 0.75f, 5, 10);
@@ -157,15 +163,15 @@ namespace Nomad.Monsters.Demo
             if (pattern == DragonPattern.Charge)
             {
                 // 원뿔 윤곽은 실제 돌진 방향을 고정해서 보여줍니다.
-                Area(transform.position, 12, 14, windup, 0.01f, 0);
-                tactics.Prepare(MonsterSkill.Charge, transform.position + direction * 12);
+                chargeWarning = Area(transform.position, 12, 14, windup, 0.01f, 0);
             }
         }
 
         private void BeginNext()
         {
-            DragonPattern next = Rotation[sequence % Rotation.Length];
-            float engageRange = next == DragonPattern.Basic ? 3.8f : next == DragonPattern.Circle ? 5.5f : 9;
+            bool chargeDue = Time.time >= nextCharge;
+            DragonPattern next = chargeDue ? DragonPattern.Charge : Rotation[sequence % Rotation.Length];
+            float engageRange = chargeDue ? float.PositiveInfinity : next == DragonPattern.Basic ? 3.8f : next == DragonPattern.Circle ? 5.5f : 9;
             if (Vector3.Distance(transform.position, target.transform.position) > engageRange)
             {
                 tracker.enabled = true;
@@ -174,7 +180,7 @@ namespace Nomad.Monsters.Demo
                 until = Time.time + 0.08f;
                 return;
             }
-            sequence++;
+            if (!chargeDue) sequence++;
             BeginPattern(next);
         }
 
@@ -182,7 +188,7 @@ namespace Nomad.Monsters.Demo
         {
             status.text = "";
             Phase = DragonPhase.Active;
-            until = Time.time + (Pattern == DragonPattern.Breath ? 1.5f : Pattern == DragonPattern.Rain ? RainDuration : 0.18f);
+            until = Time.time + (Pattern == DragonPattern.Breath ? 2.4f : Pattern == DragonPattern.Rain ? RainDuration : 0.18f);
             phaseStarted = Time.time;
             phaseDuration = until - Time.time;
             if (Pattern == DragonPattern.TripleFireball)
@@ -194,7 +200,15 @@ namespace Nomad.Monsters.Demo
                 }
             if (Pattern == DragonPattern.FirePool)
                 BossFireball.Launch(effects, transform, target, Mouth.position, aim, 0.75f, true);
-            if (Pattern == DragonPattern.Charge && !tactics.StartCharge(direction)) Recover();
+            if (Pattern == DragonPattern.Charge)
+            {
+                direction = transform.forward;
+                ChargeAimLocked = true;
+                tactics.Prepare(MonsterSkill.Charge, transform.position + direction * 12);
+                nextCharge = Time.time + ChargeInterval;
+                if (tactics.StartCharge(direction)) ChargesReleased++;
+                else Recover();
+            }
             if (Pattern == DragonPattern.Rain) { rainCount = 0; RainProjectilesSpawned = 0; nextRain = Time.time; }
         }
 
@@ -202,7 +216,7 @@ namespace Nomad.Monsters.Demo
         {
             BossHazard hazard = BossHazard.Create(effects, transform, ClampPoint(point), Quaternion.LookRotation(direction), target, radius, angle, delay, duration, damage, interval);
             hazard.EmitsFlame = Pattern != DragonPattern.Basic && damage > 0;
-            if (Pattern == DragonPattern.Breath) hazard.BreathOrigin = Mouth;
+            if (Pattern == DragonPattern.Breath) { hazard.BreathOrigin = Mouth; hazard.BreathTravelSeconds = 1.1f; }
             return hazard;
         }
 

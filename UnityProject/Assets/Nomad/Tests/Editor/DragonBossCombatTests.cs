@@ -4,11 +4,14 @@ using System.Linq;
 using Nomad.Combat;
 using Nomad.Monsters;
 using Nomad.Monsters.Demo;
+using Nomad.Player;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.TestTools;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.LowLevel;
 
 namespace Nomad.Tests
 {
@@ -60,7 +63,7 @@ namespace Nomad.Tests
             appearances.boss = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/ThirdParty/Nomad/Monsters/Candidates/Dragon.prefab");
             factory.ConfigureAppearances(appearances);
             boss = factory.CreateRanked(player, MonsterTestSettings.Defaults(MonsterRank.Boss), MonsterRank.Boss,
-                arena.Center, Quaternion.identity, "Test boss", arena.transform);
+                arena.Center, Quaternion.LookRotation(Vector3.right), "Test boss", arena.transform);
             arena.PrepareCombat(boss, player);
             combat = boss.GetComponent<DragonBossCombat>();
             combat.AutomaticPatterns = false;
@@ -99,7 +102,7 @@ namespace Nomad.Tests
             int hp = player.CurrentHealth;
             yield return Wait(1);
             Assert.That(player.CurrentHealth, Is.EqualTo(hp), "전조 중 피해 없음");
-            player.transform.position = arena.Center + Vector3.right * 8;
+            player.transform.position = arena.Center + Vector3.right * 10.5f;
             Physics.SyncTransforms();
             yield return Wait(0.9f);
             Assert.That(player.CurrentHealth, Is.EqualTo(hp), "걸어서 범위를 빠져나가 회피");
@@ -124,11 +127,11 @@ namespace Nomad.Tests
             player.transform.position = arena.Center + Vector3.forward * 6;
             Physics.SyncTransforms();
             combat.BeginPattern(DragonPattern.Breath);
-            Quaternion facing = boss.transform.rotation;
+            Quaternion facing = Quaternion.LookRotation(Vector3.forward);
             player.transform.position = arena.Center - Vector3.forward * 3;
             Physics.SyncTransforms();
             int hp = player.CurrentHealth;
-            yield return Wait(2);
+            yield return Wait(2.1f);
             Assert.That(Quaternion.Angle(boss.transform.rotation, facing), Is.LessThan(0.1f));
             Assert.That(player.CurrentHealth, Is.EqualTo(hp), "브레스 뒤로 회피 가능");
         }
@@ -237,12 +240,12 @@ namespace Nomad.Tests
         }
 
         [UnityTest]
-        public IEnumerator RainContinuesLongerAndSpawnsSeventyTwoFireballs()
+        public IEnumerator RainContinuesLongerAndSpawnsSixtyFireballs()
         {
             combat.BeginPattern(DragonPattern.Rain);
             yield return Wait(8.4f);
             Assert.That(combat.Phase, Is.EqualTo(DragonPhase.Active));
-            Assert.That(combat.RainProjectilesSpawned, Is.EqualTo(72));
+            Assert.That(combat.RainProjectilesSpawned, Is.EqualTo(60));
             yield return Wait(0.9f);
             Assert.That(combat.Effects.GetComponentsInChildren<BossHazard>().Length, Is.Zero);
         }
@@ -252,15 +255,117 @@ namespace Nomad.Tests
         {
             Assert.That(combat.Mouth.parent.name, Is.EqualTo("jaw_upper"));
             combat.BeginPattern(DragonPattern.Breath);
-            yield return Wait(1.2f);
+            yield return Wait(2);
             BossHazard breath = combat.Effects.GetComponentsInChildren<BossHazard>().Single();
             Assert.That(breath.BreathOrigin, Is.SameAs(combat.Mouth));
             Assert.That(Vector3.Distance(breath.LastBreathOrigin, combat.Mouth.position), Is.LessThan(0.06f), "현재 머리 위치에서 연속 발사");
             combat.Stun(0.3f);
             yield return Wait(0.1f);
             Assert.That(boss.GetComponent<BossStunDisplay>().Visible, Is.True);
+            Assert.That(boss.GetComponentInChildren<TextMesh>(true)?.text, Is.Not.EqualTo("기절"));
             yield return Wait(0.4f);
             Assert.That(boss.GetComponent<BossStunDisplay>().Visible, Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator ChargeHasPriorityAtDeadlineTracksDuringTellThenLocks()
+        {
+            combat.AutomaticPatterns = true;
+            yield return Wait(0.2f);
+            TestKit.SetField(combat, "nextCharge", Time.time - 0.1f);
+            combat.Stun(0.01f);
+            yield return Wait(0.05f);
+            Assert.That(combat.Pattern, Is.EqualTo(DragonPattern.Charge));
+            Assert.That(combat.Phase, Is.EqualTo(DragonPhase.Windup));
+            Quaternion before = boss.transform.rotation;
+            player.transform.position = arena.Center + Vector3.forward * 7;
+            Physics.SyncTransforms();
+            yield return Wait(0.3f);
+            float turned = Quaternion.Angle(before, boss.transform.rotation);
+            Assert.That(turned, Is.InRange(10, DragonBossCombat.ChargeTurnSpeed * 0.35f), "전조 중 제한된 속도로 조준 조절");
+            while (!combat.ChargeAimLocked) yield return null;
+            Quaternion locked = boss.transform.rotation;
+            player.transform.position = arena.Center - Vector3.forward * 7;
+            Physics.SyncTransforms();
+            yield return Wait(0.2f);
+            Assert.That(Quaternion.Angle(locked, boss.transform.rotation), Is.LessThan(0.1f), "전조 마지막은 고정되어 회피 가능");
+            yield return Wait(0.4f);
+            Assert.That(combat.ChargesReleased, Is.EqualTo(1));
+            Assert.That(combat.ChargeRemaining, Is.InRange(9, 10));
+        }
+
+        [UnityTest]
+        public IEnumerator EveryFrameTurnsSmoothlyEvenWhenTargetChangesSides()
+        {
+            player.transform.position = arena.Center - boss.transform.forward * 7;
+            Physics.SyncTransforms();
+            Quaternion before = boss.transform.rotation;
+            combat.BeginPattern(DragonPattern.Breath);
+            Assert.That(Quaternion.Angle(before, boss.transform.rotation), Is.LessThan(0.01f), "공격 시작 시 순간 회전 없음");
+            for (int frame = 0; frame < 90; frame++)
+            {
+                before = boss.transform.rotation;
+                yield return null;
+                Assert.That(Quaternion.Angle(before, boss.transform.rotation), Is.LessThanOrEqualTo(DragonBossCombat.TurnSpeed / 60 + 0.05f));
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator PointBlankCircleCanBeEscapedWithRealRollAndWalking()
+        {
+            Keyboard keyboard = InputSystem.AddDevice<Keyboard>();
+            var muted = new List<InputDevice>();
+            bool background = Application.runInBackground;
+            var behavior = InputSystem.settings.backgroundBehavior;
+            var input = InputSystem.settings.editorInputBehaviorInPlayMode;
+            try
+            {
+                foreach (Keyboard device in InputSystem.devices.OfType<Keyboard>().Where(device => device != keyboard).ToArray())
+                { InputSystem.DisableDevice(device); muted.Add(device); }
+                keyboard.MakeCurrent();
+                Application.runInBackground = true;
+                InputSystem.settings.backgroundBehavior = InputSettings.BackgroundBehavior.IgnoreFocus;
+                InputSystem.settings.editorInputBehaviorInPlayMode = InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
+                var hero = Track(new GameObject("Real roll escape"));
+                hero.SetActive(false);
+                CharacterController controller = hero.AddComponent<CharacterController>();
+                controller.height = 2;
+                controller.center = Vector3.up;
+                controller.radius = 0.3f;
+                Health health = hero.AddComponent<Health>();
+                PlayerMovement movement = hero.AddComponent<PlayerMovement>();
+                Camera camera = Track(new GameObject("Escape camera")).AddComponent<Camera>();
+                camera.transform.position = arena.Center + new Vector3(0, 10, -10);
+                camera.transform.LookAt(arena.Center);
+                TestKit.SetField(movement, "viewCamera", camera);
+                hero.transform.position = arena.Center + new Vector3(0, 0.1f, 1.85f);
+                hero.SetActive(true);
+                controller.Move(Vector3.down);
+                player.gameObject.SetActive(false);
+                TestKit.SetField(combat, "target", health);
+                yield return Wait(0.1f);
+                int hp = health.CurrentHealth;
+
+                combat.BeginPattern(DragonPattern.Circle);
+                yield return Wait(0.25f);
+                InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.W, Key.LeftShift));
+                yield return Wait(0.2f);
+                Assert.That(movement.IsRolling, Is.True, "실제 구르기 입력");
+                InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.W));
+                yield return Wait(1.4f);
+                Assert.That(Vector3.ProjectOnPlane(hero.transform.position - arena.Center, Vector3.up).magnitude,
+                    Is.GreaterThan(DragonBossCombat.CircleRadius), "근접에서 구르기 1회+걷기로 광역 탈출");
+                Assert.That(health.CurrentHealth, Is.EqualTo(hp));
+                Assert.That(health.IsCombatImmune, Is.False, "판정 때 구르기 무적 대신 범위 이탈로 회피");
+            }
+            finally
+            {
+                InputSystem.RemoveDevice(keyboard);
+                foreach (InputDevice device in muted) InputSystem.EnableDevice(device);
+                Application.runInBackground = background;
+                InputSystem.settings.backgroundBehavior = behavior;
+                InputSystem.settings.editorInputBehaviorInPlayMode = input;
+            }
         }
     }
 }

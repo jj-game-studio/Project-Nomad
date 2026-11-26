@@ -21,7 +21,7 @@ namespace Nomad.Game.Editor
         private const string Key = "Nomad.BossGrowthVerify";
         private static readonly DragonPattern[] Patterns = { DragonPattern.Circle, DragonPattern.TripleFireball,
             DragonPattern.Breath, DragonPattern.FirePool, DragonPattern.Rain, DragonPattern.Charge };
-        private static readonly float[] CaptureAt = { 0.8f, 0.9f, 1.5f, 1.9f, 6.5f, 1.35f };
+        private static readonly float[] CaptureAt = { 0.8f, 0.9f, 2.4f, 1.9f, 6.5f, 2.15f };
         private static readonly List<InputDevice> muted = new();
         private static DragonBossCombat boss;
         private static BossArena arena;
@@ -31,6 +31,7 @@ namespace Nomad.Game.Editor
         private static int stage, pattern, frame;
         private static float since;
         private static bool requestedField;
+        private static bool chargeTellCaptured;
         private static string error;
         private static double deadline;
 
@@ -114,11 +115,13 @@ namespace Nomad.Game.Editor
                     if (Patterns[pattern] == DragonPattern.Charge)
                     {
                         BossBreakableRock rock = arena.GetComponentsInChildren<BossBreakableRock>().First();
-                        boss.GetComponent<NavMeshAgent>().Warp(rock.transform.position + Vector3.right * 4);
-                        MovePlayer(rock.transform.position - Vector3.right * 3);
+                        Vector3 towardCenter = Vector3.ProjectOnPlane(arena.Center - rock.transform.position, Vector3.up).normalized;
+                        Require(boss.GetComponent<NavMeshAgent>().Warp(rock.transform.position + towardCenter * 4), "관찰용 돌진 시작 위치");
+                        MovePlayer(rock.transform.position - towardCenter * 2.5f);
                     }
                     Physics.SyncTransforms();
                     boss.BeginPattern(Patterns[pattern]);
+                    chargeTellCaptured = false;
                     Require(boss.Phase == DragonPhase.Windup, "실제 패턴 시작 " + Patterns[pattern]);
                     since = Time.time;
                     stage = 1;
@@ -126,6 +129,12 @@ namespace Nomad.Game.Editor
                 }
                 if (stage == 1)
                 {
+                    if (Patterns[pattern] == DragonPattern.Charge && !chargeTellCaptured && Time.time >= since + 0.5f)
+                    {
+                        Require(boss.Phase == DragonPhase.Windup && !boss.ChargeAimLocked, "돌진 추적 전조 확인");
+                        Capture("ChargeTell");
+                        chargeTellCaptured = true;
+                    }
                     if (Time.time < since + CaptureAt[pattern]) return;
                     if (Patterns[pattern] == DragonPattern.Charge) Require(boss.RockStuns == 1, "실제 바위 충돌 기절");
                     if (Patterns[pattern] == DragonPattern.Breath)
@@ -134,7 +143,7 @@ namespace Nomad.Game.Editor
                         Require(boss.Mouth.parent.name == "jaw_upper" && breath.BreathOrigin == boss.Mouth &&
                             Vector3.Distance(breath.LastBreathOrigin, boss.Mouth.position) < 0.1f, "현재 실제 머리에서 브레스");
                     }
-                    if (Patterns[pattern] == DragonPattern.Rain) Require(boss.RainProjectilesSpawned >= 57, "길고 많은 낙하 불덩이");
+                    if (Patterns[pattern] == DragonPattern.Rain) Require(boss.RainProjectilesSpawned >= 45, "길게 이어지는 감량 낙하 패턴");
                     Capture(Patterns[pattern].ToString());
                     boss.Stun(0.03f);
                     since = Time.time;
@@ -152,6 +161,7 @@ namespace Nomad.Game.Editor
                 {
                     if (Time.time < since + 0.15f) return;
                     Require(boss.ThresholdStuns == 1 && boss.Phase == DragonPhase.Stunned, "75% 기절");
+                    Require(!boss.GetComponentsInChildren<TextMesh>(true).Any(text => text.text.Contains("기절")), "기절 글자 제거");
                     Capture("ThresholdStun");
                     InputSystem.QueueStateEvent(keyboard, new KeyboardState(UnityEngine.InputSystem.Key.Tab));
                     since = Time.time;

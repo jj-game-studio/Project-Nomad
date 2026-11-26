@@ -11,7 +11,6 @@ namespace Nomad.Monsters.Demo
         private DragonBossCombat boss;
         private Transform mouth;
         private GameObject indicator;
-        private TextMesh label;
         private readonly Transform[] stars = new Transform[5];
         private Mesh starMesh;
         private ParticleSystem gathering;
@@ -22,15 +21,6 @@ namespace Nomad.Monsters.Demo
             mouth = source;
             indicator = new GameObject("Stun indicator");
             indicator.transform.SetParent(transform, false);
-            label = new GameObject("Stun label").AddComponent<TextMesh>();
-            label.transform.SetParent(indicator.transform, false);
-            label.font = Resources.Load<Font>("ShopFonts/Jua-Regular") ?? Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            label.GetComponent<Renderer>().sharedMaterial = label.font.material;
-            label.text = "기절";
-            label.anchor = TextAnchor.MiddleCenter;
-            label.fontSize = 72;
-            label.characterSize = 0.07f;
-            label.color = new Color(1, 0.9f, 0.15f);
 
             var vertices = new Vector3[11];
             var triangles = new int[30];
@@ -89,7 +79,6 @@ namespace Nomad.Monsters.Demo
             if (!stunned) return;
 
             Vector3 center = mouth.position + Vector3.up * 1.2f;
-            label.transform.position = center + Vector3.up * 0.8f;
             for (int index = 0; index < stars.Length; index++)
             {
                 float angle = Time.time * 3 + index * Mathf.PI * 2 / stars.Length;
@@ -101,7 +90,6 @@ namespace Nomad.Monsters.Demo
         public void FaceCamera(Camera camera)
         {
             if (camera == null) return;
-            label.transform.rotation = camera.transform.rotation;
             foreach (Transform star in stars) star.rotation = camera.transform.rotation;
         }
 

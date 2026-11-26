@@ -13,6 +13,7 @@ namespace Nomad.Monsters.Demo
         public float Radius { get; private set; }
         public bool EmitsFlame { get; set; } = true;
         public Transform BreathOrigin { get; set; }
+        public float BreathTravelSeconds { get; set; } = 0.65f;
         public Vector3 LastBreathOrigin { get; private set; }
         private Health target;
         private Transform owner;
@@ -110,7 +111,7 @@ namespace Nomad.Monsters.Demo
                     // 입자도 판정과 같은 수평 원뿔 안에서만 퍼집니다.
                     shape.enabled = false;
                     emission.enabled = false;
-                    main.startLifetime = 0.65f;
+                    main.startLifetime = BreathTravelSeconds;
                     main.startSpeed = 0;
                     main.startSize = new ParticleSystem.MinMaxCurve(0.4f, 0.9f);
                 }
@@ -133,13 +134,13 @@ namespace Nomad.Monsters.Demo
             {
                 Vector3 heading = transform.rotation * Quaternion.Euler(0, Random.Range(-angle * 0.5f, angle * 0.5f), 0) * Vector3.forward;
                 Vector3 endpoint = transform.position + heading * Radius + Vector3.up * 0.6f;
-                Vector3 velocity = (endpoint - origin) / 0.65f;
-                float age = warm ? Random.Range(0, 0.6f) : 0;
+                Vector3 velocity = (endpoint - origin) / BreathTravelSeconds;
+                float age = warm ? Random.Range(0, BreathTravelSeconds - 0.05f) : 0;
                 var particle = new ParticleSystem.EmitParams
                 {
                     position = origin + velocity * age,
                     velocity = velocity,
-                    startLifetime = 0.65f - age,
+                    startLifetime = BreathTravelSeconds - age,
                     startSize = Random.Range(0.4f, 0.9f)
                 };
                 fire.Emit(particle, 1);
