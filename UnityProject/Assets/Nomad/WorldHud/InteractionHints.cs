@@ -76,7 +76,7 @@ namespace Nomad.WorldHud
                 if (candidate is not MonoBehaviour owner || owner == null || !owner.isActiveAndEnabled) continue;
                 if (VisibleCount == markers.Count) markers.Add(CreateMarker());
                 Marker marker = markers[VisibleCount];
-                if (!WorldHudCanvas.Place(canvas, marker.Root, camera, candidate.InteractionPoint, markerOffset))
+                if (!WorldHudCanvas.Place(canvas, marker.Root, camera, InteractionAnchors.Display(candidate), markerOffset))
                     continue;
 
                 marker.Root.gameObject.SetActive(true);
@@ -120,7 +120,7 @@ namespace Nomad.WorldHud
 
                 candidates.Add(candidate);
                 // 멀리서는 원만 보여주고 실제 E 대상은 기존 2m 범위에서만 선택합니다.
-                float score = interaction.SelectionScore(candidate.InteractionPoint, distance);
+                float score = interaction.SelectionScore(candidate, distance);
                 if (distance <= 1f && !float.IsPositiveInfinity(score) && (score < nearest || (score == nearest && (Selected == null ||
                     string.CompareOrdinal(candidate.InteractionId, Selected.InteractionId) < 0))))
                 {
@@ -166,7 +166,7 @@ namespace Nomad.WorldHud
             return new Marker { Root = outer.rectTransform, Outer = outer, Key = key };
         }
 
-        private static TMP_FontAsset LabelFont()
+        internal static TMP_FontAsset LabelFont()
         {
             if (labelFont != null)
                 return labelFont;

@@ -48,6 +48,8 @@ namespace Nomad.Player
             inventory = player.GetComponent<PlayerInventory>();
             health = player.GetComponent<Health>();
             focused = Application.isFocused;
+            gameObject.AddComponent<Nomad.PlayerVisual.FirstPersonWeaponView>().Initialize(this, player);
+            gameObject.AddComponent<FirstPersonLandmarks>().Initialize(this);
 
             crosshair = new GameObject("Village Crosshair", typeof(RectTransform), typeof(Canvas));
             crosshair.transform.SetParent(transform, false);

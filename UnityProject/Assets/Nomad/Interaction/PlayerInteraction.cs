@@ -97,7 +97,7 @@ namespace Nomad.Interaction
                 // 대상별 판정 거리로 나눈 비율로 비교합니다. 기본 2m 대상끼리는 기존 순서와 같습니다.
                 float range = InteractionRange.Of(candidate);
                 float distance = (point - feet).sqrMagnitude / (range * range);
-                float score = SelectionScore(point, distance);
+                float score = SelectionScore(candidate, distance);
                 if (string.IsNullOrWhiteSpace(id) || distance > 1f || (float.IsPositiveInfinity(score) || !(score <= bestDistance)) ||
                     (best != null && score == bestDistance && string.CompareOrdinal(id, bestId) >= 0))
                     continue;
@@ -113,12 +113,12 @@ namespace Nomad.Interaction
             return best;
         }
 
-        internal float SelectionScore(Vector3 point, float distance)
+        internal float SelectionScore(IInteractable candidate, float distance)
         {
             if (movement?.FirstPersonView != true) return distance;
             Camera camera = Camera.main;
             if (camera == null) return float.PositiveInfinity;
-            Vector3 screen = camera.WorldToViewportPoint(point);
+            Vector3 screen = camera.WorldToViewportPoint(InteractionAnchors.Focus(candidate));
             if (screen.z <= 0f || screen.x < 0f || screen.x > 1f || screen.y < 0f || screen.y > 1f)
                 return float.PositiveInfinity;
 
