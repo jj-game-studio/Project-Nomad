@@ -1,5 +1,4 @@
 using Nomad.Combat;
-using Nomad.Equipment;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -9,8 +8,15 @@ namespace Nomad.Monsters.Demo
     public enum DragonPhase { Waiting, Windup, Active, Recovery, Stunned, Dead }
 
     [DefaultExecutionOrder(120)]
-    public sealed class DragonBossCombat : MonoBehaviour
+    public sealed partial class DragonBossCombat : MonoBehaviour
     {
+        public const int RainWaves = 24;
+        public const int RainPerWave = 3;
+        public const float RainInterval = 0.3f;
+        public const float RainDuration = 8.3f;
+        public bool AutomaticPatterns { get; set; } = true;
+        public int AttacksStarted { get; private set; }
+        public int RainProjectilesSpawned { get; private set; }
         public DragonPattern Pattern { get; private set; }
         public DragonPhase Phase { get; private set; }
         public float Remaining => Mathf.Max(0, until - Time.time);
@@ -43,8 +49,12 @@ namespace Nomad.Monsters.Demo
             tactics = GetComponent<MonsterTactics>();
             animationDriver = GetComponent<MonsterAnimationDriver>();
             GetComponent<MonsterMeleeAttack>().enabled = false;
-            tactics.Configure(target, 0, 14, 11, 6, 6.5f, 8, 1.2f, 1.8f, 28);
+            tactics.Configure(target, 0, 14, 15, 6, 6.5f, 8, 0.8f, 0.1f, 28);
+            agent.speed = 6;
+            agent.acceleration = 40;
+            agent.angularSpeed = 720;
             agent.stoppingDistance = 3.2f;
+            ConfigurePresentation();
             effects = new GameObject("Dragon encounter effects").transform;
             effects.SetParent(arena.transform, false);
             status = new GameObject("Boss action").AddComponent<TextMesh>();
@@ -56,7 +66,7 @@ namespace Nomad.Monsters.Demo
             status.fontSize = 40;
             status.characterSize = 0.025f;
             status.color = new Color(1, 0.7f, 0.2f);
-            until = Time.time + 2;
+            until = Time.time + 0.2f;
         }
 
         private bool PlayerInside => target != null && target.gameObject.activeInHierarchy && !target.IsDead &&
@@ -69,41 +79,50 @@ namespace Nomad.Monsters.Demo
             if (health == null) return;
             if (health.IsDead) { Phase = DragonPhase.Dead; StopEncounter(); return; }
             if (animationDriver != null && (Phase == DragonPhase.Windup || Phase == DragonPhase.Active))
+            {
+                float progress = Pattern == DragonPattern.Rain && Phase == DragonPhase.Active
+                    ? Mathf.PingPong((Time.time - phaseStarted) * 1.8f, 1) : Mathf.Clamp01((Time.time - phaseStarted) / phaseDuration);
                 animationDriver.ActionNormalizedTime = Mathf.Lerp(Phase == DragonPhase.Windup ? 0.03f : 0.3f,
-                    Phase == DragonPhase.Windup ? 0.28f : 0.9f, Mathf.Clamp01((Time.time - phaseStarted) / phaseDuration));
+                    Phase == DragonPhase.Windup ? 0.28f : 0.9f, progress);
+            }
             if (arena.IsLocked || !PlayerInside)
             {
                 if (Phase != DragonPhase.Waiting) StopEncounter();
                 Phase = DragonPhase.Waiting;
                 Pause();
-                until = Time.time + 1.5f;
+                until = Time.time;
                 return;
             }
             if (CheckThresholds()) return;
             if (Phase == DragonPhase.Stunned)
             {
                 if (Time.time < until) return;
-                Recover(1);
+                Recover();
                 return;
             }
             if (Phase == DragonPhase.Active && Pattern == DragonPattern.Charge)
             {
                 if (HitRock()) return;
-                if (tactics.TickCharge()) Recover(1.8f);
+                if (tactics.TickCharge()) Recover();
                 return;
             }
-            if (Phase == DragonPhase.Active && Pattern == DragonPattern.Rain && Time.time >= nextRain && rainCount < 6)
+            if (Phase == DragonPhase.Active && Pattern == DragonPattern.Rain && Time.time >= nextRain && rainCount < RainWaves)
             {
-                nextRain = Time.time + 0.45f;
-                Vector3 point = ClampPoint(target.transform.position + Quaternion.Euler(0, rainCount * 137.5f, 0) * Vector3.forward * (rainCount % 2 == 0 ? 0 : 1.6f));
-                Area(point, 1.15f, 360, 1.1f, 0.12f, 20);
-                BossFireball.Launch(effects, transform, target, point + Vector3.up * 8, point, 1.1f, false, damage: 0);
+                nextRain = Time.time + RainInterval;
+                for (int index = 0; index < RainPerWave; index++)
+                {
+                    float distance = index == 0 ? 0 : index == 1 ? 2.6f : 4.2f;
+                    Vector3 point = ClampPoint(target.transform.position + Quaternion.Euler(0, rainCount * 137.5f + index * 120, 0) * Vector3.forward * distance);
+                    Area(point, 1.15f, 360, 1.1f, 0.12f, 20);
+                    BossFireball.Launch(effects, transform, target, point + Vector3.up * 8, point, 1.1f, false, damage: 0);
+                    RainProjectilesSpawned++;
+                }
                 rainCount++;
             }
             if (Time.time < until) return;
             if (Phase == DragonPhase.Windup) Release();
-            else if (Phase == DragonPhase.Active) Recover(1.8f);
-            else BeginNext();
+            else if (Phase == DragonPhase.Active) Recover();
+            else if (AutomaticPatterns) BeginNext();
         }
 
         public void BeginPattern(DragonPattern pattern)
@@ -113,13 +132,15 @@ namespace Nomad.Monsters.Demo
             tactics.Stop();
             Pause();
             Pattern = pattern;
+            AttacksStarted++;
             Phase = DragonPhase.Windup;
             aim = ClampPoint(target.transform.position);
             direction = Vector3.ProjectOnPlane(aim - transform.position, Vector3.up).normalized;
             if (direction.sqrMagnitude < 0.01f) direction = transform.forward;
             transform.rotation = Quaternion.LookRotation(direction);
-            float windup = pattern == DragonPattern.Circle ? 2.2f : pattern == DragonPattern.Basic ? 0.7f :
-                pattern == DragonPattern.TripleFireball ? 0.9f : pattern == DragonPattern.Charge ? 1.2f : 1.4f;
+            float windup = pattern == DragonPattern.Circle ? 1.6f : pattern == DragonPattern.Basic ? 0.45f :
+                pattern == DragonPattern.TripleFireball ? 0.55f : pattern == DragonPattern.Charge ? 0.8f :
+                pattern == DragonPattern.Rain ? 0.7f : 0.9f;
             until = Time.time + windup;
             phaseStarted = Time.time;
             phaseDuration = windup;
@@ -139,9 +160,6 @@ namespace Nomad.Monsters.Demo
                 Area(transform.position, 12, 14, windup, 0.01f, 0);
                 tactics.Prepare(MonsterSkill.Charge, transform.position + direction * 12);
             }
-            if (pattern == DragonPattern.TripleFireball || pattern == DragonPattern.Breath)
-                WeaponVfx.Burst(transform.position + Vector3.up * 1.8f + direction * 1.5f,
-                    new WeaponVfxStyle(new Color(1, 0.8f, 0.2f), new Color(1, 0.2f, 0.02f), 0.5f));
         }
 
         private void BeginNext()
@@ -153,7 +171,7 @@ namespace Nomad.Monsters.Demo
                 tracker.enabled = true;
                 tracker.ReactToDamage();
                 if (agent.enabled && agent.isOnNavMesh) agent.isStopped = false;
-                until = Time.time + 0.3f;
+                until = Time.time + 0.08f;
                 return;
             }
             sequence++;
@@ -164,26 +182,27 @@ namespace Nomad.Monsters.Demo
         {
             status.text = "";
             Phase = DragonPhase.Active;
-            until = Time.time + (Pattern == DragonPattern.Breath ? 1.5f : Pattern == DragonPattern.Rain ? 3.6f : 0.25f);
+            until = Time.time + (Pattern == DragonPattern.Breath ? 1.5f : Pattern == DragonPattern.Rain ? RainDuration : 0.18f);
             phaseStarted = Time.time;
             phaseDuration = until - Time.time;
             if (Pattern == DragonPattern.TripleFireball)
                 foreach (float yaw in new[] { -22f, 0, 22f })
                 {
-                    Vector3 start = transform.position + Vector3.up * 1.7f + direction * 2;
+                    Vector3 start = Mouth.position;
                     Vector3 end = start + Quaternion.Euler(0, yaw, 0) * direction * 24;
                     BossFireball.Launch(effects, transform, target, start, end, 3, false);
                 }
             if (Pattern == DragonPattern.FirePool)
-                BossFireball.Launch(effects, transform, target, transform.position + Vector3.up * 2, aim, 0.75f, true);
-            if (Pattern == DragonPattern.Charge && !tactics.StartCharge(direction)) Recover(1.8f);
-            if (Pattern == DragonPattern.Rain) { rainCount = 0; nextRain = Time.time; }
+                BossFireball.Launch(effects, transform, target, Mouth.position, aim, 0.75f, true);
+            if (Pattern == DragonPattern.Charge && !tactics.StartCharge(direction)) Recover();
+            if (Pattern == DragonPattern.Rain) { rainCount = 0; RainProjectilesSpawned = 0; nextRain = Time.time; }
         }
 
         private BossHazard Area(Vector3 point, float radius, float angle, float delay, float duration, int damage, float interval = 0.75f)
         {
             BossHazard hazard = BossHazard.Create(effects, transform, ClampPoint(point), Quaternion.LookRotation(direction), target, radius, angle, delay, duration, damage, interval);
             hazard.EmitsFlame = Pattern != DragonPattern.Basic && damage > 0;
+            if (Pattern == DragonPattern.Breath) hazard.BreathOrigin = Mouth;
             return hazard;
         }
 
@@ -224,17 +243,18 @@ namespace Nomad.Monsters.Demo
             Pause();
             Phase = DragonPhase.Stunned;
             until = Time.time + seconds;
-            status.text = "기절 · 공격 기회";
+            status.text = "";
             status.color = new Color(1, 0.9f, 0.3f);
             SetMotion("Hit_A", 0.35f);
         }
 
-        private void Recover(float seconds)
+        private void Recover()
         {
             Phase = DragonPhase.Recovery;
-            until = Time.time + seconds;
+            until = Time.time;
             status.text = "";
             SetMotion(null, 1);
+            if (AutomaticPatterns) BeginNext();
         }
 
         private void SetMotion(string state, float speed)

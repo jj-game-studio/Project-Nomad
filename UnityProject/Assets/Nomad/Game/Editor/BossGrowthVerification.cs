@@ -21,7 +21,7 @@ namespace Nomad.Game.Editor
         private const string Key = "Nomad.BossGrowthVerify";
         private static readonly DragonPattern[] Patterns = { DragonPattern.Circle, DragonPattern.TripleFireball,
             DragonPattern.Breath, DragonPattern.FirePool, DragonPattern.Rain, DragonPattern.Charge };
-        private static readonly float[] CaptureAt = { 1.1f, 1.25f, 2.1f, 2.4f, 2.6f, 1.7f };
+        private static readonly float[] CaptureAt = { 0.8f, 0.9f, 1.5f, 1.9f, 6.5f, 1.35f };
         private static readonly List<InputDevice> muted = new();
         private static DragonBossCombat boss;
         private static BossArena arena;
@@ -77,6 +77,7 @@ namespace Nomad.Game.Editor
                 {
                     boss = Object.FindFirstObjectByType<DragonBossCombat>();
                     if (boss == null) return;
+                    boss.AutomaticPatterns = false;
                     arena = Object.FindFirstObjectByType<BossArena>();
                     player = Object.FindFirstObjectByType<PlayerEquipmentCombat>();
                     if (player == null) return;
@@ -90,6 +91,7 @@ namespace Nomad.Game.Editor
                     { InputSystem.DisableDevice(device); muted.Add(device); }
                     mouse.MakeCurrent();
                     keyboard.MakeCurrent();
+                    player.GetComponent<Nomad.Player.PlayerMovement>().enabled = false;
                     player.GetComponent<Health>().IsCombatImmune = true;
                     foreach (MonsterIdentity actor in Object.FindObjectsByType<MonsterIdentity>(FindObjectsSortMode.None))
                         if (actor.Rank != MonsterRank.Boss) actor.GetComponent<Health>().TryApplyDamage(int.MaxValue);
@@ -126,6 +128,13 @@ namespace Nomad.Game.Editor
                 {
                     if (Time.time < since + CaptureAt[pattern]) return;
                     if (Patterns[pattern] == DragonPattern.Charge) Require(boss.RockStuns == 1, "실제 바위 충돌 기절");
+                    if (Patterns[pattern] == DragonPattern.Breath)
+                    {
+                        BossHazard breath = boss.Effects.GetComponentInChildren<BossHazard>();
+                        Require(boss.Mouth.parent.name == "jaw_upper" && breath.BreathOrigin == boss.Mouth &&
+                            Vector3.Distance(breath.LastBreathOrigin, boss.Mouth.position) < 0.1f, "현재 실제 머리에서 브레스");
+                    }
+                    if (Patterns[pattern] == DragonPattern.Rain) Require(boss.RainProjectilesSpawned >= 57, "길고 많은 낙하 불덩이");
                     Capture(Patterns[pattern].ToString());
                     boss.Stun(0.03f);
                     since = Time.time;
@@ -191,7 +200,16 @@ namespace Nomad.Game.Editor
                 camera.transform.position = arena.Center + Quaternion.LookRotation(arena.Forward) * new Vector3(12, 22, -18);
                 camera.transform.LookAt(arena.Center);
                 camera.orthographicSize = 17;
+                boss.GetComponent<BossStunDisplay>().FaceCamera(camera);
                 Nomad.Minimap.Editor.MinimapVerification.Capture("issue214-" + (SessionState.GetBool(Key + ".terrain", false) ? "terrain-" : "main-") + name + ".png");
+                if (name == "Breath")
+                {
+                    Vector3 point = boss.Mouth.position + boss.transform.forward;
+                    camera.transform.position = point + boss.transform.rotation * new Vector3(6, 3, -5);
+                    camera.transform.LookAt(point);
+                    camera.orthographicSize = 4;
+                    Nomad.Minimap.Editor.MinimapVerification.Capture("issue214-" + (SessionState.GetBool(Key + ".terrain", false) ? "terrain-" : "main-") + "MouthBreathClose.png");
+                }
             }
             finally { camera.transform.SetPositionAndRotation(position, rotation); camera.orthographicSize = size; }
         }

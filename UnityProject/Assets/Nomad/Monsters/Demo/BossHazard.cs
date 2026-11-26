@@ -6,12 +6,14 @@ using UnityEngine.Rendering;
 namespace Nomad.Monsters.Demo
 {
     // 위치를 고정한 예고와 피해가 같은 도형을 사용합니다. 보스가 죽으면 소유자가 모두 정리합니다.
-    [DefaultExecutionOrder(200)]
+    [DefaultExecutionOrder(400)]
     public sealed class BossHazard : MonoBehaviour
     {
         public bool Active => elapsed >= delay;
         public float Radius { get; private set; }
         public bool EmitsFlame { get; set; } = true;
+        public Transform BreathOrigin { get; set; }
+        public Vector3 LastBreathOrigin { get; private set; }
         private Health target;
         private Transform owner;
         private float delay, duration, interval, elapsed, nextHit;
@@ -113,9 +115,7 @@ namespace Nomad.Monsters.Demo
                     main.startSize = new ParticleSystem.MinMaxCurve(0.4f, 0.9f);
                 }
                 WeaponVfx.Fade(fire, 0);
-                if (angle < 359) EmitBreath(true);
             }
-            if (fire != null && angle < 359) EmitBreath(false);
             if (elapsed >= nextHit)
             {
                 nextHit = elapsed + interval;
@@ -126,21 +126,33 @@ namespace Nomad.Monsters.Demo
 
         private void EmitBreath(bool warm)
         {
+            Vector3 origin = BreathOrigin != null ? BreathOrigin.position : transform.position + Vector3.up * 1.4f + transform.forward * 1.4f;
+            LastBreathOrigin = origin;
             int count = warm ? 64 : Mathf.CeilToInt(220 * Time.deltaTime);
             for (int index = 0; index < count; index++)
             {
                 Vector3 heading = transform.rotation * Quaternion.Euler(0, Random.Range(-angle * 0.5f, angle * 0.5f), 0) * Vector3.forward;
-                Vector3 velocity = heading * ((Radius - 1.4f) / 0.65f);
+                Vector3 endpoint = transform.position + heading * Radius + Vector3.up * 0.6f;
+                Vector3 velocity = (endpoint - origin) / 0.65f;
                 float age = warm ? Random.Range(0, 0.6f) : 0;
                 var particle = new ParticleSystem.EmitParams
                 {
-                    position = transform.position + Vector3.up * 1.4f + transform.forward * 1.4f + velocity * age,
+                    position = origin + velocity * age,
                     velocity = velocity,
                     startLifetime = 0.65f - age,
                     startSize = Random.Range(0.4f, 0.9f)
                 };
                 fire.Emit(particle, 1);
             }
+        }
+
+        private bool breathWarmed;
+        private void LateUpdate()
+        {
+            if (fire == null || angle >= 359 || Time.deltaTime <= 0) return;
+            // 애니메이션과 다리 보정이 끝난 현재 프레임의 머리를 사용합니다.
+            if (!breathWarmed) { EmitBreath(true); breathWarmed = true; }
+            EmitBreath(false);
         }
 
         public bool Contains(Vector3 point)

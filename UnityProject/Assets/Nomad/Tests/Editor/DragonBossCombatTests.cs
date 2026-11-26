@@ -5,6 +5,7 @@ using Nomad.Combat;
 using Nomad.Monsters;
 using Nomad.Monsters.Demo;
 using NUnit.Framework;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.TestTools;
@@ -55,10 +56,14 @@ namespace Nomad.Tests
             var factory = Track(new GameObject("Boss test factory")).AddComponent<MonsterActorFactory>();
             var material = Track(new Material(Shader.Find("Universal Render Pipeline/Lit")));
             factory.ConfigureMaterials(material, material, material, material);
+            MonsterAppearanceSet appearances = Track(ScriptableObject.CreateInstance<MonsterAppearanceSet>());
+            appearances.boss = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/ThirdParty/Nomad/Monsters/Candidates/Dragon.prefab");
+            factory.ConfigureAppearances(appearances);
             boss = factory.CreateRanked(player, MonsterTestSettings.Defaults(MonsterRank.Boss), MonsterRank.Boss,
                 arena.Center, Quaternion.identity, "Test boss", arena.transform);
             arena.PrepareCombat(boss, player);
             combat = boss.GetComponent<DragonBossCombat>();
+            combat.AutomaticPatterns = false;
             Physics.SyncTransforms();
         }
 
@@ -92,16 +97,16 @@ namespace Nomad.Tests
         {
             combat.BeginPattern(DragonPattern.Circle);
             int hp = player.CurrentHealth;
-            yield return Wait(1.5f);
+            yield return Wait(1);
             Assert.That(player.CurrentHealth, Is.EqualTo(hp), "전조 중 피해 없음");
             player.transform.position = arena.Center + Vector3.right * 8;
             Physics.SyncTransforms();
-            yield return Wait(1);
+            yield return Wait(0.9f);
             Assert.That(player.CurrentHealth, Is.EqualTo(hp), "걸어서 범위를 빠져나가 회피");
             player.transform.position = arena.Center + Vector3.right * 3;
             Physics.SyncTransforms();
             combat.BeginPattern(DragonPattern.Circle);
-            yield return Wait(2.5f);
+            yield return Wait(1.9f);
             Assert.That(player.CurrentHealth, Is.EqualTo(hp - 32), "강타는 한 번만 피해");
         }
 
@@ -136,6 +141,8 @@ namespace Nomad.Tests
             yield return null;
             Assert.That(combat.Phase, Is.EqualTo(DragonPhase.Stunned));
             Assert.That(combat.ThresholdStuns, Is.EqualTo(1));
+            yield return null;
+            Assert.That(boss.GetComponent<BossStunDisplay>().Visible, Is.True, "큰 기절 표시와 별 활성화");
             Assert.That(combat.Effects.GetComponentsInChildren<BossHazard>().Length, Is.Zero);
             float until = combat.Remaining;
             boss.TryApplyDamage(1);
@@ -171,7 +178,7 @@ namespace Nomad.Tests
         {
             combat.BeginPattern(DragonPattern.FirePool);
             int hp = player.CurrentHealth;
-            yield return Wait(2.4f);
+            yield return Wait(1.9f);
             Assert.That(player.CurrentHealth, Is.EqualTo(hp - 10));
             player.transform.position = arena.Center - Vector3.right * 6;
             Physics.SyncTransforms();
@@ -193,12 +200,12 @@ namespace Nomad.Tests
         {
             combat.BeginPattern(DragonPattern.Basic);
             int hp = player.CurrentHealth;
-            yield return Wait(0.5f);
+            yield return Wait(0.25f);
             Assert.That(player.CurrentHealth, Is.EqualTo(hp));
             yield return Wait(0.4f);
             Assert.That(player.CurrentHealth, Is.EqualTo(hp - 18));
             combat.BeginPattern(DragonPattern.Rain);
-            yield return Wait(1.7f);
+            yield return Wait(1);
             BossHazard first = combat.Effects.GetComponentsInChildren<BossHazard>().First();
             Vector3 warningPosition = first.transform.position;
             Assert.That(first.Active, Is.False, "작은 불덩이에도 회피 전조 있음");
@@ -211,6 +218,49 @@ namespace Nomad.Tests
             boss.TryApplyDamage(boss.MaxHealth);
             yield return null;
             Assert.That(combat.Effects.childCount, Is.Zero);
+        }
+
+        [UnityTest]
+        public IEnumerator BossChainsAttacksWithoutIdleRecovery()
+        {
+            combat.AutomaticPatterns = true;
+            combat.BeginPattern(DragonPattern.Basic);
+            Assert.That(boss.GetComponent<NavMeshAgent>().speed, Is.EqualTo(6));
+            for (int frame = 0; frame < 300; frame++)
+            {
+                yield return null;
+                if (combat.Phase == DragonPhase.Recovery)
+                    Assert.That(boss.GetComponent<MonsterTracker>().enabled && !boss.GetComponent<NavMeshAgent>().isStopped,
+                        Is.True, "사거리 밖이면 쉬지 않고 추적");
+            }
+            Assert.That(combat.AttacksStarted, Is.GreaterThanOrEqualTo(4), "다음 공격으로 즉시 연결");
+        }
+
+        [UnityTest]
+        public IEnumerator RainContinuesLongerAndSpawnsSeventyTwoFireballs()
+        {
+            combat.BeginPattern(DragonPattern.Rain);
+            yield return Wait(8.4f);
+            Assert.That(combat.Phase, Is.EqualTo(DragonPhase.Active));
+            Assert.That(combat.RainProjectilesSpawned, Is.EqualTo(72));
+            yield return Wait(0.9f);
+            Assert.That(combat.Effects.GetComponentsInChildren<BossHazard>().Length, Is.Zero);
+        }
+
+        [UnityTest]
+        public IEnumerator BreathTracksCurrentAnimatedMouthAndStunIndicatorClears()
+        {
+            Assert.That(combat.Mouth.parent.name, Is.EqualTo("jaw_upper"));
+            combat.BeginPattern(DragonPattern.Breath);
+            yield return Wait(1.2f);
+            BossHazard breath = combat.Effects.GetComponentsInChildren<BossHazard>().Single();
+            Assert.That(breath.BreathOrigin, Is.SameAs(combat.Mouth));
+            Assert.That(Vector3.Distance(breath.LastBreathOrigin, combat.Mouth.position), Is.LessThan(0.06f), "현재 머리 위치에서 연속 발사");
+            combat.Stun(0.3f);
+            yield return Wait(0.1f);
+            Assert.That(boss.GetComponent<BossStunDisplay>().Visible, Is.True);
+            yield return Wait(0.4f);
+            Assert.That(boss.GetComponent<BossStunDisplay>().Visible, Is.False);
         }
     }
 }
