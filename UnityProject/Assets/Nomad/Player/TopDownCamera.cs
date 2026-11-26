@@ -31,6 +31,8 @@ namespace Nomad.Player
             viewCamera.fieldOfView = 50f;
             pointerFocused = Application.isFocused;
             ResetTracking();
+            if (Application.isPlaying && target != null && target.GetComponent<PlayerMovement>() != null)
+                gameObject.AddComponent<VillageFirstPersonCamera>().Initialize(this, target);
         }
 
         private void OnEnable() => ResetTracking();

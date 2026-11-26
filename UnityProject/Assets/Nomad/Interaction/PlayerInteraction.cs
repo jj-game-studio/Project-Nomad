@@ -74,14 +74,14 @@ namespace Nomad.Interaction
 
         private bool CanInteract()
         {
-            return movement != null && movement.isActiveAndEnabled && !movement.IsRolling &&
+            return movement != null && movement.isActiveAndEnabled && !movement.IsRolling && !movement.ViewInputBlocked &&
                    inventory != null && inventory.isActiveAndEnabled && controller != null && controller.enabled;
         }
 
         private IInteractable FindTarget(InteractionContext context, Vector3 body, Vector3 feet)
         {
             IInteractable best = null;
-            float bestDistance = 1f;
+            float bestDistance = float.PositiveInfinity;
             string bestId = null;
             var seen = new HashSet<MonoBehaviour>();
 
@@ -97,19 +97,33 @@ namespace Nomad.Interaction
                 // 대상별 판정 거리로 나눈 비율로 비교합니다. 기본 2m 대상끼리는 기존 순서와 같습니다.
                 float range = InteractionRange.Of(candidate);
                 float distance = (point - feet).sqrMagnitude / (range * range);
-                if (string.IsNullOrWhiteSpace(id) || !(distance <= bestDistance) ||
-                    (best != null && distance == bestDistance && string.CompareOrdinal(id, bestId) >= 0))
+                float score = SelectionScore(point, distance);
+                if (string.IsNullOrWhiteSpace(id) || distance > 1f || (float.IsPositiveInfinity(score) || !(score <= bestDistance)) ||
+                    (best != null && score == bestDistance && string.CompareOrdinal(id, bestId) >= 0))
                     continue;
 
                 if (!candidate.CanInteract(context) || IsObstructed(body, point, owner.transform))
                     continue;
 
                 best = candidate;
-                bestDistance = distance;
+                bestDistance = score;
                 bestId = id;
             }
 
             return best;
+        }
+
+        internal float SelectionScore(Vector3 point, float distance)
+        {
+            if (movement?.FirstPersonView != true) return distance;
+            Camera camera = Camera.main;
+            if (camera == null) return float.PositiveInfinity;
+            Vector3 screen = camera.WorldToViewportPoint(point);
+            if (screen.z <= 0f || screen.x < 0f || screen.x > 1f || screen.y < 0f || screen.y > 1f)
+                return float.PositiveInfinity;
+
+            // 화면 중앙을 우선하고 같은 방향의 후보에서는 거리도 고려합니다.
+            return Vector2.SqrMagnitude(new Vector2(screen.x - 0.5f, screen.y - 0.5f)) + distance * 0.001f;
         }
 
         private bool IsObstructed(Vector3 body, Vector3 point, Transform target)

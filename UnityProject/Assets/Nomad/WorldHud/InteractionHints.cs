@@ -103,7 +103,7 @@ namespace Nomad.WorldHud
             Vector3 body = transform.TransformPoint(controller.center);
             Vector3 feet = transform.TransformPoint(controller.center - Vector3.up * (controller.height * .5f));
             var context = new InteractionContext(transform, inventory);
-            float nearest = 1f;
+            float nearest = float.PositiveInfinity;
             float radius = Mathf.Max(2f, displayRadius);
             foreach (Collider collider in Physics.OverlapSphere(feet, radius, targetLayers, QueryTriggerInteraction.Collide))
             {
@@ -120,10 +120,11 @@ namespace Nomad.WorldHud
 
                 candidates.Add(candidate);
                 // 멀리서는 원만 보여주고 실제 E 대상은 기존 2m 범위에서만 선택합니다.
-                if (distance < nearest || (distance == nearest && (Selected == null ||
-                    string.CompareOrdinal(candidate.InteractionId, Selected.InteractionId) < 0)))
+                float score = interaction.SelectionScore(candidate.InteractionPoint, distance);
+                if (distance <= 1f && !float.IsPositiveInfinity(score) && (score < nearest || (score == nearest && (Selected == null ||
+                    string.CompareOrdinal(candidate.InteractionId, Selected.InteractionId) < 0))))
                 {
-                    nearest = distance;
+                    nearest = score;
                     Selected = candidate;
                 }
             }
