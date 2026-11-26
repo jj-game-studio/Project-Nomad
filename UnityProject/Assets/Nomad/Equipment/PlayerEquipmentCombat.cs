@@ -83,6 +83,7 @@ namespace Nomad.Equipment
             legacyCombat = GetComponent<PlayerCombat>();
             if (TryGetComponent(out CharacterController controller))
                 walkableNormalY = Mathf.Cos(controller.slopeLimit * Mathf.Deg2Rad);
+            if (GetComponent<PlayerWeaponSkill>() == null) gameObject.AddComponent<PlayerWeaponSkill>();
         }
 
         private void OnEnable()

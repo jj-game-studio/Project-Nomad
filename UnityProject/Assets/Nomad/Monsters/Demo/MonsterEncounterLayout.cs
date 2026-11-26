@@ -94,6 +94,7 @@ namespace Nomad.Monsters.Demo
                 Health boss = factory.CreateRanked(player, settings, MonsterRank.Boss, arena.Center, Quaternion.identity,
                     "Boss - final arena", parent);
                 actors.Add(boss);
+                arena.PrepareCombat(boss, player);
                 arena.ObserveEncounter(player);
                 arena.RequireElite(actors.First(actor => actor.GetComponent<MonsterIdentity>().Rank == MonsterRank.Elite), boss);
             }

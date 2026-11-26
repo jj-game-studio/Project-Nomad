@@ -1403,6 +1403,7 @@ GameObject:
   - component: {fileID: 1930808197}
   - component: {fileID: 1930808196}
   - component: {fileID: 1930808198}
+  - component: {fileID: 1930808199}
   m_Layer: 0
   m_Name: Terrain Integration Controls
   m_TagString: Untagged
@@ -1554,6 +1555,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Loot.ChestSpawner
   minimumFill: 0.5
+--- !u!114 &1930808199
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1930808191}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 397d5228b9981db4c9b5d5fb8e593ea3, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::Nomad.Monsters.Demo.BossEncounterContent
+  Rock: {fileID: 7877644576711074951, guid: 5b91c0ccde428f74ebbae5f99da9a905, type: 3}
 --- !u!1 &1951189840
 GameObject:
   m_ObjectHideFlags: 0

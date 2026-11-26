@@ -667,7 +667,8 @@ namespace Nomad.Inventory
                 icon.sprite = sprite;
                 icon.enabled = sprite != null;
                 fallbackName.text = occupied && sprite == null ? stack.Item.DisplayName : string.Empty;
-                count.text = occupied && stack.Item.MaxStack > 1 ? $"×{stack.Count}" : string.Empty;
+                count.text = !occupied ? string.Empty : stack.Item.EnhancementLevel > 0 ? $"+{stack.Item.EnhancementLevel}" :
+                    stack.Item.MaxStack > 1 ? $"×{stack.Count}" : string.Empty;
                 countBadge.enabled = !string.IsNullOrEmpty(count.text);
                 tier = occupied ? stack.Item.Tier : ItemTier.None;
                 tierBadge.text = TierStyle.Label(tier);
