@@ -14,6 +14,8 @@ namespace Nomad.Monsters.Demo
         public const int RainPerWave = 3;
         public const float RainInterval = 0.35f;
         public const float CircleRadius = 9.5f;
+        public const float BreathRange = 13.5f;
+        public const float BreathAngle = 95;
         public const float RainDuration = 8.3f;
         public bool AutomaticPatterns { get; set; } = true;
         public int AttacksStarted { get; private set; }
@@ -21,7 +23,6 @@ namespace Nomad.Monsters.Demo
         public DragonPattern Pattern { get; private set; }
         public DragonPhase Phase { get; private set; }
         public float Remaining => Mathf.Max(0, until - Time.time);
-        public int ThresholdStuns { get; private set; }
         public int RockStuns { get; private set; }
         public Transform Effects => effects;
         private BossArena arena;
@@ -35,7 +36,6 @@ namespace Nomad.Monsters.Demo
         private float phaseStarted, phaseDuration;
         private Vector3 aim, direction;
         private int sequence, rainCount;
-        private bool crossed75, crossed50;
         private TextMesh status;
         private static readonly DragonPattern[] Rotation = { DragonPattern.Circle, DragonPattern.TripleFireball,
             DragonPattern.Basic, DragonPattern.Breath, DragonPattern.FirePool, DragonPattern.Rain };
@@ -96,7 +96,6 @@ namespace Nomad.Monsters.Demo
                 until = Time.time;
                 return;
             }
-            if (CheckThresholds()) return;
             if (Phase == DragonPhase.Stunned)
             {
                 if (Time.time < until) return;
@@ -155,7 +154,7 @@ namespace Nomad.Monsters.Demo
                 pattern == DragonPattern.Breath ? "브레스 준비" : pattern == DragonPattern.Rain ? "화염우" : "";
             if (pattern == DragonPattern.Circle) Area(transform.position, CircleRadius, 360, windup, 0.12f, 32);
             if (pattern == DragonPattern.Basic) Area(transform.position, 4, 110, windup, 0.12f, 18);
-            if (pattern == DragonPattern.Breath) Area(transform.position, 9, 70, windup, 2.4f, 12, 0.8f);
+            if (pattern == DragonPattern.Breath) Area(transform.position, BreathRange, BreathAngle, windup, 2.4f, 12, 0.8f);
             if (pattern == DragonPattern.FirePool)
             {
                 Area(aim, 2.4f, 360, windup + 0.75f, 5, 10);
@@ -216,7 +215,7 @@ namespace Nomad.Monsters.Demo
         {
             BossHazard hazard = BossHazard.Create(effects, transform, ClampPoint(point), Quaternion.LookRotation(direction), target, radius, angle, delay, duration, damage, interval);
             hazard.EmitsFlame = Pattern != DragonPattern.Basic && damage > 0;
-            if (Pattern == DragonPattern.Breath) { hazard.BreathOrigin = Mouth; hazard.BreathTravelSeconds = 1.1f; }
+            if (Pattern == DragonPattern.Breath) { hazard.BreathOrigin = Mouth; hazard.BreathTravelSeconds = 1.3f; }
             return hazard;
         }
 
@@ -227,16 +226,6 @@ namespace Nomad.Monsters.Demo
             local.x = Mathf.Clamp(local.x, -9.5f, 9.5f);
             local.z = Mathf.Clamp(local.z, -9.5f, 9.5f);
             return arena.Center + rotation * new Vector3(local.x, 0, local.z);
-        }
-
-        private bool CheckThresholds()
-        {
-            float ratio = health.CurrentHealth / (float)health.MaxHealth;
-            bool stun = false;
-            if (!crossed75 && ratio <= 0.75f) { crossed75 = true; ThresholdStuns++; stun = true; }
-            if (!crossed50 && ratio <= 0.5f) { crossed50 = true; ThresholdStuns++; stun = true; }
-            if (stun) Stun(3);
-            return stun;
         }
 
         private bool HitRock()

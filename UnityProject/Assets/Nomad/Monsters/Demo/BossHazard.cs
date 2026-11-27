@@ -7,7 +7,7 @@ namespace Nomad.Monsters.Demo
 {
     // 위치를 고정한 예고와 피해가 같은 도형을 사용합니다. 보스가 죽으면 소유자가 모두 정리합니다.
     [DefaultExecutionOrder(400)]
-    public sealed class BossHazard : MonoBehaviour
+    public sealed partial class BossHazard : MonoBehaviour
     {
         public bool Active => elapsed >= delay;
         public float Radius { get; private set; }
@@ -116,6 +116,7 @@ namespace Nomad.Monsters.Demo
                     main.startSize = new ParticleSystem.MinMaxCurve(0.4f, 0.9f);
                 }
                 WeaponVfx.Fade(fire, 0);
+                if (angle < 359) CreateBreathLayers();
             }
             if (elapsed >= nextHit)
             {
@@ -144,6 +145,10 @@ namespace Nomad.Monsters.Demo
                     startSize = Random.Range(0.4f, 0.9f)
                 };
                 fire.Emit(particle, 1);
+                if (core != null && index % 2 == 0) core.Emit(new ParticleSystem.EmitParams {
+                    position = particle.position, velocity = velocity, startLifetime = Mathf.Max(0.05f, BreathTravelSeconds * 0.7f - age), startSize = Random.Range(0.25f, 0.6f) }, 1);
+                if (smoke != null && index % 4 == 0) smoke.Emit(new ParticleSystem.EmitParams {
+                    position = particle.position, velocity = velocity * 0.35f + Vector3.up * 0.7f, startLifetime = 1.2f, startSize = Random.Range(0.7f, 1.4f) }, 1);
             }
         }
 
@@ -151,6 +156,7 @@ namespace Nomad.Monsters.Demo
         private void LateUpdate()
         {
             if (fire == null || angle >= 359 || Time.deltaTime <= 0) return;
+            if (breathLight != null) { breathLight.transform.position = BreathOrigin != null ? BreathOrigin.position : transform.position + Vector3.up; breathLight.intensity = 1.5f + Mathf.Sin(Time.time * 30) * 0.25f; }
             // 애니메이션과 다리 보정이 끝난 현재 프레임의 머리를 사용합니다.
             if (!breathWarmed) { EmitBreath(true); breathWarmed = true; }
             EmitBreath(false);
@@ -166,6 +172,6 @@ namespace Nomad.Monsters.Demo
                 Physics.DefaultRaycastLayers, owner, out RaycastHit hit) || hit.collider.GetComponentInParent<Health>() == target;
         }
 
-        private void OnDestroy() { if (mesh != null) Destroy(mesh); }
+        private void OnDestroy() { if (mesh != null) Destroy(mesh); if (smokeMaterial != null) Destroy(smokeMaterial); }
     }
 }

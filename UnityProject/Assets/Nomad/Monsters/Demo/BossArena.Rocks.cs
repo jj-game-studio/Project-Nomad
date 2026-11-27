@@ -49,7 +49,9 @@ namespace Nomad.Monsters.Demo
                 rock.AddComponent<BossBreakableRock>();
                 RockCount++;
             }
+            boss.gameObject.AddComponent<BossArmor>().Configure(content != null ? content.BossHealth : BossArmor.ReferenceHealth);
             boss.gameObject.AddComponent<DragonBossCombat>().Configure(this, player);
+            boss.gameObject.AddComponent<BossStrikeFeedback>().Configure(player.transform);
         }
 
         private void ClearForeignDressing()

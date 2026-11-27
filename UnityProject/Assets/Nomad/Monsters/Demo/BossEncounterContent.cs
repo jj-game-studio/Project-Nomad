@@ -6,5 +6,6 @@ namespace Nomad.Monsters.Demo
     public sealed class BossEncounterContent : MonoBehaviour
     {
         public GameObject Rock;
+        [Min(1)] public int BossHealth = BossArmor.ReferenceHealth;
     }
 }

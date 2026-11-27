@@ -2,6 +2,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Nomad.Combat;
+using Nomad.CombatFeedback;
+using Nomad.Equipment;
+using Nomad.Inventory;
 using Nomad.Monsters;
 using Nomad.Monsters.Demo;
 using Nomad.Player;
@@ -81,6 +84,103 @@ namespace Nomad.Tests
         }
 
         [Test]
+        public void DamageEventReportsActualLossAndNeverReportsImmunityOrHealing()
+        {
+            int calls = 0, actual = 0;
+            player.Damaged += (_, amount, kind) => { calls++; actual = amount; };
+            player.IsCombatImmune = true;
+            Assert.That(player.TryApplyDamage(20), Is.False);
+            Assert.That(calls, Is.Zero);
+            player.IsCombatImmune = false;
+            player.TryApplyDamage(18);
+            Assert.That(actual, Is.EqualTo(18));
+            player.RestoreFull();
+            Assert.That(calls, Is.EqualTo(1));
+            player.TryApplyDamage(int.MaxValue);
+            Assert.That(actual, Is.EqualTo(player.MaxHealth), "과잉 피해 대신 실제 감소량");
+            Assert.That(calls, Is.EqualTo(2));
+        }
+
+        [UnityTest]
+        public IEnumerator ReferenceSwordCombatLastsAboutTwoMinutesAndPlayerHurtFeedbackFades()
+        {
+            var muted = new List<InputDevice>();
+            Mouse mouse = InputSystem.AddDevice<Mouse>();
+            Keyboard keyboard = InputSystem.AddDevice<Keyboard>();
+            try
+            {
+                foreach (InputDevice device in InputSystem.devices.Where(device => device != mouse && device != keyboard && (device is Mouse || device is Keyboard)).ToArray())
+                { InputSystem.DisableDevice(device); muted.Add(device); }
+                mouse.MakeCurrent();
+                keyboard.MakeCurrent();
+                GameObject rig = Track(Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Nomad/Game/Prefabs/PlayerRig.prefab")));
+                var attacker = rig.GetComponentInChildren<PlayerEquipmentCombat>();
+                var gear = attacker.GetComponent<PlayerEquipment>();
+                var bag = attacker.GetComponent<PlayerInventory>();
+                attacker.GetComponent<PlayerMovement>().enabled = false;
+                attacker.GetComponent<PlayerStats>().RandomSource = () => 0.99f;
+                attacker.transform.position = boss.transform.position - Vector3.forward * 3;
+                foreach (Camera old in rig.GetComponentsInChildren<Camera>()) old.enabled = false;
+                Camera camera = Track(new GameObject("Balance camera")).AddComponent<Camera>();
+                camera.tag = "MainCamera";
+                camera.orthographic = true;
+                camera.orthographicSize = 15;
+                camera.transform.position = boss.transform.position + new Vector3(0, 18, -12);
+                camera.transform.LookAt(boss.transform.position);
+                TestKit.SetField(attacker, "viewCamera", camera);
+                yield return null; // 시작 장비 로드가 끝난 뒤 검증 장비를 장착합니다.
+                bag.Add("demo-sword", 2);
+                int slot = Enumerable.Range(0, bag.SlotCount).First(index => bag.GetSlot(index).Item?.ItemId == "demo-sword");
+                Assert.That(gear.TryEquip(slot, EquipmentSlot.Weapon1), Is.True);
+                Assert.That(gear.TryEnhance(EquipmentSlot.Weapon1), Is.True);
+                Assert.That(attacker.CurrentWeapon.EnhancementLevel, Is.EqualTo(1));
+                Physics.SyncTransforms();
+                yield return null;
+
+                Health victim = attacker.GetComponent<Health>();
+                int before = victim.CurrentHealth;
+                victim.TryApplyDamage(18);
+                yield return null;
+                var overlay = attacker.GetComponent<CombatFeedbackOverlay>();
+                Assert.That(overlay.LastDamage, Is.EqualTo(before - victim.CurrentHealth));
+                Assert.That(overlay.VignetteAlpha, Is.GreaterThan(0));
+                Assert.That(overlay.ActiveNumbers, Is.EqualTo(1));
+                Assert.That(attacker.GetComponent<PlayerDamageFeedback>().Reacting, Is.True);
+                Animator animator = attacker.GetComponentInChildren<Animator>();
+                Assert.That(animator.GetLayerWeight(animator.GetLayerIndex(PlayerDamageFeedback.LayerName)), Is.GreaterThan(0));
+                yield return Wait(0.9f);
+                Assert.That(overlay.VignetteAlpha, Is.Zero);
+                Assert.That(overlay.ActiveNumbers, Is.Zero);
+                Assert.That(attacker.GetComponent<PlayerDamageFeedback>().Reacting, Is.False);
+
+                Vector2 pointer = camera.WorldToScreenPoint(boss.transform.position + Vector3.up);
+                float started = Time.time;
+                int attacks = 0, skills = 0;
+                // 8초마다 4.4초 공격, 3.6초 회피. 실제 선딜·쿨다운·스킬·갑옷 보정을 통과합니다.
+                while (!boss.IsDead && Time.time - started < 180)
+                {
+                    if ((Time.time - started) % 8 < 4.4f)
+                    {
+                        if (attacker.TryUseSkill(pointer)) skills++;
+                        else if (attacker.TryAttack(pointer)) attacks++;
+                    }
+                    yield return null;
+                }
+                float elapsed = Time.time - started;
+                Debug.Log($"BOSS_REFERENCE_FIGHT seconds={elapsed:0.0} health={boss.MaxHealth} weapon=B+1 crit=off attacks={attacks} skills={skills} attackWindow=4.4/8");
+                Assert.That(boss.IsDead, Is.True);
+                Assert.That(elapsed, Is.InRange(105f, 140f));
+                Assert.That(boss.GetComponent<BossArmor>().BreakCount, Is.EqualTo(2));
+            }
+            finally
+            {
+                InputSystem.RemoveDevice(mouse);
+                InputSystem.RemoveDevice(keyboard);
+                foreach (InputDevice device in muted) InputSystem.EnableDevice(device);
+            }
+        }
+
+        [Test]
         public void RocksLeaveCenterAndEntranceClear()
         {
             BossBreakableRock[] rocks = arena.GetComponentsInChildren<BossBreakableRock>();
@@ -137,25 +237,27 @@ namespace Nomad.Tests
         }
 
         [UnityTest]
-        public IEnumerator ThresholdStunsCancelAttacksAndOnlyTriggerOnce()
+        public IEnumerator ArmorBreaksTwiceIncreaseDamageWithoutStunningOrCancellingAttacks()
         {
+            BossArmor armor = boss.GetComponent<BossArmor>();
             combat.BeginPattern(DragonPattern.Circle);
-            boss.TryApplyDamage(Mathf.CeilToInt(boss.MaxHealth * 0.26f));
+            boss.TryApplyDamage(Mathf.CeilToInt(boss.MaxHealth * 0.31f));
             yield return null;
-            Assert.That(combat.Phase, Is.EqualTo(DragonPhase.Stunned));
-            Assert.That(combat.ThresholdStuns, Is.EqualTo(1));
-            yield return null;
-            Assert.That(boss.GetComponent<BossStunDisplay>().Visible, Is.True, "큰 기절 표시와 별 활성화");
-            Assert.That(combat.Effects.GetComponentsInChildren<BossHazard>().Length, Is.Zero);
-            float until = combat.Remaining;
+            Assert.That(combat.Phase, Is.EqualTo(DragonPhase.Windup), "갑옷 파괴로 공격을 멈추지 않음");
+            Assert.That(armor.BreakCount, Is.EqualTo(1));
+            Assert.That(armor.ModifyCombatDamage(100), Is.EqualTo(125));
+            Assert.That(boss.GetComponent<BossStunDisplay>().Visible, Is.False);
+            Assert.That(combat.Effects.GetComponentsInChildren<BossHazard>().Length, Is.EqualTo(1));
             boss.TryApplyDamage(1);
-            yield return Wait(0.2f);
-            Assert.That(combat.Remaining, Is.LessThan(until), "피격 때마다 기절 연장하지 않음");
-            boss.TryApplyDamage(Mathf.CeilToInt(boss.MaxHealth * 0.25f));
+            Assert.That(armor.BreakCount, Is.EqualTo(1));
+            boss.TryApplyDamage(Mathf.CeilToInt(boss.MaxHealth * 0.35f / 1.25f));
             yield return null;
-            Assert.That(combat.ThresholdStuns, Is.EqualTo(2));
+            Assert.That(armor.BreakCount, Is.EqualTo(2));
+            Assert.That(armor.ModifyCombatDamage(100), Is.EqualTo(155));
+            Assert.That(combat.Phase, Is.EqualTo(DragonPhase.Windup));
             boss.TryApplyDamage(boss.MaxHealth);
             yield return null;
+            Assert.That(armor.BreakCount, Is.EqualTo(2), "최대 두 번만 파괴");
             Assert.That(combat.Phase, Is.EqualTo(DragonPhase.Dead));
             Assert.That(combat.Effects.childCount, Is.Zero);
         }
@@ -257,6 +359,10 @@ namespace Nomad.Tests
             combat.BeginPattern(DragonPattern.Breath);
             yield return Wait(2);
             BossHazard breath = combat.Effects.GetComponentsInChildren<BossHazard>().Single();
+            Assert.That(breath.Radius, Is.EqualTo(13.5f));
+            Vector3 widenedEdge = boss.transform.position + Quaternion.Euler(0, 42, 0) * boss.transform.forward * 12.5f;
+            Assert.That(breath.Contains(widenedEdge), Is.True, "기존 9m/70도를 벗어난 지점까지 확대");
+            Assert.That(breath.GetComponentsInChildren<ParticleSystem>().Length, Is.GreaterThanOrEqualTo(3));
             Assert.That(breath.BreathOrigin, Is.SameAs(combat.Mouth));
             Assert.That(Vector3.Distance(breath.LastBreathOrigin, combat.Mouth.position), Is.LessThan(0.06f), "현재 머리 위치에서 연속 발사");
             combat.Stun(0.3f);

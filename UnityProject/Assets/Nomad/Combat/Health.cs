@@ -24,6 +24,7 @@ namespace Nomad.Combat
 
         public event Action<Health> Died;
         public event Action<Health> Evaded;
+        public event Action<Health, int, DamageKind> Damaged;
 
         private void Awake()
         {
@@ -73,7 +74,9 @@ namespace Nomad.Combat
                 }
             }
 
+            int before = CurrentHealth;
             CurrentHealth = Mathf.Max(0, CurrentHealth - amount);
+            Damaged?.Invoke(this, before - CurrentHealth, kind);
             if (IsDead)
                 Died?.Invoke(this);
 
