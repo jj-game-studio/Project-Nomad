@@ -62,7 +62,10 @@ namespace Nomad.Game.Modules
             settings = AddPanel("SettingsPanel", backdrop, 266f);
             AddLabel("Title", settings, "설정", "Settings", new Vector2(384f, 52f), 69f, 38f);
             backButton = AddButton("Back", settings, "돌아가기", "Back", -74f, back, PrimaryColor);
-            SetNavigation(backButton, null, null);
+            var villageView = VillageViewSettingControl.Create(settings, font,
+                new Vector2(40, -98), new Vector2(352, 48));
+            SetNavigation(backButton, villageView, villageView);
+            SetNavigation(villageView, backButton, backButton);
         }
 
         public void Show(bool showingSettings)

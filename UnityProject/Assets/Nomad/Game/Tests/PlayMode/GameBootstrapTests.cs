@@ -21,10 +21,16 @@ namespace Nomad.Game.Tests
         private const float FieldTimeout = 90f;
 
         private Scene previousScene;
+        private bool hadVillageView;
+        private int savedVillageView;
 
         [UnitySetUp]
         public IEnumerator SetUp()
         {
+            // 기본 게임 흐름 검사는 사용자의 저장된 1인칭 선택과 분리합니다.
+            hadVillageView = PlayerPrefs.HasKey(VillageViewSettings.PreferenceKey);
+            savedVillageView = PlayerPrefs.GetInt(VillageViewSettings.PreferenceKey);
+            PlayerPrefs.SetInt(VillageViewSettings.PreferenceKey, 0);
             previousScene = SceneManager.GetActiveScene();
             yield return DestroyManager();
         }
@@ -47,6 +53,10 @@ namespace Nomad.Game.Tests
                 if (scene != previousScene && (scene.path == GameScenePath || scene.path == VillagePath || scene.path == FieldPath))
                     yield return SceneManager.UnloadSceneAsync(scene);
             }
+
+            if (hadVillageView) PlayerPrefs.SetInt(VillageViewSettings.PreferenceKey, savedVillageView);
+            else PlayerPrefs.DeleteKey(VillageViewSettings.PreferenceKey);
+            PlayerPrefs.Save();
         }
 
         [UnityTest]

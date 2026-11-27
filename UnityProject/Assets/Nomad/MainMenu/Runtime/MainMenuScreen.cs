@@ -43,6 +43,7 @@ namespace Nomad.MainMenu
 
         private void Awake()
         {
+            AddVillageSetting();
             RefreshContent();
             NewGameButton.onClick.AddListener(StartNewGame);
             SettingsButton.onClick.AddListener(OpenSettings);
@@ -50,6 +51,28 @@ namespace Nomad.MainMenu
             BackButton.onClick.AddListener(CloseSettings);
             VolumeSlider.onValueChanged.AddListener(ChangeVolume);
             FullscreenToggle.onValueChanged.AddListener(MainMenuSettings.SetFullscreen);
+        }
+
+        private void AddVillageSetting()
+        {
+            var setting = VillageViewSettingControl.Create(SettingsPanel.transform, FullscreenLabel.font,
+                new Vector2(16, -260), new Vector2(466, 48));
+            ((RectTransform)BackButton.transform).anchoredPosition = new Vector2(0, -326);
+            RectTransform panel = (RectTransform)SettingsPanel.transform;
+            panel.sizeDelta = new Vector2(panel.sizeDelta.x, 430);
+            RectTransform surface = (RectTransform)SettingsPanel.transform.Find("Surface");
+            surface.sizeDelta = new Vector2(surface.sizeDelta.x, 442);
+
+            LinkNavigation(FullscreenToggle, VolumeSlider, setting);
+            LinkNavigation(setting, FullscreenToggle, BackButton);
+            LinkNavigation(BackButton, setting, VolumeSlider);
+        }
+
+        private static void LinkNavigation(UnityEngine.UI.Selectable control, UnityEngine.UI.Selectable up,
+            UnityEngine.UI.Selectable down)
+        {
+            control.navigation = new UnityEngine.UI.Navigation { mode = UnityEngine.UI.Navigation.Mode.Explicit,
+                selectOnUp = up, selectOnDown = down };
         }
 
         private void Start()

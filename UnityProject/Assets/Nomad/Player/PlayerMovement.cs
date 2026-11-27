@@ -31,6 +31,10 @@ namespace Nomad.Player
         // 조준 중에는 이동 방향 대신 커서 쪽을 보며 옆걸음·뒷걸음으로 이동합니다.
         public Vector3? AimFacing { get; internal set; }
 
+        internal event System.Action Disabled;
+        internal bool FirstPersonView { get; set; }
+        internal bool ViewInputBlocked { get; set; }
+
         private CharacterController controller;
         private Health health;
         private PlayerInventory inventory;
@@ -69,12 +73,14 @@ namespace Nomad.Player
             BlocksAttack = false;
             if (health != null)
                 health.IsCombatImmune = false;
+
+            Disabled?.Invoke();
         }
 
         private void Update()
         {
             float remainingTime = Time.deltaTime;
-            BlocksAttack = IsRolling;
+            BlocksAttack = IsRolling || ViewInputBlocked;
             if (remainingTime <= 0f || (health != null && health.IsDead))
                 return;
 
@@ -88,10 +94,10 @@ namespace Nomad.Player
                 Axis(keyboard.wKey.isPressed, keyboard.sKey.isPressed));
             Vector3 direction = CameraRelativeDirection(input);
 
-            if (inventory != null && inventory.BlocksTradeInput)
+            if (ViewInputBlocked || (inventory != null && inventory.BlocksTradeInput))
                 direction = Vector3.zero;
 
-            if (controller.isGrounded && !IsRolling && inventory?.BlocksTradeInput != true)
+            if (controller.isGrounded && !IsRolling && !ViewInputBlocked && inventory?.BlocksTradeInput != true)
             {
                 if (cooldownTime <= 0f && keyboard?.leftShiftKey.wasPressedThisFrame == true &&
                     inventory?.Panel?.HasOpenChest != true)
@@ -162,6 +168,8 @@ namespace Nomad.Player
             Vector3 planarVelocity = direction * (MoveSpeed * SpeedMultiplier * StatSpeedMultiplier * ChargeSpeedMultiplier);
             if (IsRolling)
                 planarVelocity = rollBlocked ? Vector3.zero : rollDirection * RollSpeed;
+            else if (FirstPersonView)
+                transform.rotation = Quaternion.Euler(0f, viewCamera.transform.eulerAngles.y, 0f);
             else if (AimFacing.HasValue || direction.sqrMagnitude > 0f)
                 transform.rotation = Quaternion.LookRotation(AimFacing ?? direction);
 
