@@ -7,7 +7,7 @@ namespace Nomad.Hud
     [RequireComponent(typeof(CanvasRenderer))]
     public sealed class HudArtwork : MaskableGraphic
     {
-        public enum Shape { Panel, Ring, Heart, Crystal, Bolt, Weapon, Leather, MetalRing, FacetedCrystal, Boot, Fittings }
+        public enum Shape { Panel, Ring, Heart, Crystal, Bolt, Weapon, Leather, MetalRing, FacetedCrystal, Boot, Fittings, Star }
 
         [SerializeField] private Shape shape;
         [SerializeField, Range(0f, 1f)] private float fraction = 1f;
@@ -83,6 +83,18 @@ namespace Nomad.Hud
                 return;
             }
 
+            if (shape == Shape.Heart)
+            {
+                HeartIcon(mesh, rect);
+                return;
+            }
+
+            if (shape == Shape.Star)
+            {
+                StarIcon(mesh, rect);
+                return;
+            }
+
             if (shape == Shape.FacetedCrystal)
             {
                 Vector2 tip = P(.5f,.96f), left = P(.16f,.53f), bottom = P(.5f,.12f), right = P(.84f,.53f);
@@ -110,6 +122,47 @@ namespace Nomad.Hud
             // 각 아이콘은 단순 외곽선이며 중앙 삼각형 팬으로 채웁니다.
             Vector2 center = shape == Shape.Weapon ? P(.5f,.58f) : P(.5f,.54f);
             Fan(mesh, rect, center, points);
+        }
+
+        // 두 원과 아래 삼각형을 겹쳐 둥근 하트를 만들고, 왼쪽 위에 광택을 얹습니다.
+        private void HeartIcon(VertexHelper mesh, Rect rect)
+        {
+            float radius = rect.width * .25f;
+            Vector2 left = rect.min + Vector2.Scale(rect.size, P(.28f, .68f));
+            Vector2 right = rect.min + Vector2.Scale(rect.size, P(.72f, .68f));
+            Color shadow = color * .7f;
+            shadow.a = color.a;
+
+            Disc(mesh, left, radius, color);
+            Disc(mesh, right, radius, color);
+
+            int start = mesh.currentVertCount;
+            Add(mesh, rect.min + Vector2.Scale(rect.size, P(.04f, .6f)), color);
+            Add(mesh, rect.min + Vector2.Scale(rect.size, P(.96f, .6f)), color);
+            Add(mesh, rect.min + Vector2.Scale(rect.size, P(.5f, .06f)), shadow);
+            mesh.AddTriangle(start, start + 1, start + 2);
+
+            Disc(mesh, left + new Vector2(-radius * .25f, radius * .3f), radius * .28f, Color.Lerp(color, Color.white, .55f));
+        }
+
+        // 다섯 꼭짓점 별을 중심 팬으로 채우고 중심을 밝혀 입체감을 줍니다.
+        private void StarIcon(VertexHelper mesh, Rect rect)
+        {
+            Vector2 center = rect.center + new Vector2(0, -rect.height * .03f);
+            float outer = Mathf.Min(rect.width, rect.height) * .5f;
+            float inner = outer * .45f;
+            int start = mesh.currentVertCount;
+            Add(mesh, center, Color.Lerp(color, Color.white, .35f));
+
+            for (int point = 0; point < 10; point++)
+            {
+                float angle = (90f + point * 36f) * Mathf.Deg2Rad;
+                float distance = point % 2 == 0 ? outer : inner;
+                Add(mesh, center + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * distance, color);
+            }
+
+            for (int point = 0; point < 10; point++)
+                mesh.AddTriangle(start, start + 1 + point, start + 1 + (point + 1) % 10);
         }
 
         private void RoundedPanel(VertexHelper mesh, Rect rect)
@@ -190,13 +243,13 @@ namespace Nomad.Hud
         {
             int start = mesh.currentVertCount;
             Add(mesh, center, tint);
-            for (int step = 0; step < 8; step++)
+            for (int step = 0; step < 24; step++)
             {
-                float angle = step * Mathf.PI / 4;
+                float angle = step * Mathf.PI / 12;
                 Add(mesh, center + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * radius, tint);
             }
-            for (int step = 0; step < 8; step++)
-                mesh.AddTriangle(start, start + 1 + step, start + 1 + (step + 1) % 8);
+            for (int step = 0; step < 24; step++)
+                mesh.AddTriangle(start, start + 1 + step, start + 1 + (step + 1) % 24);
         }
 
         private void CreateLeather()
