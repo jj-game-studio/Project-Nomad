@@ -51,8 +51,9 @@ namespace Nomad.Player
             // 글자는 판 앞면에 고정합니다. 카메라를 바라보는 회전이나 화면 좌표 변환은 없습니다.
             var label = new GameObject("Attached Field Sign", typeof(RectTransform), typeof(TextMeshPro));
             label.transform.SetParent(board, false);
-            label.transform.localPosition = new Vector3(0, 0, -0.515f);
             Vector3 scale = board.lossyScale;
+            // 판 앞면보다 튀어나온 기둥에도 글자가 가려지지 않도록 3cm 띄웁니다.
+            label.transform.localPosition = new Vector3(0, 0, -0.5f - 0.03f / scale.z);
             label.transform.localScale = new Vector3(1f / scale.x, 1f / scale.y, 1f / scale.z);
 
             var text = label.GetComponent<TextMeshPro>();
