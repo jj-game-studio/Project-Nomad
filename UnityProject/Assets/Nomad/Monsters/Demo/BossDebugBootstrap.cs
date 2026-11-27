@@ -75,6 +75,7 @@ namespace Nomad.Monsters.Demo
             int slot = Enumerable.Range(0, bag.SlotCount).First(index => bag.GetSlot(index).Item?.ItemId == item && bag.GetSlot(index).Item.EnhancementLevel == 0);
             var gear = Player.GetComponent<PlayerEquipment>();
             if (gear.TryEquip(slot, EquipmentSlot.Weapon1)) gear.TryEnhance(EquipmentSlot.Weapon1);
+            Player.GetComponent<PlayerQuickSlots>()?.RegisterEquipped(EquipmentSlot.Weapon1, 0);
             Player.GetComponent<PlayerMana>().RestoreFull();
         }
 

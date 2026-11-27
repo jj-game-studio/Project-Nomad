@@ -100,7 +100,8 @@ namespace Nomad.Tests
             Assert.That(boss.transform.Find("Body").localPosition.y, Is.GreaterThan(5));
             while (!arrival.Landed && Time.time < until) yield return null;
             Assert.That(arrival.Landed, Is.True);
-            Assert.That(bar.enabled, Is.True);
+            Assert.That(bar.enabled, Is.False);
+            Assert.That(boss.GetComponent<BossBattleHud>().Visible, Is.True);
             Assert.That(health.IsCombatImmune, Is.False);
             Assert.That(boss.GetComponent<Collider>().enabled, Is.True);
         }
@@ -130,6 +131,7 @@ namespace Nomad.Tests
         [UnityTest]
         public IEnumerator PersistentGodModeSurvivesMovementAndRollImmunityUpdates()
         {
+            scene.Player.GetComponent<Nomad.Equipment.PlayerStats>().RandomSource = () => 0.99f;
             scene.Boss.GetComponent<BossArrival>().Skip();
             Health health = scene.Player.GetComponent<Health>();
             health.IsCombatImmune = false;
@@ -221,6 +223,80 @@ namespace Nomad.Tests
         }
 
         [UnityTest]
+        public IEnumerator EmptyGoldenTellCannotParryAndOnlyRealOrbIsReflected()
+        {
+            var boss = scene.Boss;
+            boss.GetComponent<BossArrival>().Skip();
+            scene.Player.GetComponent<Nomad.Player.PlayerMovement>().enabled = false;
+            scene.Player.transform.position = scene.Arena.Center - Vector3.forward * 7;
+            scene.Player.transform.rotation = Quaternion.identity;
+            var parry = scene.Player.GetComponent<Nomad.Equipment.PlayerBossParry>();
+            var signal = boss.GetComponent<BossParrySignal>();
+            boss.BeginPattern(DragonPattern.RadialFireballs);
+            while (Time.time < signal.FlashAt) yield return null;
+            while (boss.Effects.GetComponentsInChildren<BossFireball>().Length == 0) yield return null;
+            foreach (BossFireball orb in boss.Effects.GetComponentsInChildren<BossFireball>()) orb.Disperse();
+            Assert.That(parry.TryBegin(), Is.True);
+            yield return Wait(0.25f);
+            Assert.That(parry.Successes, Is.Zero, "빛만 있고 구체가 없으면 성공하지 않음");
+            Assert.That(boss.ParrySuccesses, Is.Zero);
+            yield return Wait(0.8f);
+            Vector3 point = scene.Player.transform.position + Vector3.up * 1.3f + Vector3.forward;
+            BossFireball first = BossFireball.Launch(boss.Effects, boss.transform, scene.Player.GetComponent<Health>(), point, point + Vector3.back, 1, false);
+            BossFireball second = BossFireball.Launch(boss.Effects, boss.transform, scene.Player.GetComponent<Health>(), point + Vector3.right * 3, point + Vector3.back, 1, false);
+            Assert.That(parry.TryBegin(), Is.True);
+            Assert.That(parry.TryReflect(first, point), Is.True);
+            Assert.That(second.Reflected, Is.False, "다른 구체는 삭제/반사하지 않음");
+            Assert.That(second.gameObject.activeSelf, Is.True);
+        }
+
+        [UnityTest]
+        public IEnumerator BattleFramesProduceVisibleGeometryAndKeepSixQuickSlots()
+        {
+            scene.Boss.GetComponent<BossArrival>().Skip();
+            yield return Wait(0.1f);
+            Canvas.ForceUpdateCanvases();
+            var graphics = Object.FindObjectsByType<BossBattleFrameGraphic>(FindObjectsSortMode.None);
+            Assert.That(graphics.Length, Is.EqualTo(4), "상/하단 프레임과 MP/STM 원형 게이지");
+            foreach (var graphic in graphics)
+            {
+                Mesh mesh = graphic.canvasRenderer.GetMesh();
+                Assert.That(mesh, Is.Not.Null);
+                Assert.That(mesh.vertexCount, Is.GreaterThan(0), graphic.name);
+            }
+            Assert.That(scene.Player.GetComponent<Nomad.Hud.PlayerHud>().Canvas.transform.Find("Bottom Bar").Cast<Transform>()
+                .Count(child => child.name.StartsWith("Slot ")), Is.EqualTo(6));
+        }
+
+        [UnityTest]
+        public IEnumerator EnrageUsesTwoVolleysSweepingBreathMorePoolsAndShorterKnockdown()
+        {
+            var boss = scene.Boss;
+            boss.GetComponent<BossArrival>().Skip();
+            scene.GodMode = true;
+            Health health = boss.GetComponent<Health>();
+            health.TryApplyDamage(health.CurrentHealth - health.MaxHealth / 4, DamageKind.Fall);
+            boss.BeginPattern(DragonPattern.RadialFireballs);
+            yield return Wait(2.3f);
+            Assert.That(boss.VolleysReleased, Is.EqualTo(2));
+            boss.BeginPattern(DragonPattern.Breath);
+            yield return Wait(1.5f);
+            Quaternion facing = boss.transform.rotation;
+            yield return Wait(0.5f);
+            Assert.That(Quaternion.Angle(facing, boss.transform.rotation), Is.GreaterThan(7));
+            boss.BeginPattern(DragonPattern.FirePool);
+            Assert.That(boss.Effects.GetComponentsInChildren<BossHazard>().Count(hazard => hazard.Radius == boss.Tuning.FirePoolRadius), Is.EqualTo(8));
+            Assert.That(boss.DashSpeed, Is.GreaterThan(boss.Tuning.ChargeSpeed * 1.5f));
+            boss.Stun(5);
+            Assert.That(boss.Remaining, Is.InRange(2.9f, 3.01f));
+            yield return Wait(3.1f);
+            boss.BeginPattern(DragonPattern.Rain);
+            yield return Wait(2);
+            Assert.That(boss.RainProjectilesSpawned, Is.GreaterThan(12));
+            Assert.That(boss.Effects.GetComponentsInChildren<BossHazard>().Any(hazard => hazard.Active && hazard.Radius == 1.8f), Is.True, "광폭 화염우 착지 뒤 불지대 유지");
+        }
+
+        [UnityTest]
         public IEnumerator RainCanBeWalkedOutOfAfterSeeingTheWarning()
         {
             var boss = scene.Boss;
@@ -248,7 +324,7 @@ namespace Nomad.Tests
         }
 
         [UnityTest]
-        public IEnumerator DenseRadialWaveHitsOnlyOnceAndRuntimeParametersChangeNextAttack()
+        public IEnumerator SparseOrbsHitOnceAndRuntimeParametersChangeNextAttack()
         {
             var boss = scene.Boss;
             boss.GetComponent<BossArrival>().Skip();
@@ -261,7 +337,7 @@ namespace Nomad.Tests
             int hits = 0;
             health.Damaged += (_, _, _) => hits++;
             Physics.SyncTransforms();
-            Assert.That(boss.Tuning.RadialRadius * 2, Is.GreaterThan(2 * boss.Tuning.RadialRange * Mathf.Sin(Mathf.PI / boss.Tuning.RadialCount)));
+            Assert.That(boss.Tuning.RadialRadius * 2, Is.LessThan(2 * boss.Tuning.RadialRange * Mathf.Sin(Mathf.PI / boss.Tuning.RadialCount)), "큰 구체 사이에 회피 공간");
             boss.BeginPattern(DragonPattern.RadialFireballs);
             yield return Wait(2.6f);
             Assert.That(hits, Is.EqualTo(1), "겹친 대형 탄 여러 개가 중복 피해를 주지 않음");

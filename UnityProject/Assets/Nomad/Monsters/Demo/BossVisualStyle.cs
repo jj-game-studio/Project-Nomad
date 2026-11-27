@@ -107,15 +107,15 @@ namespace Nomad.Monsters.Demo
             foreach (Renderer outline in outlines)
             {
                 outline.GetPropertyBlock(properties);
-                properties.SetColor("_OutlineColor", Hovered ? new Color(1, 0.025f, 0.015f) : new Color(0.035f, 0.025f, 0.03f));
-                properties.SetFloat("_Width", Hovered ? 0.12f : 0.045f);
+                properties.SetColor("_OutlineColor", signal.Flashing ? new Color(2.5f, 1.8f, 0.35f) : Hovered ? new Color(1, 0.025f, 0.015f) : new Color(0.035f, 0.025f, 0.03f));
+                properties.SetFloat("_Width", signal.Flashing ? 0.08f : Hovered ? 0.12f : 0.045f);
                 outline.SetPropertyBlock(properties);
             }
             bool yellow = alive && signal.Flashing;
             foreach (Renderer body in bodies)
             {
                 body.GetPropertyBlock(properties);
-                properties.SetColor("_SignalColor", yellow ? new Color(2.5f, 1.9f, 0.015f) : Color.black);
+                properties.SetColor("_SignalColor", Color.clear);
                 properties.SetFloat("_Enraged", EyesBurning ? 1 : 0);
                 body.SetPropertyBlock(properties);
             }

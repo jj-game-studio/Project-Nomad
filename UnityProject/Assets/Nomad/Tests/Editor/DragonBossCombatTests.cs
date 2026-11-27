@@ -258,7 +258,7 @@ namespace Nomad.Tests
 
                 var parry = attacker.GetComponent<PlayerBossParry>();
                 Health victim = attacker.GetComponent<Health>();
-                Vector3 point = attacker.transform.position + Vector3.up * 1.3f + Vector3.forward * 1.7f;
+                Vector3 point = attacker.transform.position + Vector3.up * 1.3f + Vector3.forward * 1.1f;
                 var first = BossFireball.Launch(combat.Effects, boss.transform, victim, point, attacker.transform.position + Vector3.up, 1, false);
                 var second = BossFireball.Launch(combat.Effects, boss.transform, victim, point + Vector3.right * 0.2f, attacker.transform.position + Vector3.up, 1, false);
                 int before = boss.CurrentHealth;
@@ -399,7 +399,7 @@ namespace Nomad.Tests
             Assert.That(boss.GetComponent<BossRadialChargePose>().Weight, Is.GreaterThan(0.2f));
             yield return Wait(0.63f);
             Assert.That(combat.Effects.GetComponentsInChildren<BossFireball>().Length, Is.EqualTo(combat.Tuning.RadialCount));
-            Assert.That(combat.Effects.GetComponentsInChildren<BossFireball>().All(ball => ball.GetComponentsInChildren<MeshRenderer>().Length == 0), Is.True);
+            Assert.That(combat.Effects.GetComponentsInChildren<BossFireball>().All(ball => ball.GetComponentsInChildren<MeshRenderer>().Length > 0), Is.True);
             combat.Stun(0.01f);
             yield return Wait(0.03f);
             player.transform.position = arena.Center + Vector3.forward * 6;
@@ -508,14 +508,15 @@ namespace Nomad.Tests
         }
 
         [UnityTest]
-        public IEnumerator BasicAttackIsSlowAndRainWarningsStayAtTheirOriginalPosition()
+        public IEnumerator BasicAttackIsRemovedAndRainWarningsStayAtTheirOriginalPosition()
         {
             combat.BeginPattern(DragonPattern.Basic);
             int hp = player.CurrentHealth;
             yield return Wait(0.25f);
             Assert.That(player.CurrentHealth, Is.EqualTo(hp));
             yield return Wait(0.4f);
-            Assert.That(player.CurrentHealth, Is.EqualTo(hp - 18));
+            Assert.That(player.CurrentHealth, Is.EqualTo(hp), "기본 공격은 사용하지 않음");
+            Assert.That(combat.AttacksStarted, Is.Zero);
             combat.BeginPattern(DragonPattern.Rain);
             yield return Wait(1);
             BossHazard first = combat.Effects.GetComponentsInChildren<BossHazard>().First();
@@ -538,14 +539,14 @@ namespace Nomad.Tests
             combat.AutomaticPatterns = true;
             combat.BeginPattern(DragonPattern.Basic);
             Assert.That(boss.GetComponent<NavMeshAgent>().speed, Is.EqualTo(6));
-            for (int frame = 0; frame < 420; frame++)
+            for (int frame = 0; frame < 540; frame++)
             {
                 yield return null;
                 if (combat.Phase == DragonPhase.Recovery)
                     Assert.That(!boss.GetComponent<MonsterTracker>().enabled && !boss.GetComponent<NavMeshAgent>().isStopped,
                         Is.True, "사거리 밖이면 쉬지 않고 추적");
             }
-            Assert.That(combat.AttacksStarted, Is.GreaterThanOrEqualTo(4), "다음 공격으로 즉시 연결");
+            Assert.That(combat.AttacksStarted, Is.GreaterThanOrEqualTo(3), "기본 공격 없이 강타/구체/브레스를 이어서 실행");
         }
 
         [UnityTest]

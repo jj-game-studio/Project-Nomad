@@ -37,6 +37,7 @@ namespace Nomad.Game.Editor
                 content.Knockdown = AssetDatabase.LoadAssetAtPath<AnimationClip>("Assets/Nomad/Monsters/Resources/BossKnockdown.anim");
                 content.UnevenFloor = true;
                 content.DropEntrance = true;
+                content.Tuning = new BossCombatTuning();
                 EditorSceneManager.SaveScene(scene);
             }
             AssetDatabase.SaveAssets();

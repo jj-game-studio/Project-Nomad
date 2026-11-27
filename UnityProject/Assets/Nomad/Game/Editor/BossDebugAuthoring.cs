@@ -30,6 +30,7 @@ namespace Nomad.Game.Editor
             Light sun = new GameObject("Sun").AddComponent<Light>();
             sun.type = LightType.Directional;
             sun.intensity = 1.2f;
+            sun.color = new Color(1, 0.78f, 0.6f);
             sun.shadows = LightShadows.Soft;
             sun.transform.rotation = Quaternion.Euler(50, -35, 0);
             RenderSettings.ambientLight = new Color(0.6f, 0.65f, 0.7f);

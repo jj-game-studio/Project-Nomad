@@ -17,7 +17,7 @@ namespace Nomad.Monsters.Demo
         public const float BreathRange = 18;
         public const float BreathAngle = 110;
         public const float RainDuration = 7.65f;
-        public const int RadialFireballCount = 72;
+        public const int RadialFireballCount = 12;
         public bool AutomaticPatterns { get; set; } = true;
         public int AttacksStarted { get; private set; }
         public int RainProjectilesSpawned { get; private set; }
@@ -35,8 +35,12 @@ namespace Nomad.Monsters.Demo
         public int ParrySuccesses { get; private set; }
         private BossParrySignal parrySignal;
         private BossHazard slam;
-        private bool radialParried;
-        private bool radialHitPlayer;
+        private readonly System.Collections.Generic.HashSet<int> damagedVolleys = new();
+        private int volleySerial, volleysSent;
+        private float nextVolley;
+        private BossHazard breath;
+        public int VolleysReleased { get; private set; }
+        public float DashSpeed => Tuning.ChargeSpeed * (Enraged ? 1.65f : 1);
         private bool pendingSlamCounter;
         private BossArrival arrival;
         private BossArena arena;
@@ -52,7 +56,7 @@ namespace Nomad.Monsters.Demo
         private int sequence, rainCount;
         private TextMesh status;
         private static readonly DragonPattern[] Rotation = { DragonPattern.Circle, DragonPattern.RadialFireballs,
-            DragonPattern.Basic, DragonPattern.Breath, DragonPattern.FirePool, DragonPattern.Rain };
+            DragonPattern.Breath, DragonPattern.FirePool, DragonPattern.Rain };
 
         public void Configure(BossArena room, Health victim)
         {
@@ -97,6 +101,7 @@ namespace Nomad.Monsters.Demo
             arrival.Configure(this, arena, target);
             if (FindFirstObjectByType<BossEncounterContent>()?.DropEntrance == false) arrival.Skip();
             gameObject.AddComponent<BossDeathPresentation>();
+            gameObject.AddComponent<BossBattleHud>().Configure(this, target);
         }
 
         private bool PlayerInside => target != null && target.gameObject.activeInHierarchy && !target.IsDead &&
@@ -152,17 +157,27 @@ namespace Nomad.Monsters.Demo
             if (Phase == DragonPhase.Active && Pattern == DragonPattern.Rain && Time.time >= nextRain && rainCount < Tuning.RainWaves)
             {
                 nextRain = Time.time + Tuning.RainInterval / Tempo;
-                for (int index = 0; index < Tuning.RainPerWave; index++)
+                for (int index = 0; index < Tuning.RainPerWave + (Enraged ? 2 : 0); index++)
                 {
                     float distance = index == 0 ? 0 : index == 1 ? 2.6f : 4.2f;
                     Vector3 point = ClampPoint(target.transform.position + Quaternion.Euler(0, rainCount * 137.5f + index * 120, 0) * Vector3.forward * distance);
                     float fall = Tuning.RainFallSeconds / Tempo;
                     Area(point, Tuning.RainRadius, 360, fall, 0.12f, 20);
-                    BossFireball.Launch(effects, transform, target, point + Vector3.up * 10, point, fall, false, damage: 0,
+                    bool burning = Enraged;
+                    BossFireball.Launch(effects, transform, target, point + Vector3.up * 10, point, fall, false,
+                        impact: burning ? impact => Area(impact, 1.8f, 360, 0, 4, 8) : null, damage: 0,
                         radius: Tuning.RainRadius * 0.65f);
                     RainProjectilesSpawned++;
                 }
                 rainCount++;
+            }
+            if (Phase == DragonPhase.Active && Pattern == DragonPattern.RadialFireballs && Enraged && volleysSent < 2 && Time.time >= nextVolley)
+                FireRadialVolley();
+            if (Phase == DragonPhase.Active && Pattern == DragonPattern.Breath && Enraged && breath != null)
+            {
+                direction = Quaternion.AngleAxis(20 * Time.deltaTime, Vector3.up) * direction;
+                transform.rotation = Quaternion.LookRotation(direction);
+                breath.transform.rotation = transform.rotation;
             }
             if (Time.time < until) return;
             if (Phase == DragonPhase.Windup) Release();
@@ -172,7 +187,7 @@ namespace Nomad.Monsters.Demo
 
         public void BeginPattern(DragonPattern pattern)
         {
-            if (health == null || health.IsDead || !Introduced || !PlayerInside || arena.IsLocked ||
+            if (pattern == DragonPattern.Basic || health == null || health.IsDead || !Introduced || !PlayerInside || arena.IsLocked ||
                 (Phase == DragonPhase.Stunned && Time.time < until)) return;
             tactics.Stop();
             Pause();
@@ -185,7 +200,7 @@ namespace Nomad.Monsters.Demo
             direction = Vector3.ProjectOnPlane(aim - transform.position, Vector3.up).normalized;
             if (direction.sqrMagnitude < 0.01f) direction = transform.forward;
             ChargeAimLocked = false;
-            float windup = pattern == DragonPattern.Circle ? Tuning.SlamWindup : pattern == DragonPattern.Basic ? 0.45f :
+            float windup = pattern == DragonPattern.Circle ? Tuning.SlamWindup :
                 pattern == DragonPattern.RadialFireballs ? 1.4f : pattern == DragonPattern.Charge ? Tuning.ChargeWindup :
                 pattern == DragonPattern.Rain ? 0.7f : pattern == DragonPattern.Breath ? 1.6f : 0.9f;
             windup /= Tempo;
@@ -206,13 +221,11 @@ namespace Nomad.Monsters.Demo
             }
             if (pattern == DragonPattern.RadialFireballs)
             {
-                radialParried = false;
-                radialHitPlayer = false;
+                volleysSent = 0;
                 float distance = Vector3.ProjectOnPlane(target.transform.position - transform.position, Vector3.up).magnitude;
                 parrySignal.Arm(Time.time + windup + Mathf.Max(0, distance - 3 - Tuning.RadialRadius) / (Tuning.RadialSpeed * Tempo), Tuning.RadialRange);
             }
-            if (pattern == DragonPattern.Basic) Area(transform.position, Tuning.BasicRange, 110, windup, 0.12f, 18);
-            if (pattern == DragonPattern.Breath) Area(transform.position, Tuning.BreathRange, Tuning.BreathAngle, windup, 2.4f / Tempo, 12, 0.8f / Tempo);
+            if (pattern == DragonPattern.Breath) breath = Area(transform.position, Tuning.BreathRange, Tuning.BreathAngle, windup, 2.4f / Tempo, 12, 0.8f / Tempo);
             if (pattern == DragonPattern.FirePool)
             {
                 PlanFirePools(windup);
@@ -230,7 +243,7 @@ namespace Nomad.Monsters.Demo
         {
             bool chargeDue = Time.time >= nextCharge;
             DragonPattern next = chargeDue ? DragonPattern.Charge : Rotation[sequence % Rotation.Length];
-            float engageRange = chargeDue ? float.PositiveInfinity : next == DragonPattern.Basic ? 3.8f : next == DragonPattern.Circle ? 5.5f : 9;
+            float engageRange = chargeDue ? float.PositiveInfinity : next == DragonPattern.Circle ? 5.5f : 9;
             if (Vector3.Distance(transform.position, target.transform.position) > engageRange)
             {
                 if (pursuitStarted < 0) pursuitStarted = Time.time;
@@ -259,16 +272,11 @@ namespace Nomad.Monsters.Demo
             if (Pattern == DragonPattern.Breath) until = Time.time + 2.4f / Tempo;
             phaseStarted = Time.time;
             phaseDuration = until - Time.time;
-            if (Pattern == DragonPattern.RadialFireballs && !radialParried)
-                for (int index = 0; index < Tuning.RadialCount; index++)
-                {
-                    Vector3 heading = Quaternion.Euler(0, index * 360f / Tuning.RadialCount, 0) * transform.forward;
-                    Vector3 start = arena.GroundPoint(transform.position + heading * 3) + Vector3.up * 1.2f;
-                    Vector3 end = arena.GroundPoint(transform.position + heading * Tuning.RadialRange) + Vector3.up * 1.2f;
-                    BossFireball ball = BossFireball.Launch(effects, transform, target, start, end, (Tuning.RadialRange - 3) / (Tuning.RadialSpeed * Tempo), false,
-                        damage: ScaleDamage(25), radius: Tuning.RadialRadius);
-                    ball.SignalControlled = true;
-                }
+            if (Pattern == DragonPattern.RadialFireballs)
+            {
+                FireRadialVolley();
+                until = Time.time + Tuning.RadialRange / (Tuning.RadialSpeed * Tempo) + (Enraged ? 1 : 0) + 0.3f;
+            }
             if (Pattern == DragonPattern.FirePool)
                 foreach (Vector3 point in firePoolTargets)
                     BossFireball.Launch(effects, transform, target, Mouth.position, point, 0.75f, true);
@@ -295,7 +303,7 @@ namespace Nomad.Monsters.Demo
         {
             BossHazard hazard = BossHazard.Create(effects, transform, ClampPoint(point), Quaternion.LookRotation(direction), target, radius, angle, delay, duration, ScaleDamage(damage), interval);
             hazard.GroundHeight = arena.GroundHeight;
-            hazard.EmitsFlame = Pattern != DragonPattern.Basic && damage > 0;
+            hazard.EmitsFlame = damage > 0;
             if (Pattern == DragonPattern.Breath)
             {
                 hazard.BreathOrigin = Mouth;
@@ -311,8 +319,9 @@ namespace Nomad.Monsters.Demo
         {
             Quaternion rotation = Quaternion.LookRotation(arena.Forward);
             Vector3 local = Quaternion.Inverse(rotation) * (point - arena.Center);
-            local.x = Mathf.Clamp(local.x, -BossArena.HalfSize + 3, BossArena.HalfSize - 3);
-            local.z = Mathf.Clamp(local.z, -BossArena.HalfSize + 3, BossArena.HalfSize - 3);
+            Vector3 radial = Vector3.ClampMagnitude(new Vector3(local.x, 0, local.z), BossArena.HalfSize - 3);
+            local.x = radial.x;
+            local.z = radial.z;
             return arena.GroundPoint(arena.Center + rotation * new Vector3(local.x, 0, local.z));
         }
 
@@ -320,7 +329,7 @@ namespace Nomad.Monsters.Demo
         {
             float radius = GetComponent<CapsuleCollider>().radius;
             foreach (RaycastHit hit in Physics.SphereCastAll(transform.position + Vector3.up * radius, radius, direction,
-                Tuning.ChargeSpeed * Tempo * Time.deltaTime + 0.25f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+                DashSpeed * Time.deltaTime + 0.25f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
                 if (hit.collider.GetComponentInParent<BossBreakableRock>() is BossBreakableRock rock && rock.Shatter())
                 {
                     RockStuns++;
@@ -339,6 +348,7 @@ namespace Nomad.Monsters.Demo
             tactics.Stop();
             Pause();
             Phase = DragonPhase.Stunned;
+            if (Enraged) seconds *= 0.6f;
             until = Time.time + seconds;
             phaseStarted = Time.time;
             phaseDuration = seconds;
@@ -352,7 +362,7 @@ namespace Nomad.Monsters.Demo
         private Vector3[] firePoolTargets = new Vector3[4];
         private void PlanFirePools(float windup)
         {
-            firePoolTargets = new Vector3[Tuning.FirePoolCount];
+            firePoolTargets = new Vector3[Tuning.FirePoolCount * (Enraged ? 2 : 1)];
             for (int index = 0; index < firePoolTargets.Length; index++)
             {
                 Vector3 offset = Quaternion.Euler(0, index * 360f / firePoolTargets.Length + 45, 0) * direction * (index % 2 == 0 ? 6 : 11);
@@ -363,30 +373,44 @@ namespace Nomad.Monsters.Demo
 
         public int ScaleDamage(int amount) => Mathf.RoundToInt(amount * (Enraged ? 1.4f : 1));
 
-        public void HitRadialWave(int damage)
+        public void HitRadialWave(int damage, int volley = 0)
         {
-            if (radialHitPlayer) return;
-            radialHitPlayer = true;
+            if (!damagedVolleys.Add(volley)) return;
             target.TryApplyDamage(damage);
+        }
+
+        private void FireRadialVolley()
+        {
+            volleysSent++;
+            VolleysReleased++;
+            int volley = ++volleySerial;
+            nextVolley = Time.time + 1;
+            for (int index = 0; index < Tuning.RadialCount; index++)
+            {
+                Vector3 heading = Quaternion.Euler(0, index * 360f / Tuning.RadialCount + (volleysSent - 1) * 180f / Tuning.RadialCount, 0) * transform.forward;
+                Vector3 start = arena.GroundPoint(transform.position + heading * 3) + Vector3.up * 1.2f;
+                Vector3 end = arena.GroundPoint(transform.position + heading * Tuning.RadialRange) + Vector3.up * 1.2f;
+                BossFireball ball = BossFireball.Launch(effects, transform, target, start, end,
+                    (Tuning.RadialRange - 3) / (Tuning.RadialSpeed * Tempo), false, damage: ScaleDamage(25), radius: Tuning.RadialRadius);
+                ball.SignalControlled = true;
+                ball.VolleyId = volley;
+            }
+            float distance = Vector3.ProjectOnPlane(target.transform.position - transform.position, Vector3.up).magnitude;
+            parrySignal.Arm(Time.time + Mathf.Max(0, distance - 3 - Tuning.RadialRadius) / (Tuning.RadialSpeed * Tempo), Tuning.RadialRange);
+        }
+
+        public void OrbParried()
+        {
+            ParrySuccesses++;
+            arena.ScatterParryRocks(target.transform.position, transform.position, 2 + ParrySuccesses % 2);
         }
 
         public void ResolveParry()
         {
+            if (Pattern != DragonPattern.Circle) return;
             ParrySuccesses++;
-            bool circle = Pattern == DragonPattern.Circle;
-            if (circle)
-            {
-                if (slam != null) slam.CancelDamage();
-                pendingSlamCounter = true;
-            }
-            else
-            {
-                radialParried = true;
-                foreach (BossFireball ball in effects.GetComponentsInChildren<BossFireball>()) ball.Disperse();
-                BossFireball reflected = BossFireball.Launch(effects, transform, target,
-                    target.transform.position + Vector3.up * 1.3f, transform.position + Vector3.up * 1.8f, 0.4f, false);
-                reflected.Reflect(target.transform);
-            }
+            if (slam != null) slam.CancelDamage();
+            pendingSlamCounter = true;
             arena.ScatterParryRocks(target.transform.position, transform.position, 2 + ParrySuccesses % 2);
         }
 

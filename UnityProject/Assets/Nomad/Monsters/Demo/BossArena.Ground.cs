@@ -40,6 +40,9 @@ namespace Nomad.Monsters.Demo
             {
                 int index = z * (cells + 1) + x;
                 Vector3 local = new(Mathf.Lerp(-HalfSize, HalfSize, x / (float)cells), 0, Mathf.Lerp(-HalfSize, HalfSize, z / (float)cells));
+                float nx = local.x / HalfSize, nz = local.z / HalfSize;
+                local.x *= Mathf.Sqrt(1 - nz * nz * 0.5f);
+                local.z *= Mathf.Sqrt(1 - nx * nx * 0.5f);
                 local.y = GroundHeight(floorOrigin + facing * local) - floorOrigin.y;
                 vertices[index] = local;
                 uv[index] = new Vector2(x / (float)cells, z / (float)cells);
@@ -79,11 +82,10 @@ namespace Nomad.Monsters.Demo
 
         public float DistanceToBoundary(Vector3 point, Vector3 direction)
         {
-            Quaternion inverse = Quaternion.Inverse(Quaternion.LookRotation(Forward));
-            Vector3 local = inverse * (point - Center), heading = inverse * direction;
-            float x = Mathf.Abs(heading.x) < 0.001f ? float.PositiveInfinity : ((heading.x > 0 ? HalfSize - 1 : -HalfSize + 1) - local.x) / heading.x;
-            float z = Mathf.Abs(heading.z) < 0.001f ? float.PositiveInfinity : ((heading.z > 0 ? HalfSize - 1 : -HalfSize + 1) - local.z) / heading.z;
-            return Mathf.Max(0.5f, Mathf.Min(x, z));
+            Vector3 local = Vector3.ProjectOnPlane(point - Center, Vector3.up);
+            Vector3 heading = Vector3.ProjectOnPlane(direction, Vector3.up).normalized;
+            float b = Vector3.Dot(local, heading);
+            return Mathf.Max(0.5f, -b + Mathf.Sqrt(Mathf.Max(0, b * b + (HalfSize - 1) * (HalfSize - 1) - local.sqrMagnitude)));
         }
     }
 }

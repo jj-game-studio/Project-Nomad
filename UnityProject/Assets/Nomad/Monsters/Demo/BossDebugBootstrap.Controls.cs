@@ -10,6 +10,8 @@ namespace Nomad.Monsters.Demo
         private bool godMode;
         private Vector2 scroll;
         private int selected;
+        private static readonly DragonPattern[] Choices = { DragonPattern.Circle, DragonPattern.RadialFireballs,
+            DragonPattern.Breath, DragonPattern.FirePool, DragonPattern.Charge, DragonPattern.Rain };
         private Rect PanelRect => new Rect(12, 80, 312, Mathf.Min(740, Screen.height - 92));
         public bool GodMode
         {
@@ -37,10 +39,10 @@ namespace Nomad.Monsters.Demo
             if (GUILayout.Button("지팡이 +1")) Equip("weapon-apprentice-staff");
             GUILayout.EndHorizontal();
 
-            selected = GUILayout.SelectionGrid(selected, new[] { "기본 공격", "점프 강타", "전방향 화염탄", "브레스", "불지대", "돌진", "화염우" }, 2);
-            DrawParameters((DragonPattern)selected);
+            selected = GUILayout.SelectionGrid(selected, new[] { "점프 강타", "전방향 화염탄", "브레스", "불지대", "돌진", "화염우" }, 2);
+            DrawParameters(Choices[selected]);
             GUI.enabled = Boss.Introduced && !Boss.GetComponent<Health>().IsDead;
-            if (GUILayout.Button("선택 패턴 실행")) Boss.BeginPattern((DragonPattern)selected);
+            if (GUILayout.Button("선택 패턴 실행")) Boss.BeginPattern(Choices[selected]);
             GUI.enabled = true;
             GUILayout.Label(Boss.Enraged ? "광폭 · 속도 +30% / 피해 +40%" : "체력 25% 이하: 광폭");
             if (GUILayout.Button("광폭 시험 (보스 체력 25%)"))
@@ -60,15 +62,12 @@ namespace Nomad.Monsters.Demo
             BossCombatTuning t = Boss.Tuning;
             switch (pattern)
             {
-                case DragonPattern.Basic:
-                    t.BasicRange = Slider("사거리 (m)", t.BasicRange, 2, 8);
-                    break;
                 case DragonPattern.Circle:
                     t.SlamRadius = Slider("범위 (m)", t.SlamRadius, 6, 20);
                     t.SlamWindup = Slider("준비 (초)", t.SlamWindup, 0.5f, 3);
                     break;
                 case DragonPattern.RadialFireballs:
-                    t.RadialCount = Mathf.RoundToInt(Slider("개수", t.RadialCount, 24, 120));
+                    t.RadialCount = Mathf.RoundToInt(Slider("개수", t.RadialCount, 6, 32));
                     t.RadialRadius = Slider("탄 반경 (m)", t.RadialRadius, 1, 3);
                     t.RadialSpeed = Slider("속도 (m/s)", t.RadialSpeed, 15, 65);
                     t.RadialRange = Slider("사거리 (m)", t.RadialRange, 15, 42);

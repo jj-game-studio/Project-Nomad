@@ -1568,11 +1568,10 @@ MonoBehaviour:
   m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Monsters.Demo.BossEncounterContent
   Tuning:
-    BasicRange: 4
     SlamRadius: 12
     SlamWindup: 1.15
-    RadialCount: 72
-    RadialRadius: 1.8
+    RadialCount: 12
+    RadialRadius: 1.25
     RadialSpeed: 42
     RadialRange: 34
     BreathRange: 18

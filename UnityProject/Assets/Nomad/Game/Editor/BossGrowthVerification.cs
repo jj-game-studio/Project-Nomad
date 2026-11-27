@@ -137,7 +137,7 @@ namespace Nomad.Game.Editor
                 {
                     InputSystem.QueueStateEvent(keyboard, new KeyboardState());
                     if (Time.time < since + 0.9f) return;
-                    Require(boss.ParrySuccesses == 1 && arena.RockCount - rocksBeforeParry >= 2, "실제 F 강타 패링/바위 생성");
+                    Require(boss.ParrySuccesses == 2 && arena.RockCount - rocksBeforeParry >= 2, "실제 F 강타 패링/바위 생성");
                     Capture("ParryRocksEnraged");
                     boss.BeginPattern(DragonPattern.RadialFireballs);
                     since = Time.time;
@@ -147,6 +147,7 @@ namespace Nomad.Game.Editor
                 if (stage == 14)
                 {
                     if (!boss.GetComponent<BossParrySignal>().Flashing) return;
+                    player.transform.rotation = Quaternion.LookRotation(Vector3.ProjectOnPlane(boss.transform.position - player.transform.position, Vector3.up));
                     Capture("RadialYellowFlash");
                     InputSystem.QueueStateEvent(keyboard, new KeyboardState(UnityEngine.InputSystem.Key.F));
                     since = Time.time;
@@ -157,7 +158,8 @@ namespace Nomad.Game.Editor
                 {
                     InputSystem.QueueStateEvent(keyboard, new KeyboardState());
                     if (Time.time < since + 0.9f) return;
-                    Require(boss.ParrySuccesses == 2 && player.GetComponent<PlayerBossParry>().Successes == 3, "실제 F 화염파 파훼/단일 반사");
+                    Require(boss.ParrySuccesses == 3 && player.GetComponent<PlayerBossParry>().Successes == 3,
+                        "실제 F 구체 반사/단일 반사 boss=" + boss.ParrySuccesses + " player=" + player.GetComponent<PlayerBossParry>().Successes);
                     Capture("RadialParried");
                     Debug.Log("BOSS_PARRY_PLAY_PASS yellow=pass F=pass slam=pass radial=pass rocks=pass enrage=pass");
                     boss.GetComponent<Health>().TryApplyDamage(BossArmor.ReferenceHealth * 2);
@@ -218,6 +220,7 @@ namespace Nomad.Game.Editor
                     int slot = Enumerable.Range(0, bag.SlotCount).First(index => bag.GetSlot(index).Item?.ItemId == "weapon-apprentice-staff");
                     PlayerEquipment gear = player.GetComponent<PlayerEquipment>();
                     Require(gear.TryEquip(slot, EquipmentSlot.Weapon1) && gear.TryEnhance(EquipmentSlot.Weapon1), "실제 시작 장비에서 강화");
+                    player.GetComponent<PlayerQuickSlots>()?.RegisterEquipped(EquipmentSlot.Weapon1, 0);
                     MovePlayer(arena.Center - arena.Forward * 7);
                     boss.Stun(0.03f);
                     since = Time.time;
@@ -228,7 +231,7 @@ namespace Nomad.Game.Editor
                     if (!boss.Introduced)
                     {
                         var arrival = boss.GetComponent<BossArrival>();
-                        Require(!boss.GetComponent<SegmentedHealthBar>().enabled, "낙하 착지 전 보스 체력 숨김");
+                        Require(!boss.GetComponent<BossBattleHud>().Visible, "낙하 착지 전 보스 체력 숨김");
                         if (arrival.Started && !arrival.BodyVisible && !arrivalWarningCaptured)
                         { Capture("ArrivalWarning"); arrivalWarningCaptured = true; }
                         if (arrival.BodyVisible && !arrival.Landed && !arrivalFallCaptured)
@@ -369,7 +372,7 @@ namespace Nomad.Game.Editor
                 Require(boss.GetComponent<BossArmor>().BreakCount == 2, "실제 씬 갑옷 2차 파괴");
                 Capture("ArmorBreak2");
                 player.GetComponent<Health>().IsCombatImmune = true;
-                Vector3 parryPoint = player.transform.position + Vector3.up * 1.3f + player.transform.forward * 1.7f;
+                Vector3 parryPoint = player.transform.position + Vector3.up * 1.3f + player.transform.forward * 1.1f;
                 for (int index = 0; index < 2; index++)
                     BossFireball.Launch(boss.Effects, boss.transform, player.GetComponent<Health>(), parryPoint + player.transform.right * (index * 0.15f),
                         player.transform.position + Vector3.up, 0.8f, false);

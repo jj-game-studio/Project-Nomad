@@ -15,6 +15,8 @@ namespace Nomad.Monsters.Demo
         private int damage;
         public float Radius { get; private set; } = 0.4f;
         public bool SignalControlled { get; set; }
+        public int VolleyId { get; set; }
+        private Transform orb;
         private System.Action<Vector3> impact;
         private ParticleSystem core, flame;
         public bool Parryable => !lob && damage > 0 && !reflected && !resolved;
@@ -38,7 +40,22 @@ namespace Nomad.Monsters.Demo
             ball.damage = damage;
             ball.Radius = radius;
             ball.BuildFlame();
+            if (damage > 0 && !lob) ball.BuildOrb();
             return ball;
+        }
+
+        private void BuildOrb()
+        {
+            GameObject sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            sphere.name = "Molten fire orb";
+            sphere.transform.SetParent(transform, false);
+            sphere.transform.localScale = Vector3.one * (Radius * 1.65f);
+            Destroy(sphere.GetComponent<Collider>());
+            sphere.GetComponent<Renderer>().sharedMaterial = WeaponVfx.Glow;
+            var tint = new MaterialPropertyBlock();
+            tint.SetColor("_BaseColor", new Color(1.5f, 0.3f, 0.02f, 0.8f));
+            sphere.GetComponent<Renderer>().SetPropertyBlock(tint);
+            orb = sphere.transform;
         }
 
         private void BuildFlame()
@@ -93,10 +110,13 @@ namespace Nomad.Monsters.Demo
             Vector3 next = Vector3.Lerp(start, goal, progress);
             if (lob) next += Vector3.up * Mathf.Sin(progress * Mathf.PI) * 4;
             Vector3 delta = next - transform.position;
+            if (orb != null) orb.localScale = Vector3.one * (Radius * 1.65f * (1 + Mathf.Sin(Time.time * 13) * 0.035f));
             Collider targetCollider = target.GetComponent<Collider>();
             if (SignalControlled && targetCollider != null && Vector3.Distance(targetCollider.ClosestPoint(next), next) <= Radius)
             {
-                owner.GetComponent<DragonBossCombat>().HitRadialWave(damage);
+                var guard = target.GetComponent<PlayerBossParry>();
+                if (guard != null && guard.TryReflect(this, next)) return;
+                owner.GetComponent<DragonBossCombat>().HitRadialWave(damage, VolleyId);
                 resolved = true;
                 Explode(next);
                 return;
@@ -111,12 +131,12 @@ namespace Nomad.Monsters.Demo
                     if (hit.collider.transform.IsChildOf(owner) || hit.collider.GetComponentInParent<BossBreakableRock>() != null ||
                         (SignalControlled && hit.collider.GetComponentInParent<Health>() != target)) continue;
                     var parry = hit.collider.GetComponentInParent<PlayerBossParry>();
-                    if (parry != null && parry.TryReflect(this, transform.position)) return;
+                    if (parry != null && parry.TryReflect(this, hit.point)) return;
                     resolved = true;
                     enabled = false;
                     if (hit.collider.GetComponentInParent<Health>() == target)
                     {
-                        if (SignalControlled) owner.GetComponent<DragonBossCombat>().HitRadialWave(damage);
+                        if (SignalControlled) owner.GetComponent<DragonBossCombat>().HitRadialWave(damage, VolleyId);
                         else if (reflected) target.TryApplyCombatImpact(damage, false, CombatImpactSource.ParriedFireball);
                         else target.TryApplyDamage(damage);
                     }
@@ -133,6 +153,7 @@ namespace Nomad.Monsters.Demo
             if (!Parryable || owner == null || defender == null) return false;
             Health attacker = owner.GetComponent<Health>();
             if (attacker == null || attacker.IsDead) return false;
+            DragonBossCombat boss = owner.GetComponent<DragonBossCombat>();
             reflected = true;
             SignalControlled = false;
             Radius = 0.6f;
@@ -146,10 +167,17 @@ namespace Nomad.Monsters.Demo
             main.startColor = new Color(1, 2, 2.8f);
             main = flame.main;
             main.startColor = new Color(0.25f, 0.8f, 2);
+            if (orb != null)
+            {
+                var tint = new MaterialPropertyBlock();
+                tint.SetColor("_BaseColor", new Color(0.25f, 1.1f, 2, 0.9f));
+                orb.GetComponent<Renderer>().SetPropertyBlock(tint);
+            }
             elapsed = 0;
             duration = Mathf.Max(0.12f, Vector3.Distance(start, goal) / 22);
             damage = 140;
             impact = null;
+            boss?.OrbParried();
             return true;
         }
 

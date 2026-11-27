@@ -36,10 +36,9 @@ namespace Nomad.Monsters.Demo
             Forward = outward;
             Center = entrance + outward * (edgeDistance + 3f + HalfSize);
             Center = new Vector3(Center.x, float.IsNaN(floorHeight) ? entrance.y : floorHeight, Center.z);
-            Material stone = Material(new Color(0.27f, 0.30f, 0.29f));
+            Material stone = Material(new Color(0.24f, 0.21f, 0.25f));
             Material trim = Material(new Color(0.61f, 0.49f, 0.27f));
             Quaternion rotation = Quaternion.LookRotation(outward);
-            Floor("Boss arena floor", Center, new Vector3(HalfSize * 2, 0.6f, HalfSize * 2), rotation, stone);
             BuildGround(stone);
             Vector3 rampStart = entrance - outward * 0.5f;
             Vector3 rampEnd = entrance + outward * Mathf.Max(0.5f, edgeDistance - 0.5f);
@@ -51,17 +50,6 @@ namespace Nomad.Monsters.Demo
             bridgeEnd.y = Center.y;
             if (!useGate && !standalone) Floor("Approach bridge", (rampEnd + bridgeEnd) * 0.5f,
                 new Vector3(4, 0.6f, Vector3.Distance(rampEnd, bridgeEnd)), rotation, stone);
-
-            // 경계 표식은 바닥 위 장식이며 진입·회피 동선을 막지 않습니다.
-            Vector3 right = Vector3.Cross(Vector3.up, outward);
-            for (int index = 0; index < 4; index++)
-            {
-                Vector3 corner = Center + right * (index % 2 == 0 ? -HalfSize + 1 : HalfSize - 1) + outward * (index < 2 ? -HalfSize + 1 : HalfSize - 1);
-                Decor("Arena pillar", GroundPoint(corner) + Vector3.up * 1.2f, new Vector3(0.8f, 2.4f, 0.8f), rotation, trim);
-            }
-            for (int index = 0; index < 2; index++)
-                Decor("Entrance marker", Center - outward * (HalfSize - 1) + right * (index == 0 ? -3 : 3) + Vector3.up * 1.5f,
-                    new Vector3(0.65f, 3, 0.65f), rotation, trim);
 
             sign = new GameObject("Boss arena sign").AddComponent<TextMesh>();
             sign.transform.SetParent(transform, false);

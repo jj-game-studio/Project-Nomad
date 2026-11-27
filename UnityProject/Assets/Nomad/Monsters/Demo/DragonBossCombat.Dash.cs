@@ -13,7 +13,7 @@ namespace Nomad.Monsters.Demo
         private bool TickBossCharge()
         {
             if (!agent.enabled || !agent.isOnNavMesh) return true;
-            float speed = Tuning.ChargeSpeed * Tempo;
+            float speed = DashSpeed;
             float step = Mathf.Min(dashRemaining, speed * Time.deltaTime);
             Vector3 start = agent.nextPosition;
             bool stopped = false;

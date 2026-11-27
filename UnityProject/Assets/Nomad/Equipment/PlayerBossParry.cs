@@ -58,10 +58,8 @@ namespace Nomad.Equipment
         public bool TryReflect(BossFireball ball, Vector3 point)
         {
             if (!Active || !ball.Parryable || ball.Target != GetComponent<Health>()) return false;
-            // 보스의 신호 패턴은 거리/방향별 물리 충돌보다 노란 섬광 타이밍을 우선합니다.
-            if (ball.SignalControlled) return false;
             Vector3 delta = point - (transform.position + Vector3.up * 1.3f);
-            if (delta.magnitude > 2.5f || Vector3.Angle(transform.forward, Vector3.ProjectOnPlane(delta, Vector3.up)) > 70) return false;
+            if (delta.magnitude > ball.Radius + 0.85f || Vector3.Angle(transform.forward, Vector3.ProjectOnPlane(delta, Vector3.up)) > 80) return false;
             if (!ball.Reflect(transform)) return false;
 
             Reflections++;
@@ -73,7 +71,7 @@ namespace Nomad.Equipment
         {
             consumed = true;
             Successes++;
-            WeaponVfx.Burst(point, new WeaponVfxStyle(Color.white, new Color(0.35f, 0.8f, 1), 1));
+            BossJustGuardVfx.Success(transform, point);
             HitCameraImpulse.Pulse(0.13f, 0.12f);
             CombatImpactAudio.Play(GetComponent<AudioSource>() ?? gameObject.AddComponent<AudioSource>(), true, 0.25f);
         }

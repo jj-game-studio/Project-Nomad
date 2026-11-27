@@ -5,12 +5,11 @@ namespace Nomad.Monsters.Demo
     [Serializable]
     public sealed class BossCombatTuning
     {
-        public float BasicRange = 4;
         public float SlamRadius = 12;
         public float SlamWindup = 1.15f;
 
-        public int RadialCount = 72;
-        public float RadialRadius = 1.8f;
+        public int RadialCount = 12;
+        public float RadialRadius = 1.25f;
         public float RadialSpeed = 42;
         public float RadialRange = 34;
 

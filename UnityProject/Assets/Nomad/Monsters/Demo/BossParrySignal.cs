@@ -13,14 +13,15 @@ namespace Nomad.Monsters.Demo
         public bool Flashing => Armed && Time.time >= impact - ReactionSeconds && Time.time <= impact + 0.12f;
         public float ImpactAt => impact;
         public float FlashAt => impact - ReactionSeconds;
+        private bool shown;
 
         public void Configure(DragonBossCombat owner, Health player) { boss = owner; target = player; }
-        public void Arm(float when, float radius) { impact = when; range = radius; Armed = true; }
+        public void Arm(float when, float radius) { impact = when; range = radius; Armed = true; shown = false; }
         public void Clear() => Armed = false;
 
         public bool TryParry(Health player)
         {
-            if (!Flashing || player != target || player.IsDead || boss.Phase == DragonPhase.Dead ||
+            if (boss.Pattern != DragonPattern.Circle || !Flashing || player != target || player.IsDead || boss.Phase == DragonPhase.Dead ||
                 Vector3.ProjectOnPlane(player.transform.position - transform.position, Vector3.up).magnitude > range) return false;
             Armed = false;
             boss.ResolveParry();
@@ -29,6 +30,7 @@ namespace Nomad.Monsters.Demo
 
         private void Update()
         {
+            if (Flashing && !shown) { shown = true; BossJustGuardVfx.Cue(boss.transform); }
             if (Time.time > impact + 0.15f) Armed = false;
         }
     }
