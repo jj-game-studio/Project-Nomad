@@ -68,6 +68,26 @@ namespace Nomad.Monsters.Demo
         public int MonsterCount => monsters.Count;
         public bool IsPlacing => placing;
         public bool Invincible => invincible;
+
+        public void SetHitEffects(bool flash, bool numbers, bool shards)
+        {
+            hitFlash = flash;
+            damageNumbers = numbers;
+            hitShards = shards;
+
+            foreach (Entry entry in monsters)
+                if (entry.feedback != null) entry.feedback.SetEffects(flash, numbers, shards);
+        }
+
+        private void DrawHitEffectToggles()
+        {
+            bool flash = GUILayout.Toggle(hitFlash, "Hit flash");
+            bool numbers = GUILayout.Toggle(damageNumbers, "Damage numbers");
+            bool shards = GUILayout.Toggle(hitShards, "Hit shards");
+            if (flash != hitFlash || numbers != damageNumbers || shards != hitShards)
+                SetHitEffects(flash, numbers, shards);
+        }
+
         private float UiScale => Mathf.Min(1f, Screen.width / 1280f, Screen.height / 800f);
         public Rect SpawnPanel => new Rect(Screen.width / UiScale - 346f, 12f, 334f, Screen.height / UiScale - 24f);
         public Rect LogPanel => compactUi ? new Rect(12f, 12f, 290f, showLogs ? 170f : 34f) : new Rect(12f, 12f, 365f, 270f);
@@ -323,9 +343,7 @@ if (monsters.Count >= 12)
             GUILayout.Label(notice);
             detection = GUILayout.Toggle(detection, "Detection: cyan radius (walls block sight)");
             travel = GUILayout.Toggle(travel, "Travel: amber target gap / purple home");
-            hitFlash = GUILayout.Toggle(hitFlash, "Hit flash + impact");
-            damageNumbers = GUILayout.Toggle(damageNumbers, "Damage numbers");
-            hitShards = GUILayout.Toggle(hitShards, "Hit shards");
+            DrawHitEffectToggles();
             GUILayout.Label("SETTINGS: new spawn / apply + reset");
             DrawSettings(settings[kind]);
             GUILayout.Space(5f);
@@ -463,9 +481,7 @@ if (monsters.Count >= 12)
                 travel = GUILayout.Toggle(travel, "Leash / travel limits");
                 skillWarnings = GUILayout.Toggle(skillWarnings, "Skill telegraphs");
                 healthBars = GUILayout.Toggle(healthBars, "Monster HP bars");
-                hitFlash = GUILayout.Toggle(hitFlash, "Hit flash + impact");
-                damageNumbers = GUILayout.Toggle(damageNumbers, "Damage numbers");
-                hitShards = GUILayout.Toggle(hitShards, "Hit shards");
+                DrawHitEffectToggles();
             }
             GUILayout.EndScrollView();
             GUILayout.Space(4f);

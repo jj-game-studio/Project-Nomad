@@ -56,7 +56,11 @@ namespace Nomad.CombatFeedback.Editor
             }) { text = "현재 씬에서 대상 찾기" });
 
             var damage = new IntegerField("테스트 피해량") { value = previewDamage };
-            damage.RegisterValueChangedCallback(e => previewDamage = Mathf.Clamp(e.newValue, 1, 9999));
+            damage.RegisterValueChangedCallback(e =>
+            {
+                previewDamage = Mathf.Clamp(e.newValue, 1, 9999);
+                damage.SetValueWithoutNotify(previewDamage);
+            });
             scroll.Add(damage);
             AddToggle(scroll, "치명타 미리보기", critical, value => critical = value);
             var previews = new VisualElement();
@@ -72,13 +76,16 @@ namespace Nomad.CombatFeedback.Editor
             AddToggle(playerOptions, "데미지 숫자", settings.PlayerNumbers, value => settings.PlayerNumbers = value);
             AddToggle(playerOptions, "피격음", settings.PlayerSound, value => settings.PlayerSound = value);
             AddToggle(playerOptions, "카메라 충격", settings.PlayerShake, value => settings.PlayerShake = value);
+
             AddSlider(playerOptions, "비네트 등장 (초)", settings.VignetteAttack, 0.01f, 0.2f, value => settings.VignetteAttack = value);
             AddSlider(playerOptions, "비네트 유지 (초)", settings.VignetteHold, 0, 0.3f, value => settings.VignetteHold = value);
             AddSlider(playerOptions, "비네트 복귀 (초)", settings.VignetteRelease, 0.05f, 1f, value => settings.VignetteRelease = value);
             AddSlider(playerOptions, "비네트 최대 강도", settings.VignetteMaximum, 0, 0.85f, value => settings.VignetteMaximum = value);
+
             var color = new ColorField("비네트 색") { value = settings.VignetteColor, showAlpha = false };
             color.RegisterValueChangedCallback(e => settings.VignetteColor = e.newValue);
             playerOptions.Add(color);
+
             AddSlider(playerOptions, "카메라 충격 강도", settings.PlayerShakeStrength, 0, 0.2f, value => settings.PlayerShakeStrength = value);
             AddSlider(playerOptions, "피격음 크기", settings.PlayerVolume, 0, 1, value => settings.PlayerVolume = value);
 
@@ -89,6 +96,7 @@ namespace Nomad.CombatFeedback.Editor
             AddToggle(monsterOptions, "파편", settings.MonsterShards, value => settings.MonsterShards = value);
             AddToggle(monsterOptions, "타격음", settings.MonsterSound, value => settings.MonsterSound = value);
             AddToggle(monsterOptions, "카메라 충격", settings.MonsterShake, value => settings.MonsterShake = value);
+
             AddSlider(monsterOptions, "일반 반짝임 (초)", settings.FlashSeconds, 0.02f, 0.2f, value => settings.FlashSeconds = value);
             AddSlider(monsterOptions, "치명타 반짝임 (초)", settings.CriticalFlashSeconds, 0.02f, 0.25f, value => settings.CriticalFlashSeconds = value);
             AddSlider(monsterOptions, "카메라 충격 강도", settings.MonsterShakeStrength, 0, 0.15f, value => settings.MonsterShakeStrength = value);
@@ -121,8 +129,8 @@ namespace Nomad.CombatFeedback.Editor
         private void Preview(bool hurtPlayer)
         {
             if (!EditorApplication.isPlaying || EditorApplication.isPaused || Time.timeScale <= 0) return;
-            if (hurtPlayer) { if (player != null) player.PreviewDamage(previewDamage); }
-            else if (monster != null) monster.PreviewHit(previewDamage, critical);
+            if (hurtPlayer) { if (player != null && player.gameObject.scene.IsValid()) player.PreviewDamage(previewDamage); }
+            else if (monster != null && monster.gameObject.scene.IsValid()) monster.PreviewHit(previewDamage, critical);
         }
 
         private void PreviewBurst()

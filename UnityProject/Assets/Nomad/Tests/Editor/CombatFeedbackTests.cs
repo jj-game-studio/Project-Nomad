@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Reflection;
 using Nomad.Combat;
 using Nomad.CombatFeedback;
@@ -83,7 +84,7 @@ namespace Nomad.Tests
             Assert.That(player.GetComponent<Health>().CurrentHealth, Is.EqualTo(100));
             Assert.That(monster.ActiveNumberCount, Is.EqualTo(1));
             Assert.That(monster.LastCritical, Is.True);
-            yield return new WaitForSeconds(0.06f);
+            yield return WaitForGameTime(0.06f);
             var overlay = player.GetComponent<CombatFeedbackOverlay>();
             Assert.That(overlay.VignetteAlpha, Is.GreaterThan(0));
 
@@ -122,11 +123,11 @@ namespace Nomad.Tests
             var overlay = New("Vignette").AddComponent<CombatFeedbackOverlay>();
             var settings = CombatFeedbackSettings.Current;
             settings.VignetteAttack = 0.06f;
-            settings.VignetteHold = 0.4f;
+            settings.VignetteHold = 0.1f;
             settings.VignetteRelease = 0.15f;
             overlay.Hurt(1);
             Assert.That(overlay.VignetteAlpha, Is.Zero, "처음부터 최대 밝기로 튀지 않음");
-            yield return new WaitForSeconds(0.08f);
+            yield return WaitForGameTime(0.08f);
             overlay.RefreshPositions(null);
             Assert.That(overlay.VignetteAlpha, Is.EqualTo(settings.VignetteMaximum).Within(0.001));
 
@@ -134,7 +135,7 @@ namespace Nomad.Tests
             Assert.That(overlay.VignetteAlpha, Is.EqualTo(settings.VignetteMaximum).Within(0.001));
             for (int index = 0; index < 10; index++) overlay.Hurt(1);
             Assert.That(overlay.VignetteAlpha, Is.LessThanOrEqualTo(settings.VignetteMaximum));
-            yield return new WaitForSeconds(0.8f);
+            yield return WaitForGameTime(0.4f);
             overlay.RefreshPositions(null);
             Assert.That(overlay.VignetteAlpha, Is.Zero);
         }
@@ -149,7 +150,7 @@ namespace Nomad.Tests
             Assert.That(player.GetComponent<CombatFeedbackOverlay>(), Is.Null);
             health.IsCombatImmune = false;
             health.TryApplyDamage(10);
-            yield return new WaitForSeconds(0.07f);
+            yield return WaitForGameTime(0.07f);
             var overlay = player.GetComponent<CombatFeedbackOverlay>();
             float before = overlay.VignetteAlpha;
             Time.timeScale = 0;
@@ -163,7 +164,7 @@ namespace Nomad.Tests
             Assert.That(overlay.VignetteAlpha, Is.Zero);
 
             overlay.Hurt(0.5f);
-            yield return new WaitForSeconds(0.06f);
+            yield return WaitForGameTime(0.06f);
             CombatFeedbackSettings.Current.PlayerVignette = false;
             overlay.RefreshVignette();
             Assert.That(overlay.VignetteAlpha, Is.Zero);
@@ -206,7 +207,10 @@ namespace Nomad.Tests
                 window.CreateGUI();
                 var toggles = window.rootVisualElement.Query<Toggle>().ToList();
                 Assert.That(toggles.Count, Is.GreaterThanOrEqualTo(10));
-                Assert.That(window.rootVisualElement.Query<Slider>().ToList().Count, Is.EqualTo(12));
+                Slider maximum = window.rootVisualElement.Query<Slider>().ToList().Find(slider => slider.label == "비네트 최대 강도");
+                Assert.That(maximum, Is.Not.Null);
+                maximum.value = 0.4f;
+                Assert.That(CombatFeedbackSettings.Current.VignetteMaximum, Is.EqualTo(0.4f));
                 Toggle vignette = toggles.Find(toggle => toggle.label == "붉은 비네트");
                 vignette.value = false;
                 Assert.That(CombatFeedbackSettings.Current.PlayerVignette, Is.False);
@@ -214,6 +218,41 @@ namespace Nomad.Tests
                 Assert.That(CombatFeedbackSettings.Current.PlayerVignette, Is.True);
             }
             finally { window.Close(); }
+        }
+
+        private static IEnumerator WaitForGameTime(float seconds)
+        {
+            float until = Time.time + seconds;
+            while (Time.time < until) yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator RenderedVignetteKeepsCenterClearAndDoesNotBlockPointer()
+        {
+            var camera = New("Vignette camera").AddComponent<Camera>();
+            camera.tag = "MainCamera";
+            camera.clearFlags = CameraClearFlags.SolidColor;
+            camera.backgroundColor = new Color(0.35f, 0.35f, 0.35f);
+            camera.cullingMask = ~0;
+            var overlay = New("Vignette preview").AddComponent<CombatFeedbackOverlay>();
+            overlay.Hurt(1);
+            yield return WaitForGameTime(0.06f);
+            var image = overlay.GetComponentInChildren<UnityEngine.UI.Image>();
+            Assert.That(image.raycastTarget, Is.False);
+            Assert.That(image.sprite.texture.GetPixel(64, 64).a, Is.Zero);
+            Assert.That(image.sprite.texture.GetPixel(0, 64).a, Is.GreaterThan(0.99f));
+
+            Nomad.Minimap.Editor.MinimapVerification.Capture("issue214-feedback-vignette.png");
+            var pixels = new Texture2D(2, 2);
+            try
+            {
+                pixels.LoadImage(File.ReadAllBytes(Path.Combine(Application.dataPath, "../Artifacts/issue214-feedback-vignette.png")));
+                Color center = pixels.GetPixel(pixels.width / 2, pixels.height / 2);
+                Color edge = pixels.GetPixel(8, pixels.height / 2);
+                Assert.That(center.g, Is.GreaterThan(edge.g + 0.05f));
+                Assert.That(center.b, Is.GreaterThan(edge.b + 0.05f));
+            }
+            finally { Object.DestroyImmediate(pixels); }
         }
     }
 }

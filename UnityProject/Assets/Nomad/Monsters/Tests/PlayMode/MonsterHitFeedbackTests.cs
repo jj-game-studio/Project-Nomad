@@ -167,8 +167,13 @@ namespace Nomad.Monsters.Tests
             return block.GetColor("_BaseColor");
         }
 
-        private void SetToggle(string name, bool value) => panel.GetType()
-            .GetField(name, BindingFlags.Instance | BindingFlags.NonPublic).SetValue(panel, value);
+        private void SetToggle(string name, bool value)
+        {
+            bool Read(string field) => field == name ? value : (bool)panel.GetType()
+                .GetField(field, BindingFlags.Instance | BindingFlags.NonPublic).GetValue(panel);
+            panel.GetType().GetMethod("SetHitEffects").Invoke(panel,
+                new object[] { Read("hitFlash"), Read("damageNumbers"), Read("hitShards") });
+        }
     }
 }
 #endif

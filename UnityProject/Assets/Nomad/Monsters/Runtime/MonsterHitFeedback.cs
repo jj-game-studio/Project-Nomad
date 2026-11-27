@@ -87,7 +87,6 @@ namespace Nomad.Monsters
                 else
                     numbers[i] = number;
             }
-
         }
 
         private void OnDamaged(Health owner, int damage, DamageKind kind) => PreviewHit(damage, owner.LastHitCritical);
@@ -110,8 +109,13 @@ namespace Nomad.Monsters
             {
                 if (numbers.Count == 8)
                     numbers.RemoveAt(0);
+
+                int column = numbers.Count % 3;
+                float side = column == 1 ? 0.35f : column == 2 ? -0.35f : 0;
+                Camera camera = Camera.main;
+                Vector3 right = camera != null ? camera.transform.right : Vector3.right;
                 numbers.Add(new DamageNumber { amount = damage, critical = critical,
-                    position = transform.position + Vector3.up * 2.9f });
+                    position = transform.position + Vector3.up * (2.9f + column * 0.12f) + right * side });
             }
             if (shardsEnabled && settings.MonsterShards)
                 EmitShards(critical);
