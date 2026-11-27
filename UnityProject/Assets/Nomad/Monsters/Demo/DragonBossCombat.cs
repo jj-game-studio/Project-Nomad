@@ -51,7 +51,7 @@ namespace Nomad.Monsters.Demo
             animationDriver = GetComponent<MonsterAnimationDriver>();
             GetComponent<MonsterMeleeAttack>().enabled = false;
             tactics.Configure(target, 0, BossArena.HalfSize * 2.9f, 15, 6, 6.5f, 8, 0.8f, 0.1f, 28);
-            tracker.Configure(60, 100, BossArena.HalfSize * 2);
+            tracker.enabled = false;
             GetComponent<BossArmor>().Broken += ArmorBroken;
             gameObject.AddComponent<BossKnockdownAnimation>();
             agent.speed = 6;
@@ -93,6 +93,7 @@ namespace Nomad.Monsters.Demo
             if (arena.IsLocked || !PlayerInside)
             {
                 engaged = false;
+                pursuitStarted = -1;
                 if (Phase != DragonPhase.Waiting) StopEncounter();
                 Phase = DragonPhase.Waiting;
                 Pause();
@@ -178,12 +179,17 @@ namespace Nomad.Monsters.Demo
             float engageRange = chargeDue ? float.PositiveInfinity : next == DragonPattern.Basic ? 3.8f : next == DragonPattern.Circle ? 5.5f : 9;
             if (Vector3.Distance(transform.position, target.transform.position) > engageRange)
             {
-                tracker.enabled = true;
-                tracker.ReactToDamage();
-                if (agent.enabled && agent.isOnNavMesh) agent.isStopped = false;
-                until = Time.time + 0.08f;
-                return;
+                if (pursuitStarted < 0) pursuitStarted = Time.time;
+                if (Time.time - pursuitStarted < 2.5f)
+                {
+                    PursuePlayer();
+                    until = Time.time + 0.08f;
+                    return;
+                }
+                // 경로가 막혀도 영원히 서 있지 않고 원거리 패턴으로 이어갑니다.
+                next = DragonPattern.TripleFireball;
             }
+            pursuitStarted = -1;
             if (!chargeDue) sequence++;
             BeginPattern(next);
         }

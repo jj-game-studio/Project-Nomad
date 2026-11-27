@@ -38,7 +38,7 @@ namespace Nomad.Monsters.Demo
                 else TurnTowards(direction, TurnSpeed);
                 return;
             }
-            if ((Phase == DragonPhase.Recovery || Phase == DragonPhase.Waiting) && tracker.enabled && agent.isOnNavMesh)
+            if ((Phase == DragonPhase.Recovery || Phase == DragonPhase.Waiting) && agent.isOnNavMesh && agent.hasPath)
             {
                 Vector3 travel = agent.desiredVelocity;
                 if (travel.sqrMagnitude < 0.01f) return;
