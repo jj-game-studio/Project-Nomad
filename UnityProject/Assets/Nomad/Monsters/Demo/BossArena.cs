@@ -7,13 +7,14 @@ namespace Nomad.Monsters.Demo
     // 생성 필드 밖에 붙이는 작은 보스 전용 구역입니다. 원본 NavMesh·지형은 변경하지 않습니다.
     public sealed partial class BossArena : MonoBehaviour
     {
-        public const float HalfSize = 12f;
+        public const float HalfSize = 22f;
         public Vector3 Center { get; private set; }
         public Vector3 Entrance { get; private set; }
         public bool UsesGate { get; private set; }
         public Vector3 Forward { get; private set; }
         public Vector3 Arrival => Center - Forward * (HalfSize - 3);
-        public bool Connected => navigation.valid && (UsesGate || link.valid);
+        public bool Connected => navigation.valid && (standalone || UsesGate || link.valid);
+        private bool standalone;
 
         private NavMeshData data;
         private NavMeshDataInstance navigation;
@@ -22,7 +23,13 @@ namespace Nomad.Monsters.Demo
         private readonly List<Material> materials = new();
 
         public bool Build(Vector3 entrance, Vector3 outward, float edgeDistance, float floorHeight = float.NaN, bool useGate = false)
+            => BuildArea(entrance, outward, edgeDistance, floorHeight, useGate, false);
+
+        public bool BuildStandalone(Vector3 entrance, Vector3 outward) => BuildArea(entrance, outward, 0, float.NaN, false, true);
+
+        private bool BuildArea(Vector3 entrance, Vector3 outward, float edgeDistance, float floorHeight, bool useGate, bool standalone)
         {
+            this.standalone = standalone;
             UsesGate = useGate;
             Entrance = entrance;
             outward = Vector3.ProjectOnPlane(outward, Vector3.up).normalized;
@@ -37,27 +44,27 @@ namespace Nomad.Monsters.Demo
             Vector3 rampEnd = entrance + outward * Mathf.Max(0.5f, edgeDistance - 0.5f);
             rampEnd.y = Center.y;
             Vector3 rampDirection = rampEnd - rampStart;
-            if (!useGate) Floor("Approach ramp", (rampStart + rampEnd) * 0.5f,
+            if (!useGate && !standalone) Floor("Approach ramp", (rampStart + rampEnd) * 0.5f,
                 new Vector3(4, 0.6f, rampDirection.magnitude), Quaternion.LookRotation(rampDirection), stone);
             Vector3 bridgeEnd = entrance + outward * (edgeDistance + 5f);
             bridgeEnd.y = Center.y;
-            if (!useGate) Floor("Approach bridge", (rampEnd + bridgeEnd) * 0.5f,
+            if (!useGate && !standalone) Floor("Approach bridge", (rampEnd + bridgeEnd) * 0.5f,
                 new Vector3(4, 0.6f, Vector3.Distance(rampEnd, bridgeEnd)), rotation, stone);
 
             // 경계 표식은 바닥 위 장식이며 진입·회피 동선을 막지 않습니다.
             Vector3 right = Vector3.Cross(Vector3.up, outward);
             for (int index = 0; index < 4; index++)
             {
-                Vector3 corner = Center + right * (index % 2 == 0 ? -11 : 11) + outward * (index < 2 ? -11 : 11);
+                Vector3 corner = Center + right * (index % 2 == 0 ? -HalfSize + 1 : HalfSize - 1) + outward * (index < 2 ? -HalfSize + 1 : HalfSize - 1);
                 Decor("Arena pillar", corner + Vector3.up * 1.2f, new Vector3(0.8f, 2.4f, 0.8f), rotation, trim);
             }
             for (int index = 0; index < 2; index++)
-                Decor("Entrance marker", Center - outward * 11f + right * (index == 0 ? -3 : 3) + Vector3.up * 1.5f,
+                Decor("Entrance marker", Center - outward * (HalfSize - 1) + right * (index == 0 ? -3 : 3) + Vector3.up * 1.5f,
                     new Vector3(0.65f, 3, 0.65f), rotation, trim);
 
             sign = new GameObject("Boss arena sign").AddComponent<TextMesh>();
             sign.transform.SetParent(transform, false);
-            sign.transform.position = Center - outward * 11 + Vector3.up * 2.8f;
+            sign.transform.position = Center - outward * (HalfSize - 1) + Vector3.up * 2.8f;
             sign.font = Resources.Load<Font>("ShopFonts/Jua-Regular") ?? Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             sign.GetComponent<Renderer>().sharedMaterial = sign.font.material;
             sign.text = "용의 제단";
@@ -73,7 +80,7 @@ namespace Nomad.Monsters.Demo
             float navLength = 4.4f;
             Vector3 navCenter = entrance + outward * (edgeDistance + 0.6f + navLength * 0.5f);
             navCenter.y = Center.y;
-            if (!useGate) sources.Add(BoxSource(navCenter,
+            if (!useGate && !standalone) sources.Add(BoxSource(navCenter,
                 new Vector3(4, 0.6f, navLength), rotation));
             NavMeshBuildSettings settings = NavMesh.GetSettingsByIndex(0);
             settings.agentRadius = 0.35f;
@@ -81,13 +88,14 @@ namespace Nomad.Monsters.Demo
             settings.agentClimb = 0.3f;
             settings.overrideVoxelSize = true;
             settings.voxelSize = 0.075f;
-            var bounds = new Bounds(Center, new Vector3(35, 12, 35));
+            var bounds = new Bounds(Center, new Vector3(HalfSize * 2 + 12, 12, HalfSize * 2 + 12));
             bounds.Encapsulate(entrance);
             data = NavMeshBuilder.BuildNavMeshData(settings, sources, bounds, Vector3.zero, Quaternion.identity);
             if (data == null)
                 return false;
 
             navigation = NavMesh.AddNavMeshData(data);
+            if (standalone) return NavMesh.SamplePosition(Center, out _, 1f, NavMesh.AllAreas);
             if (useGate)
             {
                 if (!NavMesh.SamplePosition(Center, out NavMeshHit centerHit, 1f, NavMesh.AllAreas) ||

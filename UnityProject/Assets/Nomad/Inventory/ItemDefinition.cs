@@ -30,14 +30,18 @@ namespace Nomad.Inventory
         [SerializeField] private GameObject equippedVisual;
 
         public string ItemId => itemId;
-        public string DisplayName => displayName;
-        public string Description => description;
+        public int EnhancementLevel { get; private set; }
+        public ItemDefinition BaseItem { get; private set; }
+        public string DisplayName => EnhancementLevel > 0 ? $"{displayName} +{EnhancementLevel}" : displayName;
+        public string UnlockedSkill => EnhancementLevel < 1 || equipmentType != EquipmentType.Weapon ? string.Empty :
+            attackMode == WeaponAttackMode.Bow ? "관통 사격" : attackMode == WeaponAttackMode.Staff ? "폭발 마법" : "전방 충격파";
+        public string Description => string.IsNullOrEmpty(UnlockedSkill) ? description : description + "\nC · " + UnlockedSkill + " (재사용 8초)";
         public Sprite Icon => icon;
         public int MaxStack => maxStack;
         public ItemTier Tier => tier;
         public EquipmentType EquipmentType => equipmentType;
-        public int AttackPower => attackPower;
-        public int Defense => defense;
+        public int AttackPower => Mathf.RoundToInt(attackPower * (1 + EnhancementLevel * 0.15f));
+        public int Defense => Mathf.RoundToInt(defense * (1 + EnhancementLevel * 0.15f));
         public WeaponAttackMode AttackMode => attackMode;
         public float AttackRange => attackRange;
         public float AttackInterval => attackInterval;
@@ -52,7 +56,17 @@ namespace Nomad.Inventory
             foreach (StatModifier modifier in Stats)
                 if (modifier.Stat == stat)
                     total += modifier.Value;
-            return total;
+            return stat == StatType.InventorySlots ? total : total * (1 + EnhancementLevel * 0.15f);
+        }
+
+        // 원본 에셋을 수정하지 않습니다. 이 인스턴스가 장비·가방 사이를 이동하며 강화를 유지합니다.
+        internal ItemDefinition CreateEnhanced()
+        {
+            ItemDefinition copy = Instantiate(BaseItem != null ? BaseItem : this);
+            copy.BaseItem = BaseItem != null ? BaseItem : this;
+            copy.EnhancementLevel = EnhancementLevel + 1;
+            copy.name = DisplayName + " enhanced";
+            return copy;
         }
     }
 }

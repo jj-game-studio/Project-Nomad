@@ -320,7 +320,7 @@ namespace Nomad.Shop
                 PlayerInventory.ItemStack stack = inventory.GetSlot(index);
                 int offer = shop.FindOffer(stack.Item);
                 int price = offer >= 0 ? shop.Catalog.GetOffer(offer).SellPrice : 0;
-                string displayName = offer >= 0 ? shop.Catalog.GetOffer(offer).DisplayName : stack.Item?.DisplayName;
+                string displayName = stack.Item?.EnhancementLevel > 0 ? stack.Item.DisplayName : offer >= 0 ? shop.Catalog.GetOffer(offer).DisplayName : stack.Item?.DisplayName;
                 SetSlot(playerSlots[index], stack.Item, displayName, stack.Count, price, false, !merchantSelected && playerIndex == index,
                     wallet.IsSaleProtected(stack.Item));
             }
@@ -353,7 +353,7 @@ namespace Nomad.Shop
             sell.targetGraphic.color = sell.interactable ? ShopUi.Forest : ShopUi.Slot;
             buy.GetComponentInChildren<Text>().color = buy.interactable ? ShopUi.Canvas : ShopUi.Muted;
             sell.GetComponentInChildren<Text>().color = sell.interactable ? ShopUi.Canvas : ShopUi.Muted;
-            string ownedName = sellOffer >= 0 ? shop.Catalog.GetOffer(sellOffer).DisplayName : owned.Item?.DisplayName;
+            string ownedName = owned.Item?.EnhancementLevel > 0 ? owned.Item.DisplayName : sellOffer >= 0 ? shop.Catalog.GetOffer(sellOffer).DisplayName : owned.Item?.DisplayName;
             tradeHeading.text = merchantSelected ? "상품 구매" : "아이템 판매";
             itemTitle.text = popupName ?? (merchantSelected ? selected.DisplayName : ownedName);
             int shownOffer = shop.FindOffer(popupItem);
@@ -365,6 +365,8 @@ namespace Nomad.Shop
             selectedIcon.sprite = popupItem?.Icon;
             selectedIcon.enabled = selectedIcon.sprite != null;
             description.text = shown == null ? "" : $"{CategoryName(shown.Group)}  /  {shown.Description}";
+            if (!merchantSelected && popupItem?.EnhancementLevel > 0)
+                description.text += "\n강화 장비는 기본 매입가로 판매되며 강화는 소멸합니다.";
             readiness.text = merchantSelected
                 ? !visible ? "이 분류에는 상품이 없습니다."
                 : shop.StockAt(merchantIndex) == 0 ? "품절입니다."
@@ -453,7 +455,7 @@ namespace Nomad.Shop
                     return;
                 }
                 int offer = shop.FindOffer(popupItem);
-                popupName = offer >= 0 ? shop.Catalog.GetOffer(offer).DisplayName : popupItem.DisplayName;
+                popupName = popupItem.EnhancementLevel > 0 ? popupItem.DisplayName : offer >= 0 ? shop.Catalog.GetOffer(offer).DisplayName : popupItem.DisplayName;
                 tradePopup.gameObject.SetActive(true);
                 popupFocus = -1;
                 foreach (ScrollRect list in GetComponentsInChildren<ScrollRect>())

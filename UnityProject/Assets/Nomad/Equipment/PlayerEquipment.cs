@@ -13,7 +13,7 @@ namespace Nomad.Equipment
 
     [DisallowMultipleComponent]
     [RequireComponent(typeof(PlayerInventory))]
-    public sealed class PlayerEquipment : MonoBehaviour, ICombatDamageModifier
+    public sealed partial class PlayerEquipment : MonoBehaviour, ICombatDamageModifier
     {
         public const int Capacity = 10;
 

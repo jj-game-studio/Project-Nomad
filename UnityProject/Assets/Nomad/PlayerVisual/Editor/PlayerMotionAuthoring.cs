@@ -60,6 +60,7 @@ namespace Nomad.PlayerVisual.Editor
                         state.speedParameterActive = true;
                     }
                 }
+                PlayerHitReactionAuthoring.ApplyToController(controller);
                 EditorUtility.SetDirty(controller);
             }
             AssetDatabase.SaveAssets();

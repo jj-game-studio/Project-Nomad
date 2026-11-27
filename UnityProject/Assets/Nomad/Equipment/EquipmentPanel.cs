@@ -36,6 +36,9 @@ namespace Nomad.Equipment
         private Font font;
         private int selected = -1;
         private ItemDefinition selectedItem;
+        private EquipmentSlot enhancementSlot;
+        private UnityEngine.UI.Button enhanceButton;
+        private UnityEngine.UI.Text enhanceLabel;
         private int dragEquipment = -1;
         private ItemDefinition draggedEquipmentItem;
         private Vector2 equipmentPressPosition;
@@ -345,6 +348,7 @@ namespace Nomad.Equipment
             }
             else if (gearSlot >= 0 && dragEquipment == gearSlot)
             {
+                enhancementSlot = (EquipmentSlot)gearSlot;
                 ItemDefinition item = equipment.GetItem((EquipmentSlot)gearSlot);
                 if (gearClick && item != null && IsDoubleClick(-1 - gearSlot, item))
                 {
@@ -446,6 +450,12 @@ namespace Nomad.Equipment
 
         private void Refresh()
         {
+            if (enhanceButton != null)
+            {
+                ItemDefinition item = equipment.GetItem(enhancementSlot);
+                enhanceLabel.text = item == null ? "장비 선택 후 강화" : $"{item.DisplayName} 강화";
+                enhanceButton.interactable = equipment.EnhancementMaterial(enhancementSlot) >= 0;
+            }
             PreviewSlot = -1;
             CanDrop = false;
             capacity.text = $"가방 ({inventory.UsedSlots} / {inventory.SlotCount})";
@@ -454,7 +464,8 @@ namespace Nomad.Equipment
             for (int index = 0; index < 10; index++)
             {
                 ItemDefinition item = equipment.GetItem((EquipmentSlot)index);
-                names[index].text = item != null && item.Icon == null ? item.DisplayName : string.Empty;
+                names[index].text = item == null ? string.Empty : item.Icon == null ? item.DisplayName :
+                    item.EnhancementLevel > 0 ? $"+{item.EnhancementLevel}" : string.Empty;
                 EquipmentType type = index < 2 ? EquipmentType.Weapon : index == 2 ? EquipmentType.Head :
                     index == 3 ? EquipmentType.Body : index == 4 ? EquipmentType.Legs : index == 5 ? EquipmentType.Feet :
                     index == 6 ? EquipmentType.Bag : EquipmentType.Accessory;
@@ -500,6 +511,19 @@ namespace Nomad.Equipment
             var title = Text("Title", statsPanel, "스탯", new Vector2(220, 32), new Vector2(0, -26), 23);
             ItemUiStyle.Frame(statsPanel);
             title.alignment = TextAnchor.MiddleLeft;
+            var forge = Rect("EnhanceButton", statsPanel, new Vector2(220, 40), new Vector2(0, 35), new Vector2(0.5f, 0.5f));
+            forge.anchorMin = forge.anchorMax = new Vector2(0.5f, 0);
+            forge.gameObject.AddComponent<UnityEngine.UI.Image>().color = new Color32(93, 71, 38, 255);
+            enhanceButton = forge.gameObject.AddComponent<UnityEngine.UI.Button>();
+            enhanceButton.onClick.AddListener(() =>
+            {
+                notice.text = equipment.TryEnhance(enhancementSlot) ? "동일 장비 1개를 소비해 강화했습니다." : "강화할 동일 장비가 필요합니다. 최대 +3입니다.";
+            });
+            enhanceLabel = Text("Label", forge, "장비 선택 후 강화", new Vector2(214, 36), Vector2.zero, 14);
+            enhanceLabel.rectTransform.anchorMin = enhanceLabel.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+            enhanceLabel.raycastTarget = false;
+            var help = Text("EnhanceHelp", statsPanel, "동일 장비 1개 · 확정 성공 · 최대 +3", new Vector2(230, 38), new Vector2(0, 78), 12);
+            help.rectTransform.anchorMin = help.rectTransform.anchorMax = new Vector2(0.5f, 0);
             for (int index = 0; index < StatCount; index++)
             {
                 var label = Text("Stat" + (StatType)index, statsPanel, StatFormat.Name((StatType)index),

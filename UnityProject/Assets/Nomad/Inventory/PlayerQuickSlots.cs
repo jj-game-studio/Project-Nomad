@@ -86,6 +86,12 @@ namespace Nomad.Inventory
 
         public ItemDefinition GetItem(int index) => items[index];
 
+        internal void ReplaceEnhanced(ItemDefinition previous, ItemDefinition replacement)
+        {
+            for (int index = 0; index < Capacity; index++)
+                if (items[index] == previous) items[index] = replacement;
+        }
+
         public int GetCount(int index)
         {
             ItemDefinition item = items[index];

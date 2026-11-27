@@ -79,6 +79,7 @@ namespace Nomad.Shop
         {
             if (!valid || item == null)
                 return -1;
+            item = item.BaseItem != null ? item.BaseItem : item;
 
             for (int index = 0; index < catalog.Count; index++)
                 if (catalog.GetOffer(index).Item == item)
@@ -215,7 +216,7 @@ namespace Nomad.Shop
                 }
             }
             else if ((uint)slotIndex >= PlayerInventory.MaxCapacity ||
-                     inventory.GetSlot(slotIndex).Item != offer.Item || inventory.GetSlot(slotIndex).Count < quantity ||
+                     (inventory.GetSlot(slotIndex).Item?.BaseItem ?? inventory.GetSlot(slotIndex).Item) != offer.Item || inventory.GetSlot(slotIndex).Count < quantity ||
                      offer.SellPrice == 0 || total + wallet.Gold > int.MaxValue ||
                      (long)stock[offerIndex] + quantity > int.MaxValue)
             {

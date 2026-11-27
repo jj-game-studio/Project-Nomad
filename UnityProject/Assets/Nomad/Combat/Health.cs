@@ -21,9 +21,11 @@ namespace Nomad.Combat
         public int CurrentHealth { get; private set; }
         public bool IsDead => CurrentHealth == 0;
         public bool IsCombatImmune { get; set; }
+        public bool LastHitCritical { get; private set; }
 
         public event Action<Health> Died;
         public event Action<Health> Evaded;
+        public event Action<Health, int, DamageKind> Damaged;
 
         private void Awake()
         {
@@ -57,7 +59,11 @@ namespace Nomad.Combat
             return true;
         }
 
-        public bool TryApplyDamage(int amount, DamageKind kind = DamageKind.Combat)
+        public bool TryApplyDamage(int amount, DamageKind kind = DamageKind.Combat) => ApplyDamage(amount, kind, false);
+
+        public bool TryApplyCombatDamage(int amount, bool critical) => ApplyDamage(amount, DamageKind.Combat, critical);
+
+        private bool ApplyDamage(int amount, DamageKind kind, bool critical)
         {
             if (amount <= 0 || IsDead || (kind == DamageKind.Combat && IsCombatImmune))
                 return false;
@@ -73,7 +79,10 @@ namespace Nomad.Combat
                 }
             }
 
+            int before = CurrentHealth;
             CurrentHealth = Mathf.Max(0, CurrentHealth - amount);
+            LastHitCritical = critical;
+            Damaged?.Invoke(this, before - CurrentHealth, kind);
             if (IsDead)
                 Died?.Invoke(this);
 
