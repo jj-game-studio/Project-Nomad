@@ -73,7 +73,8 @@ namespace Nomad.Monsters.Demo
             bag.Add(PlayerEquipmentCombat.ArrowItemId, 60);
             int slot = Enumerable.Range(0, bag.SlotCount).First(index => bag.GetSlot(index).Item?.ItemId == item && bag.GetSlot(index).Item.EnhancementLevel == 0);
             var gear = Player.GetComponent<PlayerEquipment>();
-            if (gear.TryEquip(slot, EquipmentSlot.Weapon1)) gear.TryEnhance(EquipmentSlot.Weapon1);
+            // 무기는 가방에 둔 채 퀵바 1번에 등록하고 선택한 뒤 강화합니다.
+            if (gear.EquipWeapon(slot, 0)) gear.TryEnhanceWeapon();
             Player.GetComponent<PlayerMana>().RestoreFull();
         }
 

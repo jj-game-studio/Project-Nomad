@@ -276,7 +276,6 @@ namespace Nomad.Game.Tests
             Component equipment = game.Player.GetComponent("PlayerEquipment");
             Component inventory = game.Player.GetComponent("PlayerInventory");
             Component combat = game.Player.GetComponent("PlayerEquipmentCombat");
-            object slot = Enum.ToObject(RuntimeType("Nomad.Equipment.EquipmentSlot"), 0);
             Vector2 center = camera.pixelRect.center;
             foreach (string id in new[] { "demo-sword", "demo-bow", "weapon-apprentice-staff" })
             {
@@ -287,21 +286,9 @@ namespace Nomad.Game.Tests
                     object item = stack.GetType().GetProperty("Item").GetValue(stack);
                     if (item != null && (string)item.GetType().GetProperty("ItemId").GetValue(item) == id) { found = i; break; }
                 }
-                if (found >= 0)
-                {
-                    Assert.That((bool)equipment.GetType().GetMethod("TryEquip").Invoke(equipment, new[] { (object)found, slot }), Is.True);
-                    equipment.GetType().GetMethod("SelectWeapon").Invoke(equipment, new[] { slot });
-                }
-                else
-                {
-                    for (int i = 0; i < 2; i++)
-                    {
-                        object equippedSlot = Enum.ToObject(slot.GetType(), i);
-                        object current = equipment.GetType().GetMethod("GetItem").Invoke(equipment, new[] { equippedSlot });
-                        if (current != null && (string)current.GetType().GetProperty("ItemId").GetValue(current) == id)
-                            equipment.GetType().GetMethod("SelectWeapon").Invoke(equipment, new[] { equippedSlot });
-                    }
-                }
+                // 무기는 가방에 둔 채 퀵바 1번에 등록해 손에 듭니다.
+                Assert.That(found, Is.GreaterThanOrEqualTo(0), id);
+                Assert.That((bool)equipment.GetType().GetMethod("EquipWeapon").Invoke(equipment, new object[] { found, 0 }), Is.True);
                 yield return Frames();
                 GameObject model = (GameObject)presenter.GetType().GetProperty("WeaponModel").GetValue(presenter);
                 Assert.That(model != null && model.activeInHierarchy && model.name.Contains(id), Is.True, id + " 실제 장착 외형");

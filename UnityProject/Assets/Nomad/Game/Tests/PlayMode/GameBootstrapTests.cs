@@ -446,7 +446,7 @@ namespace Nomad.Game.Tests
             var bag = (RectTransform)panel.GetType().GetProperty("BagGrid").GetValue(panel);
             var gear = (RectTransform)panel.GetType().GetProperty("EquipmentGrid").GetValue(panel);
             System.Type slotType = System.Type.GetType("Nomad.Equipment.EquipmentSlot, Assembly-CSharp");
-            object body = System.Enum.ToObject(slotType, 3);
+            object body = System.Enum.ToObject(slotType, 1);
 
             bool background = Application.runInBackground;
             var behavior = InputSystem.settings.backgroundBehavior;
@@ -465,18 +465,21 @@ namespace Nomad.Game.Tests
                 Assert.That(panel.GetType().GetProperty("IsOpen").GetValue(panel), Is.True);
                 Canvas.ForceUpdateCanvases();
 
-                // 1~2번은 무기 전용이라 방어구는 등록되지 않습니다.
+                // 1~2번은 무기 전용이라 방어구는 등록되지 않습니다. 시작 무기 등록은 그대로 남습니다.
+                var getItem = quick.GetType().GetMethod("GetItem");
+                object weapon1 = getItem.Invoke(quick, new object[] { 0 });
+                object weapon2 = getItem.Invoke(quick, new object[] { 1 });
                 int armorSlot = FindBagItem(inventory, "gear-chain-mail");
                 yield return ShowBagSlot(armorSlot);
                 yield return DragItem(mouse, ScreenCenter((RectTransform)bag.GetChild(armorSlot)), ScreenCenter(quickRects[0]));
-                Assert.That(quick.GetType().GetMethod("GetItem").Invoke(quick, new object[] { 0 }), Is.Null, "방어구 퀵바 등록 거부");
+                Assert.That(quick.GetType().GetMethod("GetItem").Invoke(quick, new object[] { 0 }), Is.SameAs(weapon1), "방어구 퀵바 등록 거부");
 
                 int potionSlot = FindBagItem(inventory, "health-potion");
                 yield return ShowBagSlot(potionSlot);
                 yield return DragItem(mouse, ScreenCenter((RectTransform)bag.GetChild(potionSlot)), ScreenCenter(quickRects[3]));
                 Assert.That(quick.GetType().GetMethod("GetCount").Invoke(quick, new object[] { 3 }), Is.EqualTo(3), "회복약 드래그 등록·잔량");
                 yield return DragItem(mouse, ScreenCenter(quickRects[3]), ScreenCenter(quickRects[0]));
-                Assert.That(quick.GetType().GetMethod("GetItem").Invoke(quick, new object[] { 0 }), Is.Null, "회복약은 무기 칸으로 이동 불가");
+                Assert.That(quick.GetType().GetMethod("GetItem").Invoke(quick, new object[] { 0 }), Is.SameAs(weapon1), "회복약은 무기 칸으로 이동 불가");
                 yield return DragItem(mouse, ScreenCenter(quickRects[3]), ScreenCenter(quickRects[2]));
                 Assert.That(quick.GetType().GetMethod("GetItem").Invoke(quick, new object[] { 3 }), Is.Null, "소모품 칸 사이 이동");
                 Assert.That(quick.GetType().GetMethod("GetCount").Invoke(quick, new object[] { 2 }), Is.EqualTo(3));
@@ -485,8 +488,8 @@ namespace Nomad.Game.Tests
                 yield return ShowBagSlot(armorSlot);
                 yield return RightClick(mouse, ScreenCenter((RectTransform)bag.GetChild(armorSlot)));
                 Assert.That(equipment.GetType().GetMethod("GetItem").Invoke(equipment, new[] { body }), Is.Not.Null, "우클릭 한 번 장착");
-                yield return DragItem(mouse, ScreenCenter((RectTransform)gear.GetChild(3)), ScreenCenter(quickRects[1]));
-                Assert.That(quick.GetType().GetMethod("GetItem").Invoke(quick, new object[] { 1 }), Is.Null, "장착 칸 방어구도 거부");
+                yield return DragItem(mouse, ScreenCenter((RectTransform)gear.GetChild(1)), ScreenCenter(quickRects[1]));
+                Assert.That(quick.GetType().GetMethod("GetItem").Invoke(quick, new object[] { 1 }), Is.SameAs(weapon2), "장착 칸 방어구도 거부");
 
                 yield return PressEscape();
                 Assert.That(panel.GetType().GetProperty("IsOpen").GetValue(panel), Is.False);

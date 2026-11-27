@@ -173,8 +173,8 @@ namespace Nomad.PlayerVisual.Editor
             yield return 0.5f;
 
             Begin("switch away and back cancels");
-            equipment.SelectWeapon(EquipmentSlot.Weapon2);
-            equipment.SelectWeapon(EquipmentSlot.Weapon1);
+            equipment.SelectWeapon(1);
+            equipment.SelectWeapon(0);
             yield return 0.3f;
             NoHit();
             yield return 0.4f;
@@ -255,18 +255,18 @@ namespace Nomad.PlayerVisual.Editor
             yield return 0.7f;
 
             step = "bow stays immediate";
-            equipment.SelectWeapon(EquipmentSlot.Weapon2);
+            equipment.SelectWeapon(1);
             int arrows = combat.ArrowCount;
             int shots = fired;
             float bowInterval = combat.CurrentWeapon.AttackInterval;
             beforeHits = attacks;
             Check(Attack() && !combat.IsMeleePending && combat.ArrowCount == arrows - 1 && fired == shots + 1 && attacks == beforeHits + 1,
                 "Bow gained windup or ammo changed");
-            equipment.SelectWeapon(EquipmentSlot.Weapon1);
+            equipment.SelectWeapon(0);
             yield return bowInterval + 0.1f;
 
             step = "unarmed stays immediate";
-            Check(equipment.TryUnequip(EquipmentSlot.Weapon1), "Could not unequip sword");
+            Check(equipment.GetComponent<PlayerQuickSlots>().Unregister(0), "Could not unregister sword");
             target.RestoreFull();
             target.transform.position = new Vector3(0f, 0.9f, 0.8f);
             Physics.SyncTransforms();
@@ -274,7 +274,7 @@ namespace Nomad.PlayerVisual.Editor
             Check(Attack() && !combat.IsMeleePending && attacks == beforeHits + 1 && target.CurrentHealth < 100, $"Unarmed regression: weapon={combat.CurrentWeapon?.ItemId}, pending={combat.IsMeleePending}, attacks={attacks}/{beforeHits}, hp={target.CurrentHealth}");
             var inventory = sword.GetComponent<PlayerInventory>();
             int slot = Enumerable.Range(0, PlayerInventory.Capacity).First(i => inventory.GetSlot(i).Item?.ItemId == PlayerSwordAnimation.SwordId);
-            Check(equipment.TryEquip(slot, EquipmentSlot.Weapon1), "Could not restore sword");
+            Check(equipment.EquipWeapon(slot, 0), "Could not restore sword");
             target.transform.position = new Vector3(0f, 0.9f, 1.5f);
             Physics.SyncTransforms();
             yield return 0.7f;

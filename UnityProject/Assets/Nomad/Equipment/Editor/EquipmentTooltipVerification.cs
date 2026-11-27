@@ -132,12 +132,10 @@ namespace Nomad.Equipment.Editor
                         break;
                     case 6:
                         Check(!Card(0).gameObject.activeSelf, "empty equipment slot hides");
-                        Pointer(Gear(EquipmentSlot.Weapon1));
+                        Pointer(Bag(Find("demo-sword")));
                         break;
+                    // 무기는 장비칸 없이 가방에 있으므로 바로 가방 무기 비교를 확인합니다.
                     case 7:
-                        Check(Title(0).Contains("검") && Body(0).Contains("공격력 25") &&
-                            !Card(0).Find("ComparisonStats").gameObject.activeSelf, "equipped weapon without comparison");
-                        Check(equipment.TryUnequip(EquipmentSlot.Weapon1), "weapon fixture");
                         Pointer(Bag(Find("demo-sword")));
                         break;
                     case 8:

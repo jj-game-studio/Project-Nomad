@@ -19,16 +19,16 @@ namespace Nomad.Tests
             PlayerQuickSlots quick = owner.AddComponent<PlayerQuickSlots>();
             owner.SetActive(true);
             bag.Add(sword.ItemId, 1);
-            Assert.That(gear.TryEquipAuto(0), Is.True);
-            Assert.That(quick.RegisterEquipped(EquipmentSlot.Weapon1, 0), Is.True);
+            Assert.That(gear.TryEquipAuto(0), Is.True, "가방 무기를 퀵바 1번에 등록");
+            Assert.That(gear.ActiveWeapon, Is.SameAs(sword));
             bag.Add(other.ItemId, 1);
-            Assert.That(gear.TryEnhance(EquipmentSlot.Weapon1), Is.False, "다른 무기를 재료로 소비하지 않음");
+            Assert.That(gear.TryEnhanceWeapon(), Is.False, "다른 무기를 재료로 소비하지 않음");
             Assert.That(bag.GetCount(other.ItemId), Is.EqualTo(1));
 
             bag.Add(sword.ItemId, 3);
             for (int level = 1; level <= 3; level++)
             {
-                Assert.That(gear.TryEnhance(EquipmentSlot.Weapon1), Is.True);
+                Assert.That(gear.TryEnhanceWeapon(), Is.True);
                 ItemDefinition enhanced = gear.ActiveWeapon;
                 Assert.That(enhanced.EnhancementLevel, Is.EqualTo(level));
                 Assert.That(enhanced.BaseItem, Is.SameAs(sword));
@@ -37,16 +37,16 @@ namespace Nomad.Tests
                 Assert.That(enhanced.AttackPower, Is.GreaterThan(sword.AttackPower));
                 Assert.That(bag.GetCount(sword.ItemId), Is.EqualTo(3 - level));
             }
-            Assert.That(gear.TryEnhance(EquipmentSlot.Weapon1), Is.False, "최대 +3");
+            Assert.That(gear.TryEnhanceWeapon(), Is.False, "최대 +3");
             ItemDefinition upgraded = gear.ActiveWeapon;
-            Assert.That(gear.TryUnequip(EquipmentSlot.Weapon1), Is.True);
+            Assert.That(quick.Unregister(0), Is.True);
+            Assert.That(gear.ActiveWeapon, Is.Null);
             int slot = -1;
             for (int index = 0; index < bag.SlotCount; index++) if (bag.GetSlot(index).Item == upgraded) slot = index;
             Assert.That(slot, Is.GreaterThanOrEqualTo(0));
             int destination = slot == 10 ? 11 : 10;
             Assert.That(bag.MoveStack(slot, destination), Is.True);
-            Assert.That(gear.TryEquip(destination, EquipmentSlot.Weapon2), Is.True);
-            gear.SelectWeapon(EquipmentSlot.Weapon2);
+            Assert.That(gear.EquipWeapon(destination, 1), Is.True);
             Assert.That(gear.ActiveWeapon, Is.SameAs(upgraded));
             Assert.That(gear.ActiveWeapon.EnhancementLevel, Is.EqualTo(3));
             Assert.That(sword.EnhancementLevel, Is.Zero, "공유 원본은 변경되지 않음");
@@ -77,12 +77,12 @@ namespace Nomad.Tests
             PlayerInventory bag = AddInventory(owner, sword);
             PlayerEquipment gear = owner.AddComponent<PlayerEquipment>();
             PlayerWallet wallet = owner.AddComponent<PlayerWallet>();
+            owner.AddComponent<PlayerQuickSlots>();
             owner.SetActive(true);
             bag.Add(sword.ItemId, 2);
             Assert.That(gear.TryEquipAuto(0), Is.True);
-            Assert.That(gear.TryEnhance(EquipmentSlot.Weapon1), Is.True);
+            Assert.That(gear.TryEnhanceWeapon(), Is.True);
             ItemDefinition enhanced = gear.ActiveWeapon;
-            Assert.That(gear.TryUnequip(EquipmentSlot.Weapon1), Is.True);
             int slot = 0;
             while (bag.GetSlot(slot).Item != enhanced) slot++;
 

@@ -119,7 +119,7 @@ namespace Nomad.Game.Editor
                     bag.Add("weapon-apprentice-staff", 2);
                     int slot = Enumerable.Range(0, bag.SlotCount).First(index => bag.GetSlot(index).Item?.ItemId == "weapon-apprentice-staff");
                     PlayerEquipment gear = player.GetComponent<PlayerEquipment>();
-                    Require(gear.TryEquip(slot, EquipmentSlot.Weapon1) && gear.TryEnhance(EquipmentSlot.Weapon1), "실제 시작 장비에서 강화");
+                    Require(gear.EquipWeapon(slot, 0) && gear.TryEnhanceWeapon(), "실제 시작 장비에서 강화");
                     MovePlayer(arena.Center - arena.Forward * 7);
                     boss.Stun(0.03f);
                     since = Time.time;

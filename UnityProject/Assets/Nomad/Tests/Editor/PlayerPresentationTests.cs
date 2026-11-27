@@ -142,7 +142,7 @@ namespace Nomad.Tests
                 int slot = -1;
                 for (int index = 0; index < inventory.SlotCount; index++)
                     if (inventory.GetSlot(index).Item?.ItemId == id) slot = index;
-                Assert.That(equipment.TryEquip(slot, EquipmentSlot.Weapon1), Is.True);
+                Assert.That(equipment.EquipWeapon(slot, 0), Is.True);
                 yield return null;
                 Transform hand = animation.Animator.GetBoneTransform(HumanBodyBones.RightHand);
                 Quaternion before = hand.rotation;

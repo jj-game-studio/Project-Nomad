@@ -13,6 +13,7 @@ namespace Nomad.Inventory
     {
         public const int Capacity = 6;
         // 1~2번은 무기 전용, 3~6번은 전투 중 사용하는 소모품 전용입니다.
+        // 무기는 장비칸 없이 가방에 둔 채 등록하며, 선택한 무기 칸이 손에 들 무기를 정합니다.
         public const int WeaponSlotCount = 2;
 
         private PlayerInventory inventory;
@@ -30,14 +31,13 @@ namespace Nomad.Inventory
         private void OnEnable()
         {
             inventory.Changed += Refresh;
-            if (equipment != null) equipment.Changed += Refresh;
+            if (equipment != null) equipment.Bind(this);
             Refresh();
         }
 
         private void OnDisable()
         {
             inventory.Changed -= Refresh;
-            if (equipment != null) equipment.Changed -= Refresh;
         }
 
         private void Update()
@@ -66,26 +66,7 @@ namespace Nomad.Inventory
             if (item.EquipmentType == EquipmentType.None)
                 return item.ItemId == PlayerHealing.PotionId && GetComponent<PlayerHealing>()?.TryUse() == true;
 
-            if (equipment == null || !equipment.isActiveAndEnabled)
-                return false;
-
-            for (int slot = 0; slot < PlayerEquipment.Capacity; slot++)
-            {
-                if (equipment.GetItem((EquipmentSlot)slot) != item)
-                    continue;
-                return item.EquipmentType != EquipmentType.Weapon || equipment.SelectWeapon((EquipmentSlot)slot);
-            }
-
-            for (int slot = 0; slot < inventory.SlotCount; slot++)
-            {
-                if (inventory.GetSlot(slot).Item != item)
-                    continue;
-                if (!equipment.TryGetAutoSlot(item.EquipmentType, out EquipmentSlot target) || !equipment.TryEquip(slot, target))
-                    return false;
-                return item.EquipmentType != EquipmentType.Weapon || equipment.SelectWeapon(target);
-            }
-
-            return false;
+            return item.EquipmentType == EquipmentType.Weapon && equipment != null && equipment.SelectWeapon(index);
         }
 
         public ItemDefinition GetItem(int index) => items[index];
@@ -113,17 +94,7 @@ namespace Nomad.Inventory
                 if (items[index] == previous) items[index] = replacement;
         }
 
-        public int GetCount(int index)
-        {
-            ItemDefinition item = items[index];
-            int count = inventory.GetCount(item);
-            if (item != null && equipment != null)
-            {
-                for (int slot = 0; slot < PlayerEquipment.Capacity; slot++)
-                    if (equipment.GetItem((EquipmentSlot)slot) == item) count++;
-            }
-            return count;
-        }
+        public int GetCount(int index) => (uint)index < Capacity ? inventory.GetCount(items[index]) : 0;
 
         // 가방 칸이 바뀌어도 등록을 유지하도록 위치 대신 아이템 정의를 참조합니다.
         public bool Register(int inventorySlot, int quickSlot)
@@ -135,9 +106,18 @@ namespace Nomad.Inventory
             return RegisterItem(item, quickSlot);
         }
 
-        public bool RegisterEquipped(EquipmentSlot equipmentSlot, int quickSlot)
+        // 가방 무기를 빈 무기 칸에, 모두 차 있으면 fallback 칸에 등록합니다.
+        public bool RegisterWeapon(ItemDefinition item, int fallback)
         {
-            return RegisterItem(equipment != null ? equipment.GetItem(equipmentSlot) : null, quickSlot);
+            if (item == null || item.EquipmentType != EquipmentType.Weapon || inventory.GetCount(item) == 0)
+                return false;
+
+            for (int index = 0; index < WeaponSlotCount; index++)
+                if (items[index] == item) return true;
+
+            for (int index = 0; index < WeaponSlotCount; index++)
+                if (items[index] == null) return RegisterItem(item, index);
+            return RegisterItem(item, fallback);
         }
 
         private bool RegisterItem(ItemDefinition item, int quickSlot)

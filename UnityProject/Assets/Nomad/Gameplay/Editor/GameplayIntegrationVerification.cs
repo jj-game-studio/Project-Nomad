@@ -194,7 +194,7 @@ namespace Nomad.Gameplay.Editor
             yield return null;
             var shooting = controls.Player.GetComponent<PlayerEquipmentCombat>();
             var equipment = shooting.GetComponent<PlayerEquipment>();
-            Require(equipment.SelectWeapon(EquipmentSlot.Weapon2), "select starter bow");
+            Require(equipment.SelectWeapon(1), "select starter bow");
             int arrows = shooting.ArrowCount;
             Require(arrows == 30, "starter arrows remain across regeneration");
             Require(!shooting.TryAttack(new Vector2(25f, Screen.height - 50f)) && shooting.ArrowCount == arrows,
@@ -357,7 +357,7 @@ namespace Nomad.Gameplay.Editor
         {
             int source = Enumerable.Range(0, PlayerInventory.Capacity)
                 .First(index => inventory.GetSlot(index).Item?.ItemId == "weapon-archmage-staff");
-            Require(equipment.TryEquip(source, EquipmentSlot.Weapon2), "staff replaces the bow");
+            Require(equipment.EquipWeapon(source, 1), "staff replaces the bow");
             var mana = shooting.GetComponent<PlayerMana>();
             var hud = shooting.GetComponent<Nomad.Hud.PlayerHud>();
             int cost = equipment.ActiveWeapon.ManaCost;

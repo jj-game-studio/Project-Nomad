@@ -172,7 +172,7 @@ namespace Nomad.Equipment.Editor
             for (int index = 0; index < PlayerInventory.Capacity; index++)
                 if (inventory.GetSlot(index).Item?.ItemId == itemId)
                     slot = index;
-            Check(slot >= 0 && equipment.TryEquip(slot, EquipmentSlot.Weapon1) && equipment.SelectWeapon(EquipmentSlot.Weapon1) &&
+            Check(slot >= 0 && equipment.EquipWeapon(slot, 0) && equipment.SelectWeapon(0) &&
                   combat.CurrentWeapon.ItemId == itemId, $"{itemId} 장착");
         }
 

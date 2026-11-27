@@ -14,7 +14,7 @@ namespace Nomad.Game.Modules
         {
             public string itemId;
             public int count;
-            [Tooltip("지급 직후 slot 칸에 장착합니다.")]
+            [Tooltip("지급 직후 slot 칸에 장착합니다. 무기는 slot 대신 퀵바 무기 칸에 등록합니다.")]
             public bool equip;
             public EquipmentSlot slot;
         }
@@ -32,6 +32,7 @@ namespace Nomad.Game.Modules
             granted = true;
             var inventory = GetComponent<PlayerInventory>();
             var equipment = GetComponent<PlayerEquipment>();
+            var quickSlots = GetComponent<PlayerQuickSlots>();
 
             foreach (Entry entry in items)
             {
@@ -39,7 +40,10 @@ namespace Nomad.Game.Modules
                     continue;
 
                 int index = FindSlot(inventory, entry.itemId);
-                if (index >= 0)
+                ItemDefinition item = index >= 0 ? inventory.GetSlot(index).Item : null;
+                if (item != null && item.EquipmentType == EquipmentType.Weapon)
+                    quickSlots?.RegisterWeapon(item, 0);
+                else if (index >= 0)
                     equipment.TryEquip(index, entry.slot);
             }
         }

@@ -57,10 +57,10 @@ namespace Nomad.Tests
                 {
                     bag.Add(id, 2);
                     int slot = Enumerable.Range(0, bag.SlotCount).First(index => bag.GetSlot(index).Item?.ItemId == id && bag.GetSlot(index).Item.EnhancementLevel == 0);
-                    Assert.That(gear.TryEquip(slot, EquipmentSlot.Weapon1), Is.True);
+                    Assert.That(gear.EquipWeapon(slot, 0), Is.True);
                     Vector2 pointer = camera.WorldToScreenPoint(new Vector3(0, 1, 9));
                     Assert.That(combat.TryUseSkill(pointer), Is.False, "미강화 무기는 스킬 없음");
-                    Assert.That(gear.TryEnhance(EquipmentSlot.Weapon1), Is.True);
+                    Assert.That(gear.TryEnhanceWeapon(), Is.True);
                     combat.GetComponent<PlayerMana>().RestoreFull();
                     float ready = Time.time + combat.CurrentWeapon.AttackInterval + 0.2f;
                     while (Time.time < ready) yield return null;

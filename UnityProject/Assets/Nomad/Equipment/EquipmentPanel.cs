@@ -9,11 +9,11 @@ namespace Nomad.Equipment
     [RequireComponent(typeof(PlayerEquipment))]
     public sealed class EquipmentPanel : MonoBehaviour
     {
-        private static readonly string[] Labels = { "무기 1", "무기 2", "투구", "갑옷", "바지", "신발", "가방", "장신구 1", "장신구 2", "장신구 3" };
-        private readonly UnityEngine.UI.Text[] names = new UnityEngine.UI.Text[10];
-        private readonly UnityEngine.UI.Image[] icons = new UnityEngine.UI.Image[10];
-        private readonly UnityEngine.UI.Outline[] borders = new UnityEngine.UI.Outline[10];
-        private readonly UnityEngine.UI.Image[] backgrounds = new UnityEngine.UI.Image[10];
+        private static readonly string[] Labels = { "투구", "갑옷", "바지", "신발", "가방", "장신구 1", "장신구 2", "장신구 3" };
+        private readonly UnityEngine.UI.Text[] names = new UnityEngine.UI.Text[PlayerEquipment.Capacity];
+        private readonly UnityEngine.UI.Image[] icons = new UnityEngine.UI.Image[PlayerEquipment.Capacity];
+        private readonly UnityEngine.UI.Outline[] borders = new UnityEngine.UI.Outline[PlayerEquipment.Capacity];
+        private readonly UnityEngine.UI.Image[] backgrounds = new UnityEngine.UI.Image[PlayerEquipment.Capacity];
         private PlayerEquipment equipment;
         private PlayerInventory inventory;
         private PlayerEquipmentCombat combat;
@@ -33,7 +33,8 @@ namespace Nomad.Equipment
         private Font font;
         private int selected = -1;
         private ItemDefinition selectedItem;
-        private EquipmentSlot enhancementSlot;
+        // 비어 있으면 강화 버튼이 선택한 퀵바 무기를 강화합니다.
+        private EquipmentSlot? enhancementSlot;
         private UnityEngine.UI.Button enhanceButton;
         private UnityEngine.UI.Text enhanceLabel;
         private int dragEquipment = -1;
@@ -119,8 +120,9 @@ namespace Nomad.Equipment
             layout.cellSize = new Vector2(80, 88);
             layout.spacing = new Vector2(8, 8);
             layout.constraint = UnityEngine.UI.GridLayoutGroup.Constraint.FixedColumnCount;
-            layout.constraintCount = 5;
-            for (int index = 0; index < 10; index++) CreateSlot(index);
+            layout.constraintCount = 4;
+            layout.childAlignment = TextAnchor.UpperCenter;
+            for (int index = 0; index < PlayerEquipment.Capacity; index++) CreateSlot(index);
 
             // 결과 문구는 검증용으로 유지하되, 화면 하단 HUD와 겹치므로 표시하지 않습니다.
             notice = Text("EquipmentHelp", panel, "", new Vector2(440, 44), Vector2.zero, 13);
@@ -207,7 +209,7 @@ namespace Nomad.Equipment
                 return;
 
             int count = 0;
-            for (int slot = 2; slot < PlayerEquipment.Capacity && count < comparisonItems.Length; slot++)
+            for (int slot = 0; slot < PlayerEquipment.Capacity && count < comparisonItems.Length; slot++)
             {
                 ItemDefinition equipped = equipment.GetItem((EquipmentSlot)slot);
                 if (equipped != null && equipped.EquipmentType == candidate.EquipmentType)
@@ -311,11 +313,6 @@ namespace Nomad.Equipment
                 notice.text = equipment.TryEquip(selected, (EquipmentSlot)gearSlot) ? "장착했습니다." : "이 칸에 장착할 수 없는 아이템입니다.";
                 CancelSelection();
             }
-            else if (dragEquipment >= 0 && equipmentDragging && hud != null && hud.FindQuickSlot(point) >= 0)
-            {
-                hud.QuickSlots.RegisterEquipped((EquipmentSlot)dragEquipment, hud.FindQuickSlot(point));
-                CancelSelection();
-            }
             else if (bagSlot >= 0 && dragEquipment >= 0 && equipmentDragging)
             {
                 bool changed = inventory.GetSlot(bagSlot).Item == null
@@ -326,16 +323,15 @@ namespace Nomad.Equipment
             }
             else if (gearSlot >= 0 && dragEquipment == gearSlot)
             {
-                enhancementSlot = (EquipmentSlot)gearSlot;
+                // 빈 장비칸을 누르면 강화 대상이 손에 든 퀵바 무기로 돌아갑니다.
                 ItemDefinition item = equipment.GetItem((EquipmentSlot)gearSlot);
+                enhancementSlot = item != null ? (EquipmentSlot)gearSlot : null;
                 if (gearClick && item != null && IsDoubleClick(-1 - gearSlot, item))
                 {
                     // 빈 가방 칸이 없거나 가방 용량 규칙에 막히면 TryUnequip이 거절해 그대로 둡니다.
                     bool removed = equipment.TryUnequip((EquipmentSlot)gearSlot);
                     notice.text = removed ? "장비를 가방에 넣었습니다." : "빈 가방 칸이 없어 해제할 수 없습니다.";
                 }
-                else if (gearClick && gearSlot <= 1)
-                    equipment.SelectWeapon((EquipmentSlot)gearSlot);
                 CancelSelection();
             }
             else if (dragEquipment >= 0 || (bagSlot < 0 && gearSlot < 0))
@@ -371,7 +367,6 @@ namespace Nomad.Equipment
             Vector2 point = mouse.position.ReadValue();
             if (!equipmentDragging) return;
 
-            hud?.HighlightQuickSlot(hud.FindQuickSlot(point), equipment.GetItem((EquipmentSlot)dragEquipment));
             equipmentDragPreview.gameObject.SetActive(true);
             BindPreview(equipmentDragName, equipmentDragIcon, draggedEquipmentItem);
             PositionPreview(equipmentDragPreview, point);
@@ -430,31 +425,31 @@ namespace Nomad.Equipment
         {
             if (enhanceButton != null)
             {
-                ItemDefinition item = equipment.GetItem(enhancementSlot);
+                ItemDefinition item = enhancementSlot is EquipmentSlot gear ? equipment.GetItem(gear) : equipment.ActiveWeapon;
                 enhanceLabel.text = item == null ? "장비 선택 후 강화" : $"{item.DisplayName} 강화";
-                enhanceButton.interactable = equipment.EnhancementMaterial(enhancementSlot) >= 0;
+                enhanceButton.interactable = (enhancementSlot is EquipmentSlot target
+                    ? equipment.EnhancementMaterial(target) : equipment.WeaponEnhancementMaterial()) >= 0;
             }
             PreviewSlot = -1;
             CanDrop = false;
             capacity.text = $"가방 ({inventory.UsedSlots} / {inventory.SlotCount})";
             LayoutBag();
             RefreshStats();
-            for (int index = 0; index < 10; index++)
+            for (int index = 0; index < PlayerEquipment.Capacity; index++)
             {
                 ItemDefinition item = equipment.GetItem((EquipmentSlot)index);
                 names[index].text = item == null ? string.Empty : item.Icon == null ? item.DisplayName :
                     item.EnhancementLevel > 0 ? $"+{item.EnhancementLevel}" : string.Empty;
-                EquipmentType type = index < 2 ? EquipmentType.Weapon : index == 2 ? EquipmentType.Head :
-                    index == 3 ? EquipmentType.Body : index == 4 ? EquipmentType.Legs : index == 5 ? EquipmentType.Feet :
-                    index == 6 ? EquipmentType.Bag : EquipmentType.Accessory;
+                EquipmentType type = index == 0 ? EquipmentType.Head : index == 1 ? EquipmentType.Body :
+                    index == 2 ? EquipmentType.Legs : index == 3 ? EquipmentType.Feet :
+                    index == 4 ? EquipmentType.Bag : EquipmentType.Accessory;
                 icons[index].sprite = item != null ? item.Icon : ItemUiStyle.Symbol(type);
                 icons[index].enabled = icons[index].sprite != null;
                 icons[index].color = item != null ? Color.white : new Color(1, 1, 1, 0.45f);
                 names[index].color = new Color32(238, 235, 222, 255);
                 backgrounds[index].color = ItemUiStyle.SlotFill;
-                // 선택한 무기칸은 금색, 나머지는 장착 장비의 등급 색으로 테두리를 그립니다.
-                borders[index].effectColor = (int)equipment.ActiveWeaponSlot == index ? new Color32(238, 186, 88, 255)
-                    : item != null && item.Tier != ItemTier.None ? TierStyle.Color(item.Tier) : new Color32(108, 128, 148, 255);
+                // 장착 장비의 등급 색으로 테두리를 그립니다.
+                borders[index].effectColor = item != null && item.Tier != ItemTier.None ? TierStyle.Color(item.Tier) : new Color32(108, 128, 148, 255);
             }
         }
 
@@ -497,7 +492,7 @@ namespace Nomad.Equipment
             enhanceButton = forge.gameObject.AddComponent<UnityEngine.UI.Button>();
             enhanceButton.onClick.AddListener(() =>
             {
-                notice.text = equipment.TryEnhance(enhancementSlot) ? "동일 장비 1개를 소비해 강화했습니다." : "강화할 동일 장비가 필요합니다. 최대 +3입니다.";
+                notice.text = (enhancementSlot is EquipmentSlot gear ? equipment.TryEnhance(gear) : equipment.TryEnhanceWeapon()) ? "동일 장비 1개를 소비해 강화했습니다." : "강화할 동일 장비가 필요합니다. 최대 +3입니다.";
             });
             enhanceLabel = Text("Label", forge, "장비 선택 후 강화", new Vector2(214, 36), Vector2.zero, 14);
             enhanceLabel.rectTransform.anchorMin = enhanceLabel.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);

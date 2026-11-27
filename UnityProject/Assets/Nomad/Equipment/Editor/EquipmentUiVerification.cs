@@ -232,21 +232,7 @@ namespace Nomad.Equipment.Editor
                         Check(equipment.GetItem(EquipmentSlot.Body) == null && inventory.GetSlot(source).Item?.ItemId == "gear-chain-mail",
                             "장비→지정 가방칸 빠른 드래그 드롭 실제 해제");
                         Check(!panel.EquipmentDragPreview.gameObject.activeSelf && panel.BagPreviewSlot == -1, "해제 성공 표시 정리");
-                        inventory.Add("demo-sword", 1);
-                        source = Find("demo-sword");
-                        Pointer(Gear(EquipmentSlot.Weapon2), true);
-                        stage = 90;
-                        break;
-                    case 90: Pointer(Bag(source), true); break;
-                    case 91:
-                        Check(panel.CanDropToBag && equipment.GetItem(EquipmentSlot.Weapon2)?.ItemId == "demo-bow" &&
-                            inventory.GetSlot(source).Item?.ItemId == "demo-sword", "호환 가방 교체 미리보기/소유 유지");
-                        Pointer(Bag(source));
-                        break;
-                    case 92:
-                        Check(equipment.GetItem(EquipmentSlot.Weapon2)?.ItemId == "demo-sword" && inventory.GetSlot(source).Item?.ItemId == "demo-bow",
-                            "장비→호환 가방 아이템 실제 교체");
-                        Check(equipment.TryEquip(source, EquipmentSlot.Weapon2) && inventory.Remove("demo-sword", 1) == 1, "교체 소유 보존/검사 상태 복원");
+                        // 무기는 장비칸이 없어 장비→가방 무기 교체 단계는 없습니다.
                         source = Find("demo-armor");
                         Pointer(Bag(source), true);
                         stage = 93;
@@ -299,7 +285,7 @@ namespace Nomad.Equipment.Editor
                         return;
                     case 18:
                         Check(visuals.ActiveEffects == 0, "효과 수명 종료 정리");
-                        Check(equipment.SelectWeapon(EquipmentSlot.Weapon2), "원거리 선택");
+                        Check(equipment.SelectWeapon(1), "원거리 선택");
                         visuals.ShowRange = true;
                         break;
                     case 19:
