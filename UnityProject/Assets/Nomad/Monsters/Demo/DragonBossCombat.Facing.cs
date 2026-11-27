@@ -19,7 +19,7 @@ namespace Nomad.Monsters.Demo
 
         private void UpdateFacing()
         {
-            if (!engaged) { engaged = true; nextCharge = Time.time + ChargeInterval; }
+            if (!engaged) { engaged = true; nextCharge = Time.time + Tuning.ChargeInterval; }
             if (Phase == DragonPhase.Windup)
             {
                 if (Pattern == DragonPattern.Charge)
@@ -44,7 +44,7 @@ namespace Nomad.Monsters.Demo
                 if (travel.sqrMagnitude < 0.01f) return;
                 float angle = Vector3.Angle(transform.forward, travel);
                 // 크게 방향을 바꿀 때는 속도를 낮춰 옆으로 미끄러지지 않게 합니다.
-                agent.speed = Mathf.Lerp(1.2f, 6, Mathf.InverseLerp(90, 15, angle));
+                agent.speed = Mathf.Lerp(Enraged ? 4 : 1.2f, MoveSpeed, Mathf.InverseLerp(90, 15, angle));
                 TurnTowards(travel, TurnSpeed);
             }
         }

@@ -13,7 +13,8 @@ namespace Nomad.Monsters.Demo
         private bool TickBossCharge()
         {
             if (!agent.enabled || !agent.isOnNavMesh) return true;
-            float step = Mathf.Min(dashRemaining, tactics.ChargeSpeed * Time.deltaTime);
+            float speed = Tuning.ChargeSpeed * Tempo;
+            float step = Mathf.Min(dashRemaining, speed * Time.deltaTime);
             Vector3 start = agent.nextPosition;
             bool stopped = false;
             if (NavMesh.Raycast(start, start + direction * step, out NavMeshHit edge, agent.areaMask))
@@ -34,7 +35,7 @@ namespace Nomad.Monsters.Demo
                 if (hit.collider.transform.IsChildOf(transform)) continue;
                 if (hit.collider.GetComponentInParent<Nomad.Combat.Health>() == target)
                 {
-                    if (!dashHitPlayer) { dashHitPlayer = true; target.TryApplyDamage(28); }
+                    if (!dashHitPlayer) { dashHitPlayer = true; target.TryApplyDamage(ScaleDamage(28)); }
                     continue;
                 }
                 step = Mathf.Max(0, hit.distance - 0.06f);
@@ -44,7 +45,7 @@ namespace Nomad.Monsters.Demo
 
             if (step > 0) agent.Move(direction * step);
             dashRemaining -= step;
-            return stopped || dashRemaining <= 0.05f || Time.time - dashStarted > PlannedChargeDistance / tactics.ChargeSpeed + 0.5f;
+            return stopped || dashRemaining <= 0.05f || Time.time - dashStarted > PlannedChargeDistance / speed + 0.5f;
         }
     }
 }

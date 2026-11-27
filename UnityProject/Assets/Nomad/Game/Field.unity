@@ -684,6 +684,28 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 397d5228b9981db4c9b5d5fb8e593ea3, type: 3}
   m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Monsters.Demo.BossEncounterContent
+  Tuning:
+    BasicRange: 4
+    SlamRadius: 12
+    SlamWindup: 1.15
+    RadialCount: 72
+    RadialRadius: 1.8
+    RadialSpeed: 42
+    RadialRange: 34
+    BreathRange: 18
+    BreathAngle: 110
+    BreathSafeRadius: 3.5
+    BreathTravelSeconds: 1.3
+    FirePoolCount: 4
+    FirePoolRadius: 2.8
+    RainWaves: 20
+    RainPerWave: 3
+    RainRadius: 1.65
+    RainFallSeconds: 0.85
+    RainInterval: 0.35
+    ChargeInterval: 22
+    ChargeWindup: 2.8
+    ChargeSpeed: 15
   Rock: {fileID: 7877644576711074951, guid: 5b91c0ccde428f74ebbae5f99da9a905, type: 3}
   BossHealth: 4200
   Knockdown: {fileID: 7400000, guid: 8098ca6f6a60ed5479a6164582a97106, type: 2}

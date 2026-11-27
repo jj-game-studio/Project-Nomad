@@ -16,6 +16,7 @@ namespace Nomad.Equipment
         private bool consumed;
         private PlayerEquipmentCombat combat;
         public int Reflections { get; private set; }
+        public int Successes { get; private set; }
         public bool IsReady => Time.time >= next;
         public bool Active => !consumed && Time.time < until && combat.CanParry;
 
@@ -23,6 +24,7 @@ namespace Nomad.Equipment
         public bool TryBegin()
         {
             if (!combat.CanParry || !IsReady) return false;
+            combat.InterruptForParry();
             consumed = false;
             until = Time.time + Window;
             next = Time.time + Cooldown;
@@ -31,8 +33,16 @@ namespace Nomad.Equipment
 
         private void Update()
         {
-            if (Keyboard.current?.gKey.wasPressedThisFrame == true) TryBegin();
+            if (Keyboard.current?.fKey.wasPressedThisFrame == true) TryBegin();
             if (!Active) return;
+
+            foreach (BossParrySignal signal in FindObjectsByType<BossParrySignal>(FindObjectsSortMode.None))
+                if (signal.TryParry(GetComponent<Health>()))
+                {
+                    if (signal.GetComponent<DragonBossCombat>().Pattern == DragonPattern.RadialFireballs) Reflections++;
+                    Succeed(transform.position + Vector3.up * 1.3f);
+                    return;
+                }
 
             BossFireball nearest = null;
             float distance = float.PositiveInfinity;
@@ -48,17 +58,24 @@ namespace Nomad.Equipment
         public bool TryReflect(BossFireball ball, Vector3 point)
         {
             if (!Active || !ball.Parryable || ball.Target != GetComponent<Health>()) return false;
+            // 보스의 신호 패턴은 거리/방향별 물리 충돌보다 노란 섬광 타이밍을 우선합니다.
+            if (ball.SignalControlled) return false;
             Vector3 delta = point - (transform.position + Vector3.up * 1.3f);
             if (delta.magnitude > 2.5f || Vector3.Angle(transform.forward, Vector3.ProjectOnPlane(delta, Vector3.up)) > 70) return false;
             if (!ball.Reflect(transform)) return false;
 
-            consumed = true;
             Reflections++;
+            Succeed(point);
+            return true;
+        }
 
+        private void Succeed(Vector3 point)
+        {
+            consumed = true;
+            Successes++;
             WeaponVfx.Burst(point, new WeaponVfxStyle(Color.white, new Color(0.35f, 0.8f, 1), 1));
             HitCameraImpulse.Pulse(0.13f, 0.12f);
             CombatImpactAudio.Play(GetComponent<AudioSource>() ?? gameObject.AddComponent<AudioSource>(), true, 0.25f);
-            return true;
         }
 
         private void OnDisable() { until = 0; consumed = true; }

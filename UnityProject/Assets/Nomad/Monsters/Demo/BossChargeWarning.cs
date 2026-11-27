@@ -50,7 +50,7 @@ namespace Nomad.Monsters.Demo
             for (int side = 0; side < 2; side++)
             {
                 Vector3 vertex = new(side == 0 ? -Width / 2 : Width / 2, 0, length * Mathf.Lerp(0.15f, 1, progress) * row / rows);
-                if (GroundHeight != null) vertex.y = GroundHeight(transform.TransformPoint(vertex)) + 0.1f - transform.position.y;
+                if (GroundHeight != null) vertex.y = GroundHeight(transform.TransformPoint(vertex)) + 0.22f - transform.position.y;
                 vertices[row * 2 + side] = vertex;
                 if (side != 0 || row == rows) continue;
                 int first = row * 6, index = row * 2;
@@ -66,7 +66,7 @@ namespace Nomad.Monsters.Demo
             for (int side = 0; side < 2; side++)
             {
                 Vector3 pointOnEdge = new(side == 0 ? -Width / 2 : Width / 2, 0, length * row / rows);
-                if (GroundHeight != null) pointOnEdge.y = GroundHeight(transform.TransformPoint(pointOnEdge)) + 0.12f - transform.position.y;
+                if (GroundHeight != null) pointOnEdge.y = GroundHeight(transform.TransformPoint(pointOnEdge)) + 0.25f - transform.position.y;
                 outline.SetPosition(side == 0 ? row : outline.positionCount - row - 1, pointOnEdge);
             }
             outline.startColor = outline.endColor = locked ? Color.red : new Color(1, 0.75f, 0.15f);

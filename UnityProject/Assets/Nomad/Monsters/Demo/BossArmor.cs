@@ -31,7 +31,8 @@ namespace Nomad.Monsters.Demo
         private void OnDamaged(Health _, int amount, DamageKind kind)
         {
             if (health.IsDead || kind != DamageKind.Combat) return;
-            if (health.LastHitSource == CombatImpactSource.ParriedFireball) DamageArmor(DurabilityPerLayer * 0.45f);
+            if (health.LastHitSource == CombatImpactSource.ParriedFireball || health.LastHitSource == CombatImpactSource.ParriedSlam)
+                DamageArmor(DurabilityPerLayer * 0.45f);
             else if (health.LastHitSource == CombatImpactSource.Basic) DamageArmor(Mathf.Min(12, amount / DamageMultiplier * 0.15f));
         }
 

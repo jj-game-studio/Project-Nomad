@@ -44,7 +44,7 @@ namespace Nomad.Monsters.Demo
             bool active = boss.Pattern == DragonPattern.Circle && boss.Phase == DragonPhase.Active;
             if (!active) { ResetPose(); return; }
             if (!jumping) { jumping = true; landed = false; since = Time.time; }
-            float progress = Mathf.Clamp01((Time.time - since) / LeapSeconds);
+            float progress = Mathf.Clamp01((Time.time - since) / boss.LeapDuration);
             Airborne = progress < 1;
             if (feet != null) feet.enabled = !Airborne;
             Vector3 lift = Vector3.up * (Mathf.Sin(progress * Mathf.PI) * 2.8f);
@@ -54,7 +54,8 @@ namespace Nomad.Monsters.Demo
 
             landed = true;
             Landings++;
-            BossGroundCracks.Create(boss.Effects, arena, transform.position, DragonBossCombat.CircleRadius);
+            boss.FinishParriedSlam();
+            BossGroundCracks.Create(boss.Effects, arena, transform.position, boss.Tuning.SlamRadius);
             HitCameraImpulse.Pulse(0.2f, 0.2f);
             CombatImpactAudio.Play(GetComponent<AudioSource>() ?? gameObject.AddComponent<AudioSource>(), true, 0.5f);
         }
@@ -65,7 +66,7 @@ namespace Nomad.Monsters.Demo
             Airborne = false;
             if (body != null) body.localPosition = resting;
             if (capsule != null) capsule.center = restingCollider;
-            if (feet != null) feet.enabled = boss == null || boss.Phase != DragonPhase.Dead;
+            if (feet != null) feet.enabled = boss == null || (boss.Phase != DragonPhase.Dead && boss.Phase != DragonPhase.Stunned);
         }
 
         private void OnDisable() => ResetPose();

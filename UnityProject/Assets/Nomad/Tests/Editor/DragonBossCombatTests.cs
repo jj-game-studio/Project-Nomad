@@ -185,7 +185,7 @@ namespace Nomad.Tests
         public void RocksLeaveCenterAndEntranceClear()
         {
             BossBreakableRock[] rocks = arena.GetComponentsInChildren<BossBreakableRock>();
-            Assert.That(rocks.Length, Is.EqualTo(24));
+            Assert.That(rocks.Length, Is.EqualTo(BossArena.InitialRockCount));
             foreach (BossBreakableRock rock in rocks)
             {
                 BoxCollider collision = rock.transform.Find("Rock collision").GetComponent<BoxCollider>();
@@ -384,7 +384,7 @@ namespace Nomad.Tests
             foreach (Vector3 vertex in fill.sharedMesh.vertices)
             {
                 Vector3 world = fill.transform.TransformPoint(vertex);
-                Assert.That(world.y - arena.GroundHeight(world), Is.InRange(0.07f, 0.11f));
+                Assert.That(world.y - arena.GroundHeight(world), Is.InRange(0.21f, 0.26f));
             }
         }
 
@@ -397,8 +397,8 @@ namespace Nomad.Tests
             Assert.That(combat.Effects.GetComponentsInChildren<BossHazard>().Length, Is.Zero, "3갈래 바닥 표시 없음");
             yield return Wait(0.8f);
             Assert.That(boss.GetComponent<BossRadialChargePose>().Weight, Is.GreaterThan(0.2f));
-            yield return Wait(0.8f);
-            Assert.That(combat.Effects.GetComponentsInChildren<BossFireball>().Length, Is.EqualTo(16));
+            yield return Wait(0.63f);
+            Assert.That(combat.Effects.GetComponentsInChildren<BossFireball>().Length, Is.EqualTo(combat.Tuning.RadialCount));
             Assert.That(combat.Effects.GetComponentsInChildren<BossFireball>().All(ball => ball.GetComponentsInChildren<MeshRenderer>().Length == 0), Is.True);
             combat.Stun(0.01f);
             yield return Wait(0.03f);
@@ -521,7 +521,7 @@ namespace Nomad.Tests
             BossHazard first = combat.Effects.GetComponentsInChildren<BossHazard>().First();
             Vector3 warningPosition = first.transform.position;
             Assert.That(first.Active, Is.False, "작은 불덩이에도 회피 전조 있음");
-            Assert.That(first.Radius, Is.EqualTo(1.15f));
+            Assert.That(first.Radius, Is.EqualTo(combat.Tuning.RainRadius));
             player.transform.position = arena.Center - Vector3.right * 6;
             Physics.SyncTransforms();
             yield return Wait(0.5f);
@@ -538,7 +538,7 @@ namespace Nomad.Tests
             combat.AutomaticPatterns = true;
             combat.BeginPattern(DragonPattern.Basic);
             Assert.That(boss.GetComponent<NavMeshAgent>().speed, Is.EqualTo(6));
-            for (int frame = 0; frame < 300; frame++)
+            for (int frame = 0; frame < 420; frame++)
             {
                 yield return null;
                 if (combat.Phase == DragonPhase.Recovery)
@@ -552,7 +552,7 @@ namespace Nomad.Tests
         public IEnumerator RainContinuesLongerAndSpawnsSixtyFireballs()
         {
             combat.BeginPattern(DragonPattern.Rain);
-            yield return Wait(8.4f);
+            yield return Wait(7.9f);
             Assert.That(combat.Phase, Is.EqualTo(DragonPhase.Active));
             Assert.That(combat.RainProjectilesSpawned, Is.EqualTo(60));
             yield return Wait(0.9f);
@@ -566,7 +566,7 @@ namespace Nomad.Tests
             combat.BeginPattern(DragonPattern.Breath);
             yield return Wait(2);
             BossHazard breath = combat.Effects.GetComponentsInChildren<BossHazard>().Single();
-            Assert.That(breath.Radius, Is.EqualTo(13.5f));
+            Assert.That(breath.Radius, Is.EqualTo(combat.Tuning.BreathRange));
             Vector3 widenedEdge = boss.transform.position + Quaternion.Euler(0, 42, 0) * boss.transform.forward * 12.5f;
             Assert.That(breath.Contains(widenedEdge), Is.True, "기존 9m/70도를 벗어난 지점까지 확대");
             Assert.That(breath.GetComponentsInChildren<ParticleSystem>().Length, Is.GreaterThanOrEqualTo(3));
@@ -624,7 +624,7 @@ namespace Nomad.Tests
         }
 
         [UnityTest]
-        public IEnumerator PointBlankCircleCanBeDodgedWithRealJumpWithoutInvulnerability()
+        public IEnumerator PointBlankCircleRequiresParryInsteadOfJumpInvulnerability()
         {
             Keyboard keyboard = InputSystem.AddDevice<Keyboard>();
             var muted = new List<InputDevice>();
@@ -668,8 +668,8 @@ namespace Nomad.Tests
                 Assert.That(hero.transform.position.y - arena.GroundHeight(hero.transform.position), Is.GreaterThan(0.65f));
                 yield return Wait(0.35f);
                 Assert.That(Vector3.ProjectOnPlane(hero.transform.position - arena.Center, Vector3.up).magnitude,
-                    Is.LessThan(DragonBossCombat.CircleRadius), "범위 안에서 실제 점프로 회피");
-                Assert.That(health.CurrentHealth, Is.EqualTo(hp));
+                    Is.LessThan(DragonBossCombat.CircleRadius), "실제 점프 중에도 강타 범위 안");
+                Assert.That(health.CurrentHealth, Is.EqualTo(hp - 32), "점프 대신 F 패링 패턴으로 변경");
                 Assert.That(health.IsCombatImmune, Is.False, "무적 없이 공중 높이로 회피");
                 Assert.That(boss.GetComponent<BossJumpSlam>().Landings, Is.EqualTo(1));
             }

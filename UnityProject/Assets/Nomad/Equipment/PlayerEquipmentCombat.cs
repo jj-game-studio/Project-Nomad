@@ -18,7 +18,16 @@ namespace Nomad.Equipment
         public const float MeleeHalfAngle = 60f;
         // 커서 레이 주변에서 적을 찾는 에임 보정 반경(m)입니다.
         public const float AimAssistRadius = 0.6f;
-        public bool CanParry => ChargeAllowed && !IsCharging && !IsMeleePending;
+        public bool CanParry => isActiveAndEnabled && equipment.isActiveAndEnabled && !InputBlocked && !EquipmentUiOpen &&
+            inventory?.BlocksTradeInput != true && Time.timeScale > 0 && !health.IsDead && !movement.BlocksAttack;
+
+        public void InterruptForParry()
+        {
+            CancelMelee();
+            CancelCharge();
+            holdingAttack = false;
+            nextAttackTime = Mathf.Max(nextAttackTime, Time.time + PlayerBossParry.Window);
+        }
 
         [SerializeField] private Camera viewCamera;
         [SerializeField] private Transform muzzle;
@@ -87,6 +96,7 @@ namespace Nomad.Equipment
             if (GetComponent<PlayerWeaponSkill>() == null) gameObject.AddComponent<PlayerWeaponSkill>();
             if (GetComponent<Nomad.CombatFeedback.PlayerDamageFeedback>() == null) gameObject.AddComponent<Nomad.CombatFeedback.PlayerDamageFeedback>();
             if (GetComponent<PlayerBossParry>() == null) gameObject.AddComponent<PlayerBossParry>();
+            if (GetComponent<Nomad.WorldHud.CharacterHealthHud>() == null) gameObject.AddComponent<Nomad.WorldHud.CharacterHealthHud>();
         }
 
         private void OnEnable()

@@ -47,8 +47,8 @@ namespace Nomad.Loot
             if (inventory == null || !inventory.isActiveAndEnabled) return;
             Keyboard keyboard = Keyboard.current;
 
-            // F: 가방을 가득 채워 공간 부족을 확인합니다. V: 검토용 아이템을 모두 비웁니다.
-            if (keyboard?.fKey.wasPressedThisFrame == true)
+            // F 패링과 겹치지 않게 검토용 채우기는 Shift+F를 사용합니다.
+            if (keyboard?.fKey.wasPressedThisFrame == true && keyboard.leftShiftKey.isPressed)
             {
                 ClearReviewItems();
                 inventory.Add("scrap", 96);
@@ -76,7 +76,7 @@ namespace Nomad.Loot
                 if (inventory.GetStack(i).Item.ItemId.StartsWith("scrap")) scrap += inventory.GetStack(i).Count;
             string result = lastChest == null ? "Approach a chest and press E"
                 : $"Last chest: {lastChest.CountItems()} items  ·  {lastChest.Status}";
-            status.text = $"E Open chest | F Fill inventory | V Clear test loot | Chests {Chests.Count}\n"
+            status.text = $"E Open chest | Shift+F Fill inventory | V Clear test loot | Chests {Chests.Count}\n"
                 + $"Scrap {scrap} | Slots {inventory.UsedSlots}/20 | {result}";
         }
     }

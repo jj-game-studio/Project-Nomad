@@ -18,6 +18,11 @@ namespace Nomad.Monsters.Demo
         public System.Func<Vector3, float> GroundHeight { get; set; }
         public float WarningSeconds { get; set; } = -1;
         public float JumpClearance { get; set; }
+        public float InnerRadius { get; set; }
+        public float VisualRangeMultiplier { get; set; } = 1;
+        public bool HideWarningWhileActive { get; set; }
+        public bool WarningVisible => fill != null && fill.gameObject.activeSelf;
+        public void CancelDamage() => damage = 0;
         private Health target;
         private Transform owner;
         private float delay, duration, interval, elapsed, nextHit;
@@ -112,6 +117,7 @@ namespace Nomad.Monsters.Demo
             fill.localScale = new Vector3(Mathf.Lerp(0.08f, 1, progress), 1, Mathf.Lerp(0.08f, 1, progress));
             ProjectGround(Mathf.Lerp(0.08f, 1, progress));
             if (!Active) return;
+            if (HideWarningWhileActive) { fill.gameObject.SetActive(false); boundary.gameObject.SetActive(false); }
             if (fire == null && EmitsFlame)
             {
                 fire = WeaponVfx.CreateParticles(transform, "Burning embers", WeaponVfx.Glow);
@@ -143,7 +149,7 @@ namespace Nomad.Monsters.Demo
             if (elapsed >= nextHit)
             {
                 nextHit = elapsed + interval;
-                if (Contains(target.transform.position)) target.TryApplyDamage(damage);
+                if (damage > 0 && Contains(target.transform.position)) target.TryApplyDamage(damage);
             }
             if (elapsed >= delay + duration) Destroy(gameObject);
         }
@@ -156,7 +162,7 @@ namespace Nomad.Monsters.Demo
             for (int index = 0; index < count; index++)
             {
                 Vector3 heading = transform.rotation * Quaternion.Euler(0, Random.Range(-angle * 0.5f, angle * 0.5f), 0) * Vector3.forward;
-                Vector3 endpoint = transform.position + heading * Radius + Vector3.up * 0.6f;
+                Vector3 endpoint = transform.position + heading * (Radius * VisualRangeMultiplier) + Vector3.up * 0.6f;
                 Vector3 velocity = (endpoint - origin) / BreathTravelSeconds;
                 float age = warm ? Random.Range(0, BreathTravelSeconds - 0.05f) : 0;
                 var particle = new ParticleSystem.EmitParams
@@ -188,7 +194,8 @@ namespace Nomad.Monsters.Demo
         {
             if (JumpClearance > 0 && GroundHeight != null && point.y - GroundHeight(point) > JumpClearance) return false;
             Vector3 offset = point - transform.position;
-            if (Mathf.Abs(offset.y) > 3 || Vector3.ProjectOnPlane(offset, Vector3.up).magnitude > Radius) return false;
+            float distance = Vector3.ProjectOnPlane(offset, Vector3.up).magnitude;
+            if (Mathf.Abs(offset.y) > 3 || distance > Radius || distance < InnerRadius) return false;
             if (angle < 359 && Vector3.Angle(transform.forward, Vector3.ProjectOnPlane(offset, Vector3.up)) > angle * 0.5f) return false;
             Vector3 ray = target.transform.position + Vector3.up - (transform.position + Vector3.up);
             return !Projectile.TryGetFirstHit(new Ray(transform.position + Vector3.up, ray.normalized), ray.magnitude,
@@ -203,7 +210,7 @@ namespace Nomad.Monsters.Demo
             {
                 Vector3 point = fullFootprint[index] * progress;
                 Vector3 world = transform.TransformPoint(point);
-                point.y = GroundHeight(world) + 0.09f - transform.position.y;
+                point.y = GroundHeight(world) + 0.22f - transform.position.y;
                 projected[index] = point;
             }
             mesh.vertices = projected;
@@ -213,7 +220,7 @@ namespace Nomad.Monsters.Demo
             {
                 Vector3 point = fullFootprint[angle >= 359 ? boundaryStart + index : index == 0 ? 0 : boundaryStart + index - 1];
                 Vector3 world = transform.TransformPoint(point);
-                point.y = GroundHeight(world) + 0.1f - transform.position.y;
+                point.y = GroundHeight(world) + 0.25f - transform.position.y;
                 boundary.SetPosition(index, point);
             }
             boundaryProjected = true;

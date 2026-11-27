@@ -9,7 +9,7 @@ namespace Nomad.Combat
         Fall
     }
 
-    public enum CombatImpactSource { Basic, Skill, ParriedFireball }
+    public enum CombatImpactSource { Basic, Skill, ParriedFireball, ParriedSlam }
 
     [DisallowMultipleComponent]
     public sealed class Health : MonoBehaviour
@@ -23,6 +23,8 @@ namespace Nomad.Combat
         public int CurrentHealth { get; private set; }
         public bool IsDead => CurrentHealth == 0;
         public bool IsCombatImmune { get; set; }
+        // 구르기처럼 한 프레임마다 갱신되는 무적과 독립적인 디버그 무적입니다.
+        public bool IsInvulnerable { get; set; }
         public bool LastHitCritical { get; private set; }
         public CombatImpactSource LastHitSource { get; private set; }
 
@@ -70,7 +72,7 @@ namespace Nomad.Combat
 
         private bool ApplyDamage(int amount, DamageKind kind, bool critical, CombatImpactSource source)
         {
-            if (amount <= 0 || IsDead || (kind == DamageKind.Combat && IsCombatImmune))
+            if (amount <= 0 || IsDead || IsInvulnerable || (kind == DamageKind.Combat && IsCombatImmune))
                 return false;
 
             // 보정 결과가 0 이하이면 회피한 공격으로 보고 피해를 적용하지 않습니다.

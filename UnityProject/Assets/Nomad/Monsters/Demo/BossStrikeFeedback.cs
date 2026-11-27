@@ -35,7 +35,8 @@ namespace Nomad.Monsters.Demo
             sound.spatialBlend = 0.2f;
             sound.maxDistance = 35;
             Transform body = transform.Find("Body");
-            bodies = body.GetComponentsInChildren<Renderer>(true);
+            bodies = System.Array.FindAll(body.GetComponentsInChildren<Renderer>(true),
+                renderer => renderer.sharedMaterial != null && renderer.sharedMaterial.HasProperty("_BaseColor"));
             head = System.Array.Find(body.GetComponentsInChildren<Transform>(true), bone => bone.name == "neck3");
             GetComponent<MonsterHitFeedback>()?.SetEffects(false, false, false);
             CreateParticles();
