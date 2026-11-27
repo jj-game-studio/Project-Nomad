@@ -9,75 +9,76 @@ namespace Nomad.Player
     [DefaultExecutionOrder(400)]
     public sealed class FirstPersonLandmarks : MonoBehaviour
     {
-        private sealed class Label
-        {
-            public TextMesh Source;
-            public TMP_Text Text;
-        }
-        private readonly List<Label> labels = new();
+        private readonly List<GameObject> labels = new();
         private readonly Dictionary<Renderer, bool> originals = new();
         private VillageFirstPersonCamera owner;
-        private Canvas canvas;
         private UnityEngine.SceneManagement.Scene region;
+
         public void Initialize(VillageFirstPersonCamera cameraOwner) => owner = cameraOwner;
 
         private void LateUpdate()
         {
-            if (owner == null || !owner.IsActive)
-            {
-                if (canvas != null) canvas.gameObject.SetActive(false);
-                Restore();
-                return;
-            }
+            bool active = owner != null && owner.IsActive;
+            if (!active) { SetVisible(false); return; }
             GameManager game = GameManager.Instance;
             if (game == null) return;
-            if (canvas == null) canvas = WorldHudCanvas.Create("First Person Landmarks", transform);
-            canvas.gameObject.SetActive(true);
+
             if (region != game.CurrentRegion)
             {
-                Restore();
-                foreach (Label label in labels) if (label.Text != null) Destroy(label.Text.gameObject);
+                SetVisible(false);
+                foreach (GameObject label in labels) if (label != null) Destroy(label);
                 labels.Clear();
+                originals.Clear();
                 region = game.CurrentRegion;
-                foreach (GameObject root in game.CurrentRegion.GetRootGameObjects())
+
+                foreach (GameObject root in region.GetRootGameObjects())
                 foreach (TextMesh source in root.GetComponentsInChildren<TextMesh>())
                 {
                     if (source.name != "Trade sign" && !source.text.Contains("필드")) continue;
                     Renderer renderer = source.GetComponent<Renderer>();
                     originals[renderer] = renderer.enabled;
-                    if (source.name == "Trade sign") continue;
-                    var rect = (RectTransform)new GameObject("Field Entrance Hint", typeof(RectTransform)).transform;
-                    rect.SetParent(canvas.transform, false);
-                    rect.sizeDelta = new Vector2(220, 40);
-
-                    TMP_Text text = rect.gameObject.AddComponent<TextMeshProUGUI>();
-                    text.font = InteractionHints.LabelFont();
-                    text.text = "필드 출입구";
-                    text.fontSize = 23;
-                    text.alignment = TextAlignmentOptions.Center;
-                    text.color = new Color(1f, 0.9f, 0.65f);
-
-                    text.outlineWidth = 0.2f;
-                    text.outlineColor = Color.black;
-                    text.raycastTarget = false;
-                    labels.Add(new Label { Source = source, Text = text });
+                    string boardName = source.name == "Field direction" ? "Signboard" :
+                        source.name == "Field Entrance Label" ? "Entrance Banner" : null;
+                    Transform board = boardName != null ? source.transform.parent.Find(boardName) : null;
+                    if (board != null) AttachText(board, source.text);
                 }
             }
-            foreach (var pair in originals) if (pair.Key != null) pair.Key.enabled = false;
-            foreach (Label label in labels)
-            {
-                bool visible = label.Source != null && Vector3.Distance(transform.position, label.Source.transform.position) < 14f &&
-                    WorldHudCanvas.Place(canvas, label.Text.rectTransform, GetComponent<Camera>(),
-                        label.Source.transform.position + Vector3.up * 0.3f, Vector2.zero);
-                label.Text.gameObject.SetActive(visible);
-            }
+            SetVisible(true);
         }
 
-        private void Restore()
+        private void AttachText(Transform board, string caption)
         {
-            foreach (var pair in originals) if (pair.Key != null) pair.Key.enabled = pair.Value;
+            // 글자는 판 앞면에 고정합니다. 카메라를 바라보는 회전이나 화면 좌표 변환은 없습니다.
+            var label = new GameObject("Attached Field Sign", typeof(RectTransform), typeof(TextMeshPro));
+            label.transform.SetParent(board, false);
+            label.transform.localPosition = new Vector3(0, 0, -0.515f);
+            Vector3 scale = board.lossyScale;
+            label.transform.localScale = new Vector3(1f / scale.x, 1f / scale.y, 1f / scale.z);
+
+            var text = label.GetComponent<TextMeshPro>();
+            text.font = InteractionHints.LabelFont();
+            text.text = caption;
+            text.rectTransform.sizeDelta = new Vector2(scale.x * 0.9f, scale.y * 0.82f);
+            text.alignment = TextAlignmentOptions.Center;
+            text.enableAutoSizing = true;
+            text.fontSizeMin = 1;
+            text.fontSizeMax = 100;
+            text.color = new Color(1f, 0.91f, 0.65f);
+            text.raycastTarget = false;
+            labels.Add(label);
         }
-        private void OnDisable() { Restore(); if (canvas != null) canvas.gameObject.SetActive(false); }
-        private void OnDestroy() { Restore(); if (canvas != null) Destroy(canvas.gameObject); }
+
+        private void SetVisible(bool active)
+        {
+            foreach (var pair in originals) if (pair.Key != null) pair.Key.enabled = active ? false : pair.Value;
+            foreach (GameObject label in labels) if (label != null) label.SetActive(active);
+        }
+
+        private void OnDisable() => SetVisible(false);
+        private void OnDestroy()
+        {
+            SetVisible(false);
+            foreach (GameObject label in labels) if (label != null) Destroy(label);
+        }
     }
 }

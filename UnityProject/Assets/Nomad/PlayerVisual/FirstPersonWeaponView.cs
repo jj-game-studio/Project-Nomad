@@ -18,7 +18,15 @@ namespace Nomad.PlayerVisual
         private ItemDefinition displayed;
         private Transform muzzle;
         private Transform previousMuzzle;
-        private Vector3 grip;
+        private FirstPersonViewCamera renderCamera;
+        private FirstPersonBow bow;
+        private Transform gripSocket;
+        private float strikeAt = -100f;
+        private float releasedAt = -100f;
+        private bool awaitingStrike;
+        private float windup;
+        private Renderer originalCharge;
+        private bool originalChargeHidden;
         private float started = -100f;
         private float duration = 0.5f;
         private float draw;
@@ -27,6 +35,7 @@ namespace Nomad.PlayerVisual
         private ParticleSystem charge;
         public bool HasArms => arms != null;
         public GameObject WeaponModel => weaponModel;
+        public Camera RenderCamera => renderCamera?.Camera;
 
         public void Initialize(VillageFirstPersonCamera cameraOwner, Transform target)
         {
@@ -45,16 +54,37 @@ namespace Nomad.PlayerVisual
             if (!owner.IsActive) return;
             started = Time.time;
             duration = item.AttackInterval;
+            windup = player.GetComponent<IMeleeAttackTiming>()?.GetWindup(item) ?? 0f;
+            awaitingStrike = true;
+            strikeAt = -100f;
         }
 
         private void Attack(WeaponAttackMode mode)
         {
-            if (!owner.IsActive || (mode == WeaponAttackMode.Melee && Time.time - started < duration)) return;
-            started = Time.time;
-            duration = combat.CurrentWeapon != null ? combat.CurrentWeapon.AttackInterval : 0.5f;
+            if (!owner.IsActive) return;
+            if (mode == WeaponAttackMode.Melee)
+            {
+                awaitingStrike = false;
+                strikeAt = Time.time;
+            }
+            else
+            {
+                releasedAt = Time.time;
+                if (mode == WeaponAttackMode.Staff && charge != null)
+                {
+                    charge.Emit(new ParticleSystem.EmitParams { startSize = 0.12f, startLifetime = 0.08f,
+                        startColor = new Color(0.7f, 0.9f, 1f, 0.7f) }, 1);
+                    charge.Emit(6);
+                }
+            }
         }
 
-        private void Cancel() { started = -100f; if (trail != null) trail.Clear(); }
+        private void Cancel()
+        {
+            started = strikeAt = releasedAt = -100f;
+            awaitingStrike = false;
+            if (trail != null) { trail.emitting = false; trail.Clear(); }
+        }
 
         private void Update()
         {
@@ -68,6 +98,8 @@ namespace Nomad.PlayerVisual
             if (!active)
             {
                 RestoreMuzzle();
+                renderCamera?.SetActive(false);
+                SetOriginalCharge(false);
                 if (root != null && root.activeSelf)
                 {
                     Cancel();
@@ -78,35 +110,51 @@ namespace Nomad.PlayerVisual
             }
             if (!EnsureArms()) return;
             root.SetActive(true);
+            renderCamera.SetActive(true);
+            SetOriginalCharge(true);
             ItemDefinition item = combat.CurrentWeapon;
             if (displayed != item) ChangeWeapon(item);
 
             WeaponAttackMode mode = item != null ? item.AttackMode : WeaponAttackMode.Melee;
             draw = Mathf.MoveTowards(draw, combat.IsCharging ? combat.ChargeProgress : 0f, Time.deltaTime * 6f);
             chargePose = Mathf.MoveTowards(chargePose, combat.IsCharging ? 1f : 0f, Time.deltaTime * 8f);
-            float progress = Mathf.Clamp01((Time.time - started) / Mathf.Max(0.1f, duration));
-            Vector3 right = new Vector3(0.3f, -0.18f, 0.58f);
-            Vector3 left = new Vector3(-0.28f, -0.48f, 0.24f);
-            Quaternion pose = Quaternion.Euler(10, -8, 8);
-            if (mode == WeaponAttackMode.Melee && progress < 1f)
+            float sinceStrike = Time.time - strikeAt;
+            float sinceRelease = Time.time - releasedAt;
+            Vector3 right = new Vector3(0.36f, -0.26f, 0.74f);
+            Vector3 left = new Vector3(-0.45f, -0.65f, 0.35f);
+            Quaternion pose = Quaternion.Euler(-12, 25, -10);
+            if (mode == WeaponAttackMode.Melee)
             {
-                float swing = progress < 0.18f ? -0.35f * Mathf.SmoothStep(0f, 1f, progress / 0.18f) :
-                    progress < 0.48f ? Mathf.Lerp(-0.35f, 1f, Mathf.SmoothStep(0f, 1f, (progress - 0.18f) / 0.3f)) :
-                    Mathf.Lerp(1f, 0f, Mathf.SmoothStep(0f, 1f, (progress - 0.48f) / 0.52f));
-                right += new Vector3(-0.18f, -0.06f, 0.05f) * swing;
-                pose *= Quaternion.Euler(25f * swing, -20f * swing, 40f * swing);
+                // 타격 이벤트에서 베기가 중심을 통과하고, 준비/복귀는 화면 가장자리로 이어집니다.
+                if (awaitingStrike)
+                {
+                    float elapsed = Time.time - started;
+                    float prep = Mathf.SmoothStep(0, 1, elapsed / Mathf.Max(0.04f, windup - 0.08f));
+                    right += new Vector3(0.07f, 0.07f, -0.12f) * prep;
+                    pose *= Quaternion.Euler(-30 * prep, -20 * prep, -30 * prep);
+                    float cut = Mathf.SmoothStep(0, 1, (elapsed - windup + 0.08f) / 0.08f);
+                    right = Vector3.Lerp(right, new Vector3(-0.15f, -0.17f, 0.82f), cut);
+                    pose = Quaternion.Slerp(pose, Quaternion.Euler(45, -40, 65), cut);
+                }
+                else if (sinceStrike < 0.34f)
+                {
+                    float recover = Mathf.SmoothStep(0, 1, sinceStrike / 0.34f);
+                    right = Vector3.Lerp(new Vector3(-0.15f, -0.17f, 0.82f), right, recover);
+                    pose = Quaternion.Slerp(Quaternion.Euler(45, -40, 65), pose, recover);
+                }
             }
             else if (mode == WeaponAttackMode.Bow)
             {
-                left = new Vector3(-0.18f, -0.19f, 0.58f);
-                right = new Vector3(0.19f, -0.21f, 0.42f - draw * 0.19f);
-                pose = Quaternion.Euler(0, -5, -8);
+                left = Vector3.Lerp(new Vector3(-0.27f, -0.27f, 0.8f), new Vector3(-0.13f, -0.08f, 0.68f), chargePose);
+                right = Vector3.Lerp(new Vector3(-0.16f, -0.24f, 0.72f), new Vector3(0.1f, -0.16f, 0.4f), draw);
+                pose = Quaternion.Euler(-3, 0, -8);
             }
             else if (mode == WeaponAttackMode.Staff)
             {
-                right = new Vector3(0.3f, -0.28f, 0.5f);
-                left = Vector3.Lerp(left, new Vector3(-0.22f, -0.16f, 0.52f), chargePose);
-                pose = Quaternion.Euler(Mathf.Lerp(12f, 35f, chargePose), -8, -18);
+                right = new Vector3(0.39f, -0.3f, 0.78f);
+                left = Vector3.Lerp(left, new Vector3(-0.28f, -0.18f, 0.68f), chargePose);
+                float recoil = sinceRelease < 0.25f ? Mathf.Sin(sinceRelease / 0.25f * Mathf.PI) : 0f;
+                pose = Quaternion.Euler(Mathf.Lerp(-8, 7, chargePose) - recoil * 12f, 15, -12);
             }
 
             // 벽에 가까우면 손을 낮춥니다. 실제 발사/피해의 벽 차단 검사는 기존 전투가 담당합니다.
@@ -121,17 +169,24 @@ namespace Nomad.PlayerVisual
             arms.Grip(transform, pose, mode == WeaponAttackMode.Bow, mode == WeaponAttackMode.Staff);
             if (weaponModel != null)
             {
-                Transform hand = mode == WeaponAttackMode.Bow ? arms.LeftHand : arms.RightHand;
-                weaponModel.transform.rotation = transform.rotation * pose * item.EquippedVisual.transform.localRotation;
-                weaponModel.transform.position = hand.TransformPoint(new Vector3(mode == WeaponAttackMode.Bow ? -0.045f : 0.045f, -0.015f, 0.015f)) - weaponModel.transform.TransformVector(grip);
-                if (trail != null) trail.emitting = !owner.InputBlocked && progress > 0.32f && progress < 0.65f;
+                if (trail != null) trail.emitting = !owner.InputBlocked && !awaitingStrike && sinceStrike < 0.1f;
+                bow?.Pose(arms.RightHand.TransformPoint(new Vector3(0.09f, 0.035f, 0)),
+                    transform.position + transform.forward * 30f, combat.ArrowCount > 0 && sinceRelease > 0.18f);
                 ApplyMuzzle();
             }
             if (charge != null)
             {
                 charge.transform.position = muzzle != null ? muzzle.position : arms.RightHand.position;
-                if (combat.IsCharging && !charge.isPlaying) charge.Play();
-                else if (!combat.IsCharging && charge.isPlaying) charge.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+                if (mode == WeaponAttackMode.Staff && WeaponVfx.TryGetStyle(item, out WeaponVfxStyle style))
+                {
+                    var main = charge.main;
+                    main.startColor = style.Glow;
+                    main.startSize = Mathf.Lerp(0.018f, 0.04f, draw);
+                    var emission = charge.emission;
+                    emission.rateOverTime = Mathf.Lerp(8f, 32f, draw);
+                }
+                if (combat.IsCharging && mode == WeaponAttackMode.Staff && !charge.isPlaying) charge.Play();
+                else if ((!combat.IsCharging || mode != WeaponAttackMode.Staff) && charge.isPlaying) charge.Stop(true, ParticleSystemStopBehavior.StopEmitting);
             }
         }
 
@@ -143,6 +198,7 @@ namespace Nomad.PlayerVisual
             root = new GameObject("First Person View");
             root.transform.SetParent(transform, false);
             arms = new FirstPersonArms(root.transform, prefab);
+            renderCamera = new FirstPersonViewCamera(GetComponent<Camera>());
 
             charge = WeaponVfx.CreateParticles(root.transform, "Hand Charge", WeaponVfx.Glow);
             charge.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
@@ -163,7 +219,10 @@ namespace Nomad.PlayerVisual
             var shape = charge.shape;
             shape.enabled = true;
             shape.shapeType = ParticleSystemShapeType.Sphere;
-            shape.radius = 0.05f;
+            shape.radius = 0.025f;
+            main.startColor = new Color(0.3f, 0.65f, 1f, 0.8f);
+            WeaponVfx.Fade(charge, 0f);
+            FirstPersonViewCamera.SetLayer(root);
             return true;
         }
 
@@ -177,19 +236,34 @@ namespace Nomad.PlayerVisual
             draw = chargePose = 0f;
             muzzle = null;
             trail = null;
-            weaponModel = item != null && item.EquippedVisual != null ? Instantiate(item.EquippedVisual, root.transform) : null;
-            if (weaponModel == null) return;
+            bow = null;
+            if (gripSocket != null) Destroy(gripSocket.gameObject);
+            gripSocket = null;
+            weaponModel = null;
+            if (item == null || item.EquippedVisual == null) return;
+
+            bool isBow = item.AttackMode == WeaponAttackMode.Bow;
+            Transform hand = isBow ? arms.LeftHand : arms.RightHand;
+            gripSocket = new GameObject("Palm Grip Socket").transform;
+            gripSocket.SetParent(hand, false);
+            gripSocket.localPosition = isBow ? new Vector3(-0.09f, -0.035f, 0) : new Vector3(0.09f, 0.035f, 0);
+            gripSocket.localRotation = Quaternion.Inverse(Quaternion.Euler(90, 0, isBow ? -90 : 90));
+            weaponModel = Instantiate(item.EquippedVisual, gripSocket);
 
             weaponModel.name = "First Person " + item.ItemId;
-            weaponModel.transform.localScale *= item.AttackMode == WeaponAttackMode.Melee ? 0.36f : 0.65f;
             foreach (Collider collider in weaponModel.GetComponentsInChildren<Collider>()) collider.enabled = false;
             MeshFilter mesh = weaponModel.GetComponentInChildren<MeshFilter>();
             if (mesh == null || mesh.sharedMesh == null) return;
 
             Bounds bounds = mesh.sharedMesh.bounds;
+            float length = item.AttackMode == WeaponAttackMode.Staff ? 1.25f : isBow ? 1.05f : 0.82f;
+            float currentLength = mesh.transform.TransformVector(Vector3.up * bounds.size.y).magnitude;
+            weaponModel.transform.localScale *= length / Mathf.Max(0.01f, currentLength);
             Vector3 localGrip = bounds.center;
-            if (item.AttackMode == WeaponAttackMode.Melee) localGrip.y = bounds.min.y + bounds.size.y * 0.18f;
-            grip = weaponModel.transform.InverseTransformPoint(mesh.transform.TransformPoint(localGrip));
+            if (item.AttackMode == WeaponAttackMode.Melee) localGrip.y = bounds.min.y + bounds.size.y * 0.12f;
+            Vector3 grip = weaponModel.transform.InverseTransformPoint(mesh.transform.TransformPoint(localGrip));
+            weaponModel.transform.localPosition = -(weaponModel.transform.localRotation * Vector3.Scale(grip, weaponModel.transform.localScale));
+            if (isBow) bow = new FirstPersonBow(weaponModel.transform, mesh);
             muzzle = new GameObject("View Weapon Tip").transform;
             muzzle.SetParent(mesh.transform, false);
             muzzle.localPosition = item.AttackMode == WeaponAttackMode.Bow ? bounds.center :
@@ -205,6 +279,7 @@ namespace Nomad.PlayerVisual
                 trail.endColor = Color.clear;
                 trail.emitting = false;
             }
+            FirstPersonViewCamera.SetLayer(gripSocket.gameObject);
         }
 
         private void ApplyMuzzle()
@@ -220,7 +295,17 @@ namespace Nomad.PlayerVisual
             previousMuzzle = null;
         }
 
-        private void OnDisable() { RestoreMuzzle(); if (root != null) root.SetActive(false); }
+        private void SetOriginalCharge(bool hidden)
+        {
+            if (originalCharge == null && player != null)
+            {
+                originalCharge = player.Find("Charge Gathering")?.GetComponentInChildren<ParticleSystemRenderer>();
+                if (originalCharge != null) originalChargeHidden = originalCharge.forceRenderingOff;
+            }
+            if (originalCharge != null) originalCharge.forceRenderingOff = hidden || originalChargeHidden;
+        }
+
+        private void OnDisable() { SetOriginalCharge(false); RestoreMuzzle(); renderCamera?.SetActive(false); if (root != null) root.SetActive(false); }
         private void OnDestroy()
         {
             if (combat != null)
@@ -231,6 +316,8 @@ namespace Nomad.PlayerVisual
                 combat.ChargeCancelled -= Cancel;
             }
             RestoreMuzzle();
+            SetOriginalCharge(false);
+            renderCamera?.Dispose();
             if (root != null) Destroy(root);
         }
     }

@@ -16,7 +16,8 @@ namespace Nomad.PlayerVisual
         {
             root = Object.Instantiate(prefab, parent, false).transform;
             root.name = "First Person Arms";
-            root.localPosition = new Vector3(0, -1.25f, 0.05f);
+            root.localPosition = new Vector3(0, -1.5f, -0.15f);
+            root.localScale *= 0.85f;
 
             animator = root.GetComponentInChildren<Animator>();
             RightHand = animator.GetBoneTransform(HumanBodyBones.RightHand);
@@ -28,15 +29,19 @@ namespace Nomad.PlayerVisual
         {
             foreach (var pair in rest) pair.Key.localRotation = pair.Value;
             Arm(HumanBodyBones.RightUpperArm, HumanBodyBones.RightLowerArm, RightHand,
-                camera.TransformPoint(right), camera.TransformPoint(new Vector3(0.5f, -0.55f, 0.1f)));
+                camera.TransformPoint(right), camera.TransformPoint(new Vector3(0.62f, -0.65f, 0.28f)),
+                camera.TransformPoint(new Vector3(0.32f, -0.38f, 0.3f)));
             Arm(HumanBodyBones.LeftUpperArm, HumanBodyBones.LeftLowerArm, LeftHand,
-                camera.TransformPoint(left), camera.TransformPoint(new Vector3(-0.5f, -0.55f, 0.1f)));
+                camera.TransformPoint(left), camera.TransformPoint(new Vector3(-0.62f, -0.65f, 0.28f)),
+                camera.TransformPoint(new Vector3(-0.32f, -0.38f, 0.3f)));
         }
 
-        private void Arm(HumanBodyBones upperId, HumanBodyBones lowerId, Transform hand, Vector3 target, Vector3 hint)
+        private void Arm(HumanBodyBones upperId, HumanBodyBones lowerId, Transform hand, Vector3 target, Vector3 hint, Vector3 shoulder)
         {
             Transform upper = animator.GetBoneTransform(upperId);
             Transform lower = animator.GetBoneTransform(lowerId);
+            // 어깨를 화면 밖 아래에 두어 전완이 화면 가장자리에서 손으로 이어지게 합니다.
+            upper.position = shoulder;
             float a = Vector3.Distance(upper.position, lower.position);
             float b = Vector3.Distance(lower.position, hand.position);
 
@@ -52,8 +57,8 @@ namespace Nomad.PlayerVisual
 
         public void Grip(Transform camera, Quaternion pose, bool bow, bool staff)
         {
-            RightHand.rotation = camera.rotation * pose * Quaternion.Euler(90, 0, 0);
-            LeftHand.rotation = camera.rotation * (bow ? pose : Quaternion.identity) * Quaternion.Euler(90, 0, 0);
+            RightHand.rotation = camera.rotation * pose * Quaternion.Euler(90, 0, 90);
+            LeftHand.rotation = camera.rotation * (bow ? pose : Quaternion.identity) * Quaternion.Euler(90, 0, -90);
             Curl(RightHand, true);
             Curl(LeftHand, bow || !staff);
         }

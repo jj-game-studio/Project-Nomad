@@ -265,6 +265,10 @@ namespace Nomad.Game.Tests
             Camera camera = game.GetComponentInChildren<Camera>();
             Component presenter = camera.GetComponent(RuntimeType("Nomad.PlayerVisual.FirstPersonWeaponView"));
             Assert.That((bool)presenter.GetType().GetProperty("HasArms").GetValue(presenter), Is.True);
+            Camera renderCamera = (Camera)presenter.GetType().GetProperty("RenderCamera").GetValue(presenter);
+            Assert.That(renderCamera.enabled, Is.True);
+            Assert.That(renderCamera.fieldOfView, Is.EqualTo(60f));
+            Assert.That(camera.cullingMask & (1 << LayerMask.NameToLayer("FirstPersonView")), Is.Zero);
             SkinnedMeshRenderer[] arms = camera.GetComponentsInChildren<SkinnedMeshRenderer>();
             Assert.That(arms.Length, Is.GreaterThan(0));
             Assert.That(arms.All(r => r.sharedMesh.subMeshCount > 0 && r.sharedMesh.GetIndexCount(0) > 0), Is.True);
@@ -302,6 +306,7 @@ namespace Nomad.Game.Tests
                 GameObject model = (GameObject)presenter.GetType().GetProperty("WeaponModel").GetValue(presenter);
                 Assert.That(model != null && model.activeInHierarchy && model.name.Contains(id), Is.True, id + " 실제 장착 외형");
                 Assert.That(model.GetComponentsInChildren<Collider>().All(c => !c.enabled), Is.True);
+                Assert.That(model.transform.parent.name, Is.EqualTo("Palm Grip Socket"), "무기는 손 소켓의 자식");
                 Capture(id + "-idle");
                 if (id == "demo-sword")
                 {
@@ -315,6 +320,11 @@ namespace Nomad.Game.Tests
                     Component slash = Object.FindAnyObjectByType(RuntimeType("Nomad.Equipment.SwordSlashVfx")) as Component;
                     if (slash != null) Assert.That(slash.GetComponent<MeshRenderer>().enabled, Is.False, "탑다운용 넓은 베기 면 숨김");
                     yield return new WaitForSeconds(0.9f);
+                    if (Environment.GetEnvironmentVariable("NOMAD_CAPTURE_MOTION") == "1")
+                    {
+                        Assert.That((bool)combat.GetType().GetMethod("TryAttack").Invoke(combat, new object[] { center }), Is.True);
+                        yield return Motion("sword", 36);
+                    }
                 }
                 else
                 {
@@ -324,15 +334,31 @@ namespace Nomad.Game.Tests
                     Assert.That((bool)combat.GetType().GetProperty("IsCharging").GetValue(combat), Is.True, "실제 좌클릭 유지 차징");
                     yield return new WaitForSeconds(0.6f);
                     Assert.That((bool)combat.GetType().GetProperty("IsCharging").GetValue(combat), Is.True, "차징 유지 중 조기 취소 없음");
-                    ParticleSystem handCharge = camera.GetComponentsInChildren<ParticleSystem>().First(p => p.name == "Hand Charge");
-                    Assert.That(handCharge.particleCount, Is.GreaterThan(0), "표시 무기 끝의 차징 입자");
+                    if (id == "demo-bow")
+                    {
+                        LineRenderer bowstring = model.GetComponentsInChildren<LineRenderer>().First(p => p.name == "Drawn Bowstring");
+                        Assert.That(Vector3.Distance(bowstring.GetPosition(1), (bowstring.GetPosition(0) + bowstring.GetPosition(2)) * 0.5f),
+                            Is.GreaterThan(0.1f), "차징 진행만큼 시위가 당겨짐");
+                        Assert.That(model.GetComponentsInChildren<Transform>().Any(p => p.name == "Nocked Arrow"), Is.True);
+                        Animator rig = camera.GetComponentInChildren<Animator>();
+                        Vector3 hand = renderCamera.WorldToViewportPoint(rig.GetBoneTransform(HumanBodyBones.RightHand).position);
+                        Assert.That(hand.x, Is.InRange(0.35f, 0.85f), "당기는 오른손이 화면 안에 표시");
+                        Assert.That(hand.y, Is.InRange(0.05f, 0.55f));
+                    }
+                    else
+                    {
+                        ParticleSystem handCharge = camera.GetComponentsInChildren<ParticleSystem>().First(p => p.name == "Hand Charge");
+                        Assert.That(handCharge.particleCount, Is.GreaterThan(0), "표시 무기 끝의 차징 입자");
+                    }
                     Capture(id + "-charge");
+                    if (Environment.GetEnvironmentVariable("NOMAD_CAPTURE_MOTION") == "1") yield return Motion(id, 12);
                     Transform tip = model.GetComponentsInChildren<Transform>().First(t => t.name == "View Weapon Tip");
                     Vector3 origin = (Vector3)combat.GetType().GetProperty("ProjectileOrigin").GetValue(combat);
                     Assert.That(Vector3.Distance(tip.position, origin), Is.LessThan(0.001f), "보이는 발사구와 실제 발사 위치");
                     InputSystem.QueueStateEvent(mouse, new MouseState { position = center });
                     yield return Frames();
                     Assert.That((bool)combat.GetType().GetProperty("IsCharging").GetValue(combat), Is.False);
+                    if (Environment.GetEnvironmentVariable("NOMAD_CAPTURE_MOTION") == "1") yield return Motion(id, 18, 12);
                     Assert.That((float)combat.GetType().GetProperty("LastShotPower").GetValue(combat), Is.GreaterThan(1.5f), "실제 차징 발사");
                     if (id == "demo-bow") Assert.That((int)combat.GetType().GetProperty("ArrowCount").GetValue(combat), Is.EqualTo(arrows - 1));
                     yield return new WaitForSeconds(0.9f);
@@ -346,13 +372,21 @@ namespace Nomad.Game.Tests
             yield return Frames();
             InputSystem.QueueDeltaStateEvent(mouse.delta, new Vector2(150, 70));
             yield return Frames();
-            RectTransform label = Object.FindObjectsByType<RectTransform>(FindObjectsSortMode.None).First(t => t.name == "Field Entrance Hint");
-            Assert.That(Quaternion.Angle(label.rotation, Quaternion.identity), Is.LessThan(0.01f), "카메라 회전에도 화면 안내는 수평");
+            RectTransform label = Object.FindObjectsByType<RectTransform>(FindObjectsSortMode.None)
+                .First(t => t.name == "Attached Field Sign" && t.parent.name == "Signboard");
+            Quaternion signRotation = label.rotation;
+            Assert.That(label.parent.name, Is.EqualTo("Signboard"));
+            Assert.That(label.localPosition.z, Is.LessThan(-0.5f), "판 앞면에 고정");
+            Assert.That(label.sizeDelta.x, Is.GreaterThan(1.8f), "판 너비에 맞춘 문구");
+            InputSystem.QueueDeltaStateEvent(mouse.delta, new Vector2(-100, -50));
+            yield return Frames();
+            Assert.That(Quaternion.Angle(label.rotation, signRotation), Is.LessThan(0.01f), "카메라를 돌려도 간판 회전 없음");
             Assert.That(sign.GetComponent<Renderer>().enabled, Is.False);
             Capture("first-person-landmark");
             VillageViewSettings.SetFirstPerson(false);
             yield return Frames();
             Assert.That(sign.GetComponent<Renderer>().enabled, Is.True, "탑다운 전환 시 원래 월드 글자 복원");
+            Assert.That(renderCamera.enabled, Is.False, "탑다운에서 별도 렌더 중단");
             Assert.That(camera.GetComponentsInChildren<SkinnedMeshRenderer>().Length, Is.EqualTo(0), "1인칭 전용 팔 숨김");
         }
 
@@ -434,6 +468,16 @@ namespace Nomad.Game.Tests
             yield return Frames();
         }
 
+        private static IEnumerator Motion(string name, int count, int offset = 0)
+        {
+            Directory.CreateDirectory(Path.GetFullPath("Artifacts/village-camera/" + name));
+            for (int frame = 0; frame < count; frame++)
+            {
+                yield return new WaitForSeconds(1f / 30f);
+                Capture(name + "/" + (frame + offset).ToString("D4"));
+            }
+        }
+
         private static void Capture(string name)
         {
             string folder = Path.GetFullPath("Artifacts/village-camera");
@@ -442,7 +486,6 @@ namespace Nomad.Game.Tests
             bool temporary = camera == null;
             if (temporary) camera = new GameObject("Menu Capture Camera").AddComponent<Camera>();
             int previousMask = camera.cullingMask;
-            camera.cullingMask = ~0;
             RenderTexture previousTarget = camera.targetTexture;
             RenderTexture previousActive = RenderTexture.active;
             var texture = new RenderTexture(1280, 720, 24);
@@ -457,6 +500,7 @@ namespace Nomad.Game.Tests
                     canvas.renderMode = RenderMode.ScreenSpaceCamera;
                     canvas.worldCamera = camera;
                     canvas.planeDistance = camera.nearClipPlane + 0.01f;
+
                 }
                 Canvas.ForceUpdateCanvases();
                 camera.Render();
