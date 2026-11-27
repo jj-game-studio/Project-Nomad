@@ -87,18 +87,38 @@ namespace Nomad.Monsters.Demo
             noise.scrollSpeed = 3;
             emission = flame.emission;
             emission.enabled = true;
-            emission.rateOverTime = Radius > 1 ? 40 : 65;
+            emission.rateOverTime = Radius > 1 ? 85 : 100;
+            AddMeteorSparks();
             WeaponVfx.Shrink(flame);
             WeaponVfx.Fade(flame, 0);
 
             var trail = gameObject.AddComponent<TrailRenderer>();
             trail.sharedMaterial = WeaponVfx.Beam;
-            trail.time = 0.45f;
+            trail.time = 0.7f;
             trail.startWidth = Radius * 2;
             trail.endWidth = 0;
             trail.startColor = Radius > 1 ? new Color(1.2f, 0.22f, 0.015f, 0.55f) : new Color(2, 0.5f, 0.03f);
             trail.endColor = new Color(0.8f, 0.02f, 0, 0);
             trail.minVertexDistance = 0.06f;
+        }
+
+        private void AddMeteorSparks()
+        {
+            var sparks = WeaponVfx.CreateParticles(transform, "Meteor trailing sparks", WeaponVfx.Glow);
+            var main = sparks.main;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(0.25f, 0.65f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.04f, 0.15f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(0.4f, 2);
+            main.startColor = new Color(3, 1.2f, 0.08f);
+            main.gravityModifier = 0.3f;
+            var shape = sparks.shape;
+            shape.enabled = true; shape.shapeType = ParticleSystemShapeType.Sphere; shape.radius = Radius * 0.65f;
+            var emission = sparks.emission;
+            emission.enabled = true; emission.rateOverTime = 90;
+            var renderer = sparks.GetComponent<ParticleSystemRenderer>();
+            renderer.renderMode = ParticleSystemRenderMode.Stretch;
+            renderer.lengthScale = 2; renderer.velocityScale = 0.1f;
+            WeaponVfx.Fade(sparks, 0);
         }
 
         private void Update()
@@ -186,6 +206,7 @@ namespace Nomad.Monsters.Demo
         private void Explode(Vector3 point)
         {
             impact?.Invoke(point);
+            if (!SignalControlled && !reflected) BossStoneDebris.Create(transform.parent, point);
             WeaponVfx.Burst(point, new WeaponVfxStyle(new Color(1, 0.8f, 0.2f), new Color(1, 0.25f, 0.03f), 0.8f));
             Destroy(gameObject);
         }

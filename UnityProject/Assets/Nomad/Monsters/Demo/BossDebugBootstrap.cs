@@ -59,11 +59,6 @@ namespace Nomad.Monsters.Demo
 
         private void Update()
         {
-            if (Player != null && Mouse.current != null)
-            {
-                Vector2 pointer = Mouse.current.position.ReadValue();
-                Player.InputBlocked = PanelRect.Contains(new Vector2(pointer.x, Screen.height - pointer.y));
-            }
             if (!restarting && Keyboard.current?.rKey.wasPressedThisFrame == true) StartCoroutine(Spawn());
         }
 

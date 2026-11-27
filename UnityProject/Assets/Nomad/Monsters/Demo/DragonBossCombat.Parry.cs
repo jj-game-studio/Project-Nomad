@@ -36,12 +36,10 @@ namespace Nomad.Monsters.Demo
 
         private void PrepareRadialWarning(float windup, int volley = 0)
         {
-            float distance = Vector3.ProjectOnPlane(target.transform.position - transform.position, Vector3.up).magnitude;
-            float travel = Mathf.Max(0, distance - 3 - Tuning.RadialRadius) / (Tuning.RadialSpeed * Tempo);
-            float impactAt = Time.time + windup + travel;
+            float impactAt = Time.time + windup;
             parrySignal.Arm(impactAt, Tuning.RadialRange);
             BossParryRangeWarning.Create(effects, arena, transform.position, direction, Tuning.RadialCount, Tuning.RadialRadius, Tuning.RadialRange,
-                Mathf.Max(0.1f, windup + travel - BossParrySignal.ReactionSeconds), volley * 180f / Tuning.RadialCount);
+                Mathf.Max(0.1f, windup - BossParrySignal.ReactionSeconds), volley * 180f / Tuning.RadialCount);
         }
     }
 }

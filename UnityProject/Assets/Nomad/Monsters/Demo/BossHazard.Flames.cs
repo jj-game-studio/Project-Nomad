@@ -12,10 +12,11 @@ namespace Nomad.Monsters.Demo
 
         private void CreateBreathLayers()
         {
+            CreateContinuousJet();
             core = WeaponVfx.CreateParticles(transform, "Hot flame core", WeaponVfx.Glow);
             var main = core.main;
             main.startColor = new Color(1.8f, 1.1f, 0.3f);
-            main.maxParticles = 180;
+            main.maxParticles = 600;
             var renderer = core.GetComponent<ParticleSystemRenderer>();
             renderer.renderMode = ParticleSystemRenderMode.Stretch;
             renderer.lengthScale = 1.6f;

@@ -1597,6 +1597,8 @@ MonoBehaviour:
     RockfallRadius: 2.7
     BreathBackstep: 4.5
     OrbitSpeed: 18
+    LavaEruptionRadius: 2.7
+    LavaEruptionWarning: 0.9
   Rock: {fileID: 7877644576711074951, guid: 5b91c0ccde428f74ebbae5f99da9a905, type: 3}
   BossHealth: 4200
   Knockdown: {fileID: 7400000, guid: 8098ca6f6a60ed5479a6164582a97106, type: 2}

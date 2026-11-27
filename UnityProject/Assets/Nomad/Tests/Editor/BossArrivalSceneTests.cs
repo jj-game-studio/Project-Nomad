@@ -56,6 +56,8 @@ namespace Nomad.Tests
             }
             Assert.That(scene != null && scene.Ready, Is.True);
             scene.Boss.AutomaticPatterns = false;
+            scene.Boss.AutomaticRockfall = false;
+            scene.Arena.GetComponentInChildren<BossOrbitingFlames>().enabled = false; // 다른 공격의 단일 피해 검사는 공전 접촉과 분리합니다.
             scene.Player.GetComponent<Health>().IsCombatImmune = true;
         }
 

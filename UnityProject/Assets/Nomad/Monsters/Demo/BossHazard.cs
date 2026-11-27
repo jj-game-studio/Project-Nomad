@@ -11,6 +11,7 @@ namespace Nomad.Monsters.Demo
     {
         public bool Active => elapsed >= delay;
         public float Radius { get; private set; }
+        public bool HighlightActive { get; set; }
         public bool EmitsFlame { get; set; } = true;
         public System.Action OnHit { get; set; }
         public bool IgnoreCover { get; set; }
@@ -129,6 +130,16 @@ namespace Nomad.Monsters.Demo
             fill.localScale = new Vector3(Mathf.Lerp(0.08f, 1, progress), 1, Mathf.Lerp(0.08f, 1, progress));
             ProjectGround(Mathf.Lerp(0.08f, 1, progress));
             if (!Active) return;
+            if (HighlightActive)
+            {
+                var tint = new MaterialPropertyBlock();
+                tint.SetColor("_BaseColor", new Color(2, 0.22f, 0.015f, 0.68f));
+                fill.GetComponent<Renderer>().sharedMaterial = WeaponVfx.Plain;
+                fill.GetComponent<Renderer>().SetPropertyBlock(tint);
+                boundary.widthMultiplier = 0.28f;
+                boundary.startColor = boundary.endColor = new Color(2.5f, 0.4f, 0.04f);
+                if (innerBoundary != null) { innerBoundary.widthMultiplier = 0.28f; innerBoundary.startColor = innerBoundary.endColor = boundary.startColor; }
+            }
             if (HideWarningWhileActive) { fill.gameObject.SetActive(false); boundary.gameObject.SetActive(false); }
             if (fire == null && EmitsFlame)
             {
@@ -171,7 +182,7 @@ namespace Nomad.Monsters.Demo
         {
             Vector3 origin = BreathOrigin != null ? BreathOrigin.position : transform.position + Vector3.up * 1.4f + transform.forward * 1.4f;
             LastBreathOrigin = origin;
-            int count = warm ? 150 : Mathf.CeilToInt(400 * Time.deltaTime);
+            int count = warm ? 320 : Mathf.CeilToInt(700 * Time.deltaTime);
             // 입자의 반지름까지 안쪽으로 넣어 실제 안전 구간과 사거리 밖으로 불이 넘치지 않게 합니다.
             const float margin = 0.85f;
             float inner = InnerRadius + margin;
@@ -190,7 +201,7 @@ namespace Nomad.Monsters.Demo
                     position = start + velocity * age,
                     velocity = velocity,
                     startLifetime = BreathTravelSeconds - age,
-                    startSize = Random.Range(1.05f, 1.5f)
+                    startSize = Random.Range(0.65f, 1.1f)
                 };
                 fire.Emit(particle, 1);
                 if (core != null && index % 2 == 0) core.Emit(new ParticleSystem.EmitParams {
@@ -252,6 +263,6 @@ namespace Nomad.Monsters.Demo
             boundaryProjected = true;
         }
 
-        private void OnDestroy() { if (mesh != null) Destroy(mesh); if (smokeMaterial != null) Destroy(smokeMaterial); if (lavaMaterial != null) Destroy(lavaMaterial); }
+        private void OnDestroy() { if (mesh != null) Destroy(mesh); if (smokeMaterial != null) Destroy(smokeMaterial); if (lavaMaterial != null) Destroy(lavaMaterial); if (jetMaterial != null) Destroy(jetMaterial); foreach (Mesh jet in jetMeshes) Destroy(jet); }
     }
 }

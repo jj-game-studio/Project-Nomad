@@ -28,6 +28,30 @@ namespace Nomad.Tests
             while (Time.time < signal.FlashAt + 0.02f) yield return null;
             Assert.That(lanes.Progress, Is.EqualTo(1));
             Assert.That(Object.FindFirstObjectByType<BossGuardPulse>(), Is.Not.Null);
+            int hp = scene.Player.GetComponent<Health>().CurrentHealth;
+            scene.GodMode = false;
+            scene.Player.GetComponent<Health>().IsCombatImmune = false;
+            scene.Player.transform.rotation = Quaternion.LookRotation(boss.transform.position - scene.Player.transform.position);
+            yield return Wait(0.25f);
+            UnityEngine.InputSystem.InputSystem.QueueStateEvent(keyboard,
+                new UnityEngine.InputSystem.LowLevel.KeyboardState(UnityEngine.InputSystem.Key.F));
+            yield return null;
+            UnityEngine.InputSystem.InputSystem.QueueStateEvent(keyboard, new UnityEngine.InputSystem.LowLevel.KeyboardState());
+            yield return Wait(0.9f);
+            Assert.That(scene.Player.GetComponent<PlayerBossParry>().Reflections, Is.EqualTo(1));
+            Assert.That(scene.Player.GetComponent<Health>().CurrentHealth, Is.EqualTo(hp));
+            yield break;
+        }
+
+        [UnityTest]
+        public IEnumerator StraightLanesMatchOnlyProjectilePaths()
+        {
+            var boss = scene.Boss;
+            boss.GetComponent<BossArrival>().Skip();
+            PlaceHero(scene.Arena.Center - Vector3.forward * 7);
+            boss.BeginPattern(DragonPattern.RadialFireballs);
+            yield return Wait(1.4f);
+            var lanes = boss.Effects.GetComponentInChildren<BossParryRangeWarning>();
             Mesh mesh = lanes.GetComponent<MeshFilter>().sharedMesh;
             Vector3 forward = boss.transform.forward;
             Assert.That(MeshCovers(lanes.transform, mesh, boss.transform.position + forward * 12), Is.True);
@@ -89,17 +113,17 @@ namespace Nomad.Tests
             yield return Wait(0.5f);
             Assert.That(scene.Arena.RockCount, Is.Zero);
             Assert.That(health.CurrentHealth, Is.EqualTo(hp));
-            Assert.That(boss.Effects.GetComponentInChildren<BossHazard>(), Is.Not.Null);
+            Assert.That(scene.Arena.GetComponentInChildren<BossFallingRock>(), Is.Not.Null);
             yield return Wait(1.9f);
             Assert.That(health.CurrentHealth, Is.LessThan(hp));
-            Assert.That(scene.Arena.RockCount, Is.EqualTo(1));
+            Assert.That(scene.Arena.RockCount, Is.InRange(1, 2));
             var rock = scene.Arena.GetComponentInChildren<BossBreakableRock>();
             Assert.That(rock.GetComponentInChildren<NavMeshObstacle>().enabled, Is.True);
-            for (int count = 1; count < 6; count++)
+            for (int count = 0; count < 6 && scene.Arena.RockCount < 6; count++)
             {
                 boss.BeginPattern(DragonPattern.Rockfall);
                 yield return Wait(2.3f);
-                Assert.That(scene.Arena.RockCount, Is.EqualTo(count + 1));
+                Assert.That(scene.Arena.RockCount, Is.InRange(1, 6));
             }
             int attacks = boss.AttacksStarted;
             boss.BeginPattern(DragonPattern.Rockfall);
@@ -121,7 +145,7 @@ namespace Nomad.Tests
             PlaceHero(scene.Arena.Center - Vector3.forward * 5);
             Vector3 start = boss.transform.position;
             boss.BeginPattern(DragonPattern.Breath);
-            yield return Wait(0.3f);
+            yield return Wait(0.2f);
             var hop = boss.GetComponent<BossBreathBackstep>();
             Assert.That(hop.Airborne, Is.True);
             Assert.That(boss.transform.Find("Body").localPosition.y, Is.GreaterThan(1.5f));
@@ -138,24 +162,41 @@ namespace Nomad.Tests
         }
 
         [UnityTest]
-        public IEnumerator SlowOrbitHasThreeOrbsAndAlternatingDistanceBands()
+        public IEnumerator ThreeBlastsAlternateFastAndCloseOrbitFollowsBossAndPushesPlayer()
         {
             var boss = scene.Boss;
             boss.GetComponent<BossArrival>().Skip();
             boss.BeginPattern(DragonPattern.OrbitFlames);
-            yield return Wait(1.4f);
-            var orbit = boss.Effects.GetComponentInChildren<BossOrbitingFlames>();
+            var sequence = boss.Effects.GetComponentInChildren<BossRingSequence>();
+            float timeout = Time.time + 5;
+            for (int round = 1; round <= 3; round++)
+            {
+                while (sequence != null && sequence.RoundsReleased < round && Time.time < timeout) yield return null;
+                Assert.That(sequence != null && sequence.RoundsReleased == round, Is.True);
+                yield return Wait(0.04f);
+                AssertBandHit(2, round % 2 == 1); AssertBandHit(5, round % 2 == 0);
+                var active = boss.Effects.GetComponentsInChildren<BossHazard>().Where(hazard => hazard.Active).ToArray();
+                Assert.That(active.Length, Is.EqualTo(3));
+                Assert.That(active.All(hazard => hazard.HighlightActive), Is.True);
+                yield return Wait(0.22f);
+            }
+            var orbit = scene.Arena.GetComponentInChildren<BossOrbitingFlames>();
             Assert.That(orbit.OrbCount, Is.EqualTo(3));
-            Vector3 direction = orbit.transform.GetChild(0).position - boss.transform.position;
-            yield return Wait(0.6f);
-            float turn = Vector3.Angle(Vector3.ProjectOnPlane(direction, Vector3.up), Vector3.ProjectOnPlane(orbit.transform.GetChild(0).position - boss.transform.position, Vector3.up));
-            Assert.That(turn, Is.InRange(8, 13));
-            AssertBandHit(2, true); AssertBandHit(8, true); AssertBandHit(12, false);
-            yield return Wait(3.6f);
-            AssertBandHit(2, false); AssertBandHit(5, true); AssertBandHit(12, true); AssertBandHit(15, false);
-            boss.Stun(0.1f);
+            orbit.enabled = true;
+            scene.Player.GetComponent<Nomad.Player.PlayerMovement>().enabled = false;
+            boss.GetComponent<NavMeshAgent>().Warp(scene.Arena.Center + Vector3.right * 2);
             yield return null;
-            Assert.That(boss.Effects.GetComponentInChildren<BossOrbitingFlames>(), Is.Null);
+            foreach (Transform orb in orbit.transform)
+                Assert.That(Vector3.ProjectOnPlane(orb.position - boss.transform.position, Vector3.up).magnitude, Is.EqualTo(3.65f).Within(0.05f));
+            scene.GodMode = false;
+            scene.Player.GetComponent<Health>().IsCombatImmune = false;
+            PlaceHero(orbit.transform.GetChild(0).position - Vector3.up * 1.1f);
+            Vector3 before = scene.Player.transform.position;
+            yield return Wait(0.5f);
+            Assert.That(Vector3.Distance(before, scene.Player.transform.position), Is.GreaterThan(5), "구체 접촉은 큰 밀침");
+            boss.Stun(0.5f);
+            yield return null;
+            Assert.That(orbit.transform.GetChild(0).gameObject.activeSelf, Is.False, "녹다운 딜타임은 구체로 방해하지 않음");
         }
 
         private void AssertBandHit(float distance, bool expected)

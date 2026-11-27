@@ -4,7 +4,7 @@ using UnityEngine.AI;
 
 namespace Nomad.Monsters.Demo
 {
-    public enum DragonPattern { Basic, Circle, RadialFireballs, Breath, FirePool, Charge, Rain, BodySweep, Rockfall, OrbitFlames }
+    public enum DragonPattern { Basic, Circle, RadialFireballs, Breath, FirePool, Charge, Rain, BodySweep, Rockfall, OrbitFlames, LavaEruption }
     public enum DragonPhase { Waiting, Windup, Active, Recovery, Stunned, Dead, Arriving, Enraging }
 
     [DefaultExecutionOrder(120)]
@@ -97,6 +97,9 @@ namespace Nomad.Monsters.Demo
             gameObject.AddComponent<BossVisualStyle>().Configure(this);
             effects = new GameObject("Dragon encounter effects").transform;
             effects.SetParent(arena.transform, false);
+            background = new GameObject("Independent boss hazards").transform;
+            background.SetParent(arena.transform, false);
+            BossOrbitingFlames.Create(background, this, arena, target, 0, float.PositiveInfinity);
             status = new GameObject("Boss action").AddComponent<TextMesh>();
             status.transform.SetParent(transform, false);
             status.transform.localPosition = Vector3.up * 4.2f;
@@ -136,6 +139,7 @@ namespace Nomad.Monsters.Demo
                 return;
             }
             if (EnrageTransitioning) return;
+            TickIndependentHazards();
             if (animationDriver != null && (Phase == DragonPhase.Windup || Phase == DragonPhase.Active))
             {
                 float progress = Pattern == DragonPattern.Rain && Phase == DragonPhase.Active
@@ -200,7 +204,9 @@ namespace Nomad.Monsters.Demo
 
         public void BeginPattern(DragonPattern pattern)
         {
-            if ((pattern == DragonPattern.Rockfall && (arena.RockCount >= BossArena.MaximumRockCount || fallingRock != null)) || pattern == DragonPattern.Basic || EnrageTransitioning || health == null || health.IsDead || !Introduced || !PlayerInside || arena.IsLocked ||
+            // 낙하는 현재 공격을 끊지 않는 별도 환경 공격입니다.
+            if (pattern == DragonPattern.Rockfall) { DropRocks(); return; }
+            if ((pattern == DragonPattern.LavaEruption && GetComponent<BossArmor>().BreakCount == 0) || pattern == DragonPattern.Basic || EnrageTransitioning || health == null || health.IsDead || !Introduced || !PlayerInside || arena.IsLocked ||
                 (Phase == DragonPhase.Stunned && Time.time < until)) return;
             tactics.Stop();
             Pause();
@@ -215,8 +221,8 @@ namespace Nomad.Monsters.Demo
             ChargeAimLocked = false;
             float windup = pattern == DragonPattern.Circle ? Tuning.SlamWindup :
                 pattern == DragonPattern.BodySweep ? Tuning.BodySweepWindup : pattern == DragonPattern.RadialFireballs ? 1.8f : pattern == DragonPattern.Charge ? Tuning.ChargeWindup :
-                pattern == DragonPattern.Rain ? 0.7f : pattern == DragonPattern.Rockfall ? Tuning.RockfallWarning :
-                pattern == DragonPattern.OrbitFlames ? 1.2f : pattern == DragonPattern.Breath ? 1.6f : 0.9f;
+                pattern == DragonPattern.Rain ? 0.7f :
+                pattern == DragonPattern.LavaEruption ? Tuning.LavaEruptionWarning : pattern == DragonPattern.OrbitFlames ? 0.75f : pattern == DragonPattern.Breath ? 0.55f : 0.9f;
             windup /= Tempo;
             if (pattern == DragonPattern.Breath) windup += BossBreathBackstep.Seconds;
             float turning = Vector3.Angle(transform.forward, direction) / (pattern == DragonPattern.Charge ? ChargeTurnSpeed : TurnSpeed);
@@ -242,8 +248,8 @@ namespace Nomad.Monsters.Demo
                 volleysSent = 0;
             }
             if (pattern == DragonPattern.Breath) backstep.Begin(-direction, Tuning.BreathBackstep);
-            if (pattern == DragonPattern.Rockfall) PrepareRockfall(windup);
             if (pattern == DragonPattern.OrbitFlames) PrepareOrbit(windup);
+            if (pattern == DragonPattern.LavaEruption) PrepareLavaEruption(windup);
             if (pattern == DragonPattern.FirePool)
             {
                 PlanFirePools(windup);
@@ -263,8 +269,8 @@ namespace Nomad.Monsters.Demo
             Phase = DragonPhase.Active;
             until = Time.time + (Pattern == DragonPattern.Breath ? 2.4f : Pattern == DragonPattern.Rain ? RainDuration :
                 Pattern == DragonPattern.Circle ? LeapDuration + 0.12f : Pattern == DragonPattern.RadialFireballs ? Tuning.RadialRange / (Tuning.RadialSpeed * Tempo) + 0.3f : 0.18f);
-            if (Pattern == DragonPattern.Rockfall) until = Time.time + BossFallingRock.FallSeconds + 0.2f;
-            if (Pattern == DragonPattern.OrbitFlames) until = Time.time + 8.4f;
+            if (Pattern == DragonPattern.OrbitFlames) until = Time.time + BossRingSequence.AfterFirstWarning;
+            if (Pattern == DragonPattern.LavaEruption) until = Time.time + 1.1f;
             if (Pattern == DragonPattern.Rain)
                 until = Time.time + (Tuning.RainWaves - 1) * Tuning.RainInterval + Tuning.RainFallSeconds + 0.15f;
             if (Pattern == DragonPattern.Breath) until = Time.time + 2.4f / Tempo;
@@ -332,7 +338,7 @@ namespace Nomad.Monsters.Demo
                 {
                     RockStuns++;
                     GetComponent<BossArmor>().DamageArmor(BossArmor.DurabilityPerLayer * 0.65f);
-                    if (Phase != DragonPhase.Stunned) Stun(2.8f);
+                    if (Phase != DragonPhase.Stunned) Stun(1.9f);
                     return true;
                 }
             return false;
@@ -355,7 +361,7 @@ namespace Nomad.Monsters.Demo
             SetMotion("BossKnockdown", 1);
         }
 
-        private void ArmorBroken(int stage) => Stun(5);
+        private void ArmorBroken(int count) => Stun(3.2f);
 
         private Vector3[] firePoolTargets = new Vector3[4];
         private void PlanFirePools(float windup)
@@ -462,6 +468,7 @@ namespace Nomad.Monsters.Demo
         {
             parrySignal?.Clear();
             CancelEffects();
+            ClearBackground();
             tactics?.Stop();
             if (status != null) status.text = "";
             SetMotion(null, 1);
@@ -477,6 +484,7 @@ namespace Nomad.Monsters.Demo
         {
             if (TryGetComponent(out BossArmor armor)) armor.Broken -= ArmorBroken;
             if (effects != null) Destroy(effects.gameObject);
+            if (background != null) Destroy(background.gameObject);
         }
     }
 }

@@ -13,8 +13,6 @@ namespace Nomad.Monsters.Demo
         private Vector3 center;
         private float age, delay, duration, nextHit;
         public int OrbCount => orbs.Length;
-        public System.Action NextBands;
-        private bool secondBands;
 
         public static BossOrbitingFlames Create(Transform parent, DragonBossCombat boss, BossArena arena, Health player, float delay, float duration)
         {
@@ -52,7 +50,7 @@ namespace Nomad.Monsters.Demo
             var fire = WeaponVfx.CreateParticles(root.transform, "Orbit flame tongues", WeaponVfx.Glow, ParticleSystemSimulationSpace.Local);
             var main = fire.main;
             main.startLifetime = new ParticleSystem.MinMaxCurve(0.15f, 0.45f);
-            main.startSize = new ParticleSystem.MinMaxCurve(0.3f, 0.8f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.2f, 0.65f);
             main.startColor = new Color(2.2f, 0.55f, 0.03f);
             var shape = fire.shape;
             shape.enabled = true; shape.shapeType = ParticleSystemShapeType.Sphere; shape.radius = 0.6f;
@@ -60,7 +58,7 @@ namespace Nomad.Monsters.Demo
             emission.enabled = true; emission.rateOverTime = 36;
             WeaponVfx.Fade(fire, 0);
             var trail = root.AddComponent<TrailRenderer>();
-            trail.sharedMaterial = WeaponVfx.Beam; trail.time = 0.55f;
+            trail.sharedMaterial = WeaponVfx.Beam; trail.time = 1.2f;
             trail.startWidth = 1.1f; trail.endWidth = 0;
             trail.startColor = new Color(1.8f, 0.3f, 0.015f, 0.65f); trail.endColor = Color.clear;
             root.SetActive(false);
@@ -69,14 +67,18 @@ namespace Nomad.Monsters.Demo
         private void Update()
         {
             age += Time.deltaTime;
-            if (boss == null || player == null || player.IsDead || age > delay + duration) { Destroy(gameObject); return; }
+            if (boss == null || player == null || age > delay + duration) { Destroy(gameObject); return; }
             if (age < delay) return;
-            if (!secondBands && age >= delay + 3.2f) { secondBands = true; NextBands?.Invoke(); }
+            bool visible = !player.IsDead && boss.Introduced && boss.Phase != DragonPhase.Waiting && boss.Phase != DragonPhase.Arriving &&
+                boss.Phase != DragonPhase.Stunned && boss.Phase != DragonPhase.Dead && !boss.EnrageTransitioning;
+            center = boss.transform.position;
+            foreach (Transform orb in orbs) orb.gameObject.SetActive(visible);
+            if (!visible) return;
             for (int index = 0; index < orbs.Length; index++)
             {
                 Transform orb = orbs[index];
                 float radians = (index * 120 + (age - delay) * boss.Tuning.OrbitSpeed) * Mathf.Deg2Rad;
-                float radius = 4.8f + index * 5;
+                float radius = 3.65f;
                 Vector3 point = center + new Vector3(Mathf.Sin(radians), 0, Mathf.Cos(radians)) * radius;
                 orb.position = arena.GroundPoint(point) + Vector3.up * 1.1f;
                 orb.gameObject.SetActive(true);
@@ -85,7 +87,8 @@ namespace Nomad.Monsters.Demo
                 if (body != null && Time.time >= nextHit && Vector3.Distance(body.ClosestPoint(orb.position), orb.position) < 1)
                 {
                     nextHit = Time.time + 1;
-                    player.TryApplyDamage(boss.ScaleDamage(14));
+                    if (player.TryApplyDamage(boss.ScaleDamage(14)))
+                        PlayerBossReaction.Play(player, center, 8, 1.15f, 0, 0.35f);
                 }
             }
         }

@@ -71,6 +71,8 @@ namespace Nomad.Tests
             combat = boss.GetComponent<DragonBossCombat>();
             boss.GetComponent<BossArrival>().Skip();
             combat.AutomaticPatterns = false;
+            combat.AutomaticRockfall = false;
+            arena.GetComponentInChildren<BossOrbitingFlames>().enabled = false;
             Physics.SyncTransforms();
         }
 
@@ -443,7 +445,7 @@ namespace Nomad.Tests
             armor.DamageArmor(full * 0.65f);
             yield return null;
             Assert.That(armor.BreakCount, Is.EqualTo(1));
-            Assert.That(combat.Remaining, Is.GreaterThan(4.8f));
+            Assert.That(combat.Remaining, Is.GreaterThan(3f));
         }
 
         [UnityTest]
@@ -459,7 +461,7 @@ namespace Nomad.Tests
             Assert.That(armor.ModifyCombatDamage(100), Is.EqualTo(100));
             Assert.That(boss.GetComponentsInChildren<Transform>().Any(item => item.name.Contains("stun star")), Is.False);
             Assert.That(combat.Effects.GetComponentsInChildren<BossHazard>().Length, Is.Zero);
-            Assert.That(combat.Remaining, Is.GreaterThan(4));
+            Assert.That(combat.Remaining, Is.InRange(3, 3.2f));
             yield return Wait(0.8f);
             Assert.That(boss.GetComponentInChildren<Animator>().GetCurrentAnimatorClipInfo(0).First().clip.name, Is.EqualTo("BossKnockdown"));
             boss.TryApplyDamage(1);

@@ -26,7 +26,16 @@ namespace Nomad.Equipment
             if (!combat.CanParry || !IsReady) return false;
             combat.InterruptForParry();
             consumed = false;
-            until = Time.time + Window;
+            float hold = Window;
+            foreach (BossParrySignal signal in FindObjectsByType<BossParrySignal>(FindObjectsSortMode.None))
+                if (signal.Flashing && signal.GetComponent<DragonBossCombat>().Pattern == DragonPattern.RadialFireballs)
+                {
+                    var boss = signal.GetComponent<DragonBossCombat>();
+                    // 느린 탄속/긴 사거리로 디버그 조정해도 신호를 보고 누른 가드를 탄 도달까지 유지합니다.
+                    float travel = (boss.Tuning.RadialRange - 3) / (boss.Tuning.RadialSpeed * boss.Tempo);
+                    hold = Mathf.Max(hold, signal.ImpactAt - Time.time + travel + 0.1f);
+                }
+            until = Time.time + hold;
             next = Time.time + Cooldown;
             return true;
         }

@@ -5,7 +5,7 @@ namespace Nomad.Monsters.Demo
 {
     public sealed class BossParrySignal : MonoBehaviour
     {
-        public const float ReactionSeconds = 0.35f;
+        public const float ReactionSeconds = 0.5f;
         private DragonBossCombat boss;
         private Health target;
         private float impact, range;
@@ -13,6 +13,7 @@ namespace Nomad.Monsters.Demo
         public bool Flashing => Armed && Time.time >= impact - ReactionSeconds && Time.time <= impact + 0.12f;
         public float ImpactAt => impact;
         public float FlashAt => impact - ReactionSeconds;
+        public float CueShownAt { get; private set; } = -1;
         private bool shown;
         private readonly System.Collections.Generic.Queue<(float impact, float range)> pending = new();
 
@@ -20,7 +21,7 @@ namespace Nomad.Monsters.Demo
         public void Arm(float when, float radius)
         {
             if (Armed && when > impact + 0.25f) { pending.Enqueue((when, radius)); return; }
-            impact = when; range = radius; Armed = true; shown = false;
+            impact = when; range = radius; Armed = true; shown = false; CueShownAt = -1;
         }
         public void Clear() { Armed = false; pending.Clear(); }
 
@@ -35,7 +36,7 @@ namespace Nomad.Monsters.Demo
 
         private void Update()
         {
-            if (Flashing && !shown) { shown = true; BossJustGuardVfx.Cue(boss.transform); }
+            if (Flashing && !shown) { shown = true; CueShownAt = Time.time; BossJustGuardVfx.Cue(boss.transform); }
             if (Time.time > impact + 0.15f)
             {
                 Armed = false;

@@ -11,6 +11,7 @@ namespace Nomad.Monsters.Demo
         private Health player;
         private GameObject visual;
         private Vector3 landing, offset;
+        public Vector3 Landing => landing;
         private float warning, age;
 
         public static BossFallingRock Create(Transform parent, BossArena room, Health player, Vector3 point, float warning)
