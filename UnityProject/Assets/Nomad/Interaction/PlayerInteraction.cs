@@ -42,7 +42,7 @@ namespace Nomad.Interaction
             }
 
             // 이동 Update가 이번 프레임의 위치와 구르기 상태를 갱신한 뒤 입력을 처리합니다.
-            if (Keyboard.current?.eKey.wasPressedThisFrame != true || !CanInteract())
+            if (Keyboard.current?.eKey.wasPressedThisFrame != true || !CanInteract() || movement.ViewInputBlocked)
                 return;
 
             var context = new InteractionContext(transform, inventory);
@@ -63,6 +63,7 @@ namespace Nomad.Interaction
 
         internal bool CanAccessChest(LootChest chest)
         {
+            // 열린 상자가 잠근 시선 입력과 접근 유효성은 별개입니다. 거리·벽·행동 상태는 계속 검사합니다.
             if (!isActiveAndEnabled || chest == null || !chest.isActiveAndEnabled || !CanInteract())
                 return false;
 
@@ -81,7 +82,7 @@ namespace Nomad.Interaction
         private IInteractable FindTarget(InteractionContext context, Vector3 body, Vector3 feet)
         {
             IInteractable best = null;
-            float bestDistance = 1f;
+            float bestDistance = float.PositiveInfinity;
             string bestId = null;
             var seen = new HashSet<MonoBehaviour>();
 
@@ -97,19 +98,33 @@ namespace Nomad.Interaction
                 // 대상별 판정 거리로 나눈 비율로 비교합니다. 기본 2m 대상끼리는 기존 순서와 같습니다.
                 float range = InteractionRange.Of(candidate);
                 float distance = (point - feet).sqrMagnitude / (range * range);
-                if (string.IsNullOrWhiteSpace(id) || !(distance <= bestDistance) ||
-                    (best != null && distance == bestDistance && string.CompareOrdinal(id, bestId) >= 0))
+                float score = SelectionScore(candidate, distance);
+                if (string.IsNullOrWhiteSpace(id) || distance > 1f || (float.IsPositiveInfinity(score) || !(score <= bestDistance)) ||
+                    (best != null && score == bestDistance && string.CompareOrdinal(id, bestId) >= 0))
                     continue;
 
                 if (!candidate.CanInteract(context) || IsObstructed(body, point, owner.transform))
                     continue;
 
                 best = candidate;
-                bestDistance = distance;
+                bestDistance = score;
                 bestId = id;
             }
 
             return best;
+        }
+
+        internal float SelectionScore(IInteractable candidate, float distance)
+        {
+            if (movement?.FirstPersonView != true) return distance;
+            Camera camera = Camera.main;
+            if (camera == null) return float.PositiveInfinity;
+            Vector3 screen = camera.WorldToViewportPoint(InteractionAnchors.Focus(candidate));
+            if (screen.z <= 0f || screen.x < 0f || screen.x > 1f || screen.y < 0f || screen.y > 1f)
+                return float.PositiveInfinity;
+
+            // 화면 중앙을 우선하고 같은 방향의 후보에서는 거리도 고려합니다.
+            return Vector2.SqrMagnitude(new Vector2(screen.x - 0.5f, screen.y - 0.5f)) + distance * 0.001f;
         }
 
         private bool IsObstructed(Vector3 body, Vector3 point, Transform target)

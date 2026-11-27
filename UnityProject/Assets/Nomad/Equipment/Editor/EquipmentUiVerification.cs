@@ -273,21 +273,21 @@ namespace Nomad.Equipment.Editor
                         break;
                     case 13:
                         Check(!panel.IsOpen, "Tab 함께 닫힘");
-                        Keys(UnityEngine.InputSystem.Key.F2);
+                        // F2 단축키 대신 설정 > 디버그 메뉴가 쓰는 속성으로 켭니다.
+                        visuals.ShowRange = true;
                         break;
                     case 14:
-                        Check(visuals.ShowRange && visuals.RangeLine.enabled && visuals.RangeLine.positionCount == 35, "F2 범위 표시");
+                        Check(visuals.ShowRange && visuals.RangeLine.enabled && visuals.RangeLine.positionCount == 35, "범위 표시 켜기");
                         // 범위 표시는 바닥에 붙여 그리므로 수평 거리로 사거리를 비교합니다.
                         for (int index = 0; index < visuals.RangeLine.positionCount; index++)
                             Check(Vector3.ProjectOnPlane(visuals.RangeLine.GetPosition(index) - combat.AttackOrigin, Vector3.up).magnitude <=
                                   combat.CurrentWeapon.AttackRange + 0.02f, "표시 사거리 일치");
                         Capture(1920, 1080, "range");
-                        Keys();
-                        Pointer(Screen(panel.Toolbar), true);
+                        visuals.ShowRange = false;
                         break;
-                    case 15: Pointer(Screen(panel.Toolbar)); break;
+                    case 15: break;
                     case 16:
-                        Check(!visuals.ShowRange && !visuals.RangeLine.enabled, "화면 토글 범위 끄기");
+                        Check(!visuals.ShowRange && !visuals.RangeLine.enabled, "범위 표시 끄기");
                         Pointer(Point(new Vector3(0, 1, 1.5f)));
                         break;
                     case 17:
@@ -300,7 +300,7 @@ namespace Nomad.Equipment.Editor
                     case 18:
                         Check(visuals.ActiveEffects == 0, "효과 수명 종료 정리");
                         Check(equipment.SelectWeapon(EquipmentSlot.Weapon2), "원거리 선택");
-                        Keys(UnityEngine.InputSystem.Key.F2);
+                        visuals.ShowRange = true;
                         break;
                     case 19:
                         Check(visuals.RangeLine.enabled && visuals.RangeLine.positionCount == 2, "원거리 범위 선");
@@ -313,7 +313,7 @@ namespace Nomad.Equipment.Editor
                         Check(impacts > 0, "실제 발사체 충돌 효과 콜백");
                         visuals.enabled = false;
                         Check(!visuals.RangeLine.enabled && visuals.ActiveEffects == 0, "비활성 시 표시/효과 정리");
-                        Debug.Log($"EQUIPMENT_UI_PASS: {checks} checks; Tab30, pointer equip/unequip/drag, F2/button, range, effects, 3 renders");
+                        Debug.Log($"EQUIPMENT_UI_PASS: {checks} checks; Tab30, pointer equip/unequip/drag, range toggle, effects, 3 renders");
                         Finish(0);
                         return;
                 }

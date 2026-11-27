@@ -126,10 +126,11 @@ namespace Nomad.Visibility.Editor
                     VerifyFoliage();
                     VerifyShade();
                     Point(Vector3.back);
-                    InputSystem.QueueStateEvent(keyboard, new KeyboardState(UnityEngine.InputSystem.Key.F3));
+                    // F3 단축키 대신 설정 > 디버그 메뉴가 쓰는 속성으로 켭니다.
+                    sight.ShowDebugRange = true;
                     break;
                 case 1:
-                    Check(sight.ShowDebugRange, "F3 enables debug range");
+                    Check(sight.ShowDebugRange, "debug range enabled");
                     Transform debug = sight.transform.Find("Visibility Debug Range");
                     Check(debug != null && debug.gameObject.activeSelf,
                         "debug visible in Game view; component=" + (sight.GetComponent<VisibilityDebugRange>() != null) +
@@ -167,7 +168,7 @@ namespace Nomad.Visibility.Editor
                         clipped |= Vector3.Distance(blocked.GetPosition(index), sight.Eye) < sight.Distance - 1f;
                     Check(clipped, "debug boundary stops at wall");
                     Capture("visibility-debug-range.png");
-                    InputSystem.QueueStateEvent(keyboard, new KeyboardState(UnityEngine.InputSystem.Key.F3));
+                    sight.ShowDebugRange = false;
                     front.GetComponent<Health>().TryApplyDamage(2);
                     Check(front.GetComponent<Health>().CurrentHealth < front.GetComponent<Health>().MaxHealth, "hidden target still takes damage");
 
@@ -177,7 +178,7 @@ namespace Nomad.Visibility.Editor
                     Object.Destroy(effect.GetComponent<Collider>());
                     break;
                 case 4:
-                    Check(!sight.ShowDebugRange && !sight.transform.Find("Visibility Debug Range").gameObject.activeSelf, "F3 hides debug range");
+                    Check(!sight.ShowDebugRange && !sight.transform.Find("Visibility Debug Range").gameObject.activeSelf, "debug range hidden");
                     InputSystem.QueueStateEvent(keyboard, new KeyboardState());
                     sight.ShowDebugRange = true;
                     Check(GameObject.Find("Late hidden effect").GetComponent<Renderer>().forceRenderingOff, "dynamic hidden renderer hidden");

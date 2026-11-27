@@ -78,6 +78,11 @@ namespace Nomad.Equipment
             gameObject.AddComponent<MeshFilter>().sharedMesh = mesh;
             var renderer = gameObject.AddComponent<MeshRenderer>();
             renderer.sharedMaterial = WeaponVfx.Plain;
+            // 1인칭은 손의 짧은 칼끝 궤적으로 표현합니다. 탑다운용 넓은 면이 카메라를 덮지 않게 합니다.
+            Camera camera = Camera.main;
+            var firstPerson = camera != null ? camera.GetComponent<Nomad.Player.VillageFirstPersonCamera>() : null;
+            renderer.enabled = firstPerson == null || !firstPerson.IsActive ||
+                Vector3.Distance(camera.transform.position, transform.position) > 3f;
             renderer.shadowCastingMode = ShadowCastingMode.Off;
             renderer.receiveShadows = false;
 

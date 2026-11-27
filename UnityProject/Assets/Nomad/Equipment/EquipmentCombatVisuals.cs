@@ -88,8 +88,6 @@ namespace Nomad.Equipment
 
         private void Update()
         {
-            if (Keyboard.current?.f2Key.wasPressedThisFrame == true)
-                ShowRange = !ShowRange;
             if (Mouse.current != null && !combat.EquipmentUiOpen && combat.TryGetAim(Mouse.current.position.ReadValue(), out Vector3 aim))
             {
                 Vector3 planar = Vector3.ProjectOnPlane(aim - combat.AttackOrigin, Vector3.up);

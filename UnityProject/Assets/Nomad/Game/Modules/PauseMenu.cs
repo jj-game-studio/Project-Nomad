@@ -3,6 +3,7 @@ using Nomad.Combat;
 using Nomad.Equipment;
 using Nomad.Interaction;
 using Nomad.Inventory;
+using Nomad.Visibility;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
@@ -13,13 +14,16 @@ namespace Nomad.Game.Modules
     [DisallowMultipleComponent]
     public sealed class PauseMenu : MonoBehaviour
     {
+        private const string VillageScene = "Village";
+        private const string FieldScene = "Field";
+
         private readonly List<Behaviour> suspendedInputs = new();
         private GameManager manager;
         private PauseMenuView view;
         private GameObject previousSelection;
         private float previousTimeScale;
         private bool previousAudioPause;
-        private bool showingSettings;
+        private PausePage page;
 
         public bool IsOpen { get; private set; }
 
@@ -42,7 +46,9 @@ namespace Nomad.Game.Modules
             if (!IsOpen && manager.Player.GetComponent<PlayerInventory>()?.Panel?.IsOpen == true)
                 return;
 
-            if (showingSettings)
+            if (page == PausePage.Debug)
+                ShowSettings();
+            else if (page == PausePage.Settings)
                 ShowMenu();
             else if (IsOpen)
                 Resume();
@@ -52,7 +58,9 @@ namespace Nomad.Game.Modules
 
         private void Open()
         {
-            view ??= new PauseMenuView(transform, Resume, Restart, ShowSettings, Quit, ShowMenu);
+            view ??= new PauseMenuView(transform, Resume, Restart, ShowSettings, Quit, ShowMenu,
+                new PauseDebugActions(ShowDebug, RestoreHealth, () => Travel(false), () => Travel(true),
+                    ToggleAttackRange, ToggleSightRange));
             previousSelection = EventSystem.current?.currentSelectedGameObject;
             previousTimeScale = Time.timeScale;
             previousAudioPause = AudioListener.pause;
@@ -83,7 +91,7 @@ namespace Nomad.Game.Modules
                 return;
 
             IsOpen = false;
-            showingSettings = false;
+            page = PausePage.Menu;
             view.Hide();
 
             if (EventSystem.current != null)
@@ -103,16 +111,50 @@ namespace Nomad.Game.Modules
             AudioListener.pause = previousAudioPause;
         }
 
-        private void ShowMenu()
+        private void ShowMenu() => ShowPage(PausePage.Menu);
+
+        private void ShowSettings() => ShowPage(PausePage.Settings);
+
+        private void ShowDebug() => ShowPage(PausePage.Debug);
+
+        private void ShowPage(PausePage next)
         {
-            showingSettings = false;
-            view.Show(false);
+            page = next;
+            RefreshDebugToggles();
+            view.Show(next);
         }
 
-        private void ShowSettings()
+        private void RefreshDebugToggles()
         {
-            showingSettings = true;
-            view.Show(true);
+            GameObject player = manager.Player;
+            view.SetDebugToggles(player.GetComponent<EquipmentCombatVisuals>()?.ShowRange == true,
+                player.GetComponent<PlayerVisibility>()?.ShowDebugRange == true);
+        }
+
+        private void RestoreHealth() => manager.Player.GetComponent<Health>()?.RestoreFull();
+
+        // 창을 닫아 시간을 되돌린 뒤 이동합니다. 필드는 기존 필드 선택창을 거칩니다.
+        private void Travel(bool field)
+        {
+            Resume();
+            if (field)
+                manager.OpenFieldSelect(FieldScene);
+            else
+                manager.LoadRegion(VillageScene);
+        }
+
+        private void ToggleAttackRange()
+        {
+            if (manager.Player.TryGetComponent(out EquipmentCombatVisuals visuals))
+                visuals.ShowRange = !visuals.ShowRange;
+            RefreshDebugToggles();
+        }
+
+        private void ToggleSightRange()
+        {
+            if (manager.Player.TryGetComponent(out PlayerVisibility sight))
+                sight.ShowDebugRange = !sight.ShowDebugRange;
+            RefreshDebugToggles();
         }
 
         private void Restart()
