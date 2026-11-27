@@ -393,7 +393,7 @@ namespace Nomad.Equipment
             Vector2 point = mouse.position.ReadValue();
             if (!equipmentDragging) return;
 
-            hud?.HighlightQuickSlot(hud.FindQuickSlot(point));
+            hud?.HighlightQuickSlot(hud.FindQuickSlot(point), equipment.GetItem((EquipmentSlot)dragEquipment));
             equipmentDragPreview.gameObject.SetActive(true);
             BindPreview(equipmentDragName, equipmentDragIcon, draggedEquipmentItem);
             PositionPreview(equipmentDragPreview, point);

@@ -394,7 +394,7 @@ namespace Nomad.Inventory
             if (preview.activeSelf)
                 PositionDragPreview(position);
             int target = preview.activeSelf ? dragHud.FindQuickSlot(position) : -1;
-            dragHud.HighlightQuickSlot(target);
+            dragHud.HighlightQuickSlot(target, quickDragItem);
             if (mouse.leftButton.isPressed)
                 return;
 
@@ -426,7 +426,7 @@ namespace Nomad.Inventory
             if (dragHud == null)
                 dragHud = inventory.GetComponentInChildren<PlayerHud>();
             int quickSlot = preview.activeSelf && dragHud != null ? dragHud.FindQuickSlot(position) : -1;
-            dragHud?.HighlightQuickSlot(quickSlot);
+            dragHud?.HighlightQuickSlot(quickSlot, inventory.GetSlot(dragSource).Item);
             if (mouse.leftButton.isPressed)
                 return;
 

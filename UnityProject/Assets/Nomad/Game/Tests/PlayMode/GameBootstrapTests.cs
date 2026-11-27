@@ -411,60 +411,40 @@ namespace Nomad.Game.Tests
                 yield return PressKey(Key.Tab);
                 Assert.That(panel.GetType().GetProperty("IsOpen").GetValue(panel), Is.True);
                 Canvas.ForceUpdateCanvases();
+
+                // 1~2번은 무기 전용이라 방어구는 등록되지 않습니다.
                 int armorSlot = FindBagItem(inventory, "gear-chain-mail");
                 yield return DragItem(mouse, ScreenCenter((RectTransform)bag.GetChild(armorSlot)), ScreenCenter(quickRects[0]));
-                Assert.That(quick.GetType().GetMethod("GetItem").Invoke(quick, new object[] { 0 }), Is.Not.Null, "장비 드래그 등록");
+                Assert.That(quick.GetType().GetMethod("GetItem").Invoke(quick, new object[] { 0 }), Is.Null, "방어구 퀵바 등록 거부");
 
                 int potionSlot = FindBagItem(inventory, "health-potion");
                 yield return DragItem(mouse, ScreenCenter((RectTransform)bag.GetChild(potionSlot)), ScreenCenter(quickRects[3]));
                 Assert.That(quick.GetType().GetMethod("GetCount").Invoke(quick, new object[] { 3 }), Is.EqualTo(3), "회복약 드래그 등록·잔량");
-                yield return DragItem(mouse, ScreenCenter(quickRects[0]), ScreenCenter(quickRects[1]));
-                Assert.That(quick.GetType().GetMethod("GetItem").Invoke(quick, new object[] { 0 }), Is.Null, "빈 퀵슬롯으로 이동");
-                yield return DragItem(mouse, ScreenCenter(quickRects[1]), ScreenCenter(quickRects[3]));
-                object swapped = quick.GetType().GetMethod("GetItem").Invoke(quick, new object[] { 1 });
-                Assert.That(swapped.GetType().GetProperty("ItemId").GetValue(swapped), Is.EqualTo("health-potion"), "장비·회복약 퀵슬롯 교환");
                 yield return DragItem(mouse, ScreenCenter(quickRects[3]), ScreenCenter(quickRects[0]));
-                yield return DragItem(mouse, ScreenCenter(quickRects[1]), ScreenCenter(quickRects[3]));
-                yield return PressKey(Key.Digit1);
-                Assert.That(equipment.GetType().GetMethod("GetItem").Invoke(equipment, new[] { body }), Is.Null, "열린 창에서 번호 사용 차단");
+                Assert.That(quick.GetType().GetMethod("GetItem").Invoke(quick, new object[] { 0 }), Is.Null, "회복약은 무기 칸으로 이동 불가");
+                yield return DragItem(mouse, ScreenCenter(quickRects[3]), ScreenCenter(quickRects[2]));
+                Assert.That(quick.GetType().GetMethod("GetItem").Invoke(quick, new object[] { 3 }), Is.Null, "소모품 칸 사이 이동");
+                Assert.That(quick.GetType().GetMethod("GetCount").Invoke(quick, new object[] { 2 }), Is.EqualTo(3));
+
+                // 장착 칸에서 끌어도 방어구는 거부됩니다.
+                yield return RightClick(mouse, ScreenCenter((RectTransform)bag.GetChild(armorSlot)));
+                Assert.That(equipment.GetType().GetMethod("GetItem").Invoke(equipment, new[] { body }), Is.Not.Null, "우클릭 한 번 장착");
+                yield return DragItem(mouse, ScreenCenter((RectTransform)gear.GetChild(3)), ScreenCenter(quickRects[1]));
+                Assert.That(quick.GetType().GetMethod("GetItem").Invoke(quick, new object[] { 1 }), Is.Null, "장착 칸 방어구도 거부");
 
                 yield return PressEscape();
                 Assert.That(panel.GetType().GetProperty("IsOpen").GetValue(panel), Is.False);
                 Assert.That(Time.timeScale, Is.EqualTo(1f), "첫 Esc는 장비만 닫음");
                 Assert.That(manager.transform.Find("PauseMenu/PauseCanvas/Backdrop"), Is.Null, "퍼즈 생성 안 함");
-                yield return PressKey(Key.Digit1);
-                var armor = (Object)quick.GetType().GetMethod("GetItem").Invoke(quick, new object[] { 0 });
-                Assert.That(equipment.GetType().GetMethod("GetItem").Invoke(equipment, new[] { body }), Is.SameAs(armor), "번호키 장착·등록 유지");
 
                 Component health = player.GetComponent("Health");
                 var damage = health.GetType().GetMethod("TryApplyDamage");
                 damage.Invoke(health, new[] { (object)60, System.Enum.ToObject(damage.GetParameters()[1].ParameterType, 1) });
                 int before = (int)health.GetType().GetProperty("CurrentHealth").GetValue(health);
-                yield return PressKey(Key.Digit4);
-                Assert.That(health.GetType().GetProperty("CurrentHealth").GetValue(health), Is.EqualTo(before + 40), "4번 회복약 사용");
-                Assert.That(quick.GetType().GetMethod("GetCount").Invoke(quick, new object[] { 3 }), Is.EqualTo(2));
+                yield return PressKey(Key.Digit3);
+                Assert.That(health.GetType().GetProperty("CurrentHealth").GetValue(health), Is.EqualTo(before + 40), "3번 회복약 사용");
+                Assert.That(quick.GetType().GetMethod("GetCount").Invoke(quick, new object[] { 2 }), Is.EqualTo(2));
 
-                yield return PressKey(Key.Tab);
-                Canvas.ForceUpdateCanvases();
-                // 장착 칸 우클릭으로 해제한 다음 가방에서 우클릭 한 번으로 다시 장착합니다.
-                yield return RightClick(mouse, ScreenCenter((RectTransform)gear.GetChild(3)));
-                Assert.That(equipment.GetType().GetMethod("GetItem").Invoke(equipment, new[] { body }), Is.Null);
-                armorSlot = FindBagItem(inventory, "gear-chain-mail");
-                yield return RightClick(mouse, ScreenCenter((RectTransform)bag.GetChild(armorSlot)));
-                Assert.That(equipment.GetType().GetMethod("GetItem").Invoke(equipment, new[] { body }), Is.SameAs(armor), "우클릭 한 번 장착");
-                yield return DragItem(mouse, ScreenCenter((RectTransform)gear.GetChild(3)), ScreenCenter(quickRects[1]));
-                Assert.That(quick.GetType().GetMethod("GetItem").Invoke(quick, new object[] { 0 }), Is.Null, "같은 장비 등록 위치 이동");
-                Assert.That(quick.GetType().GetMethod("GetItem").Invoke(quick, new object[] { 1 }), Is.SameAs(armor), "장착 칸에서도 직접 퀵슬롯 등록");
-                Assert.That(equipment.GetType().GetMethod("GetItem").Invoke(equipment, new[] { body }), Is.SameAs(armor), "등록은 장비를 해제하지 않음");
-                Assert.That(CallInventory(player, "Add", "gear-padded-armor", 1), Is.EqualTo(1));
-                int replacementSlot = FindBagItem(inventory, "gear-padded-armor");
-                yield return RightClick(mouse, ScreenCenter((RectTransform)bag.GetChild(replacementSlot)));
-                object replacement = equipment.GetType().GetMethod("GetItem").Invoke(equipment, new[] { body });
-                Assert.That(replacement.GetType().GetProperty("ItemId").GetValue(replacement), Is.EqualTo("gear-padded-armor"), "우클릭 한 번으로 기존 장비 교체");
-                Assert.That(FindBagItem(inventory, "gear-chain-mail"), Is.GreaterThanOrEqualTo(0));
-                yield return PressEscape();
-                yield return PressKey(Key.Digit2);
-                Assert.That(equipment.GetType().GetMethod("GetItem").Invoke(equipment, new[] { body }), Is.SameAs(armor), "교체 후 번호키로 재장착");
                 yield return PressEscape();
                 Assert.That(Time.timeScale, Is.Zero, "창 없는 다음 Esc는 퍼즈");
                 yield return PressEscape();

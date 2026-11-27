@@ -11,7 +11,9 @@ namespace Nomad.Inventory
     [RequireComponent(typeof(PlayerInventory))]
     public sealed class PlayerQuickSlots : MonoBehaviour
     {
-        public const int Capacity = 4;
+        public const int Capacity = 6;
+        // 1~2번은 무기 전용, 3~6번은 전투 중 사용하는 소모품 전용입니다.
+        public const int WeaponSlotCount = 2;
 
         private PlayerInventory inventory;
         private PlayerEquipment equipment;
@@ -48,6 +50,8 @@ namespace Nomad.Inventory
             else if (keyboard.digit2Key.wasPressedThisFrame) TryUse(1);
             else if (keyboard.digit3Key.wasPressedThisFrame) TryUse(2);
             else if (keyboard.digit4Key.wasPressedThisFrame) TryUse(3);
+            else if (keyboard.digit5Key.wasPressedThisFrame) TryUse(4);
+            else if (keyboard.digit6Key.wasPressedThisFrame) TryUse(5);
         }
 
         public bool TryUse(int index)
@@ -86,6 +90,23 @@ namespace Nomad.Inventory
 
         public ItemDefinition GetItem(int index) => items[index];
 
+        public static bool IsWeaponSlot(int index) => index < WeaponSlotCount;
+
+        // 빈 칸(null)은 어느 칸에나 둘 수 있어 교환 검사에 그대로 씁니다.
+        public static bool Accepts(int index, ItemDefinition item)
+        {
+            if ((uint)index >= Capacity)
+                return false;
+            if (item == null)
+                return true;
+
+            return IsWeaponSlot(index) ? item.EquipmentType == EquipmentType.Weapon : IsCombatConsumable(item);
+        }
+
+        // 현재 전투 중 "사용"이 구현된 소모품은 회복약뿐입니다. 새 소모품은 여기에 추가합니다.
+        public static bool IsCombatConsumable(ItemDefinition item) =>
+            item != null && item.EquipmentType == EquipmentType.None && item.ItemId == PlayerHealing.PotionId;
+
         internal void ReplaceEnhanced(ItemDefinition previous, ItemDefinition replacement)
         {
             for (int index = 0; index < Capacity; index++)
@@ -121,7 +142,7 @@ namespace Nomad.Inventory
 
         private bool RegisterItem(ItemDefinition item, int quickSlot)
         {
-            if (item == null || (uint)quickSlot >= Capacity)
+            if (item == null || !Accepts(quickSlot, item))
                 return false;
 
             bool changed = items[quickSlot] != item;
@@ -145,6 +166,10 @@ namespace Nomad.Inventory
         public bool Move(int source, int target)
         {
             if ((uint)source >= Capacity || (uint)target >= Capacity || source == target || items[source] == null)
+                return false;
+
+            // 무기 칸과 소모품 칸 사이로는 옮기거나 교환할 수 없습니다.
+            if (!Accepts(target, items[source]) || !Accepts(source, items[target]))
                 return false;
 
             (items[source], items[target]) = (items[target], items[source]);

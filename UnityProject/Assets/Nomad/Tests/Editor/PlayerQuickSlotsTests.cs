@@ -20,14 +20,14 @@ namespace Nomad.Tests
         [SetUp]
         public void SetUp()
         {
-            potion = Item("potion", 5);
+            // 소모품 칸은 전투 중 사용 가능한 회복약만 받으므로 회복약 ID로 만듭니다.
+            potion = Item(PlayerHealing.PotionId, 5);
             ItemDefinition ore = Item("ore", 99);
             sword = Item("sword", 1, EquipmentType.Weapon);
             bow = Item("bow", 1, EquipmentType.Weapon);
-            ItemDefinition healing = Item(PlayerHealing.PotionId, 99);
 
             var owner = Inactive("Player");
-            inventory = AddInventory(owner, potion, ore, sword, bow, healing);
+            inventory = AddInventory(owner, potion, ore, sword, bow);
             equipment = owner.AddComponent<PlayerEquipment>();
             health = owner.AddComponent<Health>();
             owner.AddComponent<PlayerHealing>();
@@ -38,7 +38,7 @@ namespace Nomad.Tests
         [Test]
         public void RegisterCountsItemAcrossAllStacks()
         {
-            inventory.Add("potion", 7);
+            inventory.Add(PlayerHealing.PotionId, 7);
 
             Assert.That(quickSlots.Register(0, 2), Is.True);
             Assert.That(quickSlots.GetItem(2), Is.SameAs(potion));
@@ -48,12 +48,12 @@ namespace Nomad.Tests
         [Test]
         public void RegisteringSameItemAgainMovesIt()
         {
-            inventory.Add("potion", 1);
-            quickSlots.Register(0, 0);
+            inventory.Add(PlayerHealing.PotionId, 1);
+            quickSlots.Register(0, 2);
 
-            Assert.That(quickSlots.Register(0, 3), Is.True);
-            Assert.That(quickSlots.GetItem(0), Is.Null);
-            Assert.That(quickSlots.GetItem(3), Is.SameAs(potion));
+            Assert.That(quickSlots.Register(0, 5), Is.True);
+            Assert.That(quickSlots.GetItem(2), Is.Null);
+            Assert.That(quickSlots.GetItem(5), Is.SameAs(potion));
         }
 
         [TestCase(0, 0)]
@@ -67,67 +67,90 @@ namespace Nomad.Tests
         [Test]
         public void RegistrationFollowsItemWhenBagSlotMoves()
         {
-            inventory.Add("potion", 2);
-            quickSlots.Register(0, 1);
+            inventory.Add(PlayerHealing.PotionId, 2);
+            quickSlots.Register(0, 3);
 
             inventory.MoveStack(0, 9);
-            Assert.That(quickSlots.GetItem(1), Is.SameAs(potion));
-            Assert.That(quickSlots.GetCount(1), Is.EqualTo(2));
+            Assert.That(quickSlots.GetItem(3), Is.SameAs(potion));
+            Assert.That(quickSlots.GetCount(3), Is.EqualTo(2));
         }
 
         [Test]
         public void RegistrationClearsWhenItemRunsOut()
         {
-            inventory.Add("potion", 2);
-            quickSlots.Register(0, 1);
+            inventory.Add(PlayerHealing.PotionId, 2);
+            quickSlots.Register(0, 3);
 
-            inventory.Remove("potion", 2);
-            Assert.That(quickSlots.GetItem(1), Is.Null);
+            inventory.Remove(PlayerHealing.PotionId, 2);
+            Assert.That(quickSlots.GetItem(3), Is.Null);
         }
 
         [Test]
         public void UnregisterClearsSlotOnce()
         {
-            inventory.Add("potion", 1);
-            quickSlots.Register(0, 0);
+            inventory.Add(PlayerHealing.PotionId, 1);
+            quickSlots.Register(0, 2);
 
-            Assert.That(quickSlots.Unregister(0), Is.True);
-            Assert.That(quickSlots.Unregister(0), Is.False);
+            Assert.That(quickSlots.Unregister(2), Is.True);
+            Assert.That(quickSlots.Unregister(2), Is.False);
         }
 
         [Test]
         public void MoveToEmptySlotAndSwapPreserveBothItemsAndCounts()
         {
-            inventory.Add("potion", 2);
+            inventory.Add(PlayerHealing.PotionId, 2);
             inventory.Add("sword", 1);
-            quickSlots.Register(0, 0);
-            quickSlots.Register(1, 3);
+            quickSlots.Register(0, 2);
+            quickSlots.Register(1, 0);
             int changes = 0;
             quickSlots.Changed += () => changes++;
 
-            Assert.That(quickSlots.Move(0, 1), Is.True);
-            Assert.That(quickSlots.GetItem(0), Is.Null);
-            Assert.That(quickSlots.GetItem(1), Is.SameAs(potion));
-            Assert.That(quickSlots.Move(1, 3), Is.True);
-            Assert.That(quickSlots.GetItem(1), Is.SameAs(sword));
+            Assert.That(quickSlots.Move(2, 3), Is.True);
+            Assert.That(quickSlots.GetItem(2), Is.Null);
             Assert.That(quickSlots.GetItem(3), Is.SameAs(potion));
             Assert.That(quickSlots.GetCount(3), Is.EqualTo(2));
+            Assert.That(quickSlots.Move(0, 1), Is.True);
+            Assert.That(quickSlots.GetItem(0), Is.Null);
+            Assert.That(quickSlots.GetItem(1), Is.SameAs(sword));
             Assert.That(changes, Is.EqualTo(2));
-            Assert.That(inventory.GetCount("potion"), Is.EqualTo(2));
+            Assert.That(inventory.GetCount(PlayerHealing.PotionId), Is.EqualTo(2));
             Assert.That(quickSlots.TryUse(1), Is.True, "교환된 번호로 장착");
             Assert.That(equipment.ActiveWeapon, Is.SameAs(sword));
         }
 
-        [TestCase(-1, 0)]
-        [TestCase(0, 4)]
-        [TestCase(0, 0)]
-        [TestCase(1, 0)]
-        public void MoveRejectsInvalidEmptyOrSameSlot(int source, int target)
+        [TestCase(-1, 2)]
+        [TestCase(2, PlayerQuickSlots.Capacity)]
+        [TestCase(2, 2)]
+        [TestCase(3, 2)]
+        [TestCase(2, 0)]
+        public void MoveRejectsInvalidEmptySameOrWrongKindSlot(int source, int target)
         {
-            inventory.Add("potion", 1);
-            quickSlots.Register(0, 0);
+            inventory.Add(PlayerHealing.PotionId, 1);
+            quickSlots.Register(0, 2);
             Assert.That(quickSlots.Move(source, target), Is.False);
-            Assert.That(quickSlots.GetItem(0), Is.SameAs(potion));
+            Assert.That(quickSlots.GetItem(2), Is.SameAs(potion));
+        }
+
+        [Test]
+        public void WeaponSlotsAcceptOnlyWeaponsAndOtherSlotsOnlyCombatConsumables()
+        {
+            inventory.Add(PlayerHealing.PotionId, 1);
+            inventory.Add("sword", 1);
+            inventory.Add("ore", 1);
+
+            for (int quick = 0; quick < PlayerQuickSlots.WeaponSlotCount; quick++)
+                Assert.That(quickSlots.Register(0, quick), Is.False, "무기 칸에 포션 금지");
+            for (int quick = PlayerQuickSlots.WeaponSlotCount; quick < PlayerQuickSlots.Capacity; quick++)
+            {
+                Assert.That(quickSlots.Register(1, quick), Is.False, "소모품 칸에 무기 금지");
+                Assert.That(quickSlots.Register(2, quick), Is.False, "사용 불가 재료 금지");
+            }
+
+            Assert.That(quickSlots.Register(1, 1), Is.True);
+            Assert.That(quickSlots.Register(0, 5), Is.True);
+            Assert.That(quickSlots.Move(1, 5), Is.False, "무기와 포션 교환 금지");
+            Assert.That(quickSlots.GetItem(1), Is.SameAs(sword));
+            Assert.That(quickSlots.GetItem(5), Is.SameAs(potion));
         }
 
         [Test]
@@ -171,8 +194,8 @@ namespace Nomad.Tests
         public void UseRejectsPauseAndUnsupportedItems()
         {
             inventory.Add("ore", 1);
-            quickSlots.Register(0, 0);
-            Assert.That(quickSlots.TryUse(0), Is.False);
+            Assert.That(quickSlots.Register(0, 2), Is.False);
+            Assert.That(quickSlots.TryUse(2), Is.False);
             inventory.Add("sword", 1);
             quickSlots.Register(1, 1);
             float previous = Time.timeScale;
