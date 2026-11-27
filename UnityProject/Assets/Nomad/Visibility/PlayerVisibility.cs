@@ -18,7 +18,7 @@ namespace Nomad.Visibility
         [SerializeField] private LayerMask blockers = Physics.DefaultRaycastLayers;
         [SerializeField, Range(0.02f, 0.2f)] private float interval = 0.08f;
         [Header("디버그")]
-        [Tooltip("F3 전환: 청록색 부채꼴, 보라색 주변 원형, 노란색 장애물 경계입니다.")]
+        [Tooltip("설정 > 디버그에서 전환: 청록색 부채꼴, 보라색 주변 원형, 노란색 장애물 경계입니다.")]
         [SerializeField] private bool showDebugRange;
 
         private readonly RaycastHit[] hits = new RaycastHit[64];
@@ -55,7 +55,6 @@ namespace Nomad.Visibility
 
         private void LateUpdate()
         {
-            if (Keyboard.current?.f3Key.wasPressedThisFrame == true) showDebugRange = !showDebugRange;
             if (!Available)
             {
                 foreach (VisibilityTarget target in VisibilityTarget.Active) target.Release();

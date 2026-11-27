@@ -17,11 +17,9 @@ namespace Nomad.Equipment
         private PlayerEquipment equipment;
         private PlayerInventory inventory;
         private PlayerEquipmentCombat combat;
-        private EquipmentCombatVisuals visuals;
         private RectTransform panel;
         private RectTransform bag;
         private RectTransform equipmentGrid;
-        private RectTransform toolbar;
         private RectTransform inventoryDragPreview;
         private RectTransform equipmentDragPreview;
         private RectTransform bagDropPreview;
@@ -32,7 +30,6 @@ namespace Nomad.Equipment
         private UnityEngine.UI.Image bagDropBackground;
         private UnityEngine.UI.Text capacity;
         private UnityEngine.UI.Text notice;
-        private UnityEngine.UI.Text rangeLabel;
         private Font font;
         private int selected = -1;
         private ItemDefinition selectedItem;
@@ -71,7 +68,6 @@ namespace Nomad.Equipment
         public bool IsOpen => panel != null && panel.gameObject.activeInHierarchy;
         public RectTransform EquipmentGrid => equipmentGrid;
         public RectTransform BagGrid => bag;
-        public RectTransform Toolbar => toolbar;
         public string Notice => notice != null ? notice.text : string.Empty;
         public int PreviewSlot { get; private set; } = -1;
         public bool CanDrop { get; private set; }
@@ -88,7 +84,6 @@ namespace Nomad.Equipment
             equipment = GetComponent<PlayerEquipment>();
             inventory = GetComponent<PlayerInventory>();
             combat = GetComponent<PlayerEquipmentCombat>();
-            visuals = GetComponent<EquipmentCombatVisuals>();
             stats = GetComponent<PlayerStats>();
             hud = GetComponentInChildren<PlayerHud>();
             var view = InventoryPanel.GetOrCreate(inventory);
@@ -131,15 +126,6 @@ namespace Nomad.Equipment
             notice.gameObject.SetActive(false);
             CreateStatsPanel();
             LayoutBag();
-            toolbar = Rect("EquipmentDebugToolbar", view.transform, new Vector2(330, 42), Vector2.zero);
-            toolbar.anchorMin = toolbar.anchorMax = toolbar.pivot = new Vector2(0, 1);
-            toolbar.anchoredPosition = new Vector2(18, -18);
-            var background = toolbar.gameObject.AddComponent<UnityEngine.UI.Image>();
-            background.color = new Color32(16, 29, 43, 240);
-            // 클릭은 위치 검사로 처리하므로 카메라가 열린 창으로 인식하지 않게 합니다.
-            background.raycastTarget = false;
-            rangeLabel = Text("RangeToggle", toolbar, "", new Vector2(310, 32), new Vector2(165, -21), 16);
-            rangeLabel.rectTransform.anchorMin = rangeLabel.rectTransform.anchorMax = new Vector2(0, 1);
             equipmentDragPreview = CreatePreview("EquipmentDragPreview", out equipmentDragName, out equipmentDragIcon);
             bagDropPreview = CreatePreview("BagDropPreview", out bagDropName, out bagDropIcon);
             bagDropBackground = bagDropPreview.GetComponent<UnityEngine.UI.Image>();
@@ -154,7 +140,6 @@ namespace Nomad.Equipment
                 return;
 
             FitToCanvas();
-            toolbar.gameObject.SetActive(!IsOpen);
             // 장비 창과 오른쪽 스탯 창을 합친 영역이 화면 가운데 오도록 옮깁니다. 상자 창이 열리면 가방 UI 배치를 따릅니다.
             bool looting = inventoryView != null && inventoryView.HasOpenChest;
             if (statsPanel != null) statsPanel.gameObject.SetActive(!looting);
@@ -163,20 +148,12 @@ namespace Nomad.Equipment
             inventoryView?.UpdateChestLayout();
 
             Mouse mouse = Mouse.current;
-            if (combat != null) combat.EquipmentUiOpen = IsOpen ||
-                (mouse != null && Contains(toolbar, mouse.position.ReadValue()));
+            if (combat != null) combat.EquipmentUiOpen = IsOpen;
             if (inventory?.BlocksTradeInput == true || inventoryView?.BlocksSplitInput == true)
             {
                 CancelSelection();
                 ResetClick();
                 return;
-            }
-
-            if (visuals != null)
-            {
-                rangeLabel.text = $"공격 범위 [F2] : {(visuals.ShowRange ? "ON" : "OFF")}  (클릭)";
-                if (mouse?.leftButton.wasReleasedThisFrame == true && Contains(toolbar, mouse.position.ReadValue()))
-                    visuals.ShowRange = !visuals.ShowRange;
             }
 
             if (!IsOpen || wasOpen != IsOpen || mouse != dragMouse || Keyboard.current?.escapeKey.wasPressedThisFrame == true)
@@ -677,7 +654,6 @@ namespace Nomad.Equipment
         private void OnDestroy()
         {
             hoverTooltip?.Dispose();
-            if (toolbar != null) Destroy(toolbar.gameObject);
             if (font != null) Destroy(font);
         }
     }

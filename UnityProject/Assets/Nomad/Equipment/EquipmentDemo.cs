@@ -25,7 +25,7 @@ namespace Nomad.Equipment
             Equip("demo-sword", EquipmentSlot.Weapon1);
             Equip("demo-bow", EquipmentSlot.Weapon2);
             InventoryPanel.GetOrCreate(inventory);
-            Debug.Log("EQUIPMENT_DEMO_READY: Tab 장비10+가방20, 가방→장비 드래그/클릭 장착, 장비 우클릭 해제. F2 공격범위, LMB 공격, 1 검/2 활. F5갑옷/F6무기해제/F7검/F8활은 검토용 보조키.");
+            Debug.Log("EQUIPMENT_DEMO_READY: Tab 장비10+가방20, 가방→장비 드래그/클릭 장착, 장비 우클릭 해제. LMB 공격, 1 검/2 활. F5갑옷/F6무기해제/F7검/F8활은 검토용 보조키.");
         }
 
         private void OnDestroy()
