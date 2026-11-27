@@ -414,10 +414,12 @@ namespace Nomad.Game.Tests
 
                 // 1~2번은 무기 전용이라 방어구는 등록되지 않습니다.
                 int armorSlot = FindBagItem(inventory, "gear-chain-mail");
+                yield return ShowBagSlot(armorSlot);
                 yield return DragItem(mouse, ScreenCenter((RectTransform)bag.GetChild(armorSlot)), ScreenCenter(quickRects[0]));
                 Assert.That(quick.GetType().GetMethod("GetItem").Invoke(quick, new object[] { 0 }), Is.Null, "방어구 퀵바 등록 거부");
 
                 int potionSlot = FindBagItem(inventory, "health-potion");
+                yield return ShowBagSlot(potionSlot);
                 yield return DragItem(mouse, ScreenCenter((RectTransform)bag.GetChild(potionSlot)), ScreenCenter(quickRects[3]));
                 Assert.That(quick.GetType().GetMethod("GetCount").Invoke(quick, new object[] { 3 }), Is.EqualTo(3), "회복약 드래그 등록·잔량");
                 yield return DragItem(mouse, ScreenCenter(quickRects[3]), ScreenCenter(quickRects[0]));
@@ -427,6 +429,7 @@ namespace Nomad.Game.Tests
                 Assert.That(quick.GetType().GetMethod("GetCount").Invoke(quick, new object[] { 2 }), Is.EqualTo(3));
 
                 // 장착 칸에서 끌어도 방어구는 거부됩니다.
+                yield return ShowBagSlot(armorSlot);
                 yield return RightClick(mouse, ScreenCenter((RectTransform)bag.GetChild(armorSlot)));
                 Assert.That(equipment.GetType().GetMethod("GetItem").Invoke(equipment, new[] { body }), Is.Not.Null, "우클릭 한 번 장착");
                 yield return DragItem(mouse, ScreenCenter((RectTransform)gear.GetChild(3)), ScreenCenter(quickRects[1]));
@@ -458,6 +461,16 @@ namespace Nomad.Game.Tests
                 InputSystem.settings.editorInputBehaviorInPlayMode = editorInput;
                 Application.runInBackground = background;
             }
+        }
+
+        // 장비창 가방은 2줄만 보이므로 대상 칸이 보이도록 스크롤한 뒤 배치를 갱신합니다.
+        private static IEnumerator ShowBagSlot(int slot)
+        {
+            var type = System.Type.GetType("Nomad.Inventory.InventoryPanel, Assembly-CSharp");
+            Object view = Object.FindFirstObjectByType(type);
+            type.GetMethod("ScrollToSlot").Invoke(view, new object[] { slot });
+            yield return null;
+            Canvas.ForceUpdateCanvases();
         }
 
         private static int FindBagItem(Component inventory, string id)

@@ -31,8 +31,6 @@ namespace Nomad.Hud
         private float manaFraction;
         private float staminaFraction;
         private PlayerEquipmentCombat combat;
-        private ItemDefinition shownWeapon;
-        private int shownArrows = -1;
         private float shownMana = -1f;
         private float shownMaxMana = -1f;
         private int shownAvailableMana = -1;
@@ -42,7 +40,6 @@ namespace Nomad.Hud
         private readonly List<GameObject> trims = new List<GameObject>();
         private readonly RectTransform[] quickRects = new RectTransform[PlayerQuickSlots.Capacity];
         private readonly HudArtwork[] quickBackgrounds = new HudArtwork[PlayerQuickSlots.Capacity];
-        private readonly HudArtwork[] selectionGlows = new HudArtwork[PlayerQuickSlots.Capacity];
         private readonly UnityEngine.UI.Image[] quickIcons = new UnityEngine.UI.Image[PlayerQuickSlots.Capacity];
         private readonly TMP_Text[] quickNames = new TMP_Text[PlayerQuickSlots.Capacity];
         private readonly TMP_Text[] quickCaptions = new TMP_Text[PlayerQuickSlots.Capacity];
@@ -72,8 +69,8 @@ namespace Nomad.Hud
         private static readonly Color BarTrack = new Color32(64, 58, 56, 235);
         private static readonly Color SlotGray = new Color32(78, 72, 70, 205);
         private static readonly Color SlotRed = new Color32(150, 74, 66, 220);
+        private const float KeyPadding = 10f;
         private static readonly Color SlotSelected = new Color32(226, 72, 64, 245);
-        private static readonly Color SelectedGlow = new Color32(255, 54, 54, 150);
 
         private void Awake()
         {
@@ -91,8 +88,8 @@ namespace Nomad.Hud
                     QuickSlots = inventory.gameObject.AddComponent<PlayerQuickSlots>();
             }
 
-            // 칸 이름(무기1·물약 등)이 한글이라 한글 글꼴을 먼저 준비합니다.
-            if (Resources.Load<Font>("ShopFonts/NanumGothic-Regular") is Font koreanFont)
+            // HUD 전체를 둥근 한글 글꼴(Jua)로 통일합니다. 숫자·한글 모두 이 글꼴을 씁니다.
+            if (Resources.Load<Font>("ShopFonts/Jua-Regular") is Font koreanFont)
                 weaponFont = TMP_FontAsset.CreateFontAsset(koreanFont);
 
             Build();
@@ -175,14 +172,6 @@ namespace Nomad.Hud
             if (combat.IsCharging)
                 attackStatusText.text = "";
 
-            // 활은 남은 화살 수를 선택 칸 위에 표시합니다.
-            int arrows = weapon?.AttackMode == WeaponAttackMode.Bow ? combat.ArrowCount : -1;
-            if (weapon != shownWeapon || arrows != shownArrows)
-            {
-                shownWeapon = weapon;
-                shownArrows = arrows;
-                SetWeapon(arrows >= 0 ? $"화살 {arrows}" : null);
-            }
         }
 
         // 손에 든 무기와 같은 아이템이 등록된 무기 칸을 빨갛게 강조합니다.
@@ -204,10 +193,9 @@ namespace Nomad.Hud
             {
                 bool weaponSlot = PlayerQuickSlots.IsWeaponSlot(index);
                 quickBackgrounds[index].color = index == selected ? SlotSelected : weaponSlot ? SlotRed : SlotGray;
-                selectionGlows[index].gameObject.SetActive(index == selected);
             }
 
-            // 화살 수·마나 경고는 선택된 무기 칸 위에 붙습니다.
+            // 마나 경고는 선택된 무기 칸 위에 붙습니다.
             RectTransform anchor = quickRects[selected >= 0 ? selected : 0];
             weaponText.rectTransform.SetParent(anchor, false);
             attackStatusText.rectTransform.SetParent(anchor, false);
@@ -343,9 +331,9 @@ namespace Nomad.Hud
             healthFill = StatusBar(bar, "Health", 150, HudArtwork.Shape.Heart, Red, out healthText);
             manaFill = StatusBar(bar, "Mana", 30, HudArtwork.Shape.Star, Blue, out manaText);
 
-            // 시안 비율대로 퀵바 중심을 화면 가운데에서 오른쪽으로 옮깁니다.
-            const float size = 138, gap = 18;
-            float first = 360 - (PlayerQuickSlots.Capacity - 1) * (size + gap) * .5f;
+            // 퀵바는 고정 크기로 화면 가운데 정렬하고, 남는 폭은 양옆 여백으로 둡니다.
+            const float size = 104, gap = 12;
+            float first = -(PlayerQuickSlots.Capacity - 1) * (size + gap) * .5f;
             for (int index = 0; index < PlayerQuickSlots.Capacity; index++)
                 BuildQuickSlot(bar, index, new Vector2(first + index * (size + gap), 0), size);
 
@@ -357,22 +345,23 @@ namespace Nomad.Hud
 
         private RectTransform StatusBar(RectTransform parent, string name, float y, HudArtwork.Shape icon, Color tint, out TMP_Text value)
         {
-            RectTransform group = Rect(name, parent, new Vector2(560, 100));
+            RectTransform group = Rect(name, parent, new Vector2(520, 100));
             group.anchorMin = group.anchorMax = group.pivot = Vector2.zero;
             group.anchoredPosition = new Vector2(70, y);
 
             // 아이콘은 막대 왼쪽에 크게, 수치는 막대 위에 흰색으로 둡니다.
-            Art(name == "Health" ? "Heart" : "Star", group, new Vector2(92, 88), new Vector2(-216, -12), icon, tint);
-            RectTransform track = Rect(name + " Track", group, new Vector2(490, 32), new Vector2(46, -28));
-            Art("Outline", track, new Vector2(496, 38), Vector2.zero, HudArtwork.Shape.Panel, new Color32(24, 20, 20, 230));
-            Art("Empty", track, new Vector2(490, 32), Vector2.zero, HudArtwork.Shape.Panel, BarTrack);
+            // 아이콘 오른쪽 끝과 막대 왼쪽 끝 사이에 16px 간격을 둡니다.
+            Art(name == "Health" ? "Heart" : "Star", group, new Vector2(80, 76), new Vector2(-220, -14), icon, tint);
+            RectTransform track = Rect(name + " Track", group, new Vector2(420, 32), new Vector2(54, -28));
+            Art("Outline", track, new Vector2(426, 38), Vector2.zero, HudArtwork.Shape.Panel, new Color32(24, 20, 20, 230));
+            Art("Empty", track, new Vector2(420, 32), Vector2.zero, HudArtwork.Shape.Panel, BarTrack);
 
-            RectTransform fill = Art("Fill", track, new Vector2(490, 32), Vector2.zero, HudArtwork.Shape.Panel, tint).rectTransform;
+            RectTransform fill = Art("Fill", track, new Vector2(420, 32), Vector2.zero, HudArtwork.Shape.Panel, tint).rectTransform;
             fill.anchorMin = Vector2.zero;
             fill.anchorMax = Vector2.one;
             fill.offsetMin = fill.offsetMax = Vector2.zero;
 
-            value = Label(name + " Value", track, "", new Vector2(490, 40), new Vector2(0, 42), 38);
+            value = Label(name + " Value", track, "", new Vector2(420, 40), new Vector2(0, 42), 34);
             value.alignment = TextAlignmentOptions.Left;
             value.color = Color.white;
             return fill;
@@ -383,13 +372,11 @@ namespace Nomad.Hud
             Vector2 square = new Vector2(size, size);
             RectTransform slot = Rect($"Slot {index + 1}", bar, square);
             slot.anchorMin = slot.anchorMax = new Vector2(.5f, 0f);
-            slot.anchoredPosition = position + new Vector2(0, 120);
+            slot.anchoredPosition = position + new Vector2(0, 96);
             quickRects[index] = slot;
             quickGroups[index] = slot.gameObject.AddComponent<CanvasGroup>();
 
-            // 선택 무기 칸은 바깥 붉은 빛과 진한 빨강 배경으로 두 겹 강조합니다.
-            selectionGlows[index] = Art("Selection", slot, square + new Vector2(16, 16), Vector2.zero, HudArtwork.Shape.Panel, SelectedGlow);
-            selectionGlows[index].gameObject.SetActive(false);
+            // 선택 무기 칸은 크기·외곽선 변화 없이 배경색만 진한 빨강으로 바꿉니다.
             bool weaponSlot = PlayerQuickSlots.IsWeaponSlot(index);
             quickBackgrounds[index] = Art("Background", slot, square, Vector2.zero, HudArtwork.Shape.Panel, weaponSlot ? SlotRed : SlotGray);
             dropHighlights[index] = Art("Drop Highlight", slot, square + new Vector2(6, 6), Vector2.zero, HudArtwork.Shape.Fittings, Amber);
@@ -406,11 +393,15 @@ namespace Nomad.Hud
             quickNames[index].enableAutoSizing = true;
             quickNames[index].fontSizeMin = 10;
 
-            quickCounts[index] = Label("Item Count", slot, "", new Vector2(60, 28), new Vector2(size * .5f - 32, -size * .5f + 18), 22);
+            quickCounts[index] = Label("Item Count", slot, "", new Vector2(60, 26), new Vector2(size * .5f - 34, -size * .5f + 16), 20);
             quickCounts[index].alignment = TextAlignmentOptions.Right;
-            TMP_Text key = Label("Key", slot, (index + 1).ToString(), new Vector2(30, 30), new Vector2(-size * .5f + 18, size * .5f - 18), 22);
-            key.alignment = TextAlignmentOptions.Left;
-            quickCaptions[index] = Label("Caption", slot, "", new Vector2(size + 10, 30), new Vector2(0, -size * .5f - 20), 22, true);
+            // 숫자 윗선(Capline)을 기준으로 맞춰 왼쪽·위 여백이 정확히 같게 합니다.
+            TMP_Text key = Label("Key", slot, (index + 1).ToString(), new Vector2(40, 0), Vector2.zero, 20);
+            key.rectTransform.anchorMin = key.rectTransform.anchorMax = key.rectTransform.pivot = new Vector2(0f, 1f);
+            key.rectTransform.anchoredPosition = new Vector2(KeyPadding, -KeyPadding);
+            key.alignment = TextAlignmentOptions.CaplineLeft;
+            key.margin = Vector4.zero;
+            quickCaptions[index] = Label("Caption", slot, "", new Vector2(size + 10, 28), new Vector2(0, -size * .5f - 18), 20, true);
         }
 
         private HudArtwork Art(string name, Transform parent, Vector2 size, Vector2 position, HudArtwork.Shape shape, Color color, float line = 4)
@@ -433,13 +424,13 @@ namespace Nomad.Hud
         private TMP_Text Label(string name, Transform parent, string value, Vector2 size, Vector2 position, int fontSize, bool korean = false)
         {
             var text = Rect(name, parent, size, position).gameObject.AddComponent<TextMeshProUGUI>();
-            text.font = korean && weaponFont != null ? weaponFont : font;
+            text.font = weaponFont != null ? weaponFont : font;
             text.text = value;
             text.fontSize = fontSize;
             text.color = new Color32(242, 242, 235, 255);
             text.alignment = TextAlignmentOptions.Center;
             text.raycastTarget = false;
-            text.fontStyle = FontStyles.Bold;
+            text.fontStyle = weaponFont != null ? FontStyles.Normal : FontStyles.Bold;
             return text;
         }
 

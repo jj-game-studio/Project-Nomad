@@ -67,6 +67,7 @@ namespace Nomad.Equipment
         private RectTransform statsPanel;
         private UnityEngine.UI.Text details;
         private int laidOutSlots = -1;
+        private const int BagVisibleRows = 2;
 
         public bool IsOpen => panel != null && panel.gameObject.activeInHierarchy;
         public RectTransform EquipmentGrid => equipmentGrid;
@@ -487,7 +488,9 @@ namespace Nomad.Equipment
                 return;
 
             laidOutSlots = inventory.SlotCount;
-            int rows = Mathf.CeilToInt(laidOutSlots / 5f);
+            // 하단 퀵바와 겹치지 않게 가방은 2줄만 보이고 나머지는 휠로 넘깁니다.
+            int rows = Mathf.Min(BagVisibleRows, Mathf.CeilToInt(laidOutSlots / 5f));
+            inventoryView.SetVisibleRows(BagVisibleRows);
             float bagHeight = rows * 88f - 8f;
             Place(bag, new Vector2(432, bagHeight), new Vector2(0, -286), new Vector2(0.5f, 1));
             Place(details.rectTransform, new Vector2(432, 30), new Vector2(0, -286 - bagHeight - 22));

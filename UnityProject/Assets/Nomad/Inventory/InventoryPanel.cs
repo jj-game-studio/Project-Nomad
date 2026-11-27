@@ -22,6 +22,11 @@ namespace Nomad.Inventory
         [SerializeField] private GameObject slotTemplate;
 
         private readonly SlotView[] slots = new SlotView[PlayerInventory.MaxCapacity];
+        private const int Columns = 5;
+        // 0이면 모든 줄을 보이고, 그 외에는 이 줄 수만 보이며 휠로 넘깁니다.
+        private int visibleRows;
+        private int firstRow;
+        private RectTransform scrollThumb;
         private Canvas canvas;
         private InventoryTooltip tooltip;
         private InventorySplitDialog splitDialog;
@@ -302,16 +307,94 @@ namespace Nomad.Inventory
             for (int index = 0; index < slots.Length; index++)
             {
                 // 가방 장비로 열리지 않은 칸은 숨겨 드래그·툴팁 대상에서도 빠집니다.
-                slots[index].Rect.gameObject.SetActive(index < inventory.SlotCount);
+                // 스크롤 창 밖의 줄도 숨기면 그리드가 남은 칸을 위로 당겨 배치합니다.
+                slots[index].Rect.gameObject.SetActive(index < inventory.SlotCount && IsRowVisible(index / Columns));
                 slots[index].Bind(inventory.GetSlot(index), index == hoveredIndex);
             }
 
             UpdateHover(FindPointerSlot(Mouse.current), refreshDetails: true);
         }
 
+        public int VisibleRows => visibleRows;
+        public int FirstRow => firstRow;
+        private int RowCount => Mathf.CeilToInt(inventory.SlotCount / (float)Columns);
+        private bool IsRowVisible(int row) => visibleRows <= 0 || (row >= firstRow && row < firstRow + visibleRows);
+
+        public void SetVisibleRows(int rows)
+        {
+            visibleRows = Mathf.Max(0, rows);
+            ScrollRows(0);
+        }
+
+        public void ScrollRows(int delta)
+        {
+            int maxFirst = visibleRows <= 0 ? 0 : Mathf.Max(0, RowCount - visibleRows);
+            int next = Mathf.Clamp(firstRow + delta, 0, maxFirst);
+            bool changed = next != firstRow;
+            firstRow = next;
+            UpdateScrollThumb();
+            if (changed || delta == 0)
+                Refresh();
+        }
+
+        // 지정한 칸이 보이도록 스크롤합니다. 검증과 외부 호출에서 숨은 칸을 꺼낼 때 씁니다.
+        public void ScrollToSlot(int slot)
+        {
+            int row = slot / Columns;
+            if (IsRowVisible(row))
+                return;
+            ScrollRows(row < firstRow ? row - firstRow : row - (firstRow + visibleRows - 1));
+        }
+
+        // 가방 오른쪽에 현재 보이는 줄 위치를 얇은 막대로 표시합니다.
+        private void UpdateScrollThumb()
+        {
+            bool scrollable = visibleRows > 0 && RowCount > visibleRows;
+            if (scrollThumb == null && scrollable)
+            {
+                var track = new GameObject("BagScrollTrack", typeof(RectTransform), typeof(UnityEngine.UI.Image)).GetComponent<RectTransform>();
+                track.SetParent(grid.parent, false);
+                track.GetComponent<UnityEngine.UI.Image>().color = new Color32(255, 255, 255, 25);
+                track.GetComponent<UnityEngine.UI.Image>().raycastTarget = false;
+                scrollThumb = new GameObject("Thumb", typeof(RectTransform), typeof(UnityEngine.UI.Image)).GetComponent<RectTransform>();
+                scrollThumb.SetParent(track, false);
+                scrollThumb.GetComponent<UnityEngine.UI.Image>().color = new Color32(224, 182, 104, 200);
+                scrollThumb.GetComponent<UnityEngine.UI.Image>().raycastTarget = false;
+            }
+
+            if (scrollThumb == null)
+                return;
+
+            var trackRect = (RectTransform)scrollThumb.parent;
+            trackRect.gameObject.SetActive(scrollable);
+            if (!scrollable)
+                return;
+
+            // 그리드 오른쪽 바깥에 그리드 높이만큼 세웁니다.
+            trackRect.anchorMin = trackRect.anchorMax = grid.anchorMin;
+            trackRect.pivot = new Vector2(0f, 1f);
+            trackRect.sizeDelta = new Vector2(5, grid.sizeDelta.y);
+            trackRect.anchoredPosition = grid.anchoredPosition + new Vector2(grid.sizeDelta.x * (1 - grid.pivot.x) + 6, grid.sizeDelta.y * (1 - grid.pivot.y));
+
+            float size = (float)visibleRows / RowCount;
+            float start = (float)firstRow / RowCount;
+            scrollThumb.anchorMin = new Vector2(0, 1 - start - size);
+            scrollThumb.anchorMax = new Vector2(1, 1 - start);
+            scrollThumb.offsetMin = scrollThumb.offsetMax = Vector2.zero;
+        }
+
         private void ProcessPointer()
         {
             Mouse mouse = Mouse.current;
+            // 가방 위에서 휠을 굴리면 한 줄씩 넘깁니다.
+            if (visibleRows > 0 && mouse != null && dragSource < 0 && quickDragSource < 0 &&
+                RectTransformUtility.RectangleContainsScreenPoint(grid, mouse.position.ReadValue(), EventCamera))
+            {
+                float wheel = mouse.scroll.ReadValue().y;
+                if (wheel != 0)
+                    ScrollRows(wheel > 0 ? -1 : 1);
+            }
+
             int pointerSlot = FindPointerSlot(mouse);
             Keyboard splitKeyboard = Keyboard.current;
             if (pointerFocused && mouse?.leftButton.wasPressedThisFrame == true && pointerSlot >= 0 &&
