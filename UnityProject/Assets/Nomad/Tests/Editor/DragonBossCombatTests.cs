@@ -69,6 +69,7 @@ namespace Nomad.Tests
                 arena.Center, Quaternion.LookRotation(Vector3.right), "Test boss", arena.transform);
             arena.PrepareCombat(boss, player);
             combat = boss.GetComponent<DragonBossCombat>();
+            boss.GetComponent<BossArrival>().Skip();
             combat.AutomaticPatterns = false;
             Physics.SyncTransforms();
         }
@@ -170,7 +171,7 @@ namespace Nomad.Tests
                 Debug.Log($"BOSS_REFERENCE_FIGHT seconds={elapsed:0.0} health={boss.MaxHealth} weapon=B+1 crit=off attacks={attacks} skills={skills} attackWindow=4.4/8");
                 Assert.That(boss.IsDead, Is.True);
                 Assert.That(elapsed, Is.InRange(105f, 140f));
-                Assert.That(boss.GetComponent<BossArmor>().BreakCount, Is.EqualTo(2));
+                Assert.That(boss.GetComponent<BossArmor>().BreakCount, Is.Zero, "기본 공격만으로 파괴가 자동 발생하지 않음");
             }
             finally
             {
@@ -271,6 +272,8 @@ namespace Nomad.Tests
                 yield return Wait(1.2f);
                 Assert.That(parry.Reflections, Is.EqualTo(1));
                 Assert.That(boss.CurrentHealth, Is.EqualTo(before - 140), "반사 탄은 보스에 한 번 피해");
+                Assert.That(boss.LastHitSource, Is.EqualTo(CombatImpactSource.ParriedFireball));
+                Assert.That(boss.GetComponent<BossArmor>().RemainingRatio, Is.LessThan(0.55f), "실제 반사 탄으로 내구도 45% 감소");
                 Assert.That(parry.TryBegin(), Is.True);
                 var lob = BossFireball.Launch(combat.Effects, boss.transform, victim, point, point, 1, true);
                 Assert.That(parry.TryReflect(lob, point), Is.False, "낙하/불지대 탄은 패링 제외");
@@ -292,7 +295,7 @@ namespace Nomad.Tests
             int hp = player.CurrentHealth;
             yield return Wait(1);
             Assert.That(player.CurrentHealth, Is.EqualTo(hp), "전조 중 피해 없음");
-            player.transform.position = arena.Center + Vector3.right * 10.5f;
+            player.transform.position = arena.Center + Vector3.right * 13.5f;
             Physics.SyncTransforms();
             yield return Wait(1.6f);
             Assert.That(player.CurrentHealth, Is.EqualTo(hp), "걸어서 범위를 빠져나가 회피");
@@ -309,7 +312,7 @@ namespace Nomad.Tests
             int hp = player.CurrentHealth;
             float restingCollider = boss.GetComponent<CapsuleCollider>().center.y;
             combat.BeginPattern(DragonPattern.Circle);
-            yield return Wait(1.9f);
+            yield return Wait(1.4f);
             var jump = boss.GetComponent<BossJumpSlam>();
             Assert.That(jump.Airborne, Is.True);
             Assert.That(boss.transform.Find("Body").localPosition.y, Is.GreaterThan(1.5f));
@@ -390,10 +393,13 @@ namespace Nomad.Tests
         {
             player.transform.position = arena.Center + Vector3.right * 7;
             Physics.SyncTransforms();
-            combat.BeginPattern(DragonPattern.TripleFireball);
+            combat.BeginPattern(DragonPattern.RadialFireballs);
             Assert.That(combat.Effects.GetComponentsInChildren<BossHazard>().Length, Is.Zero, "3갈래 바닥 표시 없음");
-            yield return Wait(1);
-            Assert.That(combat.Effects.GetComponentsInChildren<BossFireball>().Length, Is.EqualTo(3));
+            yield return Wait(0.8f);
+            Assert.That(boss.GetComponent<BossRadialChargePose>().Weight, Is.GreaterThan(0.2f));
+            yield return Wait(0.8f);
+            Assert.That(combat.Effects.GetComponentsInChildren<BossFireball>().Length, Is.EqualTo(16));
+            Assert.That(combat.Effects.GetComponentsInChildren<BossFireball>().All(ball => ball.GetComponentsInChildren<MeshRenderer>().Length == 0), Is.True);
             combat.Stun(0.01f);
             yield return Wait(0.03f);
             player.transform.position = arena.Center + Vector3.forward * 6;
@@ -409,11 +415,30 @@ namespace Nomad.Tests
         }
 
         [UnityTest]
+        public IEnumerator ArmorSourcesFavorParriesAndRocksOverBasicAttacks()
+        {
+            var armor = boss.GetComponent<BossArmor>();
+            float full = armor.Durability;
+            boss.TryApplyCombatDamage(100, false);
+            Assert.That(full - armor.Durability, Is.EqualTo(12).Within(0.001f));
+            float before = armor.Durability;
+            boss.TryApplyCombatImpact(100, false, CombatImpactSource.Skill);
+            Assert.That(armor.Durability, Is.EqualTo(before));
+            boss.TryApplyCombatImpact(140, false, CombatImpactSource.ParriedFireball);
+            Assert.That(before - armor.Durability, Is.EqualTo(full * 0.45f).Within(0.01f));
+            armor.DamageArmor(full * 0.65f);
+            yield return null;
+            Assert.That(armor.BreakCount, Is.EqualTo(1));
+            Assert.That(combat.Remaining, Is.GreaterThan(4.8f));
+        }
+
+        [UnityTest]
         public IEnumerator ArmorDurabilityBreaksTwiceAndKnocksDownWithSeparateAnimation()
         {
             BossArmor armor = boss.GetComponent<BossArmor>();
             combat.BeginPattern(DragonPattern.Circle);
-            boss.TryApplyDamage(Mathf.CeilToInt(boss.MaxHealth * 0.31f));
+            boss.TryApplyCombatImpact(140, false, CombatImpactSource.ParriedFireball);
+            armor.DamageArmor(BossArmor.DurabilityPerLayer * 0.65f);
             yield return null;
             Assert.That(combat.Phase, Is.EqualTo(DragonPhase.Stunned), "파괴 후 녹다운 딜타임");
             Assert.That(armor.BreakCount, Is.EqualTo(1));
@@ -425,7 +450,8 @@ namespace Nomad.Tests
             Assert.That(boss.GetComponentInChildren<Animator>().GetCurrentAnimatorClipInfo(0).First().clip.name, Is.EqualTo("BossKnockdown"));
             boss.TryApplyDamage(1);
             Assert.That(armor.BreakCount, Is.EqualTo(1));
-            boss.TryApplyDamage(Mathf.CeilToInt(boss.MaxHealth * 0.35f / 1.25f));
+            boss.TryApplyCombatImpact(140, false, CombatImpactSource.ParriedFireball);
+            armor.DamageArmor(BossArmor.DurabilityPerLayer * 0.65f);
             yield return null;
             Assert.That(armor.BreakCount, Is.EqualTo(2));
             Assert.That(armor.ModifyCombatDamage(100), Is.EqualTo(155));
@@ -578,7 +604,7 @@ namespace Nomad.Tests
             Assert.That(Quaternion.Angle(locked, boss.transform.rotation), Is.LessThan(0.1f), "전조 마지막은 고정되어 회피 가능");
             yield return Wait(0.4f);
             Assert.That(combat.ChargesReleased, Is.EqualTo(1));
-            Assert.That(combat.ChargeRemaining, Is.InRange(9, 10));
+            Assert.That(combat.ChargeRemaining, Is.InRange(21, 22));
         }
 
         [UnityTest]
@@ -598,7 +624,7 @@ namespace Nomad.Tests
         }
 
         [UnityTest]
-        public IEnumerator PointBlankCircleCanBeEscapedWithRealRollAndWalking()
+        public IEnumerator PointBlankCircleCanBeDodgedWithRealJumpWithoutInvulnerability()
         {
             Keyboard keyboard = InputSystem.AddDevice<Keyboard>();
             var muted = new List<InputDevice>();
@@ -634,17 +660,17 @@ namespace Nomad.Tests
                 int hp = health.CurrentHealth;
 
                 combat.BeginPattern(DragonPattern.Circle);
-                yield return Wait(0.25f);
-                InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.W, Key.LeftShift));
-                yield return Wait(0.2f);
-                Assert.That(movement.IsRolling, Is.True, "실제 구르기 입력");
-                InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.W));
-                yield return Wait(1.4f);
-                yield return Wait(0.9f);
+                yield return Wait(1.35f);
+                InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.Space));
+                yield return Wait(0.05f);
+                InputSystem.QueueStateEvent(keyboard, new KeyboardState());
+                yield return Wait(0.3f);
+                Assert.That(hero.transform.position.y - arena.GroundHeight(hero.transform.position), Is.GreaterThan(0.65f));
+                yield return Wait(0.35f);
                 Assert.That(Vector3.ProjectOnPlane(hero.transform.position - arena.Center, Vector3.up).magnitude,
-                    Is.GreaterThan(DragonBossCombat.CircleRadius), "근접에서 구르기 1회+걷기로 광역 탈출");
+                    Is.LessThan(DragonBossCombat.CircleRadius), "범위 안에서 실제 점프로 회피");
                 Assert.That(health.CurrentHealth, Is.EqualTo(hp));
-                Assert.That(health.IsCombatImmune, Is.False, "판정 때 구르기 무적 대신 범위 이탈로 회피");
+                Assert.That(health.IsCombatImmune, Is.False, "무적 없이 공중 높이로 회피");
                 Assert.That(boss.GetComponent<BossJumpSlam>().Landings, Is.EqualTo(1));
             }
             finally

@@ -35,8 +35,8 @@ namespace Nomad.Monsters.Demo
             sound.spatialBlend = 0.2f;
             sound.maxDistance = 35;
             Transform body = transform.Find("Body");
-            bodies = body.GetComponentsInChildren<Renderer>();
-            head = System.Array.Find(body.GetComponentsInChildren<Transform>(), bone => bone.name == "neck3");
+            bodies = body.GetComponentsInChildren<Renderer>(true);
+            head = System.Array.Find(body.GetComponentsInChildren<Transform>(true), bone => bone.name == "neck3");
             GetComponent<MonsterHitFeedback>()?.SetEffects(false, false, false);
             CreateParticles();
         }
@@ -118,7 +118,7 @@ namespace Nomad.Monsters.Demo
 
         private void LateUpdate()
         {
-            if (health.IsDead) { overlay.HideArmor(); return; }
+            if (health.IsDead || !GetComponent<DragonBossCombat>().Introduced) { overlay.HideArmor(); return; }
             overlay.ShowArmor(armor.BreakCount, armor.DamageMultiplier);
             overlay.ShowDurability(armor.RemainingRatio, armor.BreakCount);
             float flash = Mathf.Clamp01(1 - (Time.time - hitAt) / 0.075f);

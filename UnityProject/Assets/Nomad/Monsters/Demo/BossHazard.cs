@@ -17,6 +17,7 @@ namespace Nomad.Monsters.Demo
         public Vector3 LastBreathOrigin { get; private set; }
         public System.Func<Vector3, float> GroundHeight { get; set; }
         public float WarningSeconds { get; set; } = -1;
+        public float JumpClearance { get; set; }
         private Health target;
         private Transform owner;
         private float delay, duration, interval, elapsed, nextHit;
@@ -185,6 +186,7 @@ namespace Nomad.Monsters.Demo
 
         public bool Contains(Vector3 point)
         {
+            if (JumpClearance > 0 && GroundHeight != null && point.y - GroundHeight(point) > JumpClearance) return false;
             Vector3 offset = point - transform.position;
             if (Mathf.Abs(offset.y) > 3 || Vector3.ProjectOnPlane(offset, Vector3.up).magnitude > Radius) return false;
             if (angle < 359 && Vector3.Angle(transform.forward, Vector3.ProjectOnPlane(offset, Vector3.up)) > angle * 0.5f) return false;

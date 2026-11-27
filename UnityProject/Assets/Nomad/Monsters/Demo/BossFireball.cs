@@ -11,11 +11,10 @@ namespace Nomad.Monsters.Demo
         private Health target;
         private Vector3 start, goal;
         private float duration, elapsed;
-        private bool lob;
+        private bool lob, reflected, resolved;
         private int damage;
         private System.Action<Vector3> impact;
-        private bool reflected, resolved;
-        private Material meteorMaterial;
+        private ParticleSystem core, flame;
         public bool Parryable => !lob && damage > 0 && !reflected && !resolved;
         public Health Target => target;
         public bool Reflected => reflected;
@@ -23,39 +22,61 @@ namespace Nomad.Monsters.Demo
         public static BossFireball Launch(Transform parent, Transform owner, Health target, Vector3 start,
             Vector3 goal, float seconds, bool lob, System.Action<Vector3> impact = null, int damage = 25)
         {
-            GameObject root = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            root.name = lob ? "Lobbed fireball" : "Three way fireball";
+            var root = new GameObject(lob ? "Lobbed flame" : "Radial flame projectile");
             root.transform.SetParent(parent, true);
-            root.transform.position = start;
-            if ((goal - start).sqrMagnitude > 0.001f) root.transform.rotation = Quaternion.LookRotation(goal - start);
-            root.transform.localScale = Vector3.one * (lob ? 0.8f : 1.1f);
-            root.GetComponent<Collider>().enabled = false;
-            Destroy(root.GetComponent<Collider>());
-            root.GetComponent<Renderer>().sharedMaterial = WeaponVfx.Glow;
-            var tint = new MaterialPropertyBlock();
-            tint.SetColor("_BaseColor", new Color(1, 0.32f, 0.035f));
-            root.GetComponent<Renderer>().SetPropertyBlock(tint);
+            root.transform.SetPositionAndRotation(start, (goal - start).sqrMagnitude > 0.001f ? Quaternion.LookRotation(goal - start) : Quaternion.identity);
             var ball = root.AddComponent<BossFireball>();
             ball.owner = owner;
             ball.target = target;
             ball.start = start;
             ball.goal = goal;
-            ball.duration = seconds;
+            ball.duration = Mathf.Max(0.01f, seconds);
             ball.lob = lob;
             ball.impact = impact;
             ball.damage = damage;
-            if (!lob && damage > 0) ball.CreateMeteorTrail();
-            ParticleSystem flames = WeaponVfx.CreateParticles(root.transform, "Fire trail", WeaponVfx.Glow);
-            var main = flames.main;
-            main.startLifetime = 0.45f;
-            main.startSize = new ParticleSystem.MinMaxCurve(0.3f, 0.65f);
-            main.startColor = new ParticleSystem.MinMaxGradient(new Color(1, 0.3f, 0.02f), new Color(1, 0.85f, 0.2f));
-            var emission = flames.emission;
-            emission.enabled = true;
-            emission.rateOverTime = 45;
-            WeaponVfx.Shrink(flames);
-            WeaponVfx.Fade(flames, 0);
+            ball.BuildFlame();
             return ball;
+        }
+
+        private void BuildFlame()
+        {
+            core = WeaponVfx.CreateParticles(transform, "Living flame core", WeaponVfx.Glow, ParticleSystemSimulationSpace.Local);
+            var main = core.main;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(0.1f, 0.2f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.3f, 0.6f);
+            main.startColor = new Color(2.8f, 1.5f, 0.2f);
+            var shape = core.shape;
+            shape.enabled = true;
+            shape.shapeType = ParticleSystemShapeType.Sphere;
+            shape.radius = 0.14f;
+            var emission = core.emission;
+            emission.enabled = true;
+            emission.rateOverTime = 35;
+
+            flame = WeaponVfx.CreateParticles(transform, "Turbulent flame", WeaponVfx.Glow);
+            main = flame.main;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(0.25f, 0.5f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.45f, 0.9f);
+            main.startColor = new ParticleSystem.MinMaxGradient(new Color(1.8f, 0.2f, 0.01f), new Color(2, 0.8f, 0.03f));
+            var noise = flame.noise;
+            noise.enabled = true;
+            noise.strength = 0.3f;
+            noise.frequency = 2;
+            noise.scrollSpeed = 3;
+            emission = flame.emission;
+            emission.enabled = true;
+            emission.rateOverTime = 65;
+            WeaponVfx.Shrink(flame);
+            WeaponVfx.Fade(flame, 0);
+
+            var trail = gameObject.AddComponent<TrailRenderer>();
+            trail.sharedMaterial = WeaponVfx.Beam;
+            trail.time = 0.45f;
+            trail.startWidth = 0.75f;
+            trail.endWidth = 0;
+            trail.startColor = new Color(2, 0.5f, 0.03f);
+            trail.endColor = new Color(0.8f, 0.02f, 0, 0);
+            trail.minVertexDistance = 0.06f;
         }
 
         private void Update()
@@ -67,7 +88,7 @@ namespace Nomad.Monsters.Demo
             Vector3 next = Vector3.Lerp(start, goal, progress);
             if (lob) next += Vector3.up * Mathf.Sin(progress * Mathf.PI) * 4;
             Vector3 delta = next - transform.position;
-            if (!lob && damage > 0)
+            if (!lob && damage > 0 && delta.sqrMagnitude > 0)
             {
                 RaycastHit[] hits = Physics.SphereCastAll(transform.position, 0.4f, delta.normalized, delta.magnitude,
                     Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
@@ -79,13 +100,17 @@ namespace Nomad.Monsters.Demo
                     if (parry != null && parry.TryReflect(this, transform.position)) return;
                     resolved = true;
                     enabled = false;
-                    if (hit.collider.GetComponentInParent<Health>() == target) target.TryApplyDamage(damage);
+                    if (hit.collider.GetComponentInParent<Health>() == target)
+                    {
+                        if (reflected) target.TryApplyCombatImpact(damage, false, CombatImpactSource.ParriedFireball);
+                        else target.TryApplyDamage(damage);
+                    }
                     Explode(hit.point);
                     return;
                 }
             }
             transform.position = next;
-            if (progress >= 1) Explode(goal);
+            if (progress >= 1) { resolved = true; Explode(goal); }
         }
 
         public bool Reflect(Transform defender)
@@ -99,46 +124,17 @@ namespace Nomad.Monsters.Demo
             start = transform.position;
             goal = attacker.transform.position + Vector3.up * 1.8f;
             transform.rotation = Quaternion.LookRotation(goal - start);
-            var trail = GetComponent<TrailRenderer>();
-            if (trail != null) trail.startColor = new Color(0.3f, 1.2f, 2);
+            GetComponent<TrailRenderer>().startColor = new Color(0.3f, 1.2f, 2);
+            var main = core.main;
+            main.startColor = new Color(1, 2, 2.8f);
+            main = flame.main;
+            main.startColor = new Color(0.25f, 0.8f, 2);
             elapsed = 0;
             duration = Mathf.Max(0.12f, Vector3.Distance(start, goal) / 22);
             damage = 140;
             impact = null;
             return true;
         }
-
-        private void CreateMeteorTrail()
-        {
-            meteorMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            meteorMaterial.color = new Color(0.12f, 0.045f, 0.02f);
-            meteorMaterial.EnableKeyword("_EMISSION");
-            meteorMaterial.SetColor("_EmissionColor", new Color(1.3f, 0.16f, 0.01f));
-            GetComponent<Renderer>().sharedMaterial = meteorMaterial;
-            GetComponent<Renderer>().SetPropertyBlock(null);
-
-            var trail = gameObject.AddComponent<TrailRenderer>();
-            trail.sharedMaterial = WeaponVfx.Beam;
-            trail.time = 0.65f;
-            trail.startWidth = 1.15f;
-            trail.endWidth = 0;
-            trail.startColor = new Color(2, 0.65f, 0.04f);
-            trail.endColor = new Color(0.6f, 0.03f, 0, 0);
-            trail.minVertexDistance = 0.08f;
-
-            var embers = WeaponVfx.CreateParticles(transform, "Meteor embers", WeaponVfx.Glow);
-            var main = embers.main;
-            main.startLifetime = new ParticleSystem.MinMaxCurve(0.3f, 0.65f);
-            main.startSize = new ParticleSystem.MinMaxCurve(0.08f, 0.3f);
-            main.startSpeed = 1.8f;
-            main.startColor = new Color(1.6f, 0.45f, 0.02f);
-            var emission = embers.emission;
-            emission.enabled = true;
-            emission.rateOverTime = 85;
-            WeaponVfx.Shrink(embers);
-        }
-
-        private void OnDestroy() { if (meteorMaterial != null) Destroy(meteorMaterial); }
 
         private void Explode(Vector3 point)
         {

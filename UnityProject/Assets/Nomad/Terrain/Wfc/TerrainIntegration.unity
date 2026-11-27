@@ -1568,9 +1568,10 @@ MonoBehaviour:
   m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Monsters.Demo.BossEncounterContent
   Rock: {fileID: 7877644576711074951, guid: 5b91c0ccde428f74ebbae5f99da9a905, type: 3}
-  BossHealth: 5200
+  BossHealth: 4200
   Knockdown: {fileID: 7400000, guid: 8098ca6f6a60ed5479a6164582a97106, type: 2}
   UnevenFloor: 1
+  DropEntrance: 1
 --- !u!1 &1951189840
 GameObject:
   m_ObjectHideFlags: 0

@@ -97,9 +97,11 @@ namespace Nomad.Monsters.Demo
             if (GUILayout.Button("지팡이 +1")) Equip("weapon-apprentice-staff");
             GUILayout.EndHorizontal();
 
-            string[] labels = { "기본 공격", "원형 강타", "운석 3갈래", "브레스", "불지대 4개", "화염우", "돌진" };
+            string[] labels = { "기본 공격", "점프 강타", "전방향 화염탄", "브레스", "불지대 4개", "화염우", "돌진" };
+            GUI.enabled = Boss.Introduced;
             for (int index = 0; index < labels.Length; index++)
                 if (GUILayout.Button(labels[index])) Boss.BeginPattern((DragonPattern)index);
+            GUI.enabled = true;
             if (GUILayout.Button("보스전 재시작")) StartCoroutine(Spawn());
             GUILayout.EndArea();
             GUI.skin.font = previousFont;

@@ -9,6 +9,8 @@ namespace Nomad.Combat
         Fall
     }
 
+    public enum CombatImpactSource { Basic, Skill, ParriedFireball }
+
     [DisallowMultipleComponent]
     public sealed class Health : MonoBehaviour
     {
@@ -22,6 +24,7 @@ namespace Nomad.Combat
         public bool IsDead => CurrentHealth == 0;
         public bool IsCombatImmune { get; set; }
         public bool LastHitCritical { get; private set; }
+        public CombatImpactSource LastHitSource { get; private set; }
 
         public event Action<Health> Died;
         public event Action<Health> Evaded;
@@ -59,11 +62,13 @@ namespace Nomad.Combat
             return true;
         }
 
-        public bool TryApplyDamage(int amount, DamageKind kind = DamageKind.Combat) => ApplyDamage(amount, kind, false);
+        public bool TryApplyDamage(int amount, DamageKind kind = DamageKind.Combat) => ApplyDamage(amount, kind, false, CombatImpactSource.Basic);
 
-        public bool TryApplyCombatDamage(int amount, bool critical) => ApplyDamage(amount, DamageKind.Combat, critical);
+        public bool TryApplyCombatDamage(int amount, bool critical) => ApplyDamage(amount, DamageKind.Combat, critical, CombatImpactSource.Basic);
 
-        private bool ApplyDamage(int amount, DamageKind kind, bool critical)
+        public bool TryApplyCombatImpact(int amount, bool critical, CombatImpactSource source) => ApplyDamage(amount, DamageKind.Combat, critical, source);
+
+        private bool ApplyDamage(int amount, DamageKind kind, bool critical, CombatImpactSource source)
         {
             if (amount <= 0 || IsDead || (kind == DamageKind.Combat && IsCombatImmune))
                 return false;
@@ -82,6 +87,7 @@ namespace Nomad.Combat
             int before = CurrentHealth;
             CurrentHealth = Mathf.Max(0, CurrentHealth - amount);
             LastHitCritical = critical;
+            LastHitSource = source;
             Damaged?.Invoke(this, before - CurrentHealth, kind);
             if (IsDead)
                 Died?.Invoke(this);

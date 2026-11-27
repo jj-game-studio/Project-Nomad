@@ -31,7 +31,7 @@ namespace Nomad.Monsters.Demo
         {
             if (boss == null || gathering == null) return;
             bool preparing = boss.Phase == DragonPhase.Windup &&
-                (boss.Pattern == DragonPattern.Breath || boss.Pattern == DragonPattern.TripleFireball);
+                (boss.Pattern == DragonPattern.Breath || boss.Pattern == DragonPattern.RadialFireballs);
             var emission = gathering.emission;
             emission.enabled = preparing;
             if (!preparing) gathering.Clear();

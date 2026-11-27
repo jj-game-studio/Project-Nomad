@@ -11,7 +11,7 @@ namespace Nomad.Monsters.Demo
             for (int x = -5; x <= 5; x++)
             for (int z = -5; z <= 5; z++)
             {
-                if (uneven && (Mathf.Abs(x) > 1 || Mathf.Abs(z) > 1)) continue;
+                if (uneven) continue;
                 Decor("Weathered floor tile", Center + rotation * new Vector3(x * 4, 0.012f, z * 4),
                     new Vector3(3.92f, 0.025f, 3.92f), rotation, (x + z) % 2 == 0 ? pale : dark);
             }
@@ -26,14 +26,6 @@ namespace Nomad.Monsters.Demo
                 // 입구를 제외한 낮은 난간은 실제 낙하도 막습니다.
                 Floor("Ruined arena parapet", position, new Vector3(3.9f, 0.7f, 0.65f), turn, stone);
                 Decor("Parapet cap", position + Vector3.up * 0.06f, new Vector3(4, 0.12f, 0.8f), turn, pale);
-            }
-
-            for (int index = 0; index < 16; index++)
-            {
-                float angle = index * Mathf.PI * 2 / 16;
-                Vector3 offset = new Vector3(Mathf.Cos(angle), 0, Mathf.Sin(angle)) * 4.5f;
-                Decor("Altar inlay", Center + offset + Vector3.up * 0.045f,
-                    new Vector3(0.12f, 0.025f, 0.55f), Quaternion.Euler(0, -angle * Mathf.Rad2Deg, 0), trim);
             }
 
             Material flame = Material(new Color(0.9f, 0.58f, 0.24f));

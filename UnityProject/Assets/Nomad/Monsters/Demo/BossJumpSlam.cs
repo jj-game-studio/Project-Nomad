@@ -7,7 +7,7 @@ namespace Nomad.Monsters.Demo
     [DefaultExecutionOrder(300)]
     public sealed class BossJumpSlam : MonoBehaviour
     {
-        public const float LeapSeconds = 0.8f;
+        public const float LeapSeconds = 0.65f;
         public int Landings { get; private set; }
         public bool Airborne { get; private set; }
         private DragonBossCombat boss;
@@ -34,6 +34,13 @@ namespace Nomad.Monsters.Demo
         private void LateUpdate()
         {
             if (boss == null || body == null) return;
+            if (!boss.Introduced)
+            {
+                jumping = false;
+                Airborne = false;
+                if (feet != null) feet.enabled = false;
+                return;
+            }
             bool active = boss.Pattern == DragonPattern.Circle && boss.Phase == DragonPhase.Active;
             if (!active) { ResetPose(); return; }
             if (!jumping) { jumping = true; landed = false; since = Time.time; }
@@ -58,7 +65,7 @@ namespace Nomad.Monsters.Demo
             Airborne = false;
             if (body != null) body.localPosition = resting;
             if (capsule != null) capsule.center = restingCollider;
-            if (feet != null) feet.enabled = true;
+            if (feet != null) feet.enabled = boss == null || boss.Phase != DragonPhase.Dead;
         }
 
         private void OnDisable() => ResetPose();

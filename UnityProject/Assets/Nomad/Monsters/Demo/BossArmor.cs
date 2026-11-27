@@ -7,7 +7,7 @@ namespace Nomad.Monsters.Demo
     [RequireComponent(typeof(Health))]
     public sealed class BossArmor : MonoBehaviour, ICombatDamageModifier
     {
-        public const int ReferenceHealth = 5200;
+        public const int ReferenceHealth = 4200;
         public int BreakCount { get; private set; }
         public const float DurabilityPerLayer = 1450;
         public float Durability { get; private set; } = DurabilityPerLayer;
@@ -30,8 +30,9 @@ namespace Nomad.Monsters.Demo
 
         private void OnDamaged(Health _, int amount, DamageKind kind)
         {
-            if (health.IsDead) return;
-            DamageArmor(amount / DamageMultiplier);
+            if (health.IsDead || kind != DamageKind.Combat) return;
+            if (health.LastHitSource == CombatImpactSource.ParriedFireball) DamageArmor(DurabilityPerLayer * 0.45f);
+            else if (health.LastHitSource == CombatImpactSource.Basic) DamageArmor(Mathf.Min(12, amount / DamageMultiplier * 0.15f));
         }
 
         public void DamageArmor(float amount)

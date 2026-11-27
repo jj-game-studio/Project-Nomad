@@ -9,5 +9,6 @@ namespace Nomad.Monsters.Demo
         [Min(1)] public int BossHealth = BossArmor.ReferenceHealth;
         public AnimationClip Knockdown;
         public bool UnevenFloor = true;
+        public bool DropEntrance = true;
     }
 }
