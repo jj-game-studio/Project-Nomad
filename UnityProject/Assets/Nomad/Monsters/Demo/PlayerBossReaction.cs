@@ -17,18 +17,21 @@ namespace Nomad.Monsters.Demo
         private Quaternion originalRotation;
         private float start, end, delay, pushDistance, pushed;
         private float fallHeight = 0.35f;
+        private float pushSeconds = 0.6f;
         private bool posed;
         public bool Locked => isActiveAndEnabled && health != null && !health.IsDead && Time.time < end;
         public float KnockdownWeight { get; private set; }
         public bool HasVisual => visual != null;
 
-        public static PlayerBossReaction Play(Health player, Vector3 source, float distance, float seconds, float delay = 0)
+        public static PlayerBossReaction Play(Health player, Vector3 source, float distance, float seconds, float delay = 0, float pushSeconds = 0.6f)
         {
             var reaction = player.GetComponent<PlayerBossReaction>() ?? player.gameObject.AddComponent<PlayerBossReaction>();
             reaction.Restore();
             reaction.start = Time.time;
             reaction.end = Time.time + seconds;
             reaction.delay = delay;
+            reaction.pushSeconds = Mathf.Max(0.1f, pushSeconds);
+            reaction.KnockdownWeight = 0;
             reaction.pushDistance = distance;
             reaction.pushed = 0;
             reaction.pushDirection = Vector3.ProjectOnPlane(player.transform.position - source, Vector3.up).normalized;
@@ -52,7 +55,7 @@ namespace Nomad.Monsters.Demo
             if (!Locked) { KnockdownWeight = 0; return; }
             float age = Time.time - start - delay;
             if (age <= 0) return;
-            float reach = pushDistance * (1 - Mathf.Pow(1 - Mathf.Clamp01(age / 0.6f), 3));
+            float reach = pushDistance * (1 - Mathf.Pow(1 - Mathf.Clamp01(age / pushSeconds), 3));
             float move = reach - pushed;
             pushed = reach;
             if (controller != null && controller.enabled)

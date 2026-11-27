@@ -6,7 +6,8 @@ namespace Nomad.Monsters.Demo
 {
     public sealed class BossGroundCracks : MonoBehaviour
     {
-        private Material material;
+        private Material material, glowMaterial;
+        private LineRenderer[] glow;
         private LineRenderer[] cracks;
         private float started;
 
@@ -19,7 +20,9 @@ namespace Nomad.Monsters.Demo
             impact.material = new Material(WeaponVfx.Plain);
             impact.material.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
             impact.material.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
-            impact.cracks = new LineRenderer[10];
+            impact.cracks = new LineRenderer[16];
+            impact.glow = new LineRenderer[16];
+            impact.glowMaterial = new Material(WeaponVfx.Beam);
 
             for (int index = 0; index < impact.cracks.Length; index++)
             {
@@ -27,19 +30,28 @@ namespace Nomad.Monsters.Demo
                 line.transform.SetParent(root.transform, false);
                 line.sharedMaterial = impact.material;
                 line.shadowCastingMode = ShadowCastingMode.Off;
-                line.positionCount = 8;
-                line.startWidth = 0.24f;
-                line.endWidth = 0.035f;
+                line.positionCount = 12;
+                line.startWidth = 0.72f;
+                line.endWidth = 0.075f;
                 impact.cracks[index] = line;
-                Vector3 direction = Quaternion.Euler(0, index * 36 + 13, 0) * Vector3.forward;
+                Vector3 direction = Quaternion.Euler(0, index * 22.5f + 13, 0) * Vector3.forward;
                 Vector3 side = Vector3.Cross(Vector3.up, direction);
                 for (int step = 0; step < line.positionCount; step++)
                 {
-                    float length = Mathf.Min(radius, arena.DistanceToBoundary(center, direction)) * step / (line.positionCount - 1);
+                    float length = Mathf.Min(radius * 1.1f, arena.DistanceToBoundary(center, direction)) * step / (line.positionCount - 1);
                     Vector3 point = center + direction * length + side * (step == 0 ? 0 : Mathf.Sin(step * 11 + index) * 0.45f);
-                    point.y = arena.GroundHeight(point) + 0.045f;
+                    point.y = arena.GroundHeight(point) + 0.18f;
                     line.SetPosition(step, point);
                 }
+                var hot = new GameObject("Fresh fracture light").AddComponent<LineRenderer>();
+                hot.transform.SetParent(root.transform, false);
+                hot.sharedMaterial = impact.glowMaterial;
+                hot.positionCount = line.positionCount;
+                hot.startWidth = 0.14f; hot.endWidth = 0.015f;
+                var positions = new Vector3[line.positionCount];
+                line.GetPositions(positions);
+                hot.SetPositions(positions);
+                impact.glow[index] = hot;
             }
             var dust = WeaponVfx.CreateParticles(root.transform, "Landing stone dust", WeaponVfx.Glow);
             var main = dust.main;
@@ -52,15 +64,18 @@ namespace Nomad.Monsters.Demo
                 Vector3 point = arena.GroundPoint(center + direction * Mathf.Min(index % 5 * 1.5f, arena.DistanceToBoundary(center, direction)));
                 dust.Emit(new ParticleSystem.EmitParams { position = point + Vector3.up * 0.1f, velocity = direction * 3 + Vector3.up * 1.8f }, 1);
             }
-            Destroy(root, 3.5f);
+            BossStoneDebris.Create(parent, center + Vector3.up * 0.3f);
+            Destroy(root, 6);
         }
 
         private void Update()
         {
-            float alpha = Mathf.Clamp01((3.5f - (Time.time - started)) / 1.2f);
-            foreach (LineRenderer crack in cracks) crack.startColor = crack.endColor = new Color(0.08f, 0.045f, 0.025f, alpha);
+            float alpha = Mathf.Clamp01((6 - (Time.time - started)) / 1.5f);
+            foreach (LineRenderer crack in cracks) crack.startColor = crack.endColor = new Color(0.045f, 0.025f, 0.015f, alpha);
+            float flash = Mathf.Clamp01(1 - (Time.time - started) / 1.2f);
+            foreach (LineRenderer line in glow) line.startColor = line.endColor = new Color(1.7f, 0.7f, 0.12f, flash);
         }
 
-        private void OnDestroy() { if (material != null) Destroy(material); }
+        private void OnDestroy() { if (material != null) Destroy(material); if (glowMaterial != null) Destroy(glowMaterial); }
     }
 }

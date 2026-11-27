@@ -13,6 +13,7 @@ namespace Nomad.Monsters.Demo
         public float Radius { get; private set; }
         public bool EmitsFlame { get; set; } = true;
         public System.Action OnHit { get; set; }
+        public bool IgnoreCover { get; set; }
         public Color WarningColor { get; set; } = new Color(1, 0.25f, 0.04f, 0.22f);
         public Transform BreathOrigin { get; set; }
         public float BreathTravelSeconds { get; set; } = 0.65f;
@@ -113,7 +114,7 @@ namespace Nomad.Monsters.Demo
         private void Update()
         {
             if (target == null || target.IsDead) { Destroy(gameObject); return; }
-            if (!innerBuilt && angle < 359 && InnerRadius > 0) BuildBreathFootprint();
+            if (!innerBuilt && InnerRadius > 0) BuildBreathFootprint();
             elapsed += Time.deltaTime;
             if (!Active)
             {
@@ -121,6 +122,7 @@ namespace Nomad.Monsters.Demo
                 tint.SetColor("_BaseColor", WarningColor);
                 fill.GetComponent<Renderer>().SetPropertyBlock(tint);
                 boundary.startColor = boundary.endColor = new Color(WarningColor.r, WarningColor.g, WarningColor.b);
+                if (innerBoundary != null) innerBoundary.startColor = innerBoundary.endColor = boundary.startColor;
             }
             float warning = WarningSeconds >= 0 ? WarningSeconds : delay;
             float progress = warning <= 0 ? 1 : Mathf.Clamp01(elapsed / warning);
@@ -217,6 +219,7 @@ namespace Nomad.Monsters.Demo
             float distance = Vector3.ProjectOnPlane(offset, Vector3.up).magnitude;
             if (Mathf.Abs(offset.y) > 3 || distance > EdgeRadius(Vector3.ProjectOnPlane(offset, Vector3.up)) || distance < InnerRadius) return false;
             if (angle < 359 && Vector3.Angle(transform.forward, Vector3.ProjectOnPlane(offset, Vector3.up)) > angle * 0.5f) return false;
+            if (IgnoreCover) return true;
             Vector3 ray = target.transform.position + Vector3.up - (transform.position + Vector3.up);
             return !Projectile.TryGetFirstHit(new Ray(transform.position + Vector3.up, ray.normalized), ray.magnitude,
                 Physics.DefaultRaycastLayers, owner, out RaycastHit hit) || hit.collider.GetComponentInParent<Health>() == target;

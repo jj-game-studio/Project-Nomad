@@ -9,6 +9,7 @@ namespace Nomad.Monsters.Demo
 
         public DragonPattern ChooseNextPattern(float targetDistance)
         {
+            if (Time.time >= nextRockfall && arena.RockCount < BossArena.MaximumRockCount && fallingRock == null) return DragonPattern.Rockfall;
             var choices = new List<DragonPattern>();
             foreach (DragonPattern pattern in Rotation)
                 if (AttacksStarted == 0 || pattern != Pattern) choices.Add(pattern);

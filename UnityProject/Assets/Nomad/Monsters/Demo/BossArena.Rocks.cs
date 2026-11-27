@@ -9,7 +9,8 @@ namespace Nomad.Monsters.Demo
     public sealed partial class BossArena
     {
         public const string RockResource = "BossArenaRock";
-        public const int InitialRockCount = 8;
+        public const int InitialRockCount = 0;
+        public const int MaximumRockCount = 6;
         public int RockCount => GetComponentsInChildren<BossBreakableRock>().Count(rock => !rock.Broken);
         private Transform rockRoot;
         private GameObject rockPrefab;
@@ -24,9 +25,6 @@ namespace Nomad.Monsters.Demo
             BossEncounterContent content = FindFirstObjectByType<BossEncounterContent>();
             rockPrefab = content != null ? content.Rock : Resources.Load<GameObject>(RockResource);
             if (player.GetComponent<Nomad.WorldHud.CharacterHealthHud>() == null) player.gameObject.AddComponent<Nomad.WorldHud.CharacterHealthHud>();
-            foreach (Vector2 offset in new[] { new Vector2(-14, -14), new Vector2(14, -14), new Vector2(-18, 4),
-                new Vector2(18, 4), new Vector2(-12, 16), new Vector2(12, 16), new Vector2(-7, -1), new Vector2(7, -1) })
-                CreateRock(GroundPoint(Center + Quaternion.LookRotation(Forward) * new Vector3(offset.x, 0, offset.y)));
             boss.gameObject.AddComponent<BossArmor>().Configure(content != null ? content.BossHealth : BossArmor.ReferenceHealth);
             boss.gameObject.AddComponent<DragonBossCombat>().Configure(this, player);
             boss.gameObject.AddComponent<BossStrikeFeedback>().Configure(player.transform);
@@ -64,29 +62,29 @@ namespace Nomad.Monsters.Demo
             return rock;
         }
 
-        public int ScatterParryRocks(Vector3 player, Vector3 boss, int count)
+        public GameObject LandRock(Vector3 point)
         {
-            // 유도용 돌이 계속 누적되어 방을 막지 않게 먼 오래된 돌부터 교체합니다.
-            int replace = Mathf.Max(0, RockCount + count - 16);
-            foreach (BossBreakableRock old in GetComponentsInChildren<BossBreakableRock>()
-                .Where(rock => Vector3.Distance(rock.transform.position, player) > 6 && Vector3.Distance(rock.transform.position, boss) > 6)
-                .Take(replace)) old.Shatter();
+            if (RockCount >= MaximumRockCount) return null;
+            GameObject rock = CreateRock(GroundPoint(point));
+            rock.AddComponent<BossRockSolidify>();
+            return rock;
+        }
 
-            int spawned = 0;
-            for (int attempt = 0; attempt < 160 && spawned < count; attempt++)
+        public bool FindRockDropPoint(Vector3 requested, Vector3 boss, out Vector3 result)
+        {
+            for (int attempt = 0; attempt < 100; attempt++)
             {
                 float angle = (rocksCreated * 137.5f + attempt * 47) * Mathf.Deg2Rad;
-                float radius = 7 + (attempt % 4) * 3.4f;
-                Vector3 point = GroundPoint(Center + new Vector3(Mathf.Sin(angle), 0, Mathf.Cos(angle)) * radius);
+                Vector3 point = attempt == 0 ? requested : Center + new Vector3(Mathf.Sin(angle), 0, Mathf.Cos(angle)) * (9 + attempt % 3 * 3.5f);
                 Vector3 local = Quaternion.Inverse(Quaternion.LookRotation(Forward)) * (point - Center);
-                if (Mathf.Abs(local.x) > HalfSize - 3 || Mathf.Abs(local.z) > HalfSize - 3 ||
-                    (local.z < -HalfSize + 7 && Mathf.Abs(local.x) < 5) || Vector3.Distance(point, player) < 5 || Vector3.Distance(point, boss) < 6) continue;
-                if (GetComponentsInChildren<BossBreakableRock>().Any(rock => Vector3.Distance(rock.transform.position, point) < 6)) continue;
-                GameObject rock = CreateRock(point);
-                rock.AddComponent<BossRockEruption>().Configure();
-                spawned++;
+                if (new Vector2(local.x, local.z).magnitude > HalfSize - 3 || (local.z < -HalfSize + 7 && Mathf.Abs(local.x) < 5) ||
+                    Vector3.Distance(point, Center) < 6 || Vector3.Distance(point, boss) < 6) continue;
+                if (GetComponentsInChildren<BossBreakableRock>().Any(rock => !rock.Broken && Vector3.Distance(rock.transform.position, point) < 6)) continue;
+                result = GroundPoint(point);
+                return true;
             }
-            return spawned;
+            result = default;
+            return false;
         }
 
         private void ClearForeignDressing()

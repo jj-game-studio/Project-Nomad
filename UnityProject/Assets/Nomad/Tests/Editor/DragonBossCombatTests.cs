@@ -191,15 +191,21 @@ namespace Nomad.Tests
         [Test]
         public void RocksLeaveCenterAndEntranceClear()
         {
+            Assert.That(arena.RockCount, Is.Zero, "초기에는 바위 없음");
+            for (int index = 0; index < BossArena.MaximumRockCount; index++)
+            {
+                Assert.That(arena.FindRockDropPoint(arena.Center, boss.transform.position, out Vector3 point), Is.True);
+                Assert.That(arena.LandRock(point), Is.Not.Null);
+            }
             BossBreakableRock[] rocks = arena.GetComponentsInChildren<BossBreakableRock>();
-            Assert.That(rocks.Length, Is.EqualTo(BossArena.InitialRockCount));
+            Assert.That(rocks.Length, Is.EqualTo(6));
             foreach (BossBreakableRock rock in rocks)
             {
                 BoxCollider collision = rock.transform.Find("Rock collision").GetComponent<BoxCollider>();
                 Vector3 offset = collision.transform.position - arena.Center;
                 Assert.That(Vector3.ProjectOnPlane(offset, Vector3.up).magnitude, Is.GreaterThan(6));
-                if (Vector3.Dot(offset, arena.Forward) < -BossArena.HalfSize + 10)
-                    Assert.That(Mathf.Abs(Vector3.Dot(offset, Vector3.Cross(Vector3.up, arena.Forward))), Is.GreaterThan(4));
+                if (Vector3.Dot(offset, arena.Forward) < -BossArena.HalfSize + 7)
+                    Assert.That(Mathf.Abs(Vector3.Dot(offset, Vector3.Cross(Vector3.up, arena.Forward))), Is.GreaterThan(5));
                 Assert.That(rock.GetComponentInChildren<NavMeshObstacle>().carving, Is.True);
                 Assert.That(collision.size.x, Is.GreaterThanOrEqualTo(3.2f));
                 foreach (BossBreakableRock other in rocks)
@@ -474,7 +480,8 @@ namespace Nomad.Tests
         [UnityTest]
         public IEnumerator ChargingIntoRockBreaksItAndStunsBoss()
         {
-            yield return Wait(0.2f);
+            arena.LandRock(arena.GroundPoint(arena.Center + new Vector3(9, 0, 13)));
+            yield return Wait(0.5f);
             BossBreakableRock rock = arena.GetComponentsInChildren<BossBreakableRock>().First();
             Vector3 point = arena.GroundPoint(rock.GetComponentInChildren<BoxCollider>().bounds.center);
             Vector3 inward = Vector3.ProjectOnPlane(arena.Center - point, Vector3.up).normalized;
@@ -548,13 +555,13 @@ namespace Nomad.Tests
             combat.Tuning.RainWaves = 2;
             combat.BeginPattern(DragonPattern.Basic);
             Assert.That(boss.GetComponent<NavMeshAgent>().speed, Is.EqualTo(6));
-            for (int frame = 0; frame < 540; frame++)
+            for (int frame = 0; frame < 1800 && combat.AttacksStarted < 3; frame++)
             {
                 yield return null;
                 if (combat.Phase == DragonPhase.Recovery)
                     Assert.That(combat.Remaining, Is.InRange(0, combat.Tuning.RecoverySeconds + 0.02f), "패턴 사이 회복 시간 확보");
             }
-            Assert.That(combat.AttacksStarted, Is.GreaterThanOrEqualTo(3), "기본 공격 없이 강타/구체/브레스를 이어서 실행");
+            Assert.That(combat.AttacksStarted, Is.GreaterThanOrEqualTo(3), "긴 공전 패턴을 포함해 회복 후 다음 공격으로 진행");
         }
 
         [UnityTest]
@@ -573,7 +580,7 @@ namespace Nomad.Tests
         {
             Assert.That(combat.Mouth.parent.name, Is.EqualTo("jaw_upper"));
             combat.BeginPattern(DragonPattern.Breath);
-            yield return Wait(2);
+            yield return Wait(2.5f);
             BossHazard breath = combat.Effects.GetComponentsInChildren<BossHazard>().Single();
             Assert.That(breath.Radius, Is.EqualTo(combat.Tuning.BreathRange));
             Vector3 widenedEdge = boss.transform.position + Quaternion.Euler(0, 42, 0) * boss.transform.forward * 12.5f;

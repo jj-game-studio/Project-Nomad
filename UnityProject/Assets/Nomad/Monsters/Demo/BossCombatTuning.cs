@@ -15,8 +15,8 @@ namespace Nomad.Monsters.Demo
         public float RadialSpeed = 42;
         public float RadialRange = 34;
 
-        public float BreathRange = 18;
-        public float BreathAngle = 110;
+        public float BreathRange = 22;
+        public float BreathAngle = 120;
         public float BreathSafeRadius = 3.5f;
         public float BreathTravelSeconds = 1.3f;
 
@@ -34,6 +34,12 @@ namespace Nomad.Monsters.Demo
         public float ChargeSpeed = 15;
 
         public float BodySweepRadius = 7;
-        public float BodySweepWindup = 1.25f;
+        public float BodySweepWindup = 0.85f;
+
+        public float RockfallInterval = 14;
+        public float RockfallWarning = 1.1f;
+        public float RockfallRadius = 2.7f;
+        public float BreathBackstep = 4.5f;
+        public float OrbitSpeed = 18;
     }
 }

@@ -5,6 +5,7 @@ namespace Nomad.Monsters.Demo
     public sealed partial class BossHazard
     {
         private bool innerBuilt;
+        private LineRenderer innerBoundary;
 
         private void BuildBreathFootprint()
         {
@@ -30,7 +31,25 @@ namespace Nomad.Monsters.Demo
             fullFootprint = vertices;
             projected = new Vector3[vertices.Length];
             boundaryStart = rings * (segments + 1);
-            boundary.positionCount = (segments + 1) * 2;
+            if (angle >= 359)
+            {
+                boundary.positionCount = segments;
+                innerBoundary = new GameObject("Inner ring boundary").AddComponent<LineRenderer>();
+                innerBoundary.transform.SetParent(transform, false);
+                innerBoundary.useWorldSpace = false;
+                innerBoundary.loop = true;
+                innerBoundary.positionCount = segments;
+                innerBoundary.sharedMaterial = boundary.sharedMaterial;
+                innerBoundary.widthMultiplier = 0.07f;
+                for (int index = 0; index < segments; index++)
+                {
+                    Vector3 local = vertices[index];
+                    Vector3 world = transform.TransformPoint(local);
+                    local.y = (GroundHeight != null ? GroundHeight(world) : transform.position.y) + 0.25f - transform.position.y;
+                    innerBoundary.SetPosition(index, local);
+                }
+            }
+            else boundary.positionCount = (segments + 1) * 2;
             for (int index = 0; index < boundary.positionCount; index++)
             {
                 Vector3 local = index <= segments ? vertices[boundaryStart + index] : vertices[segments * 2 + 1 - index];

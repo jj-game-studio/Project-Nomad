@@ -153,7 +153,7 @@ namespace Nomad.Tests
         }
 
         [UnityTest]
-        public IEnumerator YellowFlashThenFParriesRadialAndSlamOnceAndEruptsSafeRocks()
+        public IEnumerator YellowFlashThenFParriesRadialAndSlamWithoutCreatingRocks()
         {
             var boss = scene.Boss;
             boss.GetComponent<BossArrival>().Skip();
@@ -170,6 +170,7 @@ namespace Nomad.Tests
             foreach (DragonPattern pattern in new[] { DragonPattern.RadialFireballs, DragonPattern.Circle })
             {
                 int before = scene.Arena.RockCount;
+                int successes = parry.Successes;
                 boss.BeginPattern(pattern);
                 while (Time.time < signal.FlashAt + 0.02f) yield return null;
                 Assert.That(signal.Flashing, Is.True);
@@ -178,7 +179,8 @@ namespace Nomad.Tests
                 yield return null;
                 InputSystem.QueueStateEvent(keyboard, new UnityEngine.InputSystem.LowLevel.KeyboardState());
                 yield return Wait(1.1f);
-                Assert.That(scene.Arena.RockCount - before, Is.InRange(2, 3), pattern + " F 성공=" + parry.Successes);
+                Assert.That(scene.Arena.RockCount, Is.EqualTo(before), "패링은 바위를 만들지 않음");
+                Assert.That(parry.Successes, Is.EqualTo(successes + 1));
                 Assert.That(health.CurrentHealth, Is.EqualTo(hp));
             }
             Assert.That(parry.Successes, Is.EqualTo(2));
@@ -209,10 +211,10 @@ namespace Nomad.Tests
                 Assert.That(UnityEditor.ShaderUtil.GetShaderMessages(shader).Any(message => message.severity == UnityEditor.Rendering.ShaderCompilerMessageSeverity.Error), Is.False);
             }
             boss.BeginPattern(DragonPattern.Breath);
-            yield return Wait(1.8f);
+            yield return Wait(2.1f);
             BossHazard breath = boss.Effects.GetComponentInChildren<BossHazard>();
             Assert.That(breath.WarningVisible, Is.False);
-            Assert.That(breath.Radius, Is.EqualTo(18));
+            Assert.That(breath.Radius, Is.EqualTo(22));
             Assert.That(breath.Contains(boss.transform.position + boss.transform.forward * 2), Is.False);
             Assert.That(breath.VisualRangeMultiplier, Is.EqualTo(1));
         }
@@ -282,7 +284,7 @@ namespace Nomad.Tests
             yield return Wait(2.6f);
             Assert.That(boss.VolleysReleased, Is.EqualTo(2));
             boss.BeginPattern(DragonPattern.Breath);
-            yield return Wait(1.5f);
+            yield return Wait(2);
             Quaternion facing = boss.transform.rotation;
             yield return Wait(0.5f);
             Assert.That(Quaternion.Angle(facing, boss.transform.rotation), Is.GreaterThan(7));

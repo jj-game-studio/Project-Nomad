@@ -21,8 +21,8 @@ namespace Nomad.Game.Editor
     {
         private const string Key = "Nomad.BossGrowthVerify";
         private static readonly DragonPattern[] Patterns = { DragonPattern.Circle, DragonPattern.RadialFireballs,
-            DragonPattern.Breath, DragonPattern.FirePool, DragonPattern.Rain, DragonPattern.Charge, DragonPattern.BodySweep };
-        private static readonly float[] CaptureAt = { 2.7f, 1.88f, 2.4f, 1.9f, 6.5f, 2.15f, 1.35f };
+            DragonPattern.Breath, DragonPattern.FirePool, DragonPattern.Rain, DragonPattern.Rockfall, DragonPattern.Charge, DragonPattern.BodySweep, DragonPattern.OrbitFlames };
+        private static readonly float[] CaptureAt = { 2.7f, 1.88f, 2.8f, 1.9f, 6.5f, 2.3f, 2.15f, 0.95f, 6.8f };
         private static readonly List<InputDevice> muted = new();
         private static DragonBossCombat boss;
         private static BossArena arena;
@@ -180,7 +180,7 @@ namespace Nomad.Game.Editor
                 {
                     InputSystem.QueueStateEvent(keyboard, new KeyboardState());
                     if (Time.time < since + 0.9f) return;
-                    Require(boss.ParrySuccesses == 3 && arena.RockCount - rocksBeforeParry >= 2, "실제 F 강타 패링/바위 생성");
+                    Require(boss.ParrySuccesses == 3 && arena.RockCount == rocksBeforeParry, "실제 F 강타 패링/바위 미생성");
                     Capture("ParryRocksEnraged");
                     boss.BeginPattern(DragonPattern.RadialFireballs);
                     since = Time.time;
@@ -189,7 +189,8 @@ namespace Nomad.Game.Editor
                 }
                 if (stage == 14)
                 {
-                    if (!boss.GetComponent<BossParrySignal>().Flashing) return;
+                    if (!boss.GetComponent<BossParrySignal>().Flashing || Time.time < boss.GetComponent<BossParrySignal>().FlashAt + 0.02f) return;
+                    Require(Object.FindFirstObjectByType<BossGuardPulse>() != null, "채움 완료와 보스 금빛 파동 동기화");
                     player.transform.rotation = Quaternion.LookRotation(Vector3.ProjectOnPlane(boss.transform.position - player.transform.position, Vector3.up));
                     player.GetComponent<Health>().IsCombatImmune = false;
                     hpBeforeOrb = player.GetComponent<Health>().CurrentHealth;
@@ -259,7 +260,7 @@ namespace Nomad.Game.Editor
                     player.GetComponent<Health>().IsCombatImmune = true;
                     foreach (MonsterIdentity actor in Object.FindObjectsByType<MonsterIdentity>(FindObjectsSortMode.None))
                         if (actor.Rank != MonsterRank.Boss) actor.GetComponent<Health>().TryApplyDamage(int.MaxValue);
-                    Require(!arena.IsLocked && arena.Connected && arena.RockCount == BossArena.InitialRockCount, "입장 해금·경로·초기 바위 8개");
+                    Require(!arena.IsLocked && arena.Connected && arena.RockCount == BossArena.InitialRockCount, "입장 해금·경로·초기 바위 없음");
                     PlayerInventory bag = player.GetComponent<PlayerInventory>();
                     bag.Add("weapon-apprentice-staff", 2);
                     int slot = Enumerable.Range(0, bag.SlotCount).First(index => bag.GetSlot(index).Item?.ItemId == "weapon-apprentice-staff");
@@ -305,6 +306,21 @@ namespace Nomad.Game.Editor
                 }
                 if (stage == 1)
                 {
+                    if (Patterns[pattern] == DragonPattern.Breath && !chargeTellCaptured && Time.time >= since + 0.3f)
+                    {
+                        Require(boss.GetComponent<BossBreathBackstep>().Airborne, "브레스 전 후방 점프");
+                        Capture("BreathBackstep"); chargeTellCaptured = true;
+                    }
+                    if (Patterns[pattern] == DragonPattern.Rockfall && !chargeTellCaptured && Time.time >= since + boss.Tuning.RockfallWarning + 0.25f)
+                    {
+                        Require(arena.RockCount == 0 && boss.Effects.GetComponentInChildren<BossFallingRock>() != null, "경고 뒤 바위 한 개 공중 낙하");
+                        Capture("RockfallMidair"); chargeTellCaptured = true;
+                    }
+                    if (Patterns[pattern] == DragonPattern.OrbitFlames && !chargeTellCaptured && Time.time >= since + 2)
+                    {
+                        Require(boss.Effects.GetComponentInChildren<BossOrbitingFlames>()?.OrbCount == 3, "느린 공전 화염구 3개");
+                        Capture("OrbitPhaseA"); chargeTellCaptured = true;
+                    }
                     if (Patterns[pattern] == DragonPattern.Circle && !chargeTellCaptured && Time.time >= since + 1.85f)
                     {
                         Require(boss.GetComponent<BossJumpSlam>().Airborne, "예고 완료 후 실제 도약");
@@ -408,7 +424,7 @@ namespace Nomad.Game.Editor
                     Require(player.GetComponent<PlayerBossParry>().Reflections == 1, "실제 F 입력으로 탄 하나만 패링");
                     InputSystem.QueueStateEvent(keyboard, new KeyboardState());
                     Capture("Parry");
-                    Debug.Log("BOSS_GROWTH_PLAY_PASS scene=" + (debug ? "BossDebug" : terrain ? "TerrainIntegration" : "Game/Field") + " patterns=7 initialRocks=8 rockStun=1 armorBreak=2 knockdown=pass enhance=1 skill=pass playerHurt=pass parry=1");
+                    Debug.Log("BOSS_GROWTH_PLAY_PASS scene=" + (debug ? "BossDebug" : terrain ? "TerrainIntegration" : "Game/Field") + " patterns=9 initialRocks=0 rockStun=1 armorBreak=2 knockdown=pass enhance=1 skill=pass playerHurt=pass parry=1");
                     stage = 30;
                     since = Time.time;
                     return;

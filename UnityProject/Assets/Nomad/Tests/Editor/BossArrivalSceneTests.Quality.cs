@@ -52,7 +52,7 @@ namespace Nomad.Tests
             var boss = scene.Boss;
             boss.GetComponent<BossArrival>().Skip();
             boss.BeginPattern(DragonPattern.Breath);
-            yield return Wait(0.2f);
+            yield return Wait(0.8f);
             BossHazard breath = boss.Effects.GetComponentInChildren<BossHazard>();
             MeshFilter warning = breath.GetComponentInChildren<MeshFilter>();
             foreach (Vector3 vertex in warning.sharedMesh.vertices)
@@ -92,6 +92,7 @@ namespace Nomad.Tests
         public IEnumerator StonePavingCartoonPlayerAndBossTreasureExistInActualScene()
         {
             scene.Boss.GetComponent<BossArrival>().Skip();
+            scene.Arena.LandRock(scene.Arena.Center + new Vector3(12, 0, 12));
             yield return Wait(0.6f);
             var paving = GameObject.Find("Hand laid volcanic stone paving").GetComponent<MeshFilter>().sharedMesh;
             Assert.That(paving.vertexCount, Is.GreaterThan(1500));

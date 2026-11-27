@@ -4,7 +4,8 @@ namespace Nomad.Monsters.Demo
 {
     public sealed partial class BossHazard
     {
-        public bool Irregular => angle >= 359 && duration > 1 && damage > 0;
+        public bool AllowIrregular { get; set; } = true;
+        public bool Irregular => AllowIrregular && InnerRadius <= 0 && angle >= 359 && duration > 1 && damage > 0;
         private float ShapeSeed => Mathf.Repeat(transform.position.x * 0.73f + transform.position.z * 0.41f, Mathf.PI * 2);
 
         public float EdgeRadius(Vector3 direction)

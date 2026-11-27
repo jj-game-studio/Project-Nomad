@@ -28,16 +28,20 @@ namespace Nomad.Monsters.Demo
         {
             sweep = Area(transform.position, Tuning.BodySweepRadius, 360, windup, 0.12f, 28);
             sweep.EmitsFlame = false;
+            sweep.WarningSeconds = Mathf.Max(0.1f, windup - BossParrySignal.ReactionSeconds);
             sweep.WarningColor = new Color(1, 0.78f, 0.08f, 0.3f);
-            sweep.OnHit = () => PlayerBossReaction.Play(target, transform.position, 7, 1.7f);
+            sweep.OnHit = () => PlayerBossReaction.Play(target, transform.position, 7, 1.35f, 0, 0.3f);
             parrySignal.Arm(Time.time + windup, Tuning.BodySweepRadius + 0.5f);
         }
 
-        private void PrepareRadialWarning(float windup)
+        private void PrepareRadialWarning(float windup, int volley = 0)
         {
             float distance = Vector3.ProjectOnPlane(target.transform.position - transform.position, Vector3.up).magnitude;
             float travel = Mathf.Max(0, distance - 3 - Tuning.RadialRadius) / (Tuning.RadialSpeed * Tempo);
-            BossParryRangeWarning.Create(effects, transform.position, Tuning.RadialRange, windup + travel, arena.GroundHeight, target.transform, heading => arena.DistanceToBoundary(transform.position, heading));
+            float impactAt = Time.time + windup + travel;
+            parrySignal.Arm(impactAt, Tuning.RadialRange);
+            BossParryRangeWarning.Create(effects, arena, transform.position, direction, Tuning.RadialCount, Tuning.RadialRadius, Tuning.RadialRange,
+                Mathf.Max(0.1f, windup + travel - BossParrySignal.ReactionSeconds), volley * 180f / Tuning.RadialCount);
         }
     }
 }

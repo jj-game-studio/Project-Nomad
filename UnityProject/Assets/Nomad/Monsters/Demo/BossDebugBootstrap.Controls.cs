@@ -11,7 +11,7 @@ namespace Nomad.Monsters.Demo
         private Vector2 scroll;
         private int selected;
         private static readonly DragonPattern[] Choices = { DragonPattern.Circle, DragonPattern.RadialFireballs,
-            DragonPattern.Breath, DragonPattern.FirePool, DragonPattern.Charge, DragonPattern.Rain, DragonPattern.BodySweep };
+            DragonPattern.Breath, DragonPattern.FirePool, DragonPattern.Charge, DragonPattern.Rain, DragonPattern.BodySweep, DragonPattern.Rockfall, DragonPattern.OrbitFlames };
         private Rect PanelRect => new Rect(12, 80, 312, Mathf.Min(740, Screen.height - 92));
         public bool GodMode
         {
@@ -86,6 +86,15 @@ namespace Nomad.Monsters.Demo
                     t.ChargeSpeed = Slider("속도 (m/s)", t.ChargeSpeed, 10, 24);
                     t.ChargeWindup = Slider("준비 (초)", t.ChargeWindup, 1.5f, 5);
                     t.ChargeInterval = Slider("간격 (초)", t.ChargeInterval, 25, 55);
+                    break;
+                case DragonPattern.Rockfall:
+                    t.RockfallInterval = Slider("낙하 간격 (초)", t.RockfallInterval, 8, 25);
+                    t.RockfallRadius = Slider("낙하 피해 범위 (m)", t.RockfallRadius, 2, 4);
+                    t.RockfallWarning = Slider("낙하 전조 (초)", t.RockfallWarning, 0.8f, 2);
+                    GUILayout.Label("낙하 바위 " + Arena.RockCount + "/" + BossArena.MaximumRockCount);
+                    break;
+                case DragonPattern.OrbitFlames:
+                    t.OrbitSpeed = Slider("공전 속도 (도/초)", t.OrbitSpeed, 8, 28);
                     break;
                 case DragonPattern.BodySweep:
                     t.BodySweepRadius = Slider("견제 범위 (m)", t.BodySweepRadius, 4, 10);

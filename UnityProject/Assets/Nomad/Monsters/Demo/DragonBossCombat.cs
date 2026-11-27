@@ -4,7 +4,7 @@ using UnityEngine.AI;
 
 namespace Nomad.Monsters.Demo
 {
-    public enum DragonPattern { Basic, Circle, RadialFireballs, Breath, FirePool, Charge, Rain, BodySweep }
+    public enum DragonPattern { Basic, Circle, RadialFireballs, Breath, FirePool, Charge, Rain, BodySweep, Rockfall, OrbitFlames }
     public enum DragonPhase { Waiting, Windup, Active, Recovery, Stunned, Dead, Arriving, Enraging }
 
     [DefaultExecutionOrder(120)]
@@ -14,8 +14,8 @@ namespace Nomad.Monsters.Demo
         public const int RainPerWave = 3;
         public const float RainInterval = 0.35f;
         public const float CircleRadius = 18f;
-        public const float BreathRange = 18;
-        public const float BreathAngle = 110;
+        public const float BreathRange = 22;
+        public const float BreathAngle = 120;
         public const float RainDuration = 7.65f;
         public const int RadialFireballCount = 12;
         public bool AutomaticPatterns { get; set; } = true;
@@ -60,7 +60,7 @@ namespace Nomad.Monsters.Demo
         private int rainCount;
         private TextMesh status;
         private static readonly DragonPattern[] Rotation = { DragonPattern.Circle, DragonPattern.RadialFireballs,
-            DragonPattern.Breath, DragonPattern.FirePool, DragonPattern.Rain };
+            DragonPattern.Breath, DragonPattern.FirePool, DragonPattern.Rain, DragonPattern.OrbitFlames };
 
         public void Configure(BossArena room, Health victim)
         {
@@ -88,6 +88,8 @@ namespace Nomad.Monsters.Demo
             gameObject.AddComponent<BossRadialChargePose>().Configure(this);
             gameObject.AddComponent<BossPatternMotion>().Configure(this);
             gameObject.AddComponent<BossBodySweepMotion>().Configure(this);
+            backstep = gameObject.AddComponent<BossBreathBackstep>();
+            backstep.Configure(this, arena);
             enrage = gameObject.AddComponent<BossEnrageTransition>();
             enrage.Configure(this, target);
             parrySignal = gameObject.AddComponent<BossParrySignal>();
@@ -106,6 +108,7 @@ namespace Nomad.Monsters.Demo
             status.color = new Color(1, 0.7f, 0.2f);
             until = Time.time + 0.2f;
             nextCharge = Time.time + Tuning.ChargeInterval;
+            nextRockfall = Time.time + Tuning.RockfallInterval;
             arrival = gameObject.AddComponent<BossArrival>();
             arrival.Configure(this, arena, target);
             if (FindFirstObjectByType<BossEncounterContent>()?.DropEntrance == false) arrival.Skip();
@@ -197,7 +200,7 @@ namespace Nomad.Monsters.Demo
 
         public void BeginPattern(DragonPattern pattern)
         {
-            if (pattern == DragonPattern.Basic || EnrageTransitioning || health == null || health.IsDead || !Introduced || !PlayerInside || arena.IsLocked ||
+            if ((pattern == DragonPattern.Rockfall && (arena.RockCount >= BossArena.MaximumRockCount || fallingRock != null)) || pattern == DragonPattern.Basic || EnrageTransitioning || health == null || health.IsDead || !Introduced || !PlayerInside || arena.IsLocked ||
                 (Phase == DragonPhase.Stunned && Time.time < until)) return;
             tactics.Stop();
             Pause();
@@ -212,8 +215,10 @@ namespace Nomad.Monsters.Demo
             ChargeAimLocked = false;
             float windup = pattern == DragonPattern.Circle ? Tuning.SlamWindup :
                 pattern == DragonPattern.BodySweep ? Tuning.BodySweepWindup : pattern == DragonPattern.RadialFireballs ? 1.8f : pattern == DragonPattern.Charge ? Tuning.ChargeWindup :
-                pattern == DragonPattern.Rain ? 0.7f : pattern == DragonPattern.Breath ? 1.6f : 0.9f;
+                pattern == DragonPattern.Rain ? 0.7f : pattern == DragonPattern.Rockfall ? Tuning.RockfallWarning :
+                pattern == DragonPattern.OrbitFlames ? 1.2f : pattern == DragonPattern.Breath ? 1.6f : 0.9f;
             windup /= Tempo;
+            if (pattern == DragonPattern.Breath) windup += BossBreathBackstep.Seconds;
             float turning = Vector3.Angle(transform.forward, direction) / (pattern == DragonPattern.Charge ? ChargeTurnSpeed : TurnSpeed);
             windup = Mathf.Max(windup, turning + (pattern == DragonPattern.Charge ? ChargeLockSeconds : 0.12f));
             until = Time.time + windup;
@@ -225,7 +230,8 @@ namespace Nomad.Monsters.Demo
             if (pattern == DragonPattern.Circle)
             {
                 slam = Area(transform.position, Tuning.SlamRadius, 360, windup + LeapDuration, 0.12f, 32);
-                slam.WarningSeconds = windup;
+                slam.WarningSeconds = windup + LeapDuration - BossParrySignal.ReactionSeconds;
+                slam.WarningColor = new Color(1, 0.78f, 0.08f, 0.3f);
                 slam.EmitsFlame = false;
                 parrySignal.Arm(Time.time + windup + LeapDuration, Tuning.SlamRadius + 0.5f);
             }
@@ -234,10 +240,10 @@ namespace Nomad.Monsters.Demo
             {
                 PrepareRadialWarning(windup);
                 volleysSent = 0;
-                float distance = Vector3.ProjectOnPlane(target.transform.position - transform.position, Vector3.up).magnitude;
-                parrySignal.Arm(Time.time + windup + Mathf.Max(0, distance - 3 - Tuning.RadialRadius) / (Tuning.RadialSpeed * Tempo), Tuning.RadialRange);
             }
-            if (pattern == DragonPattern.Breath) breath = Area(transform.position, Tuning.BreathRange, Tuning.BreathAngle, windup, 2.4f / Tempo, 12, 0.8f / Tempo);
+            if (pattern == DragonPattern.Breath) backstep.Begin(-direction, Tuning.BreathBackstep);
+            if (pattern == DragonPattern.Rockfall) PrepareRockfall(windup);
+            if (pattern == DragonPattern.OrbitFlames) PrepareOrbit(windup);
             if (pattern == DragonPattern.FirePool)
             {
                 PlanFirePools(windup);
@@ -257,6 +263,8 @@ namespace Nomad.Monsters.Demo
             Phase = DragonPhase.Active;
             until = Time.time + (Pattern == DragonPattern.Breath ? 2.4f : Pattern == DragonPattern.Rain ? RainDuration :
                 Pattern == DragonPattern.Circle ? LeapDuration + 0.12f : Pattern == DragonPattern.RadialFireballs ? Tuning.RadialRange / (Tuning.RadialSpeed * Tempo) + 0.3f : 0.18f);
+            if (Pattern == DragonPattern.Rockfall) until = Time.time + BossFallingRock.FallSeconds + 0.2f;
+            if (Pattern == DragonPattern.OrbitFlames) until = Time.time + 8.4f;
             if (Pattern == DragonPattern.Rain)
                 until = Time.time + (Tuning.RainWaves - 1) * Tuning.RainInterval + Tuning.RainFallSeconds + 0.15f;
             if (Pattern == DragonPattern.Breath) until = Time.time + 2.4f / Tempo;
@@ -291,7 +299,7 @@ namespace Nomad.Monsters.Demo
 
         private BossHazard Area(Vector3 point, float radius, float angle, float delay, float duration, int damage, float interval = 0.75f)
         {
-            BossHazard hazard = BossHazard.Create(effects, transform, ClampPoint(point), Quaternion.LookRotation(direction), target, radius, angle, delay, duration, ScaleDamage(damage), interval);
+            BossHazard hazard = BossHazard.Create(effects, transform, (Pattern == DragonPattern.Breath || Pattern == DragonPattern.OrbitFlames) ? arena.GroundPoint(point) : ClampPoint(point), Quaternion.LookRotation(direction), target, radius, angle, delay, duration, ScaleDamage(damage), interval);
             hazard.GroundHeight = arena.GroundHeight;
             hazard.EmitsFlame = damage > 0;
             if (Pattern == DragonPattern.Breath)
@@ -375,7 +383,7 @@ namespace Nomad.Monsters.Demo
             VolleysReleased++;
             int volley = ++volleySerial;
             nextVolley = Time.time + 1;
-            if (Enraged && volleysSent == 1) PrepareRadialWarning(1);
+            if (Enraged && volleysSent == 1) PrepareRadialWarning(1, 1);
             for (int index = 0; index < Tuning.RadialCount; index++)
             {
                 Vector3 heading = Quaternion.Euler(0, index * 360f / Tuning.RadialCount + (volleysSent - 1) * 180f / Tuning.RadialCount, 0) * transform.forward;
@@ -386,15 +394,12 @@ namespace Nomad.Monsters.Demo
                 ball.SignalControlled = true;
                 ball.VolleyId = volley;
             }
-            float distance = Vector3.ProjectOnPlane(target.transform.position - transform.position, Vector3.up).magnitude;
-            parrySignal.Arm(Time.time + Mathf.Max(0, distance - 3 - Tuning.RadialRadius) / (Tuning.RadialSpeed * Tempo), Tuning.RadialRange);
         }
 
         public void OrbParried(int volley = 0)
         {
             ProtectVolley(volley);
             ParrySuccesses++;
-            arena.ScatterParryRocks(target.transform.position, transform.position, 2 + ParrySuccesses % 2);
         }
 
         public void ResolveParry()
@@ -405,12 +410,10 @@ namespace Nomad.Monsters.Demo
             {
                 if (sweep != null) sweep.CancelDamage();
                 GetComponent<BossArmor>().ApplyParryBreak();
-                arena.ScatterParryRocks(target.transform.position, transform.position, 2 + ParrySuccesses % 2);
                 return;
             }
             if (slam != null) slam.CancelDamage();
             pendingSlamCounter = true;
-            arena.ScatterParryRocks(target.transform.position, transform.position, 2 + ParrySuccesses % 2);
         }
 
         public void FinishParriedSlam()

@@ -10,7 +10,7 @@ namespace Nomad.Monsters.Demo
         private bool success;
         private static readonly Color Gold = new Color(2.5f, 1.65f, 0.35f);
 
-        public static void Cue(Transform boss) => Create((boss.Find("Body") != null ? boss.Find("Body").position : boss.position) + Vector3.up * 2, boss.rotation, false);
+        public static void Cue(Transform boss) => BossGuardPulse.Create(boss);
         public static void Success(Transform player, Vector3 point)
         {
             Create(point, player.rotation, true);
