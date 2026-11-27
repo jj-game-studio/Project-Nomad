@@ -78,8 +78,8 @@ namespace Nomad.Tests
                 {
                     inventory.Add(id, 1);
                     int slot = Enumerable.Range(0, PlayerInventory.Capacity).First(index => inventory.GetSlot(index).Item?.ItemId == id);
-                    Assert.That(equipment.TryEquip(slot, EquipmentSlot.Weapon1), Is.True);
-                    equipment.SelectWeapon(EquipmentSlot.Weapon1);
+                    Assert.That(equipment.EquipWeapon(slot, 0), Is.True);
+                    equipment.SelectWeapon(0);
                     combat.GetComponent<PlayerMana>().RestoreFull();
                     for (int frame = 0; frame < 12; frame++) yield return null;
                     if (id.Contains("staff")) AssertStaffGrip(combat, visuals, false);

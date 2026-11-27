@@ -9,11 +9,13 @@ namespace Nomad.Tests
     {
         private PlayerInventory inventory;
         private PlayerEquipment equipment;
+        private PlayerQuickSlots quick;
         private Health health;
         private ItemDefinition sword;
         private ItemDefinition bow;
         private ItemDefinition helmet;
         private ItemDefinition armor;
+        private ItemDefinition plate;
         private int changes;
 
         [SetUp]
@@ -26,10 +28,12 @@ namespace Nomad.Tests
             ItemDefinition potion = Item("potion", 5);
             ItemDefinition axe = Item("axe", 1, EquipmentType.Weapon, attack: 12);
             ItemDefinition ring = Item("ring", 1, EquipmentType.Accessory);
+            plate = Item("plate", 1, EquipmentType.Body, defense: 6);
 
             var owner = Inactive("Player");
-            inventory = AddInventory(owner, sword, bow, helmet, armor, potion, axe, ring);
+            inventory = AddInventory(owner, sword, bow, helmet, armor, potion, axe, ring, plate);
             equipment = owner.AddComponent<PlayerEquipment>();
+            quick = owner.AddComponent<PlayerQuickSlots>();
             health = owner.AddComponent<Health>();
             owner.SetActive(true);
 
@@ -65,31 +69,40 @@ namespace Nomad.Tests
         }
 
         [Test]
-        public void AutoEquipWeaponFillsEmptySlotsThenReplacesActiveWeapon()
+        public void AutoEquipWeaponRegistersQuickSlotsAndKeepsItInBag()
         {
             Assert.That(AutoEquip("sword"), Is.True);
             Assert.That(AutoEquip("bow"), Is.True);
-            Assert.That(equipment.GetItem(EquipmentSlot.Weapon1), Is.SameAs(sword));
-            Assert.That(equipment.GetItem(EquipmentSlot.Weapon2), Is.SameAs(bow));
+            Assert.That(quick.GetItem(0), Is.SameAs(sword));
+            Assert.That(quick.GetItem(1), Is.SameAs(bow));
+            Assert.That(inventory.GetCount("sword"), Is.EqualTo(1), "무기는 가방에 남음");
 
-            // 두 칸이 모두 차 있으면 현재 선택한 무기칸과 교체하고, 이전 무기는 같은 가방 칸으로 돌아옵니다.
-            equipment.SelectWeapon(EquipmentSlot.Weapon2);
-            inventory.Add("axe", 1);
-            int slot = BagSlot("axe");
-            Assert.That(equipment.TryEquipAuto(slot), Is.True);
-            Assert.That(equipment.GetItem(EquipmentSlot.Weapon1), Is.SameAs(sword));
-            Assert.That(equipment.GetItem(EquipmentSlot.Weapon2).ItemId, Is.EqualTo("axe"));
-            Assert.That(inventory.GetSlot(slot).Item, Is.SameAs(bow));
+            // 두 칸이 모두 차 있으면 현재 선택한 퀵바 무기 칸을 바꿉니다.
+            Assert.That(equipment.SelectWeapon(1), Is.True);
+            Assert.That(AutoEquip("axe"), Is.True);
+            Assert.That(quick.GetItem(0), Is.SameAs(sword));
+            Assert.That(equipment.ActiveWeapon.ItemId, Is.EqualTo("axe"));
         }
 
         [Test]
-        public void AutoEquipWeaponUsesSecondSlotWhenOnlyFirstIsEmpty()
+        public void QuickBarAloneDecidesActiveWeapon()
         {
-            EquipFromBag("bow", EquipmentSlot.Weapon2);
+            inventory.Add("sword", 1);
+            inventory.Add("bow", 1);
+            Assert.That(equipment.EquipWeapon(BagSlot("sword"), 0), Is.True);
+            Assert.That(quick.Register(BagSlot("bow"), 1), Is.True);
+            Assert.That(equipment.ActiveWeapon, Is.SameAs(sword));
 
-            Assert.That(AutoEquip("sword"), Is.True);
-            Assert.That(equipment.GetItem(EquipmentSlot.Weapon1), Is.SameAs(sword));
-            Assert.That(equipment.GetItem(EquipmentSlot.Weapon2), Is.SameAs(bow));
+            changes = 0;
+            Assert.That(quick.TryUse(1), Is.True);
+            Assert.That(equipment.ActiveWeapon, Is.SameAs(bow));
+            Assert.That(changes, Is.EqualTo(1));
+
+            // 등록 무기가 가방에서 빠지면 퀵바 등록도 빠지고 맨손이 됩니다.
+            inventory.Remove("bow", 1);
+            Assert.That(quick.GetItem(1), Is.Null);
+            Assert.That(equipment.ActiveWeapon, Is.Null);
+            Assert.That(changes, Is.EqualTo(2));
         }
 
         [Test]
@@ -124,14 +137,13 @@ namespace Nomad.Tests
             Assert.That(inventory.GetSlot(BagSlot("potion")).Count, Is.EqualTo(1));
         }
 
-        [TestCase(EquipmentType.Weapon, EquipmentSlot.Weapon1, true)]
-        [TestCase(EquipmentType.Weapon, EquipmentSlot.Weapon2, true)]
         [TestCase(EquipmentType.Accessory, EquipmentSlot.Accessory3, true)]
         [TestCase(EquipmentType.Legs, EquipmentSlot.Legs, true)]
         [TestCase(EquipmentType.Feet, EquipmentSlot.Head, false)]
         [TestCase(EquipmentType.Head, EquipmentSlot.Body, false)]
-        [TestCase(EquipmentType.None, EquipmentSlot.Weapon1, false)]
+        [TestCase(EquipmentType.None, EquipmentSlot.Head, false)]
         [TestCase(EquipmentType.Weapon, EquipmentSlot.Accessory1, false)]
+        [TestCase(EquipmentType.Weapon, EquipmentSlot.Head, false)]
         public void FitsMatchesTypeToSlot(EquipmentType type, EquipmentSlot slot, bool expected)
         {
             Assert.That(PlayerEquipment.Fits(type, slot), Is.EqualTo(expected));
@@ -140,10 +152,9 @@ namespace Nomad.Tests
         [Test]
         public void EquipMovesItemOutOfInventory()
         {
-            Assert.That(EquipFromBag("sword", EquipmentSlot.Weapon1), Is.True);
+            Assert.That(EquipFromBag("helmet", EquipmentSlot.Head), Is.True);
 
-            Assert.That(equipment.GetItem(EquipmentSlot.Weapon1), Is.SameAs(sword));
-            Assert.That(equipment.ActiveWeapon, Is.SameAs(sword));
+            Assert.That(equipment.GetItem(EquipmentSlot.Head), Is.SameAs(helmet));
             Assert.That(inventory.UsedSlots, Is.Zero);
             Assert.That(changes, Is.EqualTo(1));
         }
@@ -152,7 +163,7 @@ namespace Nomad.Tests
         public void EquipRejectsWrongSlotAndStackableItem()
         {
             Assert.That(EquipFromBag("helmet", EquipmentSlot.Body), Is.False);
-            Assert.That(EquipFromBag("potion", EquipmentSlot.Weapon1), Is.False);
+            Assert.That(EquipFromBag("potion", EquipmentSlot.Head), Is.False);
 
             Assert.That(inventory.UsedSlots, Is.EqualTo(2));
             Assert.That(changes, Is.Zero);
@@ -161,11 +172,11 @@ namespace Nomad.Tests
         [Test]
         public void EquipSwapsPreviousItemBackIntoSameBagSlot()
         {
-            EquipFromBag("sword", EquipmentSlot.Weapon1);
+            EquipFromBag("armor", EquipmentSlot.Body);
 
-            Assert.That(EquipFromBag("bow", EquipmentSlot.Weapon1), Is.True);
-            Assert.That(equipment.GetItem(EquipmentSlot.Weapon1), Is.SameAs(bow));
-            Assert.That(inventory.GetSlot(0).Item, Is.SameAs(sword));
+            Assert.That(EquipFromBag("plate", EquipmentSlot.Body), Is.True);
+            Assert.That(equipment.GetItem(EquipmentSlot.Body), Is.SameAs(plate));
+            Assert.That(inventory.GetSlot(0).Item, Is.SameAs(armor));
         }
 
         [Test]
@@ -190,12 +201,13 @@ namespace Nomad.Tests
         }
 
         [Test]
-        public void SelectWeaponOnlyAcceptsWeaponSlots()
+        public void SelectWeaponOnlyAcceptsQuickWeaponSlots()
         {
-            Assert.That(equipment.SelectWeapon(EquipmentSlot.Weapon2), Is.True);
-            Assert.That(equipment.ActiveWeaponSlot, Is.EqualTo(EquipmentSlot.Weapon2));
-            Assert.That(equipment.SelectWeapon(EquipmentSlot.Head), Is.False);
-            Assert.That(equipment.ActiveWeaponSlot, Is.EqualTo(EquipmentSlot.Weapon2));
+            Assert.That(equipment.SelectWeapon(1), Is.True);
+            Assert.That(equipment.ActiveWeaponIndex, Is.EqualTo(1));
+            Assert.That(equipment.SelectWeapon(2), Is.False);
+            Assert.That(equipment.SelectWeapon(-1), Is.False);
+            Assert.That(equipment.ActiveWeaponIndex, Is.EqualTo(1));
         }
 
         [Test]

@@ -179,8 +179,8 @@ namespace Nomad.Equipment.Editor
             for (int index = 0; index < StarterWeapons.Length; index++)
             {
                 string id = StarterWeapons[index];
-                EquipmentSlot? slot = id == "demo-sword" ? EquipmentSlot.Weapon1 :
-                    id == "demo-bow" ? EquipmentSlot.Weapon2 : null;
+                // 무기는 slot 대신 퀵바 무기 칸에 순서대로 등록됩니다.
+                EquipmentSlot? slot = id == "demo-sword" || id == "demo-bow" ? default(EquipmentSlot) : null;
                 SetEntry(entries.GetArrayElementAtIndex(index), id, 1, slot);
             }
 

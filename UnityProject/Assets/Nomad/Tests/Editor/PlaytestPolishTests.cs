@@ -87,8 +87,8 @@ namespace Nomad.Tests
                 {
                     Assert.That(inventory.Add(id, 1), Is.EqualTo(1));
                     int slot = Enumerable.Range(0, PlayerInventory.Capacity).First(index => inventory.GetSlot(index).Item?.ItemId == id);
-                    Assert.That(equipment.TryEquip(slot, EquipmentSlot.Weapon1), Is.True);
-                    equipment.SelectWeapon(EquipmentSlot.Weapon1);
+                    Assert.That(equipment.EquipWeapon(slot, 0), Is.True);
+                    equipment.SelectWeapon(0);
                     inventory.Add(PlayerEquipmentCombat.ArrowItemId, 10);
                     mana.RestoreFull();
                     TestKit.SetField(combat, "nextAttackTime", 0f);

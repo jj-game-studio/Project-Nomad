@@ -46,8 +46,8 @@ namespace Nomad.Tests
                 for (int index = 0; index < PlayerInventory.Capacity; index++)
                     if (inventory.GetSlot(index).Item?.ItemId == id) slot = index;
                 Assert.That(slot, Is.GreaterThanOrEqualTo(0), "실제 수련 지팡이 등록");
-                Assert.That(equipment.TryEquip(slot, EquipmentSlot.Weapon1), Is.True);
-                equipment.SelectWeapon(EquipmentSlot.Weapon1);
+                Assert.That(equipment.EquipWeapon(slot, 0), Is.True);
+                equipment.SelectWeapon(0);
                 PlayerHud hud = player.GetComponentInChildren<PlayerHud>();
                 if (hud == null) hud = player.AddComponent<PlayerHud>();
                 mana.RestoreFull();

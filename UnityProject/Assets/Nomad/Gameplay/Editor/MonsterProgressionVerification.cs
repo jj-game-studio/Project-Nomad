@@ -260,8 +260,8 @@ namespace Nomad.Gameplay.Editor
             inventory.Remove(itemId, 1);
             inventory.Add("weapon-dagger", 1);
             int daggerSlot = Enumerable.Range(0, inventory.SlotCount).First(index => inventory.GetSlot(index).Item?.ItemId == "weapon-dagger");
-            Require(gear.TryEquip(daggerSlot, Nomad.Equipment.EquipmentSlot.Weapon1), "피격 검사 단검 장착");
-            gear.SelectWeapon(Nomad.Equipment.EquipmentSlot.Weapon1);
+            Require(gear.EquipWeapon(daggerSlot, 0), "피격 검사 단검 장착");
+            gear.SelectWeapon(0);
             int bossHealth = boss.CurrentHealth;
             Vector2 pointer = Camera.main.WorldToScreenPoint(boss.transform.position + Vector3.up);
             Require(combat.TryAttack(pointer) && boss.CurrentHealth < bossHealth, "몸통 중심2.4m 거리에서도 실제 단검 적중");

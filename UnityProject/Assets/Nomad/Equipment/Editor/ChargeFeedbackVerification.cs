@@ -108,8 +108,8 @@ namespace Nomad.Equipment.Editor
                 {
                     if (frame < changedFrame + 30) return;
                     int slot = Enumerable.Range(0, PlayerInventory.Capacity).First(index => inventory.GetSlot(index).Item?.ItemId == Weapons[weaponIndex]);
-                    Require(equipment.TryEquip(slot, EquipmentSlot.Weapon1), "검토 무기 장착");
-                    equipment.SelectWeapon(EquipmentSlot.Weapon1);
+                    Require(equipment.EquipWeapon(slot, 0), "검토 무기 장착");
+                    equipment.SelectWeapon(0);
                     changedFrame = frame;
                     stage = 1;
                     return;

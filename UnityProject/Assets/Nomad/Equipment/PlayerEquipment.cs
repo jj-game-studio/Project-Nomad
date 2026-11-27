@@ -5,37 +5,74 @@ using UnityEngine;
 
 namespace Nomad.Equipment
 {
-    // 장비 UI의 5×2 배치 순서입니다. StarterKit이 번호로 저장하므로 무기 칸 번호는 유지합니다.
+    // 장비 UI의 4×2 배치 순서입니다. 무기는 장비칸 없이 가방에 둔 채 퀵바 1~2번으로 고릅니다.
     public enum EquipmentSlot
     {
-        Weapon1, Weapon2, Head, Body, Legs, Feet, Bag, Accessory1, Accessory2, Accessory3
+        Head, Body, Legs, Feet, Bag, Accessory1, Accessory2, Accessory3
     }
 
     [DisallowMultipleComponent]
     [RequireComponent(typeof(PlayerInventory))]
     public sealed partial class PlayerEquipment : MonoBehaviour, ICombatDamageModifier
     {
-        public const int Capacity = 10;
+        public const int Capacity = 8;
 
         private PlayerInventory inventory;
         private PlayerStats stats;
+        private PlayerQuickSlots quickSlots;
+        private ItemDefinition shownWeapon;
         private readonly ItemDefinition[] items = new ItemDefinition[Capacity];
         private bool changing;
 
         public event Action Changed;
-        public EquipmentSlot ActiveWeaponSlot { get; private set; } = EquipmentSlot.Weapon1;
-        public ItemDefinition ActiveWeapon => GetItem(ActiveWeaponSlot);
+        // 선택한 퀵바 무기 칸 번호(0~1)입니다. 손에 든 무기는 이 칸에 등록된 가방 무기입니다.
+        public int ActiveWeaponIndex { get; private set; }
+        public ItemDefinition ActiveWeapon =>
+            quickSlots != null && quickSlots.isActiveAndEnabled && quickSlots.GetCount(ActiveWeaponIndex) > 0
+                ? quickSlots.GetItem(ActiveWeaponIndex) : null;
 
         public int TotalDefense => Mathf.RoundToInt(Sum(StatType.Defense));
 
-        private void Awake() => inventory = GetComponent<PlayerInventory>();
+        private void Awake()
+        {
+            inventory = GetComponent<PlayerInventory>();
+            quickSlots = GetComponent<PlayerQuickSlots>();
+        }
 
-        // 무기를 제외한 장착 장비의 스탯 합계입니다. 공격력은 선택한 무기에서 따로 읽습니다.
+        private void OnEnable()
+        {
+            if (quickSlots != null) quickSlots.Changed += QuickSlotsChanged;
+        }
+
+        // 퀵바가 나중에 붙어도(검토 씬) 손에 든 무기를 따라가도록 연결합니다.
+        internal void Bind(PlayerQuickSlots slots)
+        {
+            if (quickSlots == slots)
+                return;
+
+            if (quickSlots != null) quickSlots.Changed -= QuickSlotsChanged;
+            quickSlots = slots;
+            if (isActiveAndEnabled) quickSlots.Changed += QuickSlotsChanged;
+        }
+
+        private void OnDisable()
+        {
+            if (quickSlots != null) quickSlots.Changed -= QuickSlotsChanged;
+        }
+
+        // 퀵바 등록·가방 변화로 손에 든 무기가 바뀌었을 때만 장비 변경을 알립니다.
+        private void QuickSlotsChanged()
+        {
+            if (!changing && ActiveWeapon != shownWeapon)
+                Publish(false);
+        }
+
+        // 장착 장비의 스탯 합계입니다. 공격력은 선택한 무기에서 따로 읽습니다.
         public float Sum(StatType stat)
         {
             float total = 0;
             for (int index = 0; index < Capacity; index++)
-                if (items[index] != null && items[index].EquipmentType != EquipmentType.Weapon)
+                if (items[index] != null)
                     total += items[index].GetStat(stat);
             return total;
         }
@@ -58,17 +95,24 @@ namespace Nomad.Equipment
             return (uint)slot < Capacity ? items[(int)slot] : null;
         }
 
-        public bool SelectWeapon(EquipmentSlot slot)
+        public bool SelectWeapon(int quickSlot)
         {
-            if (!isActiveAndEnabled || changing || (slot != EquipmentSlot.Weapon1 && slot != EquipmentSlot.Weapon2))
+            if (!isActiveAndEnabled || changing || !PlayerQuickSlots.IsWeaponSlot(quickSlot) || quickSlot < 0)
                 return false;
 
-            if (ActiveWeaponSlot != slot)
+            if (ActiveWeaponIndex != quickSlot)
             {
-                ActiveWeaponSlot = slot;
+                ActiveWeaponIndex = quickSlot;
                 Publish(false);
             }
             return true;
+        }
+
+        // 가방 칸의 무기를 퀵바 무기 칸에 등록하고 바로 손에 듭니다.
+        public bool EquipWeapon(int inventorySlot, int quickSlot = 0)
+        {
+            return isActiveAndEnabled && quickSlots != null && quickSlots.isActiveAndEnabled &&
+                PlayerQuickSlots.IsWeaponSlot(quickSlot) && quickSlots.Register(inventorySlot, quickSlot) && SelectWeapon(quickSlot);
         }
 
         public bool TryEquip(int inventorySlot, EquipmentSlot slot)
@@ -96,23 +140,23 @@ namespace Nomad.Equipment
         }
 
         // 더블클릭 장착용입니다. 가방 칸의 장비를 알맞은 장비칸에 넣고, 이전 장비는 같은 가방 칸으로 돌아옵니다.
+        // 무기는 가방에 둔 채 퀵바 무기 칸에 등록합니다.
         public bool TryEquipAuto(int inventorySlot)
         {
             if (inventory == null || (uint)inventorySlot >= inventory.SlotCount)
                 return false;
 
             ItemDefinition item = inventory.GetSlot(inventorySlot).Item;
+            if (item != null && item.EquipmentType == EquipmentType.Weapon)
+                return isActiveAndEnabled && quickSlots != null && quickSlots.RegisterWeapon(item, ActiveWeaponIndex);
             return item != null && TryGetAutoSlot(item.EquipmentType, out EquipmentSlot slot) && TryEquip(inventorySlot, slot);
         }
 
-        // 무기는 빈 무기1→2, 모두 차 있으면 선택한 무기칸과 교체합니다. 장신구는 빈 1→2→3, 모두 차 있으면 장신구1과 교체합니다.
+        // 장신구는 빈 1→2→3, 모두 차 있으면 장신구1과 교체합니다. 무기는 장비칸이 없습니다.
         public bool TryGetAutoSlot(EquipmentType type, out EquipmentSlot slot)
         {
             switch (type)
             {
-                case EquipmentType.Weapon:
-                    slot = FirstEmpty(EquipmentSlot.Weapon1, EquipmentSlot.Weapon2, ActiveWeaponSlot);
-                    return true;
                 case EquipmentType.Accessory:
                     slot = FirstEmpty(EquipmentSlot.Accessory1, EquipmentSlot.Accessory3, EquipmentSlot.Accessory1);
                     return true;
@@ -164,8 +208,6 @@ namespace Nomad.Equipment
         {
             switch (slot)
             {
-                case EquipmentSlot.Weapon1:
-                case EquipmentSlot.Weapon2: return type == EquipmentType.Weapon;
                 case EquipmentSlot.Head: return type == EquipmentType.Head;
                 case EquipmentSlot.Body: return type == EquipmentType.Body;
                 case EquipmentSlot.Legs: return type == EquipmentType.Legs;
@@ -203,6 +245,7 @@ namespace Nomad.Equipment
                     inventory.TryResize(SlotCount(Sum(StatType.InventorySlots)));
                     inventory.NotifyChanged();
                 }
+                shownWeapon = ActiveWeapon;
                 Changed?.Invoke();
             }
             finally

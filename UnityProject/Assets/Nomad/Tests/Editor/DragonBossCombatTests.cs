@@ -131,8 +131,8 @@ namespace Nomad.Tests
                 yield return null; // 시작 장비 로드가 끝난 뒤 검증 장비를 장착합니다.
                 bag.Add("demo-sword", 2);
                 int slot = Enumerable.Range(0, bag.SlotCount).First(index => bag.GetSlot(index).Item?.ItemId == "demo-sword");
-                Assert.That(gear.TryEquip(slot, EquipmentSlot.Weapon1), Is.True);
-                Assert.That(gear.TryEnhance(EquipmentSlot.Weapon1), Is.True);
+                Assert.That(gear.EquipWeapon(slot, 0), Is.True);
+                Assert.That(gear.TryEnhanceWeapon(), Is.True);
                 Assert.That(attacker.CurrentWeapon.EnhancementLevel, Is.EqualTo(1));
                 Physics.SyncTransforms();
                 yield return null;

@@ -94,7 +94,7 @@ namespace Nomad.Equipment.Editor
                         UnityEngine.Object.Destroy(wall);
                         break;
                     case 2:
-                        Check(equipment.TryUnequip(EquipmentSlot.Weapon1), "검 해제");
+                        Check(equipment.GetComponent<PlayerQuickSlots>().Unregister(0), "검 퀵바 등록 해제");
                         Check(combat.CurrentWeapon.ItemId == "demo-unarmed", "맨손 CSV 대체");
                         Check(combat.TryAttack(Point(new Vector3(0, 1, 1.5f))), "맨손 공격");
                         break;
@@ -102,7 +102,7 @@ namespace Nomad.Equipment.Editor
                         Check(near.All(target => target.CurrentHealth == 70), "맨손 실제 피해5");
                         foreach (Health target in near) target.transform.position += Vector3.right * 10;
                         Physics.SyncTransforms();
-                        Check(equipment.SelectWeapon(EquipmentSlot.Weapon2), "활 선택");
+                        Check(equipment.SelectWeapon(1), "활 선택");
                         combat.InputBlocked = true;
                         Check(!combat.TryAttack(Point(far.transform.position)), "외부 입력 차단");
                         combat.InputBlocked = false;
@@ -110,9 +110,9 @@ namespace Nomad.Equipment.Editor
                         Check(!combat.TryAttack(Point(far.transform.position)), "일시정지 차단");
                         Time.timeScale = 1;
                         Check(combat.TryAttack(Point(far.transform.position)), "활 실제 발사체 발사");
-                        equipment.SelectWeapon(EquipmentSlot.Weapon1);
+                        equipment.SelectWeapon(0);
                         Check(!combat.TryAttack(Point(far.transform.position)), "무기전환 공격간격 우회 차단");
-                        equipment.SelectWeapon(EquipmentSlot.Weapon2);
+                        equipment.SelectWeapon(1);
                         break;
                     case 4:
                         Check(far.CurrentHealth == 65, "CSV 활 피해35");
@@ -190,11 +190,11 @@ namespace Nomad.Equipment.Editor
 
         private static void VerifyTransfers()
         {
-            Check(PlayerEquipment.Capacity == 10 && equipment.ActiveWeapon.AttackPower == 25, "10칸/CSV 검 장착");
+            Check(PlayerEquipment.Capacity == 8 && equipment.ActiveWeapon.AttackPower == 25, "8칸/CSV 검 퀵바 선택");
             int original = inventory.UsedSlots;
             int armorCount = inventory.GetCount("gear-plate-armor");
             int ringCount = inventory.GetCount("gear-copper-ring");
-            Check(!equipment.TryEquip(Find("gear-plate-armor"), EquipmentSlot.Weapon1) && inventory.UsedSlots == original, "잘못된 부위 무변경");
+            Check(!equipment.TryEquip(Find("gear-plate-armor"), EquipmentSlot.Head) && inventory.UsedSlots == original, "잘못된 부위 무변경");
             bool completeState = false;
             Action listener = () => completeState = equipment.GetItem(EquipmentSlot.Body)?.ItemId == "gear-plate-armor" &&
                 inventory.GetCount("gear-plate-armor") == armorCount - 1;
@@ -218,12 +218,9 @@ namespace Nomad.Equipment.Editor
 
             inventory.Add("demo-bow", PlayerInventory.MaxCapacity);
             Check(inventory.UsedSlots == inventory.SlotCount && !equipment.TryUnequip(EquipmentSlot.Body), "가방 만석 해제 실패");
-            int source = Find("demo-bow");
-            Check(equipment.TryEquip(source, EquipmentSlot.Weapon1) && inventory.GetSlot(source).Item.ItemId == "demo-sword", "만석 교체 원칸 반환");
-            Check(equipment.TryEquip(source, EquipmentSlot.Weapon1) && inventory.GetSlot(source).Item.ItemId == "demo-bow", "검 복원/중복 없음");
             inventory.Remove("demo-bow", PlayerInventory.MaxCapacity);
             foreach (EquipmentSlot slot in Enum.GetValues(typeof(EquipmentSlot)))
-                if (slot != EquipmentSlot.Weapon1 && slot != EquipmentSlot.Weapon2 && slot != EquipmentSlot.Body)
+                if (slot != EquipmentSlot.Body)
                     Check(equipment.TryUnequip(slot), "분류 해제/가방 복귀");
             Check(equipment.TotalDefense == 4 && inventory.UsedSlots == original &&
                 inventory.GetCount("gear-plate-armor") == armorCount - 1 && inventory.GetCount("gear-copper-ring") == ringCount + 2,

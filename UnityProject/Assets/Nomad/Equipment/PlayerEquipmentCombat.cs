@@ -41,7 +41,7 @@ namespace Nomad.Equipment
         private bool inputBlocked;
         private bool equipmentUiOpen;
         private ItemDefinition pendingWeapon;
-        private EquipmentSlot pendingSlot;
+        private int pendingSlot;
         private Vector3 pendingDirection;
         private float strikeTime;
         private IMeleeAttackTiming pendingTiming;
@@ -167,7 +167,7 @@ namespace Nomad.Equipment
                 if (windup > 0f && !float.IsInfinity(windup))
                 {
                     pendingWeapon = weapon;
-                    pendingSlot = equipment.ActiveWeaponSlot;
+                    pendingSlot = equipment.ActiveWeaponIndex;
                     pendingDirection = direction;
                     pendingTiming = timing;
                     strikeTime = Time.time + Mathf.Min(windup, weapon.AttackInterval);
@@ -191,7 +191,7 @@ namespace Nomad.Equipment
         {
             if (!IsMeleePending) return;
             if (!equipment.isActiveAndEnabled || CurrentWeapon != pendingWeapon ||
-                equipment.ActiveWeaponSlot != pendingSlot || InputBlocked || EquipmentUiOpen ||
+                equipment.ActiveWeaponIndex != pendingSlot || InputBlocked || EquipmentUiOpen ||
                 inventory?.BlocksTradeInput == true || health.IsDead || movement.BlocksAttack || movement.IsRolling ||
                 pendingTiming is not Behaviour presenter || presenter == null || !presenter.isActiveAndEnabled ||
                 pendingTiming.GetWindup(pendingWeapon) <= 0f)
@@ -224,7 +224,7 @@ namespace Nomad.Equipment
         private void EquipmentChanged()
         {
             if (IsCharging && CurrentWeapon != chargeWeapon) CancelCharge();
-            if (IsMeleePending && (CurrentWeapon != pendingWeapon || equipment.ActiveWeaponSlot != pendingSlot))
+            if (IsMeleePending && (CurrentWeapon != pendingWeapon || equipment.ActiveWeaponIndex != pendingSlot))
                 CancelMelee();
         }
 

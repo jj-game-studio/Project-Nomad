@@ -154,7 +154,7 @@ namespace Nomad.Tests
         }
 
         [Test]
-        public void UseEquipsAndSelectsWeaponAndKeepsRegistration()
+        public void UseSelectsBagWeaponAndKeepsRegistration()
         {
             inventory.Add("sword", 1);
             quickSlots.Register(0, 0);
@@ -162,16 +162,15 @@ namespace Nomad.Tests
             Assert.That(equipment.ActiveWeapon, Is.SameAs(sword));
             Assert.That(quickSlots.GetItem(0), Is.SameAs(sword));
             Assert.That(quickSlots.GetCount(0), Is.EqualTo(1));
+            Assert.That(inventory.GetSlot(0).Item, Is.SameAs(sword), "무기는 가방에 그대로 둠");
 
             inventory.Add("bow", 1);
-            quickSlots.Register(0, 1);
+            quickSlots.Register(1, 1);
             Assert.That(quickSlots.TryUse(1), Is.True);
             Assert.That(equipment.ActiveWeapon, Is.SameAs(bow));
             Assert.That(quickSlots.TryUse(0), Is.True);
             Assert.That(equipment.ActiveWeapon, Is.SameAs(sword));
-            Assert.That(equipment.TryUnequip(EquipmentSlot.Weapon1), Is.True);
-            Assert.That(quickSlots.GetItem(0), Is.SameAs(sword));
-            Assert.That(quickSlots.TryUse(0), Is.True);
+            Assert.That(quickSlots.TryUse(2), Is.False, "빈 칸");
         }
 
         [Test]
