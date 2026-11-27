@@ -9,6 +9,9 @@ namespace Nomad.Monsters.Demo
     {
         public const int ReferenceHealth = 5200;
         public int BreakCount { get; private set; }
+        public const float DurabilityPerLayer = 1450;
+        public float Durability { get; private set; } = DurabilityPerLayer;
+        public float RemainingRatio => BreakCount >= 2 ? 0 : Durability / DurabilityPerLayer;
         public float DamageMultiplier => BreakCount == 0 ? 1 : BreakCount == 1 ? 1.25f : 1.55f;
         public event Action<int> Broken;
         private Health health;
@@ -28,11 +31,17 @@ namespace Nomad.Monsters.Demo
         private void OnDamaged(Health _, int amount, DamageKind kind)
         {
             if (health.IsDead) return;
-            float ratio = health.CurrentHealth / (float)health.MaxHealth;
-            // 파괴는 피해만 증가시킵니다. 공격 상태·이동·기절 시간은 건드리지 않습니다.
-            while (BreakCount < 2 && ratio <= (BreakCount == 0 ? 0.7f : 0.35f))
+            DamageArmor(amount / DamageMultiplier);
+        }
+
+        public void DamageArmor(float amount)
+        {
+            if (health.IsDead || BreakCount >= 2 || amount <= 0) return;
+            Durability = Mathf.Max(0, Durability - amount);
+            if (Durability <= 0)
             {
                 BreakCount++;
+                Durability = BreakCount < 2 ? DurabilityPerLayer : 0;
                 Broken?.Invoke(BreakCount);
             }
         }

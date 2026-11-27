@@ -694,7 +694,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Equipment.PlayerStats
   baseEvasion: 0
-  baseCritChance: 5
+  baseCritChance: 10
   baseCritEvasion: 0
   baseHealthRegen: 0
   incomingCritChance: 10

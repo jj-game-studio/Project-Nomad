@@ -16,7 +16,7 @@ namespace Nomad.Equipment
         public const float MaxEvasion = 60f;
 
         [SerializeField, Range(0, 100)] private float baseEvasion;
-        [SerializeField, Range(0, 100)] private float baseCritChance = 5f;
+        [SerializeField, Range(0, 100)] private float baseCritChance = 10f;
         [SerializeField, Range(0, 100)] private float baseCritEvasion;
         [SerializeField, Min(0)] private float baseHealthRegen;
         // 받는 공격의 기본 치명타 확률입니다. 치명타 회피력만큼 줄어듭니다.

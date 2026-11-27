@@ -16,6 +16,7 @@ namespace Nomad.Combat
         private float remainingDistance;
         private int damage;
         private Action<Vector3> impact;
+        public bool Critical { get; set; }
 
         public static bool TryLaunch(Projectile prefab, Transform owner, Vector3 origin, Vector3 aimPoint,
             LayerMask layers, float speed, float range, int damage)
@@ -70,7 +71,7 @@ namespace Nomad.Combat
                 Destroy(gameObject);
                 Health health = hit.collider.GetComponentInParent<Health>();
                 if (health != null)
-                    health.TryApplyDamage(damage);
+                    health.TryApplyCombatDamage(damage, Critical);
                 impact?.Invoke(hit.point);
                 return;
             }

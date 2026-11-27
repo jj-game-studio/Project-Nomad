@@ -6,14 +6,16 @@ namespace Nomad.Monsters.Demo
     {
         public const float TurnSpeed = 150;
         public const float ChargeTurnSpeed = 130;
-        public const float ChargeLockSeconds = 0.35f;
+        public const float ChargeLockSeconds = 0.45f;
+        public const float ChargeWindup = 2.8f;
         public const float ChargeInterval = 10;
         public bool ChargeAimLocked { get; private set; }
         public int ChargesReleased { get; private set; }
         public float ChargeRemaining => Mathf.Max(0, nextCharge - Time.time);
         private float nextCharge;
         private bool engaged;
-        private BossHazard chargeWarning;
+        public float PlannedChargeDistance { get; private set; }
+        private BossChargeWarning chargeWarning;
 
         private void UpdateFacing()
         {
@@ -27,9 +29,11 @@ namespace Nomad.Monsters.Demo
                         Vector3 targetDirection = Vector3.ProjectOnPlane(target.transform.position - transform.position, Vector3.up);
                         TurnTowards(targetDirection, ChargeTurnSpeed);
                         direction = transform.forward;
+                        PlannedChargeDistance = Mathf.Clamp(targetDirection.magnitude + 2, 5, BossArena.HalfSize * 2.9f);
                     }
                     else if (!ChargeAimLocked) { ChargeAimLocked = true; direction = transform.forward; }
-                    if (chargeWarning != null) chargeWarning.transform.rotation = Quaternion.LookRotation(direction);
+                    if (chargeWarning != null) chargeWarning.Refresh(transform.position, direction, PlannedChargeDistance,
+                        Mathf.Clamp01((Time.time - phaseStarted) / phaseDuration), ChargeAimLocked);
                 }
                 else TurnTowards(direction, TurnSpeed);
                 return;

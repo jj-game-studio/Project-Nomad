@@ -22,10 +22,10 @@ namespace Nomad.Equipment
             if ((bow && ArrowCount < 1) || (staff && (mana == null || !mana.CanSpend(weapon.ManaCost * 2)))) return false;
 
             FaceRangedAim(aim);
-            int power = Mathf.RoundToInt(Damage(weapon) * 2.5f);
+            int power = Mathf.RoundToInt(Damage(weapon, out bool critical) * 2.5f);
             if (weapon.AttackMode == WeaponAttackMode.Melee)
             {
-                SkillProjectile.DamageArea(transform.position, transform.forward, 6, 100, power, transform);
+                SkillProjectile.DamageArea(transform.position, transform.forward, 6, 100, power, transform, critical);
                 WeaponVfx.Burst(transform.position + transform.forward * 3 + Vector3.up * 0.3f,
                     new WeaponVfxStyle(new Color(1, 0.9f, 0.6f), new Color(1, 0.55f, 0.1f), 2));
                 AimPoint = transform.position + transform.forward * 6;
@@ -41,7 +41,7 @@ namespace Nomad.Equipment
                 Vector3 body = new Vector3(transform.position.x, origin.y, transform.position.z);
                 Vector3 barrel = origin - body;
                 if (Projectile.TryGetFirstHit(new Ray(body, barrel.normalized), barrel.magnitude, collisionLayers, transform, out _)) return false;
-                SkillProjectile.Launch(transform, origin, direction, power, staff);
+                SkillProjectile.Launch(transform, origin, direction, power, staff, critical);
                 AimPoint = origin + direction * 24;
                 Attacked?.Invoke(weapon.AttackMode);
             }

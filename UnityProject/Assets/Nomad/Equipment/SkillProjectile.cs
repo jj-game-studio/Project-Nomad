@@ -9,10 +9,11 @@ namespace Nomad.Equipment
         private Transform owner;
         private int damage;
         private bool explosive;
+        private bool critical;
         private float distance;
         private readonly HashSet<Health> struck = new();
 
-        public static void Launch(Transform owner, Vector3 position, Vector3 direction, int damage, bool explosive)
+        public static void Launch(Transform owner, Vector3 position, Vector3 direction, int damage, bool explosive, bool critical = false)
         {
             var root = new GameObject(explosive ? "Enhanced magic bolt" : "Piercing arrow");
             UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(root, owner.gameObject.scene);
@@ -21,6 +22,7 @@ namespace Nomad.Equipment
             shot.owner = owner;
             shot.damage = damage;
             shot.explosive = explosive;
+            shot.critical = critical;
             var trail = root.AddComponent<TrailRenderer>();
             trail.sharedMaterial = WeaponVfx.Beam;
             trail.time = 0.18f;
@@ -44,12 +46,12 @@ namespace Nomad.Equipment
                 if (target != null && struck.Contains(target)) continue;
                 if (explosive)
                 {
-                    DamageArea(hit.point, transform.forward, 3.5f, 360, damage, owner);
+                    DamageArea(hit.point, transform.forward, 3.5f, 360, damage, owner, critical);
                     WeaponVfx.Burst(hit.point, new WeaponVfxStyle(Color.white, new Color(0.3f, 0.8f, 1), 2));
                     Destroy(gameObject);
                     return;
                 }
-                if (target != null) { struck.Add(target); target.TryApplyDamage(damage); }
+                if (target != null) { struck.Add(target); target.TryApplyCombatDamage(damage, critical); }
                 else { Destroy(gameObject); return; }
             }
             transform.position += transform.forward * step;
@@ -57,7 +59,7 @@ namespace Nomad.Equipment
             if (distance >= 24) Destroy(gameObject);
         }
 
-        public static void DamageArea(Vector3 center, Vector3 forward, float radius, float angle, int damage, Transform owner)
+        public static void DamageArea(Vector3 center, Vector3 forward, float radius, float angle, int damage, Transform owner, bool critical = false)
         {
             var hit = new HashSet<Health>();
             foreach (Collider collider in Physics.OverlapSphere(center + Vector3.up, radius, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
@@ -69,7 +71,7 @@ namespace Nomad.Equipment
                 Vector3 ray = target.transform.position + Vector3.up - (center + Vector3.up);
                 if (Projectile.TryGetFirstHit(new Ray(center + Vector3.up, ray.normalized), ray.magnitude,
                     Physics.DefaultRaycastLayers, owner, out RaycastHit wall) && wall.collider.GetComponentInParent<Health>() != target) continue;
-                target.TryApplyDamage(damage);
+                target.TryApplyCombatDamage(damage, critical);
             }
         }
     }

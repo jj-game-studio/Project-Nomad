@@ -50,7 +50,10 @@ namespace Nomad.Monsters.Demo
             tactics = GetComponent<MonsterTactics>();
             animationDriver = GetComponent<MonsterAnimationDriver>();
             GetComponent<MonsterMeleeAttack>().enabled = false;
-            tactics.Configure(target, 0, 14, 15, 6, 6.5f, 8, 0.8f, 0.1f, 28);
+            tactics.Configure(target, 0, BossArena.HalfSize * 2.9f, 15, 6, 6.5f, 8, 0.8f, 0.1f, 28);
+            tracker.Configure(60, 100, BossArena.HalfSize * 2);
+            GetComponent<BossArmor>().Broken += ArmorBroken;
+            gameObject.AddComponent<BossKnockdownAnimation>();
             agent.speed = 6;
             agent.acceleration = 18;
             agent.angularSpeed = TurnSpeed;
@@ -72,9 +75,9 @@ namespace Nomad.Monsters.Demo
         }
 
         private bool PlayerInside => target != null && target.gameObject.activeInHierarchy && !target.IsDead &&
-            Mathf.Abs((target.transform.position - arena.Center).y) < 4 &&
+            Mathf.Abs((target.transform.position - arena.Center).y) < 8 &&
             Mathf.Max(Mathf.Abs(Vector3.Dot(target.transform.position - arena.Center, arena.Forward)),
-                Mathf.Abs(Vector3.Dot(target.transform.position - arena.Center, Vector3.Cross(Vector3.up, arena.Forward)))) < BossArena.HalfSize;
+                Mathf.Abs(Vector3.Dot(target.transform.position - arena.Center, Vector3.Cross(Vector3.up, arena.Forward)))) < BossArena.HalfSize + (engaged ? 8 : 0);
 
         private void Update()
         {
@@ -98,6 +101,7 @@ namespace Nomad.Monsters.Demo
             }
             if (Phase == DragonPhase.Stunned)
             {
+                if (animationDriver != null) animationDriver.ActionNormalizedTime = Mathf.Clamp01((Time.time - phaseStarted) / phaseDuration);
                 if (Time.time < until) return;
                 Recover();
                 return;
@@ -142,7 +146,7 @@ namespace Nomad.Monsters.Demo
             if (direction.sqrMagnitude < 0.01f) direction = transform.forward;
             ChargeAimLocked = false;
             float windup = pattern == DragonPattern.Circle ? 1.6f : pattern == DragonPattern.Basic ? 0.45f :
-                pattern == DragonPattern.TripleFireball ? 0.55f : pattern == DragonPattern.Charge ? 1.5f :
+                pattern == DragonPattern.TripleFireball ? 0.55f : pattern == DragonPattern.Charge ? ChargeWindup :
                 pattern == DragonPattern.Rain ? 0.7f : pattern == DragonPattern.Breath ? 1.6f : 0.9f;
             float turning = Vector3.Angle(transform.forward, direction) / (pattern == DragonPattern.Charge ? ChargeTurnSpeed : TurnSpeed);
             windup = Mathf.Max(windup, turning + (pattern == DragonPattern.Charge ? ChargeLockSeconds : 0.12f));
@@ -157,12 +161,13 @@ namespace Nomad.Monsters.Demo
             if (pattern == DragonPattern.Breath) Area(transform.position, BreathRange, BreathAngle, windup, 2.4f, 12, 0.8f);
             if (pattern == DragonPattern.FirePool)
             {
-                Area(aim, 2.4f, 360, windup + 0.75f, 5, 10);
+                PlanFirePools(windup);
             }
             if (pattern == DragonPattern.Charge)
             {
-                // 원뿔 윤곽은 실제 돌진 방향을 고정해서 보여줍니다.
-                chargeWarning = Area(transform.position, 12, 14, windup, 0.01f, 0);
+                PlannedChargeDistance = Mathf.Clamp(Vector3.Distance(transform.position, aim) + 2, 5, BossArena.HalfSize * 2.9f);
+                chargeWarning = BossChargeWarning.Create(effects);
+                chargeWarning.Refresh(transform.position, direction, PlannedChargeDistance, 0, false);
             }
         }
 
@@ -194,16 +199,20 @@ namespace Nomad.Monsters.Demo
                 foreach (float yaw in new[] { -22f, 0, 22f })
                 {
                     Vector3 start = Mouth.position;
-                    Vector3 end = start + Quaternion.Euler(0, yaw, 0) * direction * 24;
-                    BossFireball.Launch(effects, transform, target, start, end, 3, false);
+                    float distance = Mathf.Clamp(Vector3.Distance(transform.position, target.transform.position) + 6, 12, 48);
+                    Vector3 end = start + Quaternion.Euler(0, yaw, 0) * direction * distance;
+                    end.y = target.transform.position.y + 0.8f;
+                    BossFireball.Launch(effects, transform, target, start, end, distance / 9.5f, false);
                 }
             if (Pattern == DragonPattern.FirePool)
-                BossFireball.Launch(effects, transform, target, Mouth.position, aim, 0.75f, true);
+                foreach (Vector3 point in firePoolTargets)
+                    BossFireball.Launch(effects, transform, target, Mouth.position, point, 0.75f, true);
             if (Pattern == DragonPattern.Charge)
             {
                 direction = transform.forward;
                 ChargeAimLocked = true;
-                tactics.Prepare(MonsterSkill.Charge, transform.position + direction * 12);
+                if (chargeWarning != null) Destroy(chargeWarning.gameObject);
+                tactics.Prepare(MonsterSkill.Charge, transform.position + direction * PlannedChargeDistance);
                 nextCharge = Time.time + ChargeInterval;
                 if (tactics.StartCharge(direction)) ChargesReleased++;
                 else Recover();
@@ -223,8 +232,8 @@ namespace Nomad.Monsters.Demo
         {
             Quaternion rotation = Quaternion.LookRotation(arena.Forward);
             Vector3 local = Quaternion.Inverse(rotation) * (point - arena.Center);
-            local.x = Mathf.Clamp(local.x, -9.5f, 9.5f);
-            local.z = Mathf.Clamp(local.z, -9.5f, 9.5f);
+            local.x = Mathf.Clamp(local.x, -BossArena.HalfSize + 3, BossArena.HalfSize - 3);
+            local.z = Mathf.Clamp(local.z, -BossArena.HalfSize + 3, BossArena.HalfSize - 3);
             return arena.Center + rotation * new Vector3(local.x, 0, local.z);
         }
 
@@ -234,7 +243,12 @@ namespace Nomad.Monsters.Demo
             foreach (RaycastHit hit in Physics.SphereCastAll(transform.position + Vector3.up * radius, radius, direction,
                 tactics.ChargeSpeed * Time.deltaTime + 0.25f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
                 if (hit.collider.GetComponentInParent<BossBreakableRock>() is BossBreakableRock rock && rock.Shatter())
-                { RockStuns++; Stun(2.5f); return true; }
+                {
+                    RockStuns++;
+                    GetComponent<BossArmor>().DamageArmor(BossArmor.DurabilityPerLayer * 0.65f);
+                    if (Phase != DragonPhase.Stunned) Stun(1.1f);
+                    return true;
+                }
             return false;
         }
 
@@ -246,9 +260,24 @@ namespace Nomad.Monsters.Demo
             Pause();
             Phase = DragonPhase.Stunned;
             until = Time.time + seconds;
+            phaseStarted = Time.time;
+            phaseDuration = seconds;
             status.text = "";
             status.color = new Color(1, 0.9f, 0.3f);
-            SetMotion("Hit_A", 0.35f);
+            SetMotion("BossKnockdown", 1);
+        }
+
+        private void ArmorBroken(int stage) => Stun(4.2f);
+
+        private readonly Vector3[] firePoolTargets = new Vector3[4];
+        private void PlanFirePools(float windup)
+        {
+            for (int index = 0; index < firePoolTargets.Length; index++)
+            {
+                Vector3 offset = Quaternion.Euler(0, index * 90 + 45, 0) * direction * (index % 2 == 0 ? 6 : 11);
+                firePoolTargets[index] = ClampPoint(transform.position + offset);
+                Area(firePoolTargets[index], 2.8f, 360, windup + 0.75f, 6, 10);
+            }
         }
 
         private void Recover()
@@ -291,6 +320,10 @@ namespace Nomad.Monsters.Demo
 
         private void LateUpdate() { if (status != null && Camera.main != null) status.transform.rotation = Camera.main.transform.rotation; }
         private void OnDisable() { StopEncounter(); }
-        private void OnDestroy() { if (effects != null) Destroy(effects.gameObject); }
+        private void OnDestroy()
+        {
+            if (TryGetComponent(out BossArmor armor)) armor.Broken -= ArmorBroken;
+            if (effects != null) Destroy(effects.gameObject);
+        }
     }
 }

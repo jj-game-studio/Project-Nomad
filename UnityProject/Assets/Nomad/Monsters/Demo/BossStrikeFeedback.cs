@@ -63,7 +63,7 @@ namespace Nomad.Monsters.Demo
             LastDamage = amount;
             hitAt = Time.time;
             Vector3 point = ImpactPoint();
-            overlay.ShowDamage(amount, point + Vector3.up * 0.4f, armor.BreakCount > 0 ? new Color(1, 0.65f, 0.18f) : new Color(1, 0.9f, 0.6f));
+            overlay.ShowDamage(amount, point + Vector3.up * 0.4f, armor.BreakCount > 0 ? new Color(1, 0.65f, 0.18f) : new Color(1, 0.9f, 0.6f), health.LastHitCritical);
             Emit(sparks, point, amount >= 80 ? 24 : 14, 4);
             HitCameraImpulse.Pulse(amount >= 80 ? 0.12f : 0.075f, 0.1f);
             if (Time.time - lastSound > 0.08f)
@@ -120,6 +120,7 @@ namespace Nomad.Monsters.Demo
         {
             if (health.IsDead) { overlay.HideArmor(); return; }
             overlay.ShowArmor(armor.BreakCount, armor.DamageMultiplier);
+            overlay.ShowDurability(armor.RemainingRatio, armor.BreakCount);
             float flash = Mathf.Clamp01(1 - (Time.time - hitAt) / 0.075f);
             foreach (Renderer renderer in bodies)
             {

@@ -18,10 +18,12 @@ namespace Nomad.CombatFeedback
         private Texture2D edgeTexture;
         private Sprite edgeSprite;
         private Text status, banner;
+        private Image armorFill;
         private float hurtAt = -10, hurtStrength, bannerUntil;
         public int LastDamage { get; private set; }
         public float VignetteAlpha => vignette != null ? vignette.color.a : 0;
         public int ActiveNumbers { get; private set; }
+        public bool LastCritical { get; private set; }
 
         private void Awake()
         {
@@ -65,20 +67,58 @@ namespace Nomad.CombatFeedback
             return label;
         }
 
-        public void ShowDamage(int amount, Vector3 point, Color color)
+        public void ShowDamage(int amount, Vector3 point, Color color, bool critical = false)
         {
             LastDamage = amount;
+            LastCritical = critical;
             Number slot = numbers[0];
             foreach (Number candidate in numbers) if (candidate.started < slot.started) slot = candidate;
             slot.started = Time.time;
             slot.point = point;
-            slot.color = color;
-            slot.text.text = amount.ToString();
+            slot.color = critical ? new Color(1, 0.4f, 0.05f) : color;
+            slot.text.fontSize = critical ? 46 : 34;
+            slot.text.text = amount + (critical ? "!" : "");
             slot.text.gameObject.SetActive(true);
         }
 
         public void ShowArmor(int stage, float multiplier) => status.text = $"갑옷 파괴 {stage}/2  ·  받는 피해 {multiplier * 100:0}%";
-        public void HideArmor() { status.text = ""; bannerUntil = 0; }
+        public void ShowDurability(float ratio, int stage)
+        {
+            if (armorFill == null)
+            {
+                var root = new GameObject("Armor durability", typeof(RectTransform), typeof(Image));
+                root.transform.SetParent(canvasRect, false);
+                var background = root.GetComponent<Image>();
+                background.color = new Color(0.04f, 0.035f, 0.025f, 0.95f);
+                background.raycastTarget = false;
+                var rect = (RectTransform)root.transform;
+                rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 1);
+                rect.anchoredPosition = new Vector2(0, -132);
+                rect.sizeDelta = new Vector2(480, 14);
+                var child = new GameObject("Remaining armor", typeof(RectTransform), typeof(Image));
+                child.transform.SetParent(rect, false);
+                armorFill = child.GetComponent<Image>();
+                armorFill.color = new Color(0.7f, 0.8f, 0.9f);
+                armorFill.raycastTarget = false;
+                var bar = armorFill.rectTransform;
+                bar.anchorMin = Vector2.zero;
+                bar.anchorMax = Vector2.one;
+                bar.offsetMin = new Vector2(2, 2);
+                bar.offsetMax = new Vector2(-2, -2);
+                bar.pivot = new Vector2(0, 0.5f);
+            }
+            armorFill.rectTransform.localScale = new Vector3(Mathf.Clamp01(ratio), 1, 1);
+            armorFill.transform.parent.gameObject.SetActive(true);
+            status.text = $"내구도 {ratio * 100:0}% · " + status.text;
+            banner.rectTransform.anchoredPosition = new Vector2(0, -152);
+            if (stage >= 2) status.text = "갑옷 완전 파괴 · 받는 피해 155%";
+        }
+        public void HideArmor()
+        {
+            status.text = "";
+            bannerUntil = 0;
+            if (armorFill != null) armorFill.transform.parent.gameObject.SetActive(false);
+        }
         public void ArmorBreak(int stage)
         {
             banner.text = $"갑옷 파괴 {stage}/2!";

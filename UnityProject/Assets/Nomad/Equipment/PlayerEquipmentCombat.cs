@@ -18,6 +18,7 @@ namespace Nomad.Equipment
         public const float MeleeHalfAngle = 60f;
         // 커서 레이 주변에서 적을 찾는 에임 보정 반경(m)입니다.
         public const float AimAssistRadius = 0.6f;
+        public bool CanParry => ChargeAllowed && !IsCharging && !IsMeleePending;
 
         [SerializeField] private Camera viewCamera;
         [SerializeField] private Transform muzzle;
@@ -85,6 +86,7 @@ namespace Nomad.Equipment
                 walkableNormalY = Mathf.Cos(controller.slopeLimit * Mathf.Deg2Rad);
             if (GetComponent<PlayerWeaponSkill>() == null) gameObject.AddComponent<PlayerWeaponSkill>();
             if (GetComponent<Nomad.CombatFeedback.PlayerDamageFeedback>() == null) gameObject.AddComponent<Nomad.CombatFeedback.PlayerDamageFeedback>();
+            if (GetComponent<PlayerBossParry>() == null) gameObject.AddComponent<PlayerBossParry>();
         }
 
         private void OnEnable()
@@ -243,9 +245,11 @@ namespace Nomad.Equipment
             // 커서가 몸통·무기 안쪽이면 뒤집어 쏘지 않고 현재 보는 방향을 유지합니다.
             if (Vector3.Dot(Vector3.ProjectOnPlane(aim - origin, Vector3.up), transform.forward) < 0.25f)
                 aim = origin + transform.forward * weapon.AttackRange;
+            int damage = Damage(weapon, out bool critical);
             if (!Projectile.TryLaunch(shot, transform, origin, aim, collisionLayers, 45f,
-                    weapon.AttackRange, Mathf.Max(1, Mathf.RoundToInt(Damage(weapon) * power)), point => NotifyRangedImpact(point, weapon, power), out Projectile launched))
+                    weapon.AttackRange, Mathf.Max(1, Mathf.RoundToInt(damage * power)), point => NotifyRangedImpact(point, weapon, power), out Projectile launched))
                 return false;
+            launched.Critical = critical;
 
             // 막힌 발사구나 유효하지 않은 조준에는 재화나 공격 간격을 적용하지 않습니다.
             nextAttackTime = Time.time + weapon.AttackInterval;
@@ -365,17 +369,19 @@ namespace Nomad.Equipment
                     Collider collider = target.GetComponentInChildren<Collider>();
                     Vector3 point = collider != null ? collider.bounds.center + Vector3.up * (collider.bounds.extents.y + 0.08f)
                         : target.transform.position + Vector3.up;
-                    if (target.TryApplyDamage(Damage(weapon))) NotifyImpact(point, weapon);
+                    int damage = Damage(weapon, out bool critical);
+                    if (target.TryApplyCombatDamage(damage, critical)) NotifyImpact(point, weapon);
                 }
         }
 
         // 스탯이 있으면 장비 공격력과 치명타를 반영합니다. 근접은 대상마다 따로 판정합니다.
-        private int Damage(ItemDefinition weapon)
+        private int Damage(ItemDefinition weapon, out bool critical)
         {
+            critical = false;
             if (stats == null || !stats.isActiveAndEnabled)
                 return weapon.AttackPower;
 
-            return stats.RollOutgoingDamage(weapon, out _);
+            return stats.RollOutgoingDamage(weapon, out critical);
         }
 
         public float MeleeReach(Vector3 direction, float range)

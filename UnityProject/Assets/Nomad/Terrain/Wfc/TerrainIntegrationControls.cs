@@ -76,7 +76,7 @@ namespace Nomad.Terrain
                 Regenerate(false);
             }
             if (keyboard?.oKey.wasPressedThisFrame == true) SetView(view == 1 ? 0 : 1);
-            if (keyboard?.gKey.wasPressedThisFrame == true) SetView(view == 2 ? 0 : 2);
+            if (keyboard?.gKey.wasPressedThisFrame == true && keyboard.leftShiftKey.isPressed) SetView(view == 2 ? 0 : 2);
         }
 
         public void ToggleLegacy()
@@ -149,7 +149,7 @@ namespace Nomad.Terrain
                 + $" | Exits {field.ExitPoints.Count} ({string.Join("/", field.ExitPoints.Select(point => point.Id.Replace("exit-", "")))})\n"
                 + $"Attempts {result.Attempts} | Candidate checks {result.CandidateChecks}\n"
                 + "R New seed | T Replay | L WFC/Legacy | P Props on/off\n"
-                + "O Field overview/player | G 3m tile gallery/player\n"
+                + "O Field overview/player | Shift+G 3m tile gallery/player\n"
                 + "WASD Move | Space Jump | Left Shift Roll | Fall: respawn\n"
                 + $"Levels 0/1/2m | Reachable samples {generator.ReachableSamples} | {NavigationFailure}{generator.WalkabilityFailure}";
             return result;

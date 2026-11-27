@@ -14,6 +14,7 @@ namespace Nomad.Game.Editor
 
         public static void Apply()
         {
+            BossDebugAuthoring.Apply();
             Nomad.PlayerVisual.Editor.PlayerHitReactionAuthoring.Apply();
             const string output = "Assets/Nomad/Monsters/Resources/BossArenaRock.prefab";
             Directory.CreateDirectory(Path.GetDirectoryName(output));
@@ -33,6 +34,7 @@ namespace Nomad.Game.Editor
                 var content = root.GetComponent<BossEncounterContent>() ?? root.AddComponent<BossEncounterContent>();
                 content.Rock = rock;
                 content.BossHealth = BossArmor.ReferenceHealth;
+                content.Knockdown = AssetDatabase.LoadAssetAtPath<AnimationClip>("Assets/Nomad/Monsters/Resources/BossKnockdown.anim");
                 EditorSceneManager.SaveScene(scene);
             }
             AssetDatabase.SaveAssets();

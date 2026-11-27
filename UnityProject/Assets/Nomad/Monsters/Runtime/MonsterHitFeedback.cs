@@ -13,6 +13,7 @@ namespace Nomad.Monsters
             public int amount;
             public Vector3 position;
             public float age;
+            public bool critical;
         }
 
         private const float FlashDuration = 0.16f;
@@ -87,7 +88,7 @@ namespace Nomad.Monsters
             {
                 if (numbers.Count == 8)
                     numbers.RemoveAt(0);
-                numbers.Add(new DamageNumber { amount = damage,
+                numbers.Add(new DamageNumber { amount = damage, critical = health.LastHitCritical,
                     position = transform.position + Vector3.up * 2.9f });
             }
             if (shardsEnabled)
@@ -162,12 +163,13 @@ namespace Nomad.Monsters
                     continue;
 
                 numberStyle.fontSize = Mathf.RoundToInt(Mathf.Lerp(30, 22, Mathf.Clamp01(number.age / 0.16f)));
+                if (number.critical) numberStyle.fontSize += 10;
                 Rect rect = new Rect(screen.x - 50f, Screen.height - screen.y - 20f, 100f, 40f);
-                string text = number.amount.ToString();
+                string text = number.amount + (number.critical ? "!" : "");
                 float alpha = 1f - number.age / NumberDuration;
                 numberStyle.normal.textColor = new Color(0f, 0f, 0f, alpha);
                 GUI.Label(new Rect(rect.x + 1f, rect.y + 1f, rect.width, rect.height), text, numberStyle);
-                numberStyle.normal.textColor = new Color(1f, 0.85f, 0.25f, alpha);
+                numberStyle.normal.textColor = number.critical ? new Color(1f, 0.4f, 0.05f, alpha) : new Color(1f, 0.85f, 0.25f, alpha);
                 GUI.Label(rect, text, numberStyle);
             }
         }

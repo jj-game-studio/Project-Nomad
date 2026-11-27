@@ -184,7 +184,7 @@ namespace Nomad.Tests
         public void RocksLeaveCenterAndEntranceClear()
         {
             BossBreakableRock[] rocks = arena.GetComponentsInChildren<BossBreakableRock>();
-            Assert.That(rocks.Length, Is.EqualTo(6));
+            Assert.That(rocks.Length, Is.EqualTo(12));
             foreach (BossBreakableRock rock in rocks)
             {
                 Vector3 offset = rock.transform.position - arena.Center;
@@ -192,6 +192,91 @@ namespace Nomad.Tests
                 if (Vector3.Dot(offset, arena.Forward) < 0)
                     Assert.That(Mathf.Abs(Vector3.Dot(offset, Vector3.Cross(Vector3.up, arena.Forward))), Is.GreaterThan(4));
                 Assert.That(rock.GetComponentInChildren<NavMeshObstacle>().carving, Is.True);
+                Assert.That(rock.GetComponentInChildren<BoxCollider>().size.x, Is.GreaterThanOrEqualTo(3.2f));
+                foreach (BossBreakableRock other in rocks)
+                    if (other != rock) Assert.That(Vector3.Distance(rock.transform.position, other.transform.position), Is.GreaterThanOrEqualTo(6));
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator ChargeUsesLongRectangleAndKeepsAggroPastArenaEdge()
+        {
+            combat.AutomaticPatterns = true;
+            yield return Wait(0.05f);
+            combat.AutomaticPatterns = false;
+            player.transform.position = arena.Center + Vector3.right * 25;
+            Physics.SyncTransforms();
+            combat.BeginPattern(DragonPattern.Charge);
+            yield return Wait(0.05f);
+            Assert.That(combat.Phase, Is.EqualTo(DragonPhase.Windup), "초기 진입 후에는 외곽 8m 여유까지 유지");
+            Assert.That(combat.Remaining, Is.GreaterThan(2.5f));
+            var warning = combat.Effects.GetComponentInChildren<BossChargeWarning>();
+            Assert.That(warning, Is.Not.Null);
+            Assert.That(warning.Length, Is.GreaterThanOrEqualTo(25));
+            Assert.That(combat.Effects.GetComponentsInChildren<BossHazard>().Length, Is.Zero, "돌진에 원뿔 표식 없음");
+            player.transform.position = arena.Center + Vector3.right * 32;
+            yield return null;
+            Assert.That(combat.Phase, Is.EqualTo(DragonPhase.Waiting));
+        }
+
+        [UnityTest]
+        public IEnumerator ParryReflectsOnlyOneProjectileAndCriticalMetadataReachesDamageNumber()
+        {
+            Mouse mouse = InputSystem.AddDevice<Mouse>();
+            Keyboard keyboard = InputSystem.AddDevice<Keyboard>();
+            var muted = new List<InputDevice>();
+            try
+            {
+                foreach (InputDevice device in InputSystem.devices.Where(device => device != mouse && device != keyboard && (device is Mouse || device is Keyboard)).ToArray())
+                { InputSystem.DisableDevice(device); muted.Add(device); }
+                mouse.MakeCurrent();
+                keyboard.MakeCurrent();
+                GameObject rig = Track(Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Nomad/Game/Prefabs/PlayerRig.prefab")));
+                var attacker = rig.GetComponentInChildren<PlayerEquipmentCombat>();
+                attacker.GetComponent<PlayerMovement>().enabled = false;
+                attacker.transform.position = arena.Center - Vector3.forward * 8;
+                attacker.transform.rotation = Quaternion.identity;
+                yield return null;
+                var stats = attacker.GetComponent<PlayerStats>();
+                Assert.That(stats.Get(StatType.CritChance), Is.EqualTo(10));
+                stats.RandomSource = () => 0.099f;
+                int criticalDamage = stats.RollOutgoingDamage(attacker.CurrentWeapon, out bool critical);
+                Assert.That(critical, Is.True);
+                stats.RandomSource = () => 0.1f;
+                Assert.That(stats.RollOutgoingDamage(attacker.CurrentWeapon, out bool normal), Is.LessThan(criticalDamage));
+                Assert.That(normal, Is.False);
+                boss.TryApplyCombatDamage(criticalDamage, true);
+                Assert.That(boss.LastHitCritical, Is.True);
+                Assert.That(boss.GetComponent<CombatFeedbackOverlay>().LastCritical, Is.True);
+                stats.RandomSource = () => 0.99f;
+
+                var parry = attacker.GetComponent<PlayerBossParry>();
+                Health victim = attacker.GetComponent<Health>();
+                Vector3 point = attacker.transform.position + Vector3.up * 1.3f + Vector3.forward * 1.7f;
+                var first = BossFireball.Launch(combat.Effects, boss.transform, victim, point, attacker.transform.position + Vector3.up, 1, false);
+                var second = BossFireball.Launch(combat.Effects, boss.transform, victim, point + Vector3.right * 0.2f, attacker.transform.position + Vector3.up, 1, false);
+                int before = boss.CurrentHealth;
+                Assert.That(first.GetComponent<TrailRenderer>(), Is.Not.Null, "운석 꼬리");
+                Assert.That(parry.TryBegin(), Is.True);
+                Assert.That(parry.TryReflect(first, point), Is.True);
+                Assert.That(first.Reflected, Is.True);
+                Assert.That(parry.TryReflect(first, point), Is.False, "같은 탄 중복 반사 없음");
+                Assert.That(parry.TryReflect(second, point), Is.False, "한 판정은 탄 하나만");
+                Assert.That(parry.TryBegin(), Is.False, "쿨다운 중 재사용 차단");
+                yield return Wait(1.2f);
+                Assert.That(parry.Reflections, Is.EqualTo(1));
+                Assert.That(boss.CurrentHealth, Is.EqualTo(before - 140), "반사 탄은 보스에 한 번 피해");
+                Assert.That(parry.TryBegin(), Is.True);
+                var lob = BossFireball.Launch(combat.Effects, boss.transform, victim, point, point, 1, true);
+                Assert.That(parry.TryReflect(lob, point), Is.False, "낙하/불지대 탄은 패링 제외");
+                yield return Wait(PlayerBossParry.Window + 0.05f);
+                Assert.That(parry.Active, Is.False, "짧은 판정 종료");
+            }
+            finally
+            {
+                InputSystem.RemoveDevice(mouse);
+                InputSystem.RemoveDevice(keyboard);
+                foreach (InputDevice device in muted) InputSystem.EnableDevice(device);
             }
         }
 
@@ -237,24 +322,27 @@ namespace Nomad.Tests
         }
 
         [UnityTest]
-        public IEnumerator ArmorBreaksTwiceIncreaseDamageWithoutStunningOrCancellingAttacks()
+        public IEnumerator ArmorDurabilityBreaksTwiceAndKnocksDownWithSeparateAnimation()
         {
             BossArmor armor = boss.GetComponent<BossArmor>();
             combat.BeginPattern(DragonPattern.Circle);
             boss.TryApplyDamage(Mathf.CeilToInt(boss.MaxHealth * 0.31f));
             yield return null;
-            Assert.That(combat.Phase, Is.EqualTo(DragonPhase.Windup), "갑옷 파괴로 공격을 멈추지 않음");
+            Assert.That(combat.Phase, Is.EqualTo(DragonPhase.Stunned), "파괴 후 녹다운 딜타임");
             Assert.That(armor.BreakCount, Is.EqualTo(1));
             Assert.That(armor.ModifyCombatDamage(100), Is.EqualTo(125));
-            Assert.That(boss.GetComponent<BossStunDisplay>().Visible, Is.False);
-            Assert.That(combat.Effects.GetComponentsInChildren<BossHazard>().Length, Is.EqualTo(1));
+            Assert.That(boss.GetComponent<BossStunDisplay>().Visible, Is.True);
+            Assert.That(combat.Effects.GetComponentsInChildren<BossHazard>().Length, Is.Zero);
+            Assert.That(combat.Remaining, Is.GreaterThan(4));
+            yield return Wait(0.8f);
+            Assert.That(boss.GetComponentInChildren<Animator>().GetCurrentAnimatorClipInfo(0).First().clip.name, Is.EqualTo("BossKnockdown"));
             boss.TryApplyDamage(1);
             Assert.That(armor.BreakCount, Is.EqualTo(1));
             boss.TryApplyDamage(Mathf.CeilToInt(boss.MaxHealth * 0.35f / 1.25f));
             yield return null;
             Assert.That(armor.BreakCount, Is.EqualTo(2));
             Assert.That(armor.ModifyCombatDamage(100), Is.EqualTo(155));
-            Assert.That(combat.Phase, Is.EqualTo(DragonPhase.Windup));
+            Assert.That(combat.Phase, Is.EqualTo(DragonPhase.Stunned));
             boss.TryApplyDamage(boss.MaxHealth);
             yield return null;
             Assert.That(armor.BreakCount, Is.EqualTo(2), "최대 두 번만 파괴");
@@ -268,13 +356,15 @@ namespace Nomad.Tests
             yield return Wait(0.2f);
             BossBreakableRock rock = arena.GetComponentsInChildren<BossBreakableRock>().First();
             Vector3 point = rock.transform.position;
+            point.y = arena.Center.y;
             Assert.That(boss.GetComponent<NavMeshAgent>().Warp(point + Vector3.right * 4), Is.True);
             player.transform.position = point - Vector3.right * 3;
             Physics.SyncTransforms();
             combat.BeginPattern(DragonPattern.Charge);
-            yield return Wait(2);
+            yield return Wait(3.1f);
             Assert.That(rock == null || rock.Broken, Is.True, $"phase={combat.Phase} position={boss.transform.position} rock={point}");
             Assert.That(combat.RockStuns, Is.EqualTo(1));
+            Assert.That(boss.GetComponent<BossArmor>().RemainingRatio, Is.EqualTo(0.35f).Within(0.001f));
             Assert.That(combat.Phase, Is.EqualTo(DragonPhase.Stunned));
         }
 
@@ -282,6 +372,10 @@ namespace Nomad.Tests
         public IEnumerator FirePoolTicksAndStopsAfterLeavingAndDeathCleansIt()
         {
             combat.BeginPattern(DragonPattern.FirePool);
+            BossHazard[] pools = combat.Effects.GetComponentsInChildren<BossHazard>();
+            Assert.That(pools.Length, Is.EqualTo(4));
+            player.transform.position = pools[0].transform.position;
+            Physics.SyncTransforms();
             int hp = player.CurrentHealth;
             yield return Wait(1.9f);
             Assert.That(player.CurrentHealth, Is.EqualTo(hp - 10));

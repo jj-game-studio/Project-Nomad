@@ -40,8 +40,8 @@ namespace Nomad.Monsters.Demo
                 Quaternion turn = rotation * Quaternion.Euler(0, side * 90, 0);
                 var wall = new GameObject("Sealed boundary");
                 wall.transform.SetParent(seal.transform, false);
-                wall.transform.SetPositionAndRotation(Center + turn * new Vector3(0, 2.5f, -11.6f), turn);
-                wall.AddComponent<BoxCollider>().size = new Vector3(24, 5, 0.45f);
+                wall.transform.SetPositionAndRotation(Center + turn * new Vector3(0, 2.5f, -HalfSize + 0.4f), turn);
+                wall.AddComponent<BoxCollider>().size = new Vector3(HalfSize * 2, 5, 0.45f);
                 if (side != 0) continue;
                 GameObject curtain = Decor("Sealed entrance", wall.transform.position,
                     new Vector3(4.5f, 5, 0.04f), turn, red);

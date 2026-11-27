@@ -60,7 +60,7 @@ namespace Nomad.Tests
             Assert.That(arena.Build(new Vector3(0, 0.15f, 15), Vector3.forward, 3), Is.True);
             Assert.That(arena.Center.z, Is.GreaterThan(28), "보스는 원래 필드 바깥 전용 공간에 있음");
             Assert.That(arena.Connected, Is.True);
-            Assert.That(MonsterEncounterLayout.PathLength(Vector3.zero, arena.Center), Is.InRange(28f, 36f));
+            Assert.That(MonsterEncounterLayout.PathLength(Vector3.zero, arena.Center), Is.InRange(arena.Center.z - 2, arena.Center.z + 2));
             Assert.That(arena.GetComponentsInChildren<BoxCollider>().Length, Is.GreaterThanOrEqualTo(2));
             arena.gameObject.SetActive(false);
             Assert.That(arena.Connected, Is.False, "지역 해제와 함께 보조 경로·링크 제거");

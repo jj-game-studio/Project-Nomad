@@ -18,8 +18,9 @@ namespace Nomad.Monsters.Demo
             rocks.transform.SetParent(transform, false);
             BossEncounterContent content = FindFirstObjectByType<BossEncounterContent>();
             GameObject prefab = content != null ? content.Rock : Resources.Load<GameObject>(RockResource);
-            foreach (Vector2 offset in new[] { new Vector2(-7, -5), new Vector2(7, -5), new Vector2(-8, 2),
-                new Vector2(8, 2), new Vector2(-5, 8), new Vector2(5, 8) })
+            foreach (Vector2 offset in new[] { new Vector2(-14, -14), new Vector2(14, -14), new Vector2(-18, -5),
+                new Vector2(18, -5), new Vector2(-18, 6), new Vector2(18, 6), new Vector2(-13, 16),
+                new Vector2(13, 16), new Vector2(-6, 18), new Vector2(6, 18), new Vector2(-9, 6), new Vector2(9, 6) })
             {
                 Vector3 point = Center + Quaternion.LookRotation(Forward) * new Vector3(offset.x, 0, offset.y);
                 GameObject rock = prefab != null ? Instantiate(prefab, rocks.transform) : GameObject.CreatePrimitive(PrimitiveType.Sphere);
@@ -30,7 +31,7 @@ namespace Nomad.Monsters.Demo
                 Renderer[] renderers = rock.GetComponentsInChildren<Renderer>();
                 Bounds bounds = renderers[0].bounds;
                 foreach (Renderer renderer in renderers) bounds.Encapsulate(renderer.bounds);
-                float scale = 2f / Mathf.Max(bounds.size.x, bounds.size.z);
+                float scale = 3.4f / Mathf.Max(bounds.size.x, bounds.size.z);
                 rock.transform.localScale *= scale;
                 bounds = renderers[0].bounds;
                 foreach (Renderer renderer in renderers) bounds.Encapsulate(renderer.bounds);
@@ -38,12 +39,12 @@ namespace Nomad.Monsters.Demo
 
                 var collision = new GameObject("Rock collision");
                 collision.transform.SetParent(rock.transform, true);
-                collision.transform.SetPositionAndRotation(point + Vector3.up * 0.7f, Quaternion.identity);
+                collision.transform.SetPositionAndRotation(point + Vector3.up * 1.1f, Quaternion.identity);
                 // 장식 프리팹의 피벗과 무관한 월드 크기로 통행/돌진 충돌을 맞춥니다.
-                collision.AddComponent<BoxCollider>().size = new Vector3(1.9f, 1.4f, 1.9f);
+                collision.AddComponent<BoxCollider>().size = new Vector3(3.2f, 2.2f, 3.2f);
                 NavMeshObstacle obstacle = collision.AddComponent<NavMeshObstacle>();
                 obstacle.shape = NavMeshObstacleShape.Box;
-                obstacle.size = new Vector3(1.9f, 1.4f, 1.9f);
+                obstacle.size = new Vector3(3.2f, 2.2f, 3.2f);
                 obstacle.carving = true;
                 obstacle.carveOnlyStationary = true;
                 rock.AddComponent<BossBreakableRock>();
