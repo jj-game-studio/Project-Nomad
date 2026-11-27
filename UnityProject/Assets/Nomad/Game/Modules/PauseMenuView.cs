@@ -5,6 +5,25 @@ using UnityEngine.EventSystems;
 
 namespace Nomad.Game.Modules
 {
+    internal enum PausePage { Menu, Settings, Debug }
+
+    // 디버그 메뉴 버튼이 호출할 동작입니다.
+    internal readonly struct PauseDebugActions
+    {
+        public readonly UnityAction Open, Heal, Village, Field, ToggleRange, ToggleSight;
+
+        public PauseDebugActions(UnityAction open, UnityAction heal, UnityAction village, UnityAction field,
+            UnityAction toggleRange, UnityAction toggleSight)
+        {
+            Open = open;
+            Heal = heal;
+            Village = village;
+            Field = field;
+            ToggleRange = toggleRange;
+            ToggleSight = toggleSight;
+        }
+    }
+
     internal sealed class PauseMenuView
     {
         private static readonly Color32 PanelColor = new(25, 30, 28, 252);
@@ -17,13 +36,17 @@ namespace Nomad.Game.Modules
         private readonly GameObject overlay;
         private readonly RectTransform menu;
         private readonly RectTransform settings;
+        private readonly RectTransform debug;
         private readonly UnityEngine.UI.Button resumeButton;
         private readonly UnityEngine.UI.Button backButton;
+        private readonly UnityEngine.UI.Button debugBackButton;
+        private readonly TMP_Text rangeLabel;
+        private readonly TMP_Text sightLabel;
         private readonly TMP_FontAsset koreanFont;
         private readonly TMP_FontAsset font;
 
         public PauseMenuView(Transform parent, UnityAction resume, UnityAction restart, UnityAction openSettings,
-            UnityAction quit, UnityAction back)
+            UnityAction quit, UnityAction back, PauseDebugActions debugActions)
         {
             koreanFont = TMP_FontAsset.CreateFontAsset("Malgun Gothic", "Regular");
             font = koreanFont != null ? koreanFont : Resources.Load<TMP_FontAsset>("NomadHudFont");
@@ -59,9 +82,8 @@ namespace Nomad.Game.Modules
             SetNavigation(settingsButton, restartButton, quitButton);
             SetNavigation(quitButton, settingsButton, resumeButton);
 
-            settings = AddPanel("SettingsPanel", backdrop, 334f);
-            AddLabel("Title", settings, "설정", "Settings", new Vector2(384f, 52f), 103f, 38f);
-            backButton = AddButton("Back", settings, "돌아가기", "Back", -108f, back, PrimaryColor);
+            settings = AddPanel("SettingsPanel", backdrop, 402f);
+            AddLabel("Title", settings, "설정", "Settings", new Vector2(384f, 52f), 137f, 38f);
             var villageView = VillageViewSettingControl.Create(settings, font,
                 new Vector2(40, -98), new Vector2(352, 48));
 
@@ -70,18 +92,59 @@ namespace Nomad.Game.Modules
                 new Vector2(40, -166), new Vector2(352, 48),
                 () => "UI 표시: " + (HudVisibilitySettings.Visible ? "켜짐" : "꺼짐") + "  ›",
                 () => HudVisibilitySettings.SetVisible(!HudVisibilitySettings.Visible));
-            SetNavigation(backButton, hudVisible, villageView);
+            var debugButton = AddButton("Debug", settings, "디버그", "Debug", -57f, debugActions.Open, ButtonColor);
+            backButton = AddButton("Back", settings, "돌아가기", "Back", -125f, back, PrimaryColor);
             SetNavigation(villageView, backButton, hudVisible);
-            SetNavigation(hudVisible, villageView, backButton);
+            SetNavigation(hudVisible, villageView, debugButton);
+            SetNavigation(debugButton, hudVisible, backButton);
+            SetNavigation(backButton, debugButton, villageView);
+
+            // 디버그 메뉴: 위에서부터 차례로 놓고 위아래 이동은 순환시킵니다.
+            debug = AddPanel("DebugPanel", backdrop, 520f);
+            AddLabel("Title", debug, "디버그", "Debug", new Vector2(384f, 52f), 205f, 38f);
+            UnityEngine.UI.Button[] buttons =
+            {
+                AddButton("Heal", debug, "체력 충전", "Restore Health", 136f, debugActions.Heal, ButtonColor),
+                AddButton("Village", debug, "마을로 이동", "Go to Village", 68f, debugActions.Village, ButtonColor),
+                AddButton("Field", debug, "필드로 이동", "Go to Field", 0f, debugActions.Field, ButtonColor),
+                AddButton("AttackRange", debug, "", "", -68f, debugActions.ToggleRange, ButtonColor),
+                AddButton("SightRange", debug, "", "", -136f, debugActions.ToggleSight, ButtonColor),
+                AddButton("Back", debug, "돌아가기", "Back", -204f, openSettings, PrimaryColor)
+            };
+            for (int i = 0; i < buttons.Length; i++)
+                SetNavigation(buttons[i], buttons[(i + buttons.Length - 1) % buttons.Length], buttons[(i + 1) % buttons.Length]);
+
+            debugBackButton = buttons[5];
+            rangeLabel = buttons[3].GetComponentInChildren<TMP_Text>();
+            sightLabel = buttons[4].GetComponentInChildren<TMP_Text>();
         }
 
-        public void Show(bool showingSettings)
+        public void Show(PausePage page)
         {
-            menu.gameObject.SetActive(!showingSettings);
-            settings.gameObject.SetActive(showingSettings);
+            menu.gameObject.SetActive(page == PausePage.Menu);
+            settings.gameObject.SetActive(page == PausePage.Settings);
+            debug.gameObject.SetActive(page == PausePage.Debug);
             overlay.SetActive(true);
-            EventSystem.current?.SetSelectedGameObject((showingSettings ? backButton : resumeButton).gameObject);
+
+            UnityEngine.UI.Button selected = page switch
+            {
+                PausePage.Settings => backButton,
+                PausePage.Debug => debugBackButton,
+                _ => resumeButton
+            };
+            EventSystem.current?.SetSelectedGameObject(selected.gameObject);
         }
+
+        // 토글 버튼 문구에 현재 상태를 표시합니다.
+        public void SetDebugToggles(bool range, bool sight)
+        {
+            rangeLabel.text = ToggleText("공격 범위 표시", "Attack Range", range);
+            sightLabel.text = ToggleText("시야 범위 표시", "Sight Range", sight);
+        }
+
+        private string ToggleText(string korean, string english, bool on) => koreanFont != null
+            ? $"{korean}: {(on ? "켜짐" : "꺼짐")}"
+            : $"{english}: {(on ? "ON" : "OFF")}";
 
         public void Hide() => overlay.SetActive(false);
 

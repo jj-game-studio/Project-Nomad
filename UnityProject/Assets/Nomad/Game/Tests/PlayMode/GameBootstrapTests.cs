@@ -290,6 +290,29 @@ namespace Nomad.Game.Tests
             Assert.That(hudCanvas.enabled, Is.True);
             HudVisibilitySettings.SetVisible(originalHudVisible);
 
+            // 설정 > 디버그: 공격 범위 토글과 체력 충전, Esc로 설정 복귀를 확인합니다.
+            Component visuals = manager.Player.GetComponent("EquipmentCombatVisuals");
+            var showRange = visuals.GetType().GetProperty("ShowRange");
+            Component health = manager.Player.GetComponent("Health");
+            Click(PauseButton(pause, "SettingsPanel", "Debug"));
+            Assert.That(PauseButton(pause, "DebugPanel", "Back").activeInHierarchy, Is.True);
+
+            bool range = (bool)showRange.GetValue(visuals);
+            Click(PauseButton(pause, "DebugPanel", "AttackRange"));
+            Assert.That((bool)showRange.GetValue(visuals), Is.EqualTo(!range), "공격 범위 토글");
+            Click(PauseButton(pause, "DebugPanel", "AttackRange"));
+
+            System.Reflection.MethodInfo damage = health.GetType().GetMethod("TryApplyDamage");
+            object fall = System.Enum.Parse(damage.GetParameters()[1].ParameterType, "Fall");
+            damage.Invoke(health, new[] { (object)1, fall });
+            Click(PauseButton(pause, "DebugPanel", "Heal"));
+            Assert.That(health.GetType().GetProperty("CurrentHealth").GetValue(health),
+                Is.EqualTo(health.GetType().GetProperty("MaxHealth").GetValue(health)), "체력 충전");
+
+            yield return PressEscape();
+            Assert.That(PauseButton(pause, "SettingsPanel", "Back").activeInHierarchy, Is.True);
+            Assert.That(PauseButton(pause, "DebugPanel", "Back").activeInHierarchy, Is.False);
+
             yield return PressEscape();
             Assert.That(PauseButton(pause, "SettingsPanel", "Back").activeInHierarchy, Is.False);
             Assert.That(Time.timeScale, Is.Zero);
