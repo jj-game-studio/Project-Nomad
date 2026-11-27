@@ -16,12 +16,11 @@ namespace Nomad.Monsters
             public bool critical;
         }
 
-        private const float FlashDuration = 0.16f;
         private const float NumberDuration = 0.8f;
         private readonly List<DamageNumber> numbers = new List<DamageNumber>(8);
         private Health health;
-        private int previousHp;
         private float flashRemaining;
+        private AudioSource sound;
         private bool flashEnabled = true;
         private bool numbersEnabled = true;
         private bool shardsEnabled = true;
@@ -30,20 +29,36 @@ namespace Nomad.Monsters
         private Material shardMaterial;
         private GUIStyle numberStyle;
 
-        public bool IsFlashing => flashEnabled && flashRemaining > 0f;
+        public bool IsFlashing => flashEnabled && CombatFeedbackSettings.Current.MonsterFlash && flashRemaining > 0f;
         public int ActiveNumberCount => numbers.Count;
         public int LastDamage { get; private set; }
+        public bool LastCritical { get; private set; }
+        public int ActiveCriticalNumberCount
+        {
+            get
+            {
+                int count = 0;
+                foreach (DamageNumber number in numbers) if (number.critical) count++;
+                return count;
+            }
+        }
         public int ActiveShardCount => shards == null ? 0 : shards.particleCount;
 
         private void Awake()
         {
             health = GetComponent<Health>();
+            sound = gameObject.AddComponent<AudioSource>();
+            sound.playOnAwake = false;
+            sound.spatialBlend = 1f;
+            sound.minDistance = 5f;
+            sound.maxDistance = 35f;
         }
 
         private void OnEnable()
         {
-            previousHp = health.CurrentHealth;
+            health.Damaged += OnDamaged;
             LastDamage = 0;
+            LastCritical = false;
         }
 
         public void SetEffects(bool flash, bool damageNumbers, bool particles)
@@ -61,6 +76,7 @@ namespace Nomad.Monsters
 
         private void Update()
         {
+            RefreshEffects();
             flashRemaining = Mathf.Max(0f, flashRemaining - Time.deltaTime);
             for (int i = numbers.Count - 1; i >= 0; i--)
             {
@@ -72,37 +88,53 @@ namespace Nomad.Monsters
                     numbers[i] = number;
             }
 
-            // 공용 Health 계약은 유지합니다. 같은 프레임의 피해는 실제 감소량 합계로 표시합니다.
-            int damage = previousHp - health.CurrentHealth;
-            previousHp = health.CurrentHealth;
-            if (damage <= 0)
-                return;
+        }
+
+        private void OnDamaged(Health owner, int damage, DamageKind kind) => PreviewHit(damage, owner.LastHitCritical);
+
+        // HP와 AI 상태를 변경하지 않고 실제 적중과 같은 표시 경로를 재생합니다.
+        public void PreviewHit(int damage, bool critical = false)
+        {
+            if (!isActiveAndEnabled || damage <= 0 || Time.timeScale <= 0) return;
+            var settings = CombatFeedbackSettings.Current;
 
             LastDamage = damage;
-            if (flashEnabled)
-            {
-                flashRemaining = FlashDuration;
-                HitCameraImpulse.Pulse();
-            }
-            if (numbersEnabled)
+            LastCritical = critical;
+            if (flashEnabled && settings.MonsterFlash)
+                flashRemaining = Mathf.Max(flashRemaining, critical ? settings.CriticalFlashSeconds : settings.FlashSeconds);
+            if (settings.MonsterShake)
+                HitCameraImpulse.Pulse(settings.MonsterShakeStrength * (critical ? settings.CriticalShakeMultiplier : 1f), 0.09f);
+            HitImpactAudio.PlayMonster(sound, critical);
+
+            if (numbersEnabled && settings.MonsterNumbers)
             {
                 if (numbers.Count == 8)
                     numbers.RemoveAt(0);
-                numbers.Add(new DamageNumber { amount = damage, critical = health.LastHitCritical,
+                numbers.Add(new DamageNumber { amount = damage, critical = critical,
                     position = transform.position + Vector3.up * 2.9f });
             }
-            if (shardsEnabled)
-                EmitShards();
+            if (shardsEnabled && settings.MonsterShards)
+                EmitShards(critical);
         }
 
-        private void EmitShards()
+        public void RefreshEffects()
+        {
+            var settings = CombatFeedbackSettings.Current;
+            if (!settings.MonsterFlash || !flashEnabled) flashRemaining = 0;
+            if (!settings.MonsterNumbers || !numbersEnabled) numbers.Clear();
+            if ((!settings.MonsterShards || !shardsEnabled) && shards != null)
+                shards.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            if (!settings.MonsterSound && sound != null) sound.Stop();
+        }
+
+        private void EmitShards(bool critical)
         {
             if (shards == null)
                 CreateShards();
 
             shards.transform.position = transform.position + Vector3.up;
             shards.Play();
-            for (int i = 0; i < 12; i++)
+            for (int i = 0; i < (critical ? 16 : 8); i++)
             {
                 Vector3 velocity = Random.onUnitSphere * Random.Range(1.5f, 3f);
                 velocity.y = Mathf.Abs(velocity.y) + 1f;
@@ -176,8 +208,15 @@ namespace Nomad.Monsters
 
         private void OnDisable()
         {
+            health.Damaged -= OnDamaged;
+            ClearFeedback();
+        }
+
+        public void ClearFeedback()
+        {
             flashRemaining = 0f;
             numbers.Clear();
+            if (sound != null) sound.Stop();
             if (shards != null)
                 shards.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
         }

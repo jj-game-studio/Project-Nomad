@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using Nomad.Monsters;
 
 namespace Nomad.CombatFeedback
 {
@@ -19,7 +20,8 @@ namespace Nomad.CombatFeedback
         private Sprite edgeSprite;
         private Text status, banner;
         private Image armorFill;
-        private float hurtAt = -10, hurtStrength, bannerUntil;
+        private float hurtAt = -10, hurtStrength, hurtFrom, bannerUntil;
+        private float hurtAttack, hurtHold, hurtRelease;
         public int LastDamage { get; private set; }
         public float VignetteAlpha => vignette != null ? vignette.color.a : 0;
         public int ActiveNumbers { get; private set; }
@@ -127,9 +129,61 @@ namespace Nomad.CombatFeedback
 
         public void Hurt(float fraction)
         {
+            var settings = CombatFeedbackSettings.Current;
+            if (!isActiveAndEnabled || !settings.PlayerVignette || fraction <= 0 || Time.timeScale <= 0) return;
             if (vignette == null) BuildVignette();
+
+            hurtFrom = EvaluateVignette();
+            // 기존 효과가 남아 있으면 작은 후속 피해도 현재 피크를 약하게 만들지 않습니다.
+            float requested = 0.18f + Mathf.Clamp01(fraction) * 1.1f;
+            float existing = Time.time - hurtAt < hurtAttack + hurtHold + hurtRelease ? hurtStrength : 0;
+            hurtStrength = Mathf.Clamp(Mathf.Max(existing, requested), 0, settings.VignetteMaximum);
+            hurtAttack = Mathf.Max(0.001f, settings.VignetteAttack);
+            hurtHold = Mathf.Max(0, settings.VignetteHold);
+            hurtRelease = Mathf.Max(0.001f, settings.VignetteRelease);
             hurtAt = Time.time;
-            hurtStrength = Mathf.Clamp(0.25f + fraction * 1.5f, 0.25f, 0.75f);
+            RefreshVignette();
+        }
+
+        private float EvaluateVignette()
+        {
+            if (!CombatFeedbackSettings.Current.PlayerVignette) return 0;
+            float age = Time.time - hurtAt;
+            if (age < hurtAttack)
+                return Mathf.Lerp(hurtFrom, hurtStrength, Mathf.SmoothStep(0, 1, age / Mathf.Max(0.001f, hurtAttack)));
+            if (age < hurtAttack + hurtHold) return hurtStrength;
+
+            float remaining = 1 - Mathf.Clamp01((age - hurtAttack - hurtHold) / Mathf.Max(0.001f, hurtRelease));
+            return hurtStrength * remaining * remaining;
+        }
+
+        public void RefreshVignette()
+        {
+            if (!CombatFeedbackSettings.Current.PlayerVignette)
+                hurtStrength = hurtFrom = 0;
+            if (vignette == null) return;
+
+            Color color = CombatFeedbackSettings.Current.VignetteColor;
+            color.a = Mathf.Min(EvaluateVignette(), CombatFeedbackSettings.Current.VignetteMaximum);
+            vignette.color = color;
+        }
+
+        public void ClearFeedback()
+        {
+            hurtAt = -10;
+            hurtStrength = hurtFrom = 0;
+            RefreshVignette();
+            ClearDamageNumbers();
+        }
+
+        public void ClearDamageNumbers()
+        {
+            foreach (Number number in numbers)
+            {
+                number.started = -10;
+                if (number.text != null) number.text.gameObject.SetActive(false);
+            }
+            ActiveNumbers = 0;
         }
 
         private void BuildVignette()
@@ -141,8 +195,9 @@ namespace Nomad.CombatFeedback
             {
                 float dx = (x / 127f - 0.5f) * 2;
                 float dy = (y / 127f - 0.5f) * 2;
-                float edge = Mathf.Clamp01((Mathf.Sqrt(dx * dx + dy * dy) - 0.38f) / 0.75f);
-                edgeTexture.SetPixel(x, y, new Color(1, 1, 1, edge * edge));
+                float radius = Mathf.Pow(dx * dx * dx * dx + dy * dy * dy * dy, 0.25f);
+                float edge = Mathf.Clamp01((radius - 0.58f) / 0.42f);
+                edgeTexture.SetPixel(x, y, new Color(1, 1, 1, Mathf.SmoothStep(0, 1, edge)));
             }
             edgeTexture.Apply();
             edgeSprite = Sprite.Create(edgeTexture, new Rect(0, 0, 128, 128), Vector2.one * 0.5f);
@@ -151,6 +206,7 @@ namespace Nomad.CombatFeedback
             go.transform.SetAsFirstSibling();
             vignette = go.GetComponent<Image>();
             vignette.sprite = edgeSprite;
+            vignette.color = Color.clear;
             vignette.raycastTarget = false;
             RectTransform rect = vignette.rectTransform;
             rect.anchorMin = Vector2.zero;
@@ -161,6 +217,7 @@ namespace Nomad.CombatFeedback
         private void LateUpdate() => RefreshPositions(Camera.main);
         public void RefreshPositions(Camera camera)
         {
+            RefreshVignette();
             if (camera == null) return;
             ActiveNumbers = 0;
             foreach (Number number in numbers)
@@ -175,9 +232,10 @@ namespace Nomad.CombatFeedback
                 number.text.rectTransform.localScale = Vector3.one * (1 + Mathf.Max(0, 1 - age / 0.12f) * 0.3f);
                 number.text.color = new Color(number.color.r, number.color.g, number.color.b, Mathf.Clamp01((0.8f - age) / 0.25f));
             }
-            if (vignette != null) vignette.color = new Color(0.85f, 0.015f, 0.03f, hurtStrength * Mathf.Clamp01(1 - (Time.time - hurtAt) / 0.55f));
             banner.color = new Color(1, 0.75f, 0.2f, Mathf.Clamp01((bannerUntil - Time.time) / 0.4f));
         }
+
+        private void OnDisable() => ClearFeedback();
 
         private void OnDestroy()
         {
