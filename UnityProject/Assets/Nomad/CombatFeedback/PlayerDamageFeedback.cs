@@ -33,17 +33,24 @@ namespace Nomad.CombatFeedback
         private void OnDisable()
         {
             health.Damaged -= OnDamaged;
-            reactUntil = 0;
-            if (layer >= 0 && animator != null) animator.SetLayerWeight(layer, 0);
+            ClearFeedback();
         }
 
         private void OnDamaged(Health _, int amount, DamageKind kind)
         {
+            PreviewDamage(amount);
+        }
+
+        public void PreviewDamage(int amount)
+        {
+            if (!isActiveAndEnabled || amount <= 0 || Time.timeScale <= 0) return;
+            var settings = CombatFeedbackSettings.Current;
             if (overlay == null) overlay = GetComponent<CombatFeedbackOverlay>() ?? gameObject.AddComponent<CombatFeedbackOverlay>();
-            overlay.ShowDamage(amount, transform.position + Vector3.up * 1.8f, new Color(1, 0.25f, 0.15f));
+            if (settings.PlayerNumbers)
+                overlay.ShowDamage(amount, transform.position + Vector3.up * 1.8f, new Color(1, 0.25f, 0.15f));
             overlay.Hurt(amount / (float)health.MaxHealth);
-            HitCameraImpulse.Pulse(0.1f, 0.14f);
-            CombatImpactAudio.Play(sound, false, 0.32f);
+            if (settings.PlayerShake) HitCameraImpulse.Pulse(settings.PlayerShakeStrength, 0.14f);
+            if (settings.PlayerSound) CombatImpactAudio.Play(sound, false, settings.PlayerVolume);
             if (movement != null && movement.IsRolling) return;
             reactUntil = Time.time + 0.24f;
             if (layer < 0 || animator == null) return;
@@ -51,8 +58,18 @@ namespace Nomad.CombatFeedback
             animator.SetLayerWeight(layer, 1);
         }
 
+        public void ClearFeedback()
+        {
+            reactUntil = 0;
+            if (overlay != null) overlay.ClearFeedback();
+            if (sound != null) sound.Stop();
+            if (layer >= 0 && animator != null) animator.SetLayerWeight(layer, 0);
+        }
+
         private void LateUpdate()
         {
+            if (!CombatFeedbackSettings.Current.PlayerSound && sound != null) sound.Stop();
+            if (!CombatFeedbackSettings.Current.PlayerNumbers && overlay != null) overlay.ClearDamageNumbers();
             if (layer < 0 || animator == null) return;
             animator.SetLayerWeight(layer, Mathf.Clamp01((reactUntil - Time.time) / 0.12f));
         }

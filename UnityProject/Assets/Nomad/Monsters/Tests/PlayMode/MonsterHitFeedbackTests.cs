@@ -106,7 +106,8 @@ namespace Nomad.Monsters.Tests
             monster.TryApplyDamage(30);
             monster.TryApplyDamage(20);
             yield return null;
-            Assert.That(feedback.LastDamage, Is.EqualTo(50), "같은 프레임의 실제 감소량을 합산");
+            Assert.That(feedback.LastDamage, Is.EqualTo(20), "실제 피해 이벤트별 감소량을 표시");
+            Assert.That(feedback.ActiveNumberCount, Is.EqualTo(2));
             feedback.SetEffects(false, false, false);
             typeof(Health).GetProperty(nameof(Health.CurrentHealth)).SetValue(monster, monster.MaxHealth);
             yield return null;
@@ -166,8 +167,13 @@ namespace Nomad.Monsters.Tests
             return block.GetColor("_BaseColor");
         }
 
-        private void SetToggle(string name, bool value) => panel.GetType()
-            .GetField(name, BindingFlags.Instance | BindingFlags.NonPublic).SetValue(panel, value);
+        private void SetToggle(string name, bool value)
+        {
+            bool Read(string field) => field == name ? value : (bool)panel.GetType()
+                .GetField(field, BindingFlags.Instance | BindingFlags.NonPublic).GetValue(panel);
+            panel.GetType().GetMethod("SetHitEffects").Invoke(panel,
+                new object[] { Read("hitFlash"), Read("damageNumbers"), Read("hitShards") });
+        }
     }
 }
 #endif
