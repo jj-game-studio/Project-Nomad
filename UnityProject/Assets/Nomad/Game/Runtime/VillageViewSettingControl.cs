@@ -1,3 +1,4 @@
+using System;
 using TMPro;
 using UnityEngine;
 
@@ -7,10 +8,19 @@ namespace Nomad.Game
     public sealed class VillageViewSettingControl : MonoBehaviour
     {
         private TMP_Text label;
+        private Func<string> describe;
+        private Action toggle;
 
-        public static UnityEngine.UI.Button Create(Transform parent, TMP_FontAsset font, Vector2 position, Vector2 size)
+        public static UnityEngine.UI.Button Create(Transform parent, TMP_FontAsset font, Vector2 position, Vector2 size) =>
+            CreateToggle("VillageView", parent, font, position, size,
+                () => "마을 시점: " + (VillageViewSettings.FirstPerson ? "1인칭" : "탑다운") + "  ›",
+                () => VillageViewSettings.SetFirstPerson(!VillageViewSettings.FirstPerson));
+
+        // 누를 때마다 값을 바꾸고 문구를 다시 그리는 설정 버튼입니다.
+        public static UnityEngine.UI.Button CreateToggle(string name, Transform parent, TMP_FontAsset font,
+            Vector2 position, Vector2 size, Func<string> describe, Action toggle)
         {
-            var rect = (RectTransform)new GameObject("VillageView", typeof(RectTransform)).transform;
+            var rect = (RectTransform)new GameObject(name, typeof(RectTransform)).transform;
             rect.SetParent(parent, false);
             rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0f, 1f);
             rect.anchoredPosition = position;
@@ -41,6 +51,8 @@ namespace Nomad.Game
 
             var control = rect.gameObject.AddComponent<VillageViewSettingControl>();
             control.label = text;
+            control.describe = describe;
+            control.toggle = toggle;
             button.onClick.AddListener(control.Toggle);
             control.Refresh();
             return button;
@@ -49,14 +61,14 @@ namespace Nomad.Game
         private void OnEnable() => Refresh();
         private void Toggle()
         {
-            VillageViewSettings.SetFirstPerson(!VillageViewSettings.FirstPerson);
+            toggle?.Invoke();
             Refresh();
         }
 
         private void Refresh()
         {
-            if (label != null)
-                label.text = "마을 시점: " + (VillageViewSettings.FirstPerson ? "1인칭" : "탑다운") + "  ›";
+            if (label != null && describe != null)
+                label.text = describe();
         }
     }
 }

@@ -82,14 +82,21 @@ namespace Nomad.Game.Modules
             SetNavigation(settingsButton, restartButton, quitButton);
             SetNavigation(quitButton, settingsButton, resumeButton);
 
-            settings = AddPanel("SettingsPanel", backdrop, 334f);
-            AddLabel("Title", settings, "설정", "Settings", new Vector2(384f, 52f), 103f, 38f);
+            settings = AddPanel("SettingsPanel", backdrop, 402f);
+            AddLabel("Title", settings, "설정", "Settings", new Vector2(384f, 52f), 137f, 38f);
             var villageView = VillageViewSettingControl.Create(settings, font,
                 new Vector2(40, -98), new Vector2(352, 48));
-            var debugButton = AddButton("Debug", settings, "디버그", "Debug", -46f, debugActions.Open, ButtonColor);
-            backButton = AddButton("Back", settings, "돌아가기", "Back", -114f, back, PrimaryColor);
-            SetNavigation(villageView, backButton, debugButton);
-            SetNavigation(debugButton, villageView, backButton);
+
+            // 끄면 하단 HUD만 숨깁니다. 이 메뉴는 그대로 보여 다시 켤 수 있습니다.
+            var hudVisible = VillageViewSettingControl.CreateToggle("HudVisible", settings, font,
+                new Vector2(40, -166), new Vector2(352, 48),
+                () => "UI 표시: " + (HudVisibilitySettings.Visible ? "켜짐" : "꺼짐") + "  ›",
+                () => HudVisibilitySettings.SetVisible(!HudVisibilitySettings.Visible));
+            var debugButton = AddButton("Debug", settings, "디버그", "Debug", -57f, debugActions.Open, ButtonColor);
+            backButton = AddButton("Back", settings, "돌아가기", "Back", -125f, back, PrimaryColor);
+            SetNavigation(villageView, backButton, hudVisible);
+            SetNavigation(hudVisible, villageView, debugButton);
+            SetNavigation(debugButton, hudVisible, backButton);
             SetNavigation(backButton, debugButton, villageView);
 
             // 디버그 메뉴: 위에서부터 차례로 놓고 위아래 이동은 순환시킵니다.
