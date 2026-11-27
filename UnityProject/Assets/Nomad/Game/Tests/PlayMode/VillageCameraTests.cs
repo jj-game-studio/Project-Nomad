@@ -365,27 +365,45 @@ namespace Nomad.Game.Tests
                 }
             }
 
-            TextMesh sign = Object.FindObjectsByType<TextMesh>(FindObjectsSortMode.None).First(t => t.name == "Field direction");
-            Vector3 stand = sign.transform.position + Vector3.back * 3f;
+            TextMesh[] signs = Object.FindObjectsByType<TextMesh>(FindObjectsSortMode.None);
+            TextMesh sign = signs.FirstOrDefault(t => t.name == "Field direction");
+            bool legacyBoard = sign != null;
+            sign ??= signs.Single(t => t.name == "Gateway Title");
+            Transform label = legacyBoard
+                ? Object.FindObjectsByType<RectTransform>(FindObjectsSortMode.None)
+                    .First(t => t.name == "Attached Field Sign" && t.parent.name == "Signboard")
+                : sign.transform;
+            if (legacyBoard)
+            {
+                Assert.That(label.localPosition.z, Is.LessThan(-0.5f), "판 앞면에 고정");
+                Assert.That(((RectTransform)label).sizeDelta.x, Is.GreaterThan(1.8f), "판 너비에 맞춘 문구");
+            }
+            else
+            {
+                Assert.That(sign.text, Is.EqualTo("필 드"), "교체된 관문의 실제 월드 안내");
+                Assert.That(sign.GetComponent<Renderer>().enabled, Is.True, "새 관문 문구를 숨기지 않음");
+            }
+
+            Vector3 stand = sign.transform.position + (legacyBoard ? Vector3.back * 3f : Vector3.forward * 6f);
             stand.y = 0.05f;
             game.PlacePlayer(stand, Quaternion.identity);
             yield return Frames();
+            if (!legacyBoard)
+            {
+                InputSystem.QueueDeltaStateEvent(mouse.delta, new Vector2(1500, 200));
+                yield return Frames();
+            }
+            Quaternion signRotation = label.rotation;
+            Vector3 signPosition = label.position;
             InputSystem.QueueDeltaStateEvent(mouse.delta, new Vector2(150, 70));
             yield return Frames();
-            RectTransform label = Object.FindObjectsByType<RectTransform>(FindObjectsSortMode.None)
-                .First(t => t.name == "Attached Field Sign" && t.parent.name == "Signboard");
-            Quaternion signRotation = label.rotation;
-            Assert.That(label.parent.name, Is.EqualTo("Signboard"));
-            Assert.That(label.localPosition.z, Is.LessThan(-0.5f), "판 앞면에 고정");
-            Assert.That(label.sizeDelta.x, Is.GreaterThan(1.8f), "판 너비에 맞춘 문구");
-            InputSystem.QueueDeltaStateEvent(mouse.delta, new Vector2(-100, -50));
-            yield return Frames();
-            Assert.That(Quaternion.Angle(label.rotation, signRotation), Is.LessThan(0.01f), "카메라를 돌려도 간판 회전 없음");
-            Assert.That(sign.GetComponent<Renderer>().enabled, Is.False);
-            Capture("first-person-landmark");
+            Assert.That(Quaternion.Angle(label.rotation, signRotation), Is.LessThan(0.01f), "시선 회전에도 안내는 월드에 고정");
+            Assert.That(Vector3.Distance(label.position, signPosition), Is.LessThan(0.001f));
+            Assert.That(sign.GetComponent<Renderer>().enabled, Is.EqualTo(!legacyBoard));
+            Capture(legacyBoard ? "first-person-landmark" : "first-person-gateway");
             VillageViewSettings.SetFirstPerson(false);
             yield return Frames();
-            Assert.That(sign.GetComponent<Renderer>().enabled, Is.True, "탑다운 전환 시 원래 월드 글자 복원");
+            Assert.That(sign.GetComponent<Renderer>().enabled, Is.True, "탑다운에서도 월드 안내 표시");
             Assert.That(renderCamera.enabled, Is.False, "탑다운에서 별도 렌더 중단");
             Assert.That(camera.GetComponentsInChildren<SkinnedMeshRenderer>().Length, Is.EqualTo(0), "1인칭 전용 팔 숨김");
         }
