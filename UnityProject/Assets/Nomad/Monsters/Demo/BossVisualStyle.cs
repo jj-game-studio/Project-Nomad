@@ -79,11 +79,11 @@ namespace Nomad.Monsters.Demo
             eyes = WeaponVfx.CreateParticles(transform, "Enraged burning eyes", WeaponVfx.Glow);
             var main = eyes.main;
             main.startLifetime = 0.22f;
-            main.startSize = new ParticleSystem.MinMaxCurve(0.12f, 0.22f);
-            main.startColor = new Color(3, 0.015f, 0.005f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.025f, 0.065f);
+            main.startColor = new Color(2.8f, 0.24f, 0.015f);
             var noise = eyes.noise;
             noise.enabled = true;
-            noise.strength = 0.12f;
+            noise.strength = 0.035f;
             noise.frequency = 4;
             noise.scrollSpeed = 3;
             WeaponVfx.Shrink(eyes);
@@ -117,17 +117,19 @@ namespace Nomad.Monsters.Demo
                 body.GetPropertyBlock(properties);
                 properties.SetColor("_SignalColor", Color.clear);
                 properties.SetFloat("_Enraged", EyesBurning ? 1 : 0);
+                properties.SetVector("_EyeLeft", eyeBone.TransformPoint(EyeSockets[0]));
+                properties.SetVector("_EyeRight", eyeBone.TransformPoint(EyeSockets[1]));
                 body.SetPropertyBlock(properties);
             }
             flash.transform.position = transform.position + Vector3.up * 2;
             flash.intensity = yellow ? 5 : 0;
             if (!EyesBurning) { eyes.Clear(); return; }
-            foreach (Vector3 socket in EyeSockets)
+            // 광폭 입자는 눈 밖으로 띄우지 않고 몸 표면에서만 작게 타오릅니다.
+            if (Random.value < Time.deltaTime * 50)
             {
-                Vector3 point = eyeBone.TransformPoint(socket);
-                float side = Mathf.Sign(Vector3.Dot(point - eyeBone.position, transform.right));
-                point += (transform.right * side + transform.forward).normalized * 0.45f;
-                eyes.Emit(new ParticleSystem.EmitParams { position = point, velocity = Vector3.up * 0.8f }, 2);
+                Vector3 ember = transform.position + transform.right * Random.Range(-0.9f, 0.9f)
+                    + transform.forward * Random.Range(-1.5f, 0.5f) + Vector3.up * Random.Range(1.8f, 2.7f);
+                eyes.Emit(new ParticleSystem.EmitParams { position = ember, velocity = Vector3.up * 1.1f }, 1);
             }
         }
 

@@ -10,7 +10,7 @@ namespace Nomad.Equipment
     [RequireComponent(typeof(PlayerEquipmentCombat))]
     public sealed class PlayerBossParry : MonoBehaviour
     {
-        public const float Window = 0.3f;
+        public const float Window = 0.5f;
         public const float Cooldown = 0.9f;
         private float until, next;
         private bool consumed;

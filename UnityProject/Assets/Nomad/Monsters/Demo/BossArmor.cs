@@ -12,7 +12,7 @@ namespace Nomad.Monsters.Demo
         public const float DurabilityPerLayer = 1450;
         public float Durability { get; private set; } = DurabilityPerLayer;
         public float RemainingRatio => BreakCount >= 2 ? 0 : Durability / DurabilityPerLayer;
-        public float DamageMultiplier => BreakCount == 0 ? 1 : BreakCount == 1 ? 1.25f : 1.55f;
+        public float DamageMultiplier => BreakCount == 0 ? 0.55f : BreakCount == 1 ? 1f : 1.85f;
         public event Action<int> Broken;
         private Health health;
 

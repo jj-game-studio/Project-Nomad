@@ -56,7 +56,7 @@ namespace Nomad.Monsters.Demo
             Landings++;
             boss.FinishParriedSlam();
             BossGroundCracks.Create(boss.Effects, arena, transform.position, boss.Tuning.SlamRadius);
-            HitCameraImpulse.Pulse(0.2f, 0.2f);
+            HitCameraImpulse.Pulse(0.42f, 0.25f);
             CombatImpactAudio.Play(GetComponent<AudioSource>() ?? gameObject.AddComponent<AudioSource>(), true, 0.5f);
         }
 

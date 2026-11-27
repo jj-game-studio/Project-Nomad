@@ -1,4 +1,5 @@
 #if UNITY_EDITOR
+using System.Linq;
 using System;
 using System.Collections;
 using System.Reflection;
@@ -69,7 +70,8 @@ namespace Nomad.Monsters.Tests
         {
             Health actor = Create("flash-0", new Vector3(4f, 0f, -3f));
             yield return null;
-            Renderer[] bodies = actor.transform.Find("Body").GetComponentsInChildren<Renderer>();
+            Renderer[] bodies = actor.transform.Find("Body").GetComponentsInChildren<Renderer>()
+                .Where(body => body.sharedMaterials.Any(material => material.HasProperty("_BaseMap"))).ToArray();
             Assert.That(bodies.Length, Is.GreaterThan(1));
             actor.TryApplyDamage(25);
             yield return null;

@@ -5,7 +5,7 @@ namespace Nomad.Monsters.Demo
 {
     public sealed class BossParrySignal : MonoBehaviour
     {
-        public const float ReactionSeconds = 0.24f;
+        public const float ReactionSeconds = 0.45f;
         private DragonBossCombat boss;
         private Health target;
         private float impact, range;

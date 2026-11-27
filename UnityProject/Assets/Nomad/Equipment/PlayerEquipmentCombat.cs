@@ -85,6 +85,7 @@ namespace Nomad.Equipment
         private void Awake()
         {
             equipment = GetComponent<PlayerEquipment>();
+            gameObject.AddComponent<Nomad.Monsters.Demo.CartoonSurfaceStyle>();
             movement = GetComponent<PlayerMovement>();
             TryGetComponent(out inventory);
             health = GetComponent<Health>();

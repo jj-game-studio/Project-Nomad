@@ -59,6 +59,7 @@ namespace Nomad.Monsters.Demo
             obstacle.carving = true;
             obstacle.carveOnlyStationary = true;
             rock.AddComponent<BossBreakableRock>();
+            rock.AddComponent<CartoonSurfaceStyle>();
             rocksCreated++;
             return rock;
         }

@@ -12,8 +12,20 @@ namespace Nomad.Game.Editor
     {
         public static void Prime() => AssetDatabase.ImportAsset("Assets/Nomad/Combat/Health.cs", ImportAssetOptions.ForceUpdate);
 
+        private static void CopyPresentation(string sourceName, string resource)
+        {
+            var source = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/ThirdParty/Synty_Kingdom/PolygonFantasyKingdom/Prefabs/" + sourceName + ".prefab");
+            if (source == null) throw new System.InvalidOperationException(sourceName);
+            GameObject instance = Object.Instantiate(source);
+            PrefabUtility.SaveAsPrefabAsset(instance, "Assets/Nomad/Monsters/Resources/" + resource + ".prefab");
+            Object.DestroyImmediate(instance);
+        }
+
         public static void Apply()
         {
+            CopyPresentation("Castle/SM_Bld_Castle_Pillar_Stone_01", "BossRuinedPillar");
+            CopyPresentation("Castle/SM_Bld_Castle_Archway_Small_01", "BossRuinedArch");
+            CopyPresentation("Props/Furniture/SM_Prop_Chest_03", "BossTreasureChest");
             BossDebugAuthoring.Apply();
             Nomad.PlayerVisual.Editor.PlayerHitReactionAuthoring.Apply();
             const string output = "Assets/Nomad/Monsters/Resources/BossArenaRock.prefab";

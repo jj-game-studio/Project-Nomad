@@ -686,7 +686,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Monsters.Demo.BossEncounterContent
   Tuning:
     SlamRadius: 12
-    SlamWindup: 1.15
+    SlamWindup: 1.55
+    RecoverySeconds: 0.85
+    EnragedRainPoolChance: 0.3
     RadialCount: 12
     RadialRadius: 1.25
     RadialSpeed: 42

@@ -82,6 +82,7 @@ namespace Nomad.Monsters.Demo
             agent.stoppingDistance = 3.2f;
             ConfigurePresentation();
             gameObject.AddComponent<BossRadialChargePose>().Configure(this);
+            gameObject.AddComponent<BossPatternMotion>().Configure(this);
             parrySignal = gameObject.AddComponent<BossParrySignal>();
             parrySignal.Configure(this, target);
             gameObject.AddComponent<BossVisualStyle>().Configure(this);
@@ -156,14 +157,14 @@ namespace Nomad.Monsters.Demo
             }
             if (Phase == DragonPhase.Active && Pattern == DragonPattern.Rain && Time.time >= nextRain && rainCount < Tuning.RainWaves)
             {
-                nextRain = Time.time + Tuning.RainInterval / Tempo;
-                for (int index = 0; index < Tuning.RainPerWave + (Enraged ? 2 : 0); index++)
+                nextRain = Time.time + Tuning.RainInterval;
+                for (int index = 0; index < Tuning.RainPerWave; index++)
                 {
                     float distance = index == 0 ? 0 : index == 1 ? 2.6f : 4.2f;
                     Vector3 point = ClampPoint(target.transform.position + Quaternion.Euler(0, rainCount * 137.5f + index * 120, 0) * Vector3.forward * distance);
-                    float fall = Tuning.RainFallSeconds / Tempo;
+                    float fall = Tuning.RainFallSeconds;
                     Area(point, Tuning.RainRadius, 360, fall, 0.12f, 20);
-                    bool burning = Enraged;
+                    bool burning = Enraged && Random.value < Tuning.EnragedRainPoolChance;
                     BossFireball.Launch(effects, transform, target, point + Vector3.up * 10, point, fall, false,
                         impact: burning ? impact => Area(impact, 1.8f, 360, 0, 4, 8) : null, damage: 0,
                         radius: Tuning.RainRadius * 0.65f);
@@ -201,7 +202,7 @@ namespace Nomad.Monsters.Demo
             if (direction.sqrMagnitude < 0.01f) direction = transform.forward;
             ChargeAimLocked = false;
             float windup = pattern == DragonPattern.Circle ? Tuning.SlamWindup :
-                pattern == DragonPattern.RadialFireballs ? 1.4f : pattern == DragonPattern.Charge ? Tuning.ChargeWindup :
+                pattern == DragonPattern.RadialFireballs ? 1.8f : pattern == DragonPattern.Charge ? Tuning.ChargeWindup :
                 pattern == DragonPattern.Rain ? 0.7f : pattern == DragonPattern.Breath ? 1.6f : 0.9f;
             windup /= Tempo;
             float turning = Vector3.Angle(transform.forward, direction) / (pattern == DragonPattern.Charge ? ChargeTurnSpeed : TurnSpeed);
@@ -268,7 +269,7 @@ namespace Nomad.Monsters.Demo
             until = Time.time + (Pattern == DragonPattern.Breath ? 2.4f : Pattern == DragonPattern.Rain ? RainDuration :
                 Pattern == DragonPattern.Circle ? LeapDuration + 0.12f : Pattern == DragonPattern.RadialFireballs ? Tuning.RadialRange / (Tuning.RadialSpeed * Tempo) + 0.3f : 0.18f);
             if (Pattern == DragonPattern.Rain)
-                until = Time.time + (Tuning.RainWaves - 1) * Tuning.RainInterval / Tempo + Tuning.RainFallSeconds / Tempo + 0.15f;
+                until = Time.time + (Tuning.RainWaves - 1) * Tuning.RainInterval + Tuning.RainFallSeconds + 0.15f;
             if (Pattern == DragonPattern.Breath) until = Time.time + 2.4f / Tempo;
             phaseStarted = Time.time;
             phaseDuration = until - Time.time;
@@ -309,7 +310,7 @@ namespace Nomad.Monsters.Demo
                 hazard.BreathOrigin = Mouth;
                 hazard.BreathTravelSeconds = Tuning.BreathTravelSeconds / Tempo;
                 hazard.InnerRadius = Tuning.BreathSafeRadius;
-                hazard.VisualRangeMultiplier = 1.2f;
+                hazard.VisualRangeMultiplier = 1;
                 hazard.HideWarningWhileActive = true;
             }
             return hazard;
@@ -424,10 +425,9 @@ namespace Nomad.Monsters.Demo
         private void Recover()
         {
             Phase = DragonPhase.Recovery;
-            until = Time.time;
+            until = Time.time + Tuning.RecoverySeconds;
             status.text = "";
             SetMotion(null, 1);
-            if (AutomaticPatterns) BeginNext();
         }
 
         public void FinishArrival()

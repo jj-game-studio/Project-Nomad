@@ -95,6 +95,8 @@ namespace Nomad.Monsters.Demo
                     t.RainInterval = Slider("낙하 간격 (초)", t.RainInterval, 0.25f, 0.7f);
                     break;
             }
+            t.RecoverySeconds = Slider("패턴 사이 휴식 (초)", t.RecoverySeconds, 0.3f, 2);
+            if (pattern == DragonPattern.Rain) t.EnragedRainPoolChance = Slider("광폭 장판 확률", t.EnragedRainPoolChance, 0, 1);
             GUILayout.Label("다음 패턴 실행부터 적용 · R로 초기화");
         }
 

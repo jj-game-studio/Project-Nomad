@@ -11,7 +11,11 @@ namespace Nomad.Monsters.Demo
         private static readonly Color Gold = new Color(2.5f, 1.65f, 0.35f);
 
         public static void Cue(Transform boss) => Create((boss.Find("Body") != null ? boss.Find("Body").position : boss.position) + Vector3.up * 2, boss.rotation, false);
-        public static void Success(Transform player, Vector3 point) => Create(point, player.rotation, true);
+        public static void Success(Transform player, Vector3 point)
+        {
+            Create(point, player.rotation, true);
+            ParrySuccessBanner.Show(player);
+        }
 
         private static void Create(Vector3 point, Quaternion facing, bool guarded)
         {
@@ -28,9 +32,9 @@ namespace Nomad.Monsters.Demo
                 ray.sharedMaterial = WeaponVfx.Beam;
                 ray.positionCount = 3;
                 Vector3 axis = index == 0 ? Vector3.up : index == 1 ? Vector3.right : (Vector3.right + Vector3.up).normalized;
-                float length = guarded ? 1.5f : 2.7f;
+                float length = guarded ? 2.6f : 2.7f;
                 ray.SetPositions(new[] { -axis * length, Vector3.zero, axis * length });
-                ray.widthCurve = new AnimationCurve(new Keyframe(0, 0), new Keyframe(0.5f, guarded ? 0.2f : 0.12f), new Keyframe(1, 0));
+                ray.widthCurve = new AnimationCurve(new Keyframe(0, 0), new Keyframe(0.5f, guarded ? 0.32f : 0.12f), new Keyframe(1, 0));
                 effect.rays[index] = ray;
             }
 
@@ -40,7 +44,7 @@ namespace Nomad.Monsters.Demo
             main.startSize = new ParticleSystem.MinMaxCurve(0.03f, 0.12f);
             main.startColor = Gold;
             WeaponVfx.Fade(sparks, 0);
-            for (int index = 0; index < (guarded ? 42 : 24); index++)
+            for (int index = 0; index < (guarded ? 84 : 24); index++)
                 sparks.Emit(new ParticleSystem.EmitParams { position = point, velocity = Random.onUnitSphere * (guarded ? 6 : 4) }, 1);
             Destroy(root, 0.45f);
         }

@@ -21,6 +21,7 @@ Shader "Nomad/Boss Cel"
             TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
             CBUFFER_START(UnityPerMaterial)
             float4 _BaseMap_ST, _BaseColor, _SignalColor;
+            float3 _EyeLeft, _EyeRight;
             float _Enraged;
             CBUFFER_END
             struct Attributes { float4 positionOS:POSITION; float3 normalOS:NORMAL; float2 uv:TEXCOORD0; };
@@ -42,9 +43,12 @@ Shader "Nomad/Boss Cel"
                 half3 texColor = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, input.uv).rgb;
                 half3 albedo = texColor * _BaseColor.rgb;
                 // 원본 눈의 밝은 황금색만 붉게 발광시켜 눈 표면에서도 광폭을 구분합니다.
-                half eyes = step(0.55, texColor.r) * step(0.35, texColor.g) * (1 - step(0.25, texColor.b));
+                half eyeArea = 1 - smoothstep(0.22, 0.62, min(distance(input.positionWS, _EyeLeft), distance(input.positionWS, _EyeRight)));
+                half eyes = eyeArea * saturate(texColor.r * 1.5 - texColor.b * 0.8);
+                half fissure = pow(saturate(sin(input.uv.x * 117 + sin(input.uv.y * 83) * 3)), 24);
+                half heat = (0.65 + 0.35 * sin(_Time.y * 5 + input.positionWS.y * 3));
                 half rim = pow(1 - abs(dot(normalize(input.normalWS), normalize(_WorldSpaceCameraPos - input.positionWS))), 2);
-                return half4(albedo * band + _SignalColor.rgb * (0.18 + rim * 0.65) + eyes * _Enraged * half3(3,0.01,0), 1);
+                return half4(albedo * band + _SignalColor.rgb * (0.18 + rim * 0.65) + _Enraged * (eyes * half3(4,0.035,0) + fissure * heat * half3(0.65,0.07,0.005) + rim * half3(0.25,0.015,0)), 1);
             }
             ENDHLSL
         }

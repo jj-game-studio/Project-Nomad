@@ -20,7 +20,8 @@ Shader "Nomad/Cartoon Lava"
             half4 Frag(Varyings input):SV_Target
             {
                 float2 p = input.world.xz;
-                p *= 0.42;
+                p *= 0.24;
+                p += float2(sin(p.y * 1.3 + _Time.y * 0.18), cos(p.x * 1.1 - _Time.y * 0.1)) * 0.4;
                 float2 cell = floor(p), f = frac(p);
                 float nearest = 10, second = 10;
                 for (int x = -1; x <= 1; x++)
@@ -35,7 +36,7 @@ Shader "Nomad/Cartoon Lava"
                 }
                 float seam = second - nearest;
                 float flow = sin(input.world.x * 0.6 + input.world.z * 0.4 - _Time.y) * 0.5 + 0.5;
-                half3 color = lerp(half3(2.4,0.5,0.025),half3(0.15,0.022,0.025),smoothstep(0.025,0.18,seam));
+                half3 color = lerp(half3(1.65,0.28,0.012),half3(0.13,0.026,0.025),smoothstep(0.04,0.32,seam));
                 color += half3(0.3,0.035,0) * flow * (1 - smoothstep(0.02,0.12,seam));
                 return half4(color,1);
             }

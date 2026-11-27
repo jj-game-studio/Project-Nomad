@@ -6,7 +6,9 @@ namespace Nomad.Monsters.Demo
     public sealed class BossCombatTuning
     {
         public float SlamRadius = 12;
-        public float SlamWindup = 1.15f;
+        public float SlamWindup = 1.55f;
+        public float RecoverySeconds = 0.85f;
+        [UnityEngine.Range(0, 1)] public float EnragedRainPoolChance = 0.3f;
 
         public int RadialCount = 12;
         public float RadialRadius = 1.25f;

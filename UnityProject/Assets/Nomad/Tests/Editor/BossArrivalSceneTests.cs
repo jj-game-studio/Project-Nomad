@@ -15,7 +15,7 @@ using UnityEngine.UI;
 
 namespace Nomad.Tests
 {
-    public sealed class BossArrivalSceneTests
+    public sealed partial class BossArrivalSceneTests
     {
         private readonly List<InputDevice> muted = new();
         private BossDebugBootstrap scene;
@@ -213,7 +213,7 @@ namespace Nomad.Tests
             Assert.That(breath.WarningVisible, Is.False);
             Assert.That(breath.Radius, Is.EqualTo(18));
             Assert.That(breath.Contains(boss.transform.position + boss.transform.forward * 2), Is.False);
-            Assert.That(breath.VisualRangeMultiplier, Is.GreaterThan(1));
+            Assert.That(breath.VisualRangeMultiplier, Is.EqualTo(1));
         }
 
         private static IEnumerator Wait(float seconds)
@@ -277,7 +277,7 @@ namespace Nomad.Tests
             Health health = boss.GetComponent<Health>();
             health.TryApplyDamage(health.CurrentHealth - health.MaxHealth / 4, DamageKind.Fall);
             boss.BeginPattern(DragonPattern.RadialFireballs);
-            yield return Wait(2.3f);
+            yield return Wait(2.6f);
             Assert.That(boss.VolleysReleased, Is.EqualTo(2));
             boss.BeginPattern(DragonPattern.Breath);
             yield return Wait(1.5f);
@@ -290,9 +290,10 @@ namespace Nomad.Tests
             boss.Stun(5);
             Assert.That(boss.Remaining, Is.InRange(2.9f, 3.01f));
             yield return Wait(3.1f);
+            boss.Tuning.EnragedRainPoolChance = 1;
             boss.BeginPattern(DragonPattern.Rain);
             yield return Wait(2);
-            Assert.That(boss.RainProjectilesSpawned, Is.GreaterThan(12));
+            Assert.That(boss.RainProjectilesSpawned, Is.InRange(12, 15));
             Assert.That(boss.Effects.GetComponentsInChildren<BossHazard>().Any(hazard => hazard.Active && hazard.Radius == 1.8f), Is.True, "광폭 화염우 착지 뒤 불지대 유지");
         }
 
@@ -346,7 +347,7 @@ namespace Nomad.Tests
             boss.Tuning.RadialRadius = 2;
             boss.Tuning.RadialSpeed = 18;
             boss.BeginPattern(DragonPattern.RadialFireballs);
-            yield return Wait(1.43f);
+            yield return Wait(1.83f);
             BossFireball[] balls = boss.Effects.GetComponentsInChildren<BossFireball>();
             Assert.That(balls.Length, Is.EqualTo(24));
             Assert.That(balls.All(ball => ball.Radius == 2), Is.True);

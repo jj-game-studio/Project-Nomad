@@ -157,7 +157,8 @@ namespace Nomad.Loot
             spawner.bodyMaterial = CreateMaterial(new Color(0.22f, 0.12f, 0.42f));
             spawner.lidMaterial = CreateMaterial(new Color(1f, 0.75f, 0.12f));
             LootChest chest = spawner.CreateChest(id, position, Quaternion.identity);
-            chest.transform.localScale = Vector3.one * 1.4f;
+            chest.transform.localScale = Vector3.one * 2.2f;
+            chest.gameObject.AddComponent<BossTreasurePresentation>().Build();
             chest.Initialize(id, contents);
             return chest;
         }

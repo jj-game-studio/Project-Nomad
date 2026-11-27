@@ -160,6 +160,13 @@ namespace Nomad.Tests
                 // 8초마다 4.4초 공격, 3.6초 회피. 실제 선딜·쿨다운·스킬·갑옷 보정을 통과합니다.
                 while (!boss.IsDead && Time.time - started < 180)
                 {
+                    // 패링 반격과 바위 충돌로 45초/85초에 갑옷을 순차 파괴하는 기준 전투입니다.
+                    var armor = boss.GetComponent<BossArmor>();
+                    if ((armor.BreakCount == 0 && Time.time - started >= 45) || (armor.BreakCount == 1 && Time.time - started >= 85))
+                    {
+                        boss.TryApplyCombatImpact(140, false, CombatImpactSource.ParriedFireball);
+                        armor.DamageArmor(BossArmor.DurabilityPerLayer * 0.65f);
+                    }
                     if ((Time.time - started) % 8 < 4.4f)
                     {
                         if (attacker.TryUseSkill(pointer)) skills++;
@@ -171,7 +178,7 @@ namespace Nomad.Tests
                 Debug.Log($"BOSS_REFERENCE_FIGHT seconds={elapsed:0.0} health={boss.MaxHealth} weapon=B+1 crit=off attacks={attacks} skills={skills} attackWindow=4.4/8");
                 Assert.That(boss.IsDead, Is.True);
                 Assert.That(elapsed, Is.InRange(105f, 140f));
-                Assert.That(boss.GetComponent<BossArmor>().BreakCount, Is.Zero, "기본 공격만으로 파괴가 자동 발생하지 않음");
+                Assert.That(boss.GetComponent<BossArmor>().BreakCount, Is.EqualTo(2), "패링/바위 활용 후 두 단계 파괴");
             }
             finally
             {
@@ -266,12 +273,13 @@ namespace Nomad.Tests
                 Assert.That(parry.TryBegin(), Is.True);
                 Assert.That(parry.TryReflect(first, point), Is.True);
                 Assert.That(first.Reflected, Is.True);
+                Assert.That(Object.FindObjectsByType<UnityEngine.UI.Text>(FindObjectsSortMode.None).Any(text => text.text == "패링!" && text.color.r > 0.9f && text.color.g > 0.8f), Is.True, "성공할 때 노란 패링 문구");
                 Assert.That(parry.TryReflect(first, point), Is.False, "같은 탄 중복 반사 없음");
                 Assert.That(parry.TryReflect(second, point), Is.False, "한 판정은 탄 하나만");
                 Assert.That(parry.TryBegin(), Is.False, "쿨다운 중 재사용 차단");
                 yield return Wait(1.2f);
                 Assert.That(parry.Reflections, Is.EqualTo(1));
-                Assert.That(boss.CurrentHealth, Is.EqualTo(before - 140), "반사 탄은 보스에 한 번 피해");
+                Assert.That(boss.CurrentHealth, Is.EqualTo(before - 77), "반사 탄은 보스에 한 번 피해");
                 Assert.That(boss.LastHitSource, Is.EqualTo(CombatImpactSource.ParriedFireball));
                 Assert.That(boss.GetComponent<BossArmor>().RemainingRatio, Is.LessThan(0.55f), "실제 반사 탄으로 내구도 45% 감소");
                 Assert.That(parry.TryBegin(), Is.True);
@@ -312,7 +320,7 @@ namespace Nomad.Tests
             int hp = player.CurrentHealth;
             float restingCollider = boss.GetComponent<CapsuleCollider>().center.y;
             combat.BeginPattern(DragonPattern.Circle);
-            yield return Wait(1.4f);
+            yield return Wait(1.85f);
             var jump = boss.GetComponent<BossJumpSlam>();
             Assert.That(jump.Airborne, Is.True);
             Assert.That(boss.transform.Find("Body").localPosition.y, Is.GreaterThan(1.5f));
@@ -397,7 +405,7 @@ namespace Nomad.Tests
             Assert.That(combat.Effects.GetComponentsInChildren<BossHazard>().Length, Is.Zero, "3갈래 바닥 표시 없음");
             yield return Wait(0.8f);
             Assert.That(boss.GetComponent<BossRadialChargePose>().Weight, Is.GreaterThan(0.2f));
-            yield return Wait(0.63f);
+            yield return Wait(1.03f);
             Assert.That(combat.Effects.GetComponentsInChildren<BossFireball>().Length, Is.EqualTo(combat.Tuning.RadialCount));
             Assert.That(combat.Effects.GetComponentsInChildren<BossFireball>().All(ball => ball.GetComponentsInChildren<MeshRenderer>().Length > 0), Is.True);
             combat.Stun(0.01f);
@@ -442,7 +450,7 @@ namespace Nomad.Tests
             yield return null;
             Assert.That(combat.Phase, Is.EqualTo(DragonPhase.Stunned), "파괴 후 녹다운 딜타임");
             Assert.That(armor.BreakCount, Is.EqualTo(1));
-            Assert.That(armor.ModifyCombatDamage(100), Is.EqualTo(125));
+            Assert.That(armor.ModifyCombatDamage(100), Is.EqualTo(100));
             Assert.That(boss.GetComponentsInChildren<Transform>().Any(item => item.name.Contains("stun star")), Is.False);
             Assert.That(combat.Effects.GetComponentsInChildren<BossHazard>().Length, Is.Zero);
             Assert.That(combat.Remaining, Is.GreaterThan(4));
@@ -454,9 +462,9 @@ namespace Nomad.Tests
             armor.DamageArmor(BossArmor.DurabilityPerLayer * 0.65f);
             yield return null;
             Assert.That(armor.BreakCount, Is.EqualTo(2));
-            Assert.That(armor.ModifyCombatDamage(100), Is.EqualTo(155));
+            Assert.That(armor.ModifyCombatDamage(100), Is.EqualTo(185));
             Assert.That(combat.Phase, Is.EqualTo(DragonPhase.Stunned));
-            boss.TryApplyDamage(boss.MaxHealth);
+            boss.TryApplyDamage(boss.MaxHealth, DamageKind.Fall);
             yield return null;
             Assert.That(armor.BreakCount, Is.EqualTo(2), "최대 두 번만 파괴");
             Assert.That(combat.Phase, Is.EqualTo(DragonPhase.Dead));
@@ -496,7 +504,7 @@ namespace Nomad.Tests
             Physics.SyncTransforms();
             yield return Wait(1);
             Assert.That(player.CurrentHealth, Is.EqualTo(hp - 10));
-            boss.TryApplyDamage(boss.MaxHealth);
+            boss.TryApplyDamage(boss.MaxHealth, DamageKind.Fall);
             yield return null;
             Assert.That(combat.Effects.childCount, Is.Zero);
         }
@@ -528,13 +536,13 @@ namespace Nomad.Tests
             yield return Wait(0.5f);
             Assert.That(first.transform.position, Is.EqualTo(warningPosition), "생성한 표식은 플레이어를 따라가지 않음");
             Assert.That(combat.Effects.GetComponentsInChildren<BossHazard>().Length, Is.GreaterThanOrEqualTo(2));
-            boss.TryApplyDamage(boss.MaxHealth);
+            boss.TryApplyDamage(boss.MaxHealth, DamageKind.Fall);
             yield return null;
             Assert.That(combat.Effects.childCount, Is.Zero);
         }
 
         [UnityTest]
-        public IEnumerator BossChainsAttacksWithoutIdleRecovery()
+        public IEnumerator BossLeavesReadableRecoveryBetweenAttacks()
         {
             combat.AutomaticPatterns = true;
             combat.BeginPattern(DragonPattern.Basic);
@@ -543,8 +551,7 @@ namespace Nomad.Tests
             {
                 yield return null;
                 if (combat.Phase == DragonPhase.Recovery)
-                    Assert.That(!boss.GetComponent<MonsterTracker>().enabled && !boss.GetComponent<NavMeshAgent>().isStopped,
-                        Is.True, "사거리 밖이면 쉬지 않고 추적");
+                    Assert.That(combat.Remaining, Is.InRange(0, combat.Tuning.RecoverySeconds + 0.02f), "패턴 사이 회복 시간 확보");
             }
             Assert.That(combat.AttacksStarted, Is.GreaterThanOrEqualTo(3), "기본 공격 없이 강타/구체/브레스를 이어서 실행");
         }
@@ -588,7 +595,7 @@ namespace Nomad.Tests
             yield return Wait(0.2f);
             TestKit.SetField(combat, "nextCharge", Time.time - 0.1f);
             combat.Stun(0.01f);
-            yield return Wait(0.05f);
+            yield return Wait(0.95f);
             Assert.That(combat.Pattern, Is.EqualTo(DragonPattern.Charge));
             Assert.That(combat.Phase, Is.EqualTo(DragonPhase.Windup));
             Quaternion before = boss.transform.rotation;
@@ -661,7 +668,7 @@ namespace Nomad.Tests
                 int hp = health.CurrentHealth;
 
                 combat.BeginPattern(DragonPattern.Circle);
-                yield return Wait(1.35f);
+                yield return Wait(1.75f);
                 InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.Space));
                 yield return Wait(0.05f);
                 InputSystem.QueueStateEvent(keyboard, new KeyboardState());

@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Nomad.Monsters.Demo
 {
-    public sealed class BossRuinsDressing : MonoBehaviour
+    public sealed partial class BossRuinsDressing : MonoBehaviour
     {
         private readonly List<Material> materials = new();
         private BossArena arena;
@@ -64,6 +64,7 @@ namespace Nomad.Monsters.Demo
                 Primitive("Broken ceremonial arch", PrimitiveType.Cube, point, new Vector3(1.5f, 1.1f, 1.4f),
                     facing * Quaternion.Euler(0, 0, angle * Mathf.Rad2Deg - 90), edge);
             }
+            BuildMasonry(facing);
             foreach (float radius in new[] { 7f, 13f, 19f }) Ring(radius);
             for (int index = 0; index < 24; index++) Crack(index, facing);
         }
@@ -143,8 +144,8 @@ namespace Nomad.Monsters.Demo
 
         private Material Material(Color color)
         {
-            var material = new Material(Shader.Find("Universal Render Pipeline/Lit")) { color = color };
-            material.SetFloat("_Smoothness", 0.05f);
+            var material = new Material(Resources.Load<Shader>("BossStone")) { color = color };
+
             materials.Add(material);
             return material;
         }
@@ -172,6 +173,6 @@ namespace Nomad.Monsters.Demo
             skyCamera.backgroundColor = previousBackground;
             skyCamera = null;
         }
-        private void OnDestroy() { RestoreSky(); foreach (Material material in materials) Destroy(material); }
+        private void OnDestroy() { RestoreSky(); foreach (Material material in materials) Destroy(material); foreach (Mesh mesh in masonryMeshes) Destroy(mesh); }
     }
 }

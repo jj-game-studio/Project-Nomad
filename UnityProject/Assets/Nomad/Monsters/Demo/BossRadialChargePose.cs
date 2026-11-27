@@ -35,13 +35,15 @@ namespace Nomad.Monsters.Demo
         {
             if (boss == null || neck == null) return;
             if (boss.Phase == DragonPhase.Dead) { Weight = 0; gathering.Clear(); return; }
-            bool preparing = boss.Phase == DragonPhase.Windup && boss.Pattern == DragonPattern.RadialFireballs;
-            float desired = preparing ? Mathf.SmoothStep(0, 1, 1 - boss.Remaining / 1.4f) : 0;
+            bool preparing = boss.Phase == DragonPhase.Windup && (boss.Pattern == DragonPattern.RadialFireballs || boss.Pattern == DragonPattern.Breath || boss.Pattern == DragonPattern.FirePool);
+            float desired = preparing ? Mathf.SmoothStep(0, 1, 1 - boss.Remaining / 1.8f) : 0;
             Weight = Mathf.MoveTowards(Weight, desired, Time.deltaTime * 5);
             if (Weight > 0)
             {
                 original = neck.localRotation;
-                neck.rotation = Quaternion.AngleAxis(-32 * Weight, transform.right) * neck.rotation;
+                float lift = boss.Pattern == DragonPattern.Breath ? -12 : -32;
+                float recoil = boss.Phase == DragonPhase.Active && boss.Pattern == DragonPattern.Breath ? Mathf.Sin(Time.time * 24) * 2.5f : 0;
+                neck.rotation = Quaternion.AngleAxis(lift * Weight + recoil, transform.right) * neck.rotation;
                 applied = neck.localRotation;
                 posed = true;
             }

@@ -96,7 +96,7 @@ namespace Nomad.Monsters.Demo
                 return;
             }
             BossGroundCracks.Create(boss.Effects, arena, transform.position, 6);
-            HitCameraImpulse.Pulse(0.2f, 0.2f);
+            HitCameraImpulse.Pulse(0.42f, 0.25f);
             CombatImpactAudio.Play(GetComponent<AudioSource>() ?? gameObject.AddComponent<AudioSource>(), true, 0.5f);
         }
     }

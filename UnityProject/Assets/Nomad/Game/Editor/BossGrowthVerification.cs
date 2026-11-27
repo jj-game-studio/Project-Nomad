@@ -22,7 +22,7 @@ namespace Nomad.Game.Editor
         private const string Key = "Nomad.BossGrowthVerify";
         private static readonly DragonPattern[] Patterns = { DragonPattern.Circle, DragonPattern.RadialFireballs,
             DragonPattern.Breath, DragonPattern.FirePool, DragonPattern.Rain, DragonPattern.Charge };
-        private static readonly float[] CaptureAt = { 2.3f, 1.48f, 2.4f, 1.9f, 6.5f, 2.15f };
+        private static readonly float[] CaptureAt = { 2.7f, 1.88f, 2.4f, 1.9f, 6.5f, 2.15f };
         private static readonly List<InputDevice> muted = new();
         private static DragonBossCombat boss;
         private static BossArena arena;
@@ -260,7 +260,7 @@ namespace Nomad.Game.Editor
                 }
                 if (stage == 1)
                 {
-                    if (Patterns[pattern] == DragonPattern.Circle && !chargeTellCaptured && Time.time >= since + 1.45f)
+                    if (Patterns[pattern] == DragonPattern.Circle && !chargeTellCaptured && Time.time >= since + 1.85f)
                     {
                         Require(boss.GetComponent<BossJumpSlam>().Airborne, "예고 완료 후 실제 도약");
                         Capture("CircleLeap");
@@ -418,6 +418,15 @@ namespace Nomad.Game.Editor
                     overlay.RefreshPositions(camera);
                 string prefix = SessionState.GetBool(Key + ".debug", false) ? "debug-" : SessionState.GetBool(Key + ".terrain", false) ? "terrain-" : "main-";
                 Nomad.Minimap.Editor.MinimapVerification.Capture("issue214-" + prefix + name + ".png");
+                if (name == "DeathEnd")
+                {
+                    var treasure = Object.FindFirstObjectByType<Nomad.Loot.BossTreasurePresentation>();
+                    Require(treasure != null, "실제 보스 사망 보물상자");
+                    camera.transform.position = treasure.transform.position + new Vector3(4, 4, -5);
+                    camera.transform.LookAt(treasure.transform.position + Vector3.up * 0.8f);
+                    camera.orthographicSize = 3;
+                    Nomad.Minimap.Editor.MinimapVerification.Capture("issue214-" + prefix + "TreasureClose.png");
+                }
                 if (name == "Breath")
                 {
                     Vector3 point = boss.Mouth.position + boss.transform.forward;

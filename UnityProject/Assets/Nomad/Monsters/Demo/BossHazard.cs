@@ -111,6 +111,7 @@ namespace Nomad.Monsters.Demo
         private void Update()
         {
             if (target == null || target.IsDead) { Destroy(gameObject); return; }
+            if (!innerBuilt && angle < 359 && InnerRadius > 0) BuildBreathFootprint();
             elapsed += Time.deltaTime;
             float warning = WarningSeconds >= 0 ? WarningSeconds : delay;
             float progress = warning <= 0 ? 1 : Mathf.Clamp01(elapsed / warning);
@@ -145,6 +146,7 @@ namespace Nomad.Monsters.Demo
                 }
                 WeaponVfx.Fade(fire, 0);
                 if (angle < 359) CreateBreathLayers();
+                else if (duration > 1) CreateLavaSurface();
             }
             if (elapsed >= nextHit)
             {
@@ -158,25 +160,32 @@ namespace Nomad.Monsters.Demo
         {
             Vector3 origin = BreathOrigin != null ? BreathOrigin.position : transform.position + Vector3.up * 1.4f + transform.forward * 1.4f;
             LastBreathOrigin = origin;
-            int count = warm ? 64 : Mathf.CeilToInt(220 * Time.deltaTime);
+            int count = warm ? 150 : Mathf.CeilToInt(400 * Time.deltaTime);
+            // 입자의 반지름까지 안쪽으로 넣어 실제 안전 구간과 사거리 밖으로 불이 넘치지 않게 합니다.
+            const float margin = 0.85f;
+            float inner = InnerRadius + margin;
+            float outer = Mathf.Max(inner, Radius - margin);
+            float halfAngle = Mathf.Max(0, angle * 0.5f - Mathf.Asin(Mathf.Min(1, margin / inner)) * Mathf.Rad2Deg);
             for (int index = 0; index < count; index++)
             {
-                Vector3 heading = transform.rotation * Quaternion.Euler(0, Random.Range(-angle * 0.5f, angle * 0.5f), 0) * Vector3.forward;
-                Vector3 endpoint = transform.position + heading * (Radius * VisualRangeMultiplier) + Vector3.up * 0.6f;
-                Vector3 velocity = (endpoint - origin) / BreathTravelSeconds;
+                Vector3 heading = transform.rotation * Quaternion.Euler(0, Random.Range(-halfAngle, halfAngle), 0) * Vector3.forward;
+                Vector3 start = transform.position + heading * inner;
+                start.y = Mathf.Max(transform.position.y + 0.8f, origin.y - 0.4f);
+                Vector3 endpoint = transform.position + heading * outer + Vector3.up * 0.9f;
+                Vector3 velocity = (endpoint - start) / BreathTravelSeconds;
                 float age = warm ? Random.Range(0, BreathTravelSeconds - 0.05f) : 0;
                 var particle = new ParticleSystem.EmitParams
                 {
-                    position = origin + velocity * age,
+                    position = start + velocity * age,
                     velocity = velocity,
                     startLifetime = BreathTravelSeconds - age,
-                    startSize = Random.Range(0.4f, 0.9f)
+                    startSize = Random.Range(1.05f, 1.5f)
                 };
                 fire.Emit(particle, 1);
                 if (core != null && index % 2 == 0) core.Emit(new ParticleSystem.EmitParams {
-                    position = particle.position, velocity = velocity, startLifetime = Mathf.Max(0.05f, BreathTravelSeconds * 0.7f - age), startSize = Random.Range(0.25f, 0.6f) }, 1);
-                if (smoke != null && index % 4 == 0) smoke.Emit(new ParticleSystem.EmitParams {
-                    position = particle.position, velocity = velocity * 0.35f + Vector3.up * 0.7f, startLifetime = 1.2f, startSize = Random.Range(0.7f, 1.4f) }, 1);
+                    position = particle.position, velocity = velocity, startLifetime = BreathTravelSeconds - age, startSize = Random.Range(0.6f, 1.05f) }, 1);
+                if (smoke != null && index % 5 == 0) smoke.Emit(new ParticleSystem.EmitParams {
+                    position = particle.position, velocity = Vector3.up * 0.7f, startLifetime = 0.45f, startSize = 0.65f }, 1);
             }
         }
 
@@ -209,6 +218,7 @@ namespace Nomad.Monsters.Demo
             for (int index = 0; index < projected.Length; index++)
             {
                 Vector3 point = fullFootprint[index] * progress;
+                if (innerBuilt) point = fullFootprint[index].normalized * (InnerRadius + (fullFootprint[index].magnitude - InnerRadius) * progress);
                 Vector3 world = transform.TransformPoint(point);
                 point.y = GroundHeight(world) + 0.22f - transform.position.y;
                 projected[index] = point;
@@ -226,6 +236,6 @@ namespace Nomad.Monsters.Demo
             boundaryProjected = true;
         }
 
-        private void OnDestroy() { if (mesh != null) Destroy(mesh); if (smokeMaterial != null) Destroy(smokeMaterial); }
+        private void OnDestroy() { if (mesh != null) Destroy(mesh); if (smokeMaterial != null) Destroy(smokeMaterial); if (lavaMaterial != null) Destroy(lavaMaterial); }
     }
 }
