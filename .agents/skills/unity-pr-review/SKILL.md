@@ -13,4 +13,6 @@ The runner uses a single disposable checkout at `%LOCALAPPDATA%\ProjectNomad\PRR
 
 Let the runner handle cleanup within the shared checkout. On a lock, working branch, unsafe path, or authentication failure, relay the message and path. Read `docs/unity-pr-review.md` for prerequisites and recovery only when needed.
 
-When the command finishes, report the PR number, reviewed HEAD, project path, and result. Distinguish "Editor launch requested" from "import/compile finished". Wait for the person to pick a scene and review in Play mode; invoking this skill does not authorize running tests, approving, or merging.
+Use this shared path for human play review; never add a developer worktree or validation copy to Unity Hub or open another copy for the person. Keep the Hub display name `Project Nomad` and use `scripts/Open-GameInUnity.ps1` (or its installed desktop shortcut) to reopen the same project. The launcher opens the integrated `Game` scene. Developers may keep isolated worktrees for implementation and automated checks.
+
+When the command finishes, report the PR number, reviewed HEAD, project path, and result. Distinguish "Editor launch requested" from "import/compile finished". Wait for the person to review in Play mode; invoking this skill does not authorize running tests, approving, or merging.

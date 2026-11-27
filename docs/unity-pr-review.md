@@ -1,6 +1,6 @@
 # Unity PR 검토 프로젝트 열기
 
-Windows에서 Git, 인증된 GitHub CLI(`gh auth status`), Unity CLI와 해당 PR이 지정한 Unity Editor를 준비합니다. 비공개 애셋 서브모듈 접근 권한도 필요합니다. 설치된 Unity CLI의 실행 옵션은 `unity open --help`로 확인할 수 있습니다.
+Windows에서 Git, 인증된 GitHub CLI(`gh auth status`), 해당 PR이 지정한 Unity Editor를 준비합니다. 비공개 애셋 서브모듈 접근 권한도 필요합니다.
 
 저장소 루트의 PowerShell에서 실행합니다.
 
@@ -8,7 +8,21 @@ Windows에서 Git, 인증된 GitHub CLI(`gh auth status`), Unity CLI와 해당 P
 .\scripts\Open-PrInUnity.ps1 -PrNumber 41
 ```
 
-PR의 최신 HEAD와 서브모듈을 준비하고 프로젝트 버전에 맞는 Editor를 엽니다. 기본 Unity Hub 설치 경로인 `%ProgramFiles%\Unity\Hub\Editor\버전\Editor\Unity.exe`를 사용합니다. 씬 선택과 Play는 직접 하며, 이 명령은 검토 승인이나 병합을 수행하지 않습니다.
+PR의 최신 HEAD와 서브모듈을 준비하고 프로젝트 버전에 맞는 Editor를 엽니다. 기본 Unity Hub 설치 경로인 `%ProgramFiles%\Unity\Hub\Editor\버전\Editor\Unity.exe`를 사용합니다. 통합 `Game` 씬을 열고 Play는 직접 하며, 이 명령은 검토 승인이나 병합을 수행하지 않습니다.
+
+## 사용자는 Project Nomad 하나만 열기
+
+Unity Hub에는 `%LOCALAPPDATA%\ProjectNomad\PRReview\UnityProject`만 **Project Nomad**라는 표시 이름으로 등록합니다. 원본 저장소의 `UnityProject`, `.worktrees`와 자동 검증 복사본은 Hub에 추가하지 않습니다. 개발용 파일은 그대로 보존하고 사용자의 플레이 진입점만 통일합니다.
+
+같은 프로젝트를 다시 열 때는 바탕화면 **Project Nomad** 바로가기 또는 다음 명령을 사용합니다. 새 checkout을 만들거나 Git 상태를 바꾸지 않고, 이전 디버그 씬 대신 통합 `Game` 씬을 엽니다. 이미 실행 중이거나 잠겨 있으면 중복 실행하지 않습니다.
+
+```powershell
+.\scripts\Open-GameInUnity.ps1
+.\scripts\Open-GameInUnity.ps1 -CheckOnly
+.\scripts\Open-GameInUnity.ps1 -InstallShortcut
+```
+
+바로가기는 `%LOCALAPPDATA%\ProjectNomad\Open-ProjectNomad.ps1`을 사용하므로 작업 브랜치를 정리해도 경로가 끊기지 않습니다. 검토 내용을 갱신하는 일은 에이전트가 `Open-PrInUnity.ps1 -PrNumber <번호>`로 같은 폴더에 준비합니다. 미승인 PR을 병합하거나 모든 작업 브랜치를 합치는 동작은 아닙니다.
 
 ## 공용 폴더와 캐시
 
