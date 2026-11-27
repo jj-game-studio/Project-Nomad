@@ -40,6 +40,7 @@ namespace Nomad.Monsters.Demo
             Material trim = Material(new Color(0.61f, 0.49f, 0.27f));
             Quaternion rotation = Quaternion.LookRotation(outward);
             Floor("Boss arena floor", Center, new Vector3(HalfSize * 2, 0.6f, HalfSize * 2), rotation, stone);
+            BuildGround(stone);
             Vector3 rampStart = entrance - outward * 0.5f;
             Vector3 rampEnd = entrance + outward * Mathf.Max(0.5f, edgeDistance - 0.5f);
             rampEnd.y = Center.y;
@@ -56,7 +57,7 @@ namespace Nomad.Monsters.Demo
             for (int index = 0; index < 4; index++)
             {
                 Vector3 corner = Center + right * (index % 2 == 0 ? -HalfSize + 1 : HalfSize - 1) + outward * (index < 2 ? -HalfSize + 1 : HalfSize - 1);
-                Decor("Arena pillar", corner + Vector3.up * 1.2f, new Vector3(0.8f, 2.4f, 0.8f), rotation, trim);
+                Decor("Arena pillar", GroundPoint(corner) + Vector3.up * 1.2f, new Vector3(0.8f, 2.4f, 0.8f), rotation, trim);
             }
             for (int index = 0; index < 2; index++)
                 Decor("Entrance marker", Center - outward * (HalfSize - 1) + right * (index == 0 ? -3 : 3) + Vector3.up * 1.5f,
@@ -76,7 +77,7 @@ namespace Nomad.Monsters.Demo
 
             // 통로의 필드 안쪽은 기존 NavMesh를 그대로 사용하고 외곽 부분만 별도로 굽습니다.
             var sources = new List<NavMeshBuildSource>();
-            sources.Add(BoxSource(Center, new Vector3(HalfSize * 2, 0.6f, HalfSize * 2), rotation));
+            sources.Add(GroundSource());
             float navLength = 4.4f;
             Vector3 navCenter = entrance + outward * (edgeDistance + 0.6f + navLength * 0.5f);
             navCenter.y = Center.y;
@@ -175,6 +176,8 @@ namespace Nomad.Monsters.Demo
             ClearProgression();
             ClearEncounter();
             if (data != null) Destroy(data);
+            if (groundMesh != null) Destroy(groundMesh);
+            if (groundTexture != null) Destroy(groundTexture);
             foreach (Material material in materials) if (material != null) Destroy(material);
         }
     }

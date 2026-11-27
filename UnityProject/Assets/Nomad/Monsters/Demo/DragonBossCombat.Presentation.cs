@@ -14,7 +14,7 @@ namespace Nomad.Monsters.Demo
             Mouth.SetParent(upper != null ? upper : transform, false);
             Mouth.position = upper != null ? (upper.position + (lower != null ? lower.position : upper.position)) * 0.5f + transform.forward * 0.25f :
                 transform.position + Vector3.up * 1.8f + transform.forward * 1.5f;
-            gameObject.AddComponent<BossStunDisplay>().Configure(this, Mouth);
+            gameObject.AddComponent<BossMouthPreparation>().Configure(this, Mouth);
         }
     }
 }

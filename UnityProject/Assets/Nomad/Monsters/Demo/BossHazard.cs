@@ -15,6 +15,8 @@ namespace Nomad.Monsters.Demo
         public Transform BreathOrigin { get; set; }
         public float BreathTravelSeconds { get; set; } = 0.65f;
         public Vector3 LastBreathOrigin { get; private set; }
+        public System.Func<Vector3, float> GroundHeight { get; set; }
+        public float WarningSeconds { get; set; } = -1;
         private Health target;
         private Transform owner;
         private float delay, duration, interval, elapsed, nextHit;
@@ -23,6 +25,10 @@ namespace Nomad.Monsters.Demo
         private Mesh mesh;
         private Transform fill;
         private ParticleSystem fire;
+        private Vector3[] fullFootprint, projected;
+        private LineRenderer boundary;
+        private bool boundaryProjected;
+        private int boundaryStart;
 
         public static BossHazard Create(Transform parent, Transform owner, Vector3 point, Quaternion facing, Health target,
             float radius, float angle, float delay, float duration, int damage, float interval = 0.75f)
@@ -47,18 +53,30 @@ namespace Nomad.Monsters.Demo
         private void BuildVisual()
         {
             const int segments = 64;
-            var vertices = new Vector3[segments + 2];
-            var triangles = new int[segments * 3];
+            int rings = Mathf.Clamp(Mathf.CeilToInt(Radius / 1.5f), 1, 8);
+            var vertices = new Vector3[1 + rings * (segments + 1)];
+            var triangles = new int[segments * 3 + (rings - 1) * segments * 6];
+            int triangle = 0;
+            for (int ring = 1; ring <= rings; ring++)
             for (int index = 0; index <= segments; index++)
             {
                 float radians = Mathf.Lerp(-angle * 0.5f, angle * 0.5f, index / (float)segments) * Mathf.Deg2Rad;
-                vertices[index + 1] = new Vector3(Mathf.Sin(radians), 0, Mathf.Cos(radians)) * Radius;
+                int vertex = 1 + (ring - 1) * (segments + 1) + index;
+                vertices[vertex] = new Vector3(Mathf.Sin(radians), 0, Mathf.Cos(radians)) * (Radius * ring / rings);
                 if (index == segments) continue;
-                triangles[index * 3] = 0;
-                triangles[index * 3 + 1] = index + 1;
-                triangles[index * 3 + 2] = index + 2;
+                if (ring == 1)
+                {
+                    triangles[triangle++] = 0; triangles[triangle++] = vertex; triangles[triangle++] = vertex + 1;
+                    continue;
+                }
+                int inner = vertex - segments - 1;
+                triangles[triangle++] = inner; triangles[triangle++] = vertex; triangles[triangle++] = vertex + 1;
+                triangles[triangle++] = inner; triangles[triangle++] = vertex + 1; triangles[triangle++] = inner + 1;
             }
+            boundaryStart = 1 + (rings - 1) * (segments + 1);
             mesh = new Mesh { name = "Boss attack footprint", vertices = vertices, triangles = triangles };
+            fullFootprint = vertices;
+            projected = new Vector3[vertices.Length];
             mesh.RecalculateNormals();
             var go = new GameObject("Warning fill");
             fill = go.transform;
@@ -72,23 +90,26 @@ namespace Nomad.Monsters.Demo
             renderer.SetPropertyBlock(tint);
 
             var outline = new GameObject("Warning boundary").AddComponent<LineRenderer>();
+            boundary = outline;
             outline.transform.SetParent(transform, false);
             outline.useWorldSpace = false;
             outline.loop = true;
             outline.widthMultiplier = 0.07f;
             outline.sharedMaterial = WeaponVfx.Plain;
             outline.startColor = outline.endColor = new Color(1, 0.5f, 0.1f);
-            outline.positionCount = angle >= 359 ? vertices.Length - 1 : vertices.Length;
+            outline.positionCount = angle >= 359 ? segments : segments + 2;
             for (int index = 0; index < outline.positionCount; index++)
-                outline.SetPosition(index, vertices[angle >= 359 ? index + 1 : index]);
+                outline.SetPosition(index, vertices[angle >= 359 ? boundaryStart + index : index == 0 ? 0 : boundaryStart + index - 1]);
         }
 
         private void Update()
         {
             if (target == null || target.IsDead) { Destroy(gameObject); return; }
             elapsed += Time.deltaTime;
-            float progress = delay <= 0 ? 1 : Mathf.Clamp01(elapsed / delay);
+            float warning = WarningSeconds >= 0 ? WarningSeconds : delay;
+            float progress = warning <= 0 ? 1 : Mathf.Clamp01(elapsed / warning);
             fill.localScale = new Vector3(Mathf.Lerp(0.08f, 1, progress), 1, Mathf.Lerp(0.08f, 1, progress));
+            ProjectGround(Mathf.Lerp(0.08f, 1, progress));
             if (!Active) return;
             if (fire == null && EmitsFlame)
             {
@@ -170,6 +191,30 @@ namespace Nomad.Monsters.Demo
             Vector3 ray = target.transform.position + Vector3.up - (transform.position + Vector3.up);
             return !Projectile.TryGetFirstHit(new Ray(transform.position + Vector3.up, ray.normalized), ray.magnitude,
                 Physics.DefaultRaycastLayers, owner, out RaycastHit hit) || hit.collider.GetComponentInParent<Health>() == target;
+        }
+
+        private void ProjectGround(float progress)
+        {
+            if (GroundHeight == null) return;
+            fill.localScale = Vector3.one;
+            for (int index = 0; index < projected.Length; index++)
+            {
+                Vector3 point = fullFootprint[index] * progress;
+                Vector3 world = transform.TransformPoint(point);
+                point.y = GroundHeight(world) + 0.09f - transform.position.y;
+                projected[index] = point;
+            }
+            mesh.vertices = projected;
+            mesh.RecalculateBounds();
+            if (boundaryProjected) return;
+            for (int index = 0; index < boundary.positionCount; index++)
+            {
+                Vector3 point = fullFootprint[angle >= 359 ? boundaryStart + index : index == 0 ? 0 : boundaryStart + index - 1];
+                Vector3 world = transform.TransformPoint(point);
+                point.y = GroundHeight(world) + 0.1f - transform.position.y;
+                boundary.SetPosition(index, point);
+            }
+            boundaryProjected = true;
         }
 
         private void OnDestroy() { if (mesh != null) Destroy(mesh); if (smokeMaterial != null) Destroy(smokeMaterial); }

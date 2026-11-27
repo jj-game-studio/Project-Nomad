@@ -20,9 +20,13 @@ namespace Nomad.Monsters.Demo
             GameObject prefab = content != null ? content.Rock : Resources.Load<GameObject>(RockResource);
             foreach (Vector2 offset in new[] { new Vector2(-14, -14), new Vector2(14, -14), new Vector2(-18, -5),
                 new Vector2(18, -5), new Vector2(-18, 6), new Vector2(18, 6), new Vector2(-13, 16),
-                new Vector2(13, 16), new Vector2(-6, 18), new Vector2(6, 18), new Vector2(-9, 6), new Vector2(9, 6) })
+                new Vector2(13, 16), new Vector2(-6, 18), new Vector2(7, 18), new Vector2(-9, 6), new Vector2(9, 6),
+                new Vector2(-7, -1), new Vector2(7, -1), new Vector2(-2, 7), new Vector2(2, -7),
+                new Vector2(-8, -13), new Vector2(8, -13), new Vector2(-12, -6), new Vector2(12, -6),
+                new Vector2(-1, 13), new Vector2(-14, 1), new Vector2(14, 1), new Vector2(0, 19) })
             {
                 Vector3 point = Center + Quaternion.LookRotation(Forward) * new Vector3(offset.x, 0, offset.y);
+                point = GroundPoint(point);
                 GameObject rock = prefab != null ? Instantiate(prefab, rocks.transform) : GameObject.CreatePrimitive(PrimitiveType.Sphere);
                 rock.name = "Breakable arena boulders";
                 rock.transform.SetParent(rocks.transform, false);

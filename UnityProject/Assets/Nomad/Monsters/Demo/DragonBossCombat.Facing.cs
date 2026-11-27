@@ -29,10 +29,10 @@ namespace Nomad.Monsters.Demo
                         Vector3 targetDirection = Vector3.ProjectOnPlane(target.transform.position - transform.position, Vector3.up);
                         TurnTowards(targetDirection, ChargeTurnSpeed);
                         direction = transform.forward;
-                        PlannedChargeDistance = Mathf.Clamp(targetDirection.magnitude + 2, 5, BossArena.HalfSize * 2.9f);
+                        PlannedChargeDistance = Mathf.Clamp(targetDirection.magnitude + ChargeOvershoot, MinimumChargeDistance, BossArena.HalfSize * 2.9f);
                     }
                     else if (!ChargeAimLocked) { ChargeAimLocked = true; direction = transform.forward; }
-                    if (chargeWarning != null) chargeWarning.Refresh(transform.position, direction, PlannedChargeDistance,
+                    if (chargeWarning != null) chargeWarning.Refresh(transform.position, direction, Mathf.Min(PlannedChargeDistance, arena.DistanceToBoundary(transform.position, direction)),
                         Mathf.Clamp01((Time.time - phaseStarted) / phaseDuration), ChargeAimLocked);
                 }
                 else TurnTowards(direction, TurnSpeed);

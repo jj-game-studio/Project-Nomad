@@ -35,6 +35,7 @@ namespace Nomad.Game.Editor
                 content.Rock = rock;
                 content.BossHealth = BossArmor.ReferenceHealth;
                 content.Knockdown = AssetDatabase.LoadAssetAtPath<AnimationClip>("Assets/Nomad/Monsters/Resources/BossKnockdown.anim");
+                content.UnevenFloor = true;
                 EditorSceneManager.SaveScene(scene);
             }
             AssetDatabase.SaveAssets();

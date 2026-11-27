@@ -184,17 +184,19 @@ namespace Nomad.Tests
         public void RocksLeaveCenterAndEntranceClear()
         {
             BossBreakableRock[] rocks = arena.GetComponentsInChildren<BossBreakableRock>();
-            Assert.That(rocks.Length, Is.EqualTo(12));
+            Assert.That(rocks.Length, Is.EqualTo(24));
             foreach (BossBreakableRock rock in rocks)
             {
-                Vector3 offset = rock.transform.position - arena.Center;
+                BoxCollider collision = rock.transform.Find("Rock collision").GetComponent<BoxCollider>();
+                Vector3 offset = collision.transform.position - arena.Center;
                 Assert.That(Vector3.ProjectOnPlane(offset, Vector3.up).magnitude, Is.GreaterThan(6));
-                if (Vector3.Dot(offset, arena.Forward) < 0)
+                if (Vector3.Dot(offset, arena.Forward) < -BossArena.HalfSize + 10)
                     Assert.That(Mathf.Abs(Vector3.Dot(offset, Vector3.Cross(Vector3.up, arena.Forward))), Is.GreaterThan(4));
                 Assert.That(rock.GetComponentInChildren<NavMeshObstacle>().carving, Is.True);
-                Assert.That(rock.GetComponentInChildren<BoxCollider>().size.x, Is.GreaterThanOrEqualTo(3.2f));
+                Assert.That(collision.size.x, Is.GreaterThanOrEqualTo(3.2f));
                 foreach (BossBreakableRock other in rocks)
-                    if (other != rock) Assert.That(Vector3.Distance(rock.transform.position, other.transform.position), Is.GreaterThanOrEqualTo(6));
+                    if (other != rock) Assert.That(Vector3.Distance(rock.transform.Find("Rock collision").position,
+                        other.transform.Find("Rock collision").position), Is.GreaterThanOrEqualTo(6));
             }
         }
 
@@ -212,7 +214,8 @@ namespace Nomad.Tests
             Assert.That(combat.Remaining, Is.GreaterThan(2.5f));
             var warning = combat.Effects.GetComponentInChildren<BossChargeWarning>();
             Assert.That(warning, Is.Not.Null);
-            Assert.That(warning.Length, Is.GreaterThanOrEqualTo(25));
+            Assert.That(warning.Length, Is.InRange(19f, 22f), "표식은 방 경계에서 잘림");
+            Assert.That(combat.PlannedChargeDistance, Is.GreaterThanOrEqualTo(39));
             Assert.That(combat.Effects.GetComponentsInChildren<BossHazard>().Length, Is.Zero, "돌진에 원뿔 표식 없음");
             player.transform.position = arena.Center + Vector3.right * 32;
             yield return null;
@@ -249,6 +252,8 @@ namespace Nomad.Tests
                 Assert.That(boss.LastHitCritical, Is.True);
                 Assert.That(boss.GetComponent<CombatFeedbackOverlay>().LastCritical, Is.True);
                 stats.RandomSource = () => 0.99f;
+
+                foreach (BossBreakableRock rock in arena.GetComponentsInChildren<BossBreakableRock>()) Object.DestroyImmediate(rock.gameObject);
 
                 var parry = attacker.GetComponent<PlayerBossParry>();
                 Health victim = attacker.GetComponent<Health>();
@@ -289,13 +294,95 @@ namespace Nomad.Tests
             Assert.That(player.CurrentHealth, Is.EqualTo(hp), "전조 중 피해 없음");
             player.transform.position = arena.Center + Vector3.right * 10.5f;
             Physics.SyncTransforms();
-            yield return Wait(0.9f);
+            yield return Wait(1.6f);
             Assert.That(player.CurrentHealth, Is.EqualTo(hp), "걸어서 범위를 빠져나가 회피");
             player.transform.position = arena.Center + Vector3.right * 3;
             Physics.SyncTransforms();
             combat.BeginPattern(DragonPattern.Circle);
-            yield return Wait(1.9f);
+            yield return Wait(2.7f);
             Assert.That(player.CurrentHealth, Is.EqualTo(hp - 32), "강타는 한 번만 피해");
+        }
+
+        [UnityTest]
+        public IEnumerator CircleFillsThenJumpsAndDamagesOnlyOnLandingWithCracks()
+        {
+            int hp = player.CurrentHealth;
+            float restingCollider = boss.GetComponent<CapsuleCollider>().center.y;
+            combat.BeginPattern(DragonPattern.Circle);
+            yield return Wait(1.9f);
+            var jump = boss.GetComponent<BossJumpSlam>();
+            Assert.That(jump.Airborne, Is.True);
+            Assert.That(boss.transform.Find("Body").localPosition.y, Is.GreaterThan(1.5f));
+            Assert.That(boss.GetComponent<CapsuleCollider>().center.y, Is.GreaterThan(restingCollider + 1.5f));
+            Assert.That(player.CurrentHealth, Is.EqualTo(hp), "도약 중에는 피해 없음");
+            yield return Wait(0.8f);
+            Assert.That(player.CurrentHealth, Is.EqualTo(hp - 32));
+            Assert.That(jump.Landings, Is.EqualTo(1));
+            Assert.That(jump.Airborne, Is.False);
+            Assert.That(boss.GetComponent<CapsuleCollider>().center.y, Is.EqualTo(restingCollider).Within(0.01f));
+            Assert.That(combat.Effects.GetComponentsInChildren<BossGroundCracks>().Length, Is.EqualTo(1));
+            Assert.That(boss.GetComponentsInChildren<Transform>().Any(item => item.name.Contains("stun star")), Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator BossReengagesAfterLeavingAndDoesNotUseGenericReturnHome()
+        {
+            combat.AutomaticPatterns = true;
+            player.transform.position = arena.GroundPoint(arena.Center + new Vector3(-12, 0, -1));
+            Physics.SyncTransforms();
+            Vector3 before = boss.transform.position;
+            yield return Wait(3.2f);
+            Assert.That(boss.GetComponent<MonsterTracker>().enabled, Is.False);
+            Assert.That(combat.AttacksStarted > 0 || Vector3.Distance(before, boss.transform.position) > 1, Is.True);
+            player.transform.position = arena.Center + Vector3.right * 33;
+            yield return null;
+            Assert.That(combat.Phase, Is.EqualTo(DragonPhase.Waiting));
+            Assert.That(boss.GetComponent<NavMeshAgent>().isStopped, Is.True);
+            int attacks = combat.AttacksStarted;
+            before = boss.transform.position;
+            player.transform.position = arena.GroundPoint(arena.Center + Vector3.right * 18);
+            Physics.SyncTransforms();
+            yield return Wait(3.3f);
+            Assert.That(combat.AttacksStarted > attacks || Vector3.Distance(before, boss.transform.position) > 1, Is.True, "재진입 후 추적/공격 재개");
+        }
+
+        [UnityTest]
+        public IEnumerator ChargePassesPlayerAndAppliesContactDamageOnlyOnce()
+        {
+            foreach (BossBreakableRock rock in arena.GetComponentsInChildren<BossBreakableRock>()) Object.DestroyImmediate(rock.gameObject);
+            yield return Wait(0.3f);
+            boss.GetComponent<NavMeshAgent>().Warp(arena.Center);
+            boss.transform.rotation = Quaternion.identity;
+            player.transform.position = arena.GroundPoint(arena.Center + Vector3.forward * 4);
+            Physics.SyncTransforms();
+            int hp = player.CurrentHealth;
+            combat.BeginPattern(DragonPattern.Charge);
+            Assert.That(combat.PlannedChargeDistance, Is.GreaterThanOrEqualTo(32));
+            yield return Wait(4.3f);
+            Assert.That(boss.transform.position.z, Is.GreaterThan(player.transform.position.z + 8));
+            Assert.That(player.CurrentHealth, Is.EqualTo(hp - 28));
+        }
+
+        [UnityTest]
+        public IEnumerator UnevenGroundNavigationAndWarningsUseSameHeight()
+        {
+            var surface = arena.GetComponentsInChildren<MeshCollider>().Single(item => item.name == "Uneven arena ground");
+            float low = surface.sharedMesh.vertices.Min(point => point.y), high = surface.sharedMesh.vertices.Max(point => point.y);
+            Assert.That(high - low, Is.GreaterThan(0.3f));
+            foreach (Vector3 offset in new[] { new Vector3(12, 0, 12), new Vector3(-15, 0, -8), new Vector3(0, 0, -18) })
+            {
+                Vector3 point = arena.GroundPoint(arena.Center + offset);
+                Assert.That(NavMesh.SamplePosition(point, out NavMeshHit navigation, 1, NavMesh.AllAreas), Is.True);
+                Assert.That(Mathf.Abs(navigation.position.y - point.y), Is.LessThan(0.25f));
+            }
+            combat.BeginPattern(DragonPattern.Circle);
+            yield return Wait(0.2f);
+            var fill = combat.Effects.GetComponentInChildren<MeshFilter>();
+            foreach (Vector3 vertex in fill.sharedMesh.vertices)
+            {
+                Vector3 world = fill.transform.TransformPoint(vertex);
+                Assert.That(world.y - arena.GroundHeight(world), Is.InRange(0.07f, 0.11f));
+            }
         }
 
         [UnityTest]
@@ -331,7 +418,7 @@ namespace Nomad.Tests
             Assert.That(combat.Phase, Is.EqualTo(DragonPhase.Stunned), "파괴 후 녹다운 딜타임");
             Assert.That(armor.BreakCount, Is.EqualTo(1));
             Assert.That(armor.ModifyCombatDamage(100), Is.EqualTo(125));
-            Assert.That(boss.GetComponent<BossStunDisplay>().Visible, Is.True);
+            Assert.That(boss.GetComponentsInChildren<Transform>().Any(item => item.name.Contains("stun star")), Is.False);
             Assert.That(combat.Effects.GetComponentsInChildren<BossHazard>().Length, Is.Zero);
             Assert.That(combat.Remaining, Is.GreaterThan(4));
             yield return Wait(0.8f);
@@ -355,10 +442,10 @@ namespace Nomad.Tests
         {
             yield return Wait(0.2f);
             BossBreakableRock rock = arena.GetComponentsInChildren<BossBreakableRock>().First();
-            Vector3 point = rock.transform.position;
-            point.y = arena.Center.y;
-            Assert.That(boss.GetComponent<NavMeshAgent>().Warp(point + Vector3.right * 4), Is.True);
-            player.transform.position = point - Vector3.right * 3;
+            Vector3 point = arena.GroundPoint(rock.GetComponentInChildren<BoxCollider>().bounds.center);
+            Vector3 inward = Vector3.ProjectOnPlane(arena.Center - point, Vector3.up).normalized;
+            Assert.That(boss.GetComponent<NavMeshAgent>().Warp(arena.GroundPoint(point + inward * 4)), Is.True);
+            player.transform.position = arena.GroundPoint(point - inward * 8);
             Physics.SyncTransforms();
             combat.BeginPattern(DragonPattern.Charge);
             yield return Wait(3.1f);
@@ -429,7 +516,7 @@ namespace Nomad.Tests
             {
                 yield return null;
                 if (combat.Phase == DragonPhase.Recovery)
-                    Assert.That(boss.GetComponent<MonsterTracker>().enabled && !boss.GetComponent<NavMeshAgent>().isStopped,
+                    Assert.That(!boss.GetComponent<MonsterTracker>().enabled && !boss.GetComponent<NavMeshAgent>().isStopped,
                         Is.True, "사거리 밖이면 쉬지 않고 추적");
             }
             Assert.That(combat.AttacksStarted, Is.GreaterThanOrEqualTo(4), "다음 공격으로 즉시 연결");
@@ -461,10 +548,10 @@ namespace Nomad.Tests
             Assert.That(Vector3.Distance(breath.LastBreathOrigin, combat.Mouth.position), Is.LessThan(0.06f), "현재 머리 위치에서 연속 발사");
             combat.Stun(0.3f);
             yield return Wait(0.1f);
-            Assert.That(boss.GetComponent<BossStunDisplay>().Visible, Is.True);
+            Assert.That(boss.GetComponentsInChildren<Transform>().Any(item => item.name.Contains("stun star")), Is.False);
             Assert.That(boss.GetComponentInChildren<TextMesh>(true)?.text, Is.Not.EqualTo("기절"));
             yield return Wait(0.4f);
-            Assert.That(boss.GetComponent<BossStunDisplay>().Visible, Is.False);
+            Assert.That(boss.GetComponentsInChildren<Transform>().Any(item => item.name.Contains("stun star")), Is.False);
         }
 
         [UnityTest]
@@ -553,10 +640,12 @@ namespace Nomad.Tests
                 Assert.That(movement.IsRolling, Is.True, "실제 구르기 입력");
                 InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.W));
                 yield return Wait(1.4f);
+                yield return Wait(0.9f);
                 Assert.That(Vector3.ProjectOnPlane(hero.transform.position - arena.Center, Vector3.up).magnitude,
                     Is.GreaterThan(DragonBossCombat.CircleRadius), "근접에서 구르기 1회+걷기로 광역 탈출");
                 Assert.That(health.CurrentHealth, Is.EqualTo(hp));
                 Assert.That(health.IsCombatImmune, Is.False, "판정 때 구르기 무적 대신 범위 이탈로 회피");
+                Assert.That(boss.GetComponent<BossJumpSlam>().Landings, Is.EqualTo(1));
             }
             finally
             {

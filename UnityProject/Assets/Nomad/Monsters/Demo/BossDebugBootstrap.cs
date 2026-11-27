@@ -41,7 +41,7 @@ namespace Nomad.Monsters.Demo
             Arena = arenaRoot.AddComponent<BossArena>();
             // 통로/마을 생성 없이 보스방의 바닥과 NavMesh만 사용합니다.
             Arena.BuildStandalone(new Vector3(0, 0, -BossArena.HalfSize - 3), Vector3.forward);
-            GameObject rig = Instantiate(PlayerPrefab, Arena.Center - Vector3.forward * 8, Quaternion.identity, encounter.transform);
+            GameObject rig = Instantiate(PlayerPrefab, Arena.GroundPoint(Arena.Center - Vector3.forward * 8) + Vector3.up * 0.05f, Quaternion.identity, encounter.transform);
             Player = rig.GetComponentInChildren<PlayerEquipmentCombat>();
             var factory = encounter.AddComponent<MonsterActorFactory>();
             factory.ConfigureMaterials(material, material, material, material);
@@ -88,7 +88,7 @@ namespace Nomad.Monsters.Demo
 
             var health = Player.GetComponent<Health>();
             health.IsCombatImmune = GUILayout.Toggle(health.IsCombatImmune, "플레이어 무적");
-            Boss.AutomaticPatterns = GUILayout.Toggle(Boss.AutomaticPatterns, "자동 패턴");
+            Boss.AutomaticPatterns = GUILayout.Toggle(Boss.AutomaticPatterns, "자동 패턴 (끄면 단발 시험)");
             if (GUILayout.Button("체력·마나 회복")) { health.RestoreFull(); Player.GetComponent<PlayerMana>().RestoreFull(); }
 
             GUILayout.BeginHorizontal();
@@ -99,7 +99,7 @@ namespace Nomad.Monsters.Demo
 
             string[] labels = { "기본 공격", "원형 강타", "운석 3갈래", "브레스", "불지대 4개", "화염우", "돌진" };
             for (int index = 0; index < labels.Length; index++)
-                if (GUILayout.Button(labels[index])) { Boss.AutomaticPatterns = false; Boss.BeginPattern((DragonPattern)index); }
+                if (GUILayout.Button(labels[index])) Boss.BeginPattern((DragonPattern)index);
             if (GUILayout.Button("보스전 재시작")) StartCoroutine(Spawn());
             GUILayout.EndArea();
             GUI.skin.font = previousFont;

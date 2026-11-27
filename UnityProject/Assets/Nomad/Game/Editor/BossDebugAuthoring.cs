@@ -24,6 +24,7 @@ namespace Nomad.Game.Editor
             content.Rock = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Nomad/Monsters/Resources/BossArenaRock.prefab");
             content.BossHealth = BossArmor.ReferenceHealth;
             content.Knockdown = AssetDatabase.LoadAssetAtPath<AnimationClip>("Assets/Nomad/Monsters/Resources/BossKnockdown.anim");
+            content.UnevenFloor = true;
             Light sun = new GameObject("Sun").AddComponent<Light>();
             sun.type = LightType.Directional;
             sun.intensity = 1.2f;

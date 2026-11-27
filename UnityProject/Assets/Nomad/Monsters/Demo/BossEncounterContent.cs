@@ -8,5 +8,6 @@ namespace Nomad.Monsters.Demo
         public GameObject Rock;
         [Min(1)] public int BossHealth = BossArmor.ReferenceHealth;
         public AnimationClip Knockdown;
+        public bool UnevenFloor = true;
     }
 }
