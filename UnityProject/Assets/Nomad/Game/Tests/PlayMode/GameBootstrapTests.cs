@@ -270,6 +270,26 @@ namespace Nomad.Game.Tests
             Assert.That(PauseButton(pause, "PausePanel", "Resume").activeInHierarchy, Is.False);
             Assert.That(Time.timeScale, Is.Zero);
 
+            // UI 표시를 끄면 하단 HUD 캔버스만 꺼지고, 다시 켜면 돌아옵니다.
+            var hud = (Behaviour)manager.Player.GetComponentInChildren(
+                System.Type.GetType("Nomad.Hud.PlayerHud, Assembly-CSharp"));
+            var hudCanvas = (Canvas)hud.GetType().GetProperty("Canvas").GetValue(hud);
+            bool originalHudVisible = HudVisibilitySettings.Visible;
+            HudVisibilitySettings.SetVisible(true);
+            yield return null;
+            Assert.That(hudCanvas.enabled, Is.True);
+
+            Click(PauseButton(pause, "SettingsPanel", "HudVisible"));
+            yield return null;
+            Assert.That(HudVisibilitySettings.Visible, Is.False);
+            Assert.That(hudCanvas.enabled, Is.False);
+            Assert.That(PauseButton(pause, "SettingsPanel", "Back").activeInHierarchy, Is.True);
+
+            Click(PauseButton(pause, "SettingsPanel", "HudVisible"));
+            yield return null;
+            Assert.That(hudCanvas.enabled, Is.True);
+            HudVisibilitySettings.SetVisible(originalHudVisible);
+
             yield return PressEscape();
             Assert.That(PauseButton(pause, "SettingsPanel", "Back").activeInHierarchy, Is.False);
             Assert.That(Time.timeScale, Is.Zero);

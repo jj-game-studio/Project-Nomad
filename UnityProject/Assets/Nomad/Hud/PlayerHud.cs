@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Nomad.Combat;
 using Nomad.Consumables;
 using Nomad.Equipment;
+using Nomad.Game;
 using Nomad.Inventory;
 using Nomad.Player;
 using TMPro;
@@ -123,6 +124,9 @@ namespace Nomad.Hud
 
         private void LateUpdate()
         {
+            // 설정의 UI 표시가 꺼지면 하단 HUD 캔버스만 그리지 않습니다.
+            canvas.enabled = HudVisibilitySettings.Visible;
+
             UpdateChargeGauge();
             potionText.gameObject.SetActive(healing != null);
             if (healing != null && healing.Count != shownPotions)

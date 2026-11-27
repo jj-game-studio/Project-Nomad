@@ -59,13 +59,20 @@ namespace Nomad.Game.Modules
             SetNavigation(settingsButton, restartButton, quitButton);
             SetNavigation(quitButton, settingsButton, resumeButton);
 
-            settings = AddPanel("SettingsPanel", backdrop, 266f);
-            AddLabel("Title", settings, "설정", "Settings", new Vector2(384f, 52f), 69f, 38f);
-            backButton = AddButton("Back", settings, "돌아가기", "Back", -74f, back, PrimaryColor);
+            settings = AddPanel("SettingsPanel", backdrop, 334f);
+            AddLabel("Title", settings, "설정", "Settings", new Vector2(384f, 52f), 103f, 38f);
+            backButton = AddButton("Back", settings, "돌아가기", "Back", -108f, back, PrimaryColor);
             var villageView = VillageViewSettingControl.Create(settings, font,
                 new Vector2(40, -98), new Vector2(352, 48));
-            SetNavigation(backButton, villageView, villageView);
-            SetNavigation(villageView, backButton, backButton);
+
+            // 끄면 하단 HUD만 숨깁니다. 이 메뉴는 그대로 보여 다시 켤 수 있습니다.
+            var hudVisible = VillageViewSettingControl.CreateToggle("HudVisible", settings, font,
+                new Vector2(40, -166), new Vector2(352, 48),
+                () => "UI 표시: " + (HudVisibilitySettings.Visible ? "켜짐" : "꺼짐") + "  ›",
+                () => HudVisibilitySettings.SetVisible(!HudVisibilitySettings.Visible));
+            SetNavigation(backButton, hudVisible, villageView);
+            SetNavigation(villageView, backButton, hudVisible);
+            SetNavigation(hudVisible, villageView, backButton);
         }
 
         public void Show(bool showingSettings)
