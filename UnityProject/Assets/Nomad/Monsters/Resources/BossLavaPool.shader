@@ -14,14 +14,16 @@ Shader "Nomad/Lava Pool"
             #pragma fragment Frag
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             float3 _Center;
-            float _Radius;
+            float _Radius, _ShapeSeed;
             struct A { float4 positionOS:POSITION; };
             struct V { float4 positionCS:SV_POSITION; float3 world:TEXCOORD0; };
             V Vert(A v) { V o; o.world = TransformObjectToWorld(v.positionOS.xyz); o.positionCS = TransformWorldToHClip(o.world); return o; }
             half4 Frag(V v):SV_Target
             {
                 float2 uv = (v.world.xz - _Center.xz) / _Radius;
-                float radius = length(uv);
+                float radians = atan2(uv.x, uv.y);
+                float boundary = 0.82 + 0.1 * sin(radians * 3 + _ShapeSeed) + 0.06 * cos(radians * 5 - _ShapeSeed * 0.7);
+                float radius = length(uv) / boundary;
                 float waves = sin(uv.x * 19 + sin(uv.y * 13 + _Time.y) * 2) * sin(uv.y * 17 - _Time.y * 1.4);
                 float crust = smoothstep(0.12, 0.5, waves);
                 float edge = smoothstep(0.75, 0.98, radius);

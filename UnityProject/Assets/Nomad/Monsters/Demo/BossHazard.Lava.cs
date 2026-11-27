@@ -11,6 +11,11 @@ namespace Nomad.Monsters.Demo
             lavaMaterial = new Material(Resources.Load<Shader>("BossLavaPool"));
             lavaMaterial.SetVector("_Center", transform.position);
             lavaMaterial.SetFloat("_Radius", Radius);
+            lavaMaterial.SetFloat("_ShapeSeed", ShapeSeed);
+            var shape = fire.shape;
+            shape.enabled = false;
+            var emission = fire.emission;
+            emission.enabled = false;
             fill.GetComponent<Renderer>().sharedMaterial = lavaMaterial;
             fill.GetComponent<Renderer>().SetPropertyBlock(null);
             boundary.startColor = boundary.endColor = new Color(1.5f, 0.3f, 0.015f);

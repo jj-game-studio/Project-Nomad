@@ -5,7 +5,7 @@ namespace Nomad.Monsters.Demo
     [Serializable]
     public sealed class BossCombatTuning
     {
-        public float SlamRadius = 12;
+        public float SlamRadius = 18;
         public float SlamWindup = 1.55f;
         public float RecoverySeconds = 0.85f;
         [UnityEngine.Range(0, 1)] public float EnragedRainPoolChance = 0.3f;
@@ -29,8 +29,11 @@ namespace Nomad.Monsters.Demo
         public float RainFallSeconds = 0.85f;
         public float RainInterval = 0.35f;
 
-        public float ChargeInterval = 22;
+        public float ChargeInterval = 34;
         public float ChargeWindup = 2.8f;
         public float ChargeSpeed = 15;
+
+        public float BodySweepRadius = 7;
+        public float BodySweepWindup = 1.25f;
     }
 }

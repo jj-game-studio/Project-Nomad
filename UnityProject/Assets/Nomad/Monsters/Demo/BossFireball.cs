@@ -137,7 +137,7 @@ namespace Nomad.Monsters.Demo
                     if (hit.collider.GetComponentInParent<Health>() == target)
                     {
                         if (SignalControlled) owner.GetComponent<DragonBossCombat>().HitRadialWave(damage, VolleyId);
-                        else if (reflected) target.TryApplyCombatImpact(damage, false, CombatImpactSource.ParriedFireball);
+                        else if (reflected) target.GetComponent<BossArmor>()?.ApplyParryBreak();
                         else target.TryApplyDamage(damage);
                     }
                     Explode(hit.point);
@@ -177,7 +177,7 @@ namespace Nomad.Monsters.Demo
             duration = Mathf.Max(0.12f, Vector3.Distance(start, goal) / 22);
             damage = 140;
             impact = null;
-            boss?.OrbParried();
+            boss?.OrbParried(VolleyId);
             return true;
         }
 

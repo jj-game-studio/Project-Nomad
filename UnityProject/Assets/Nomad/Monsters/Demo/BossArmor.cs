@@ -26,6 +26,8 @@ namespace Nomad.Monsters.Demo
             health.RestoreFull();
         }
 
+        public void ApplyParryBreak() => DamageArmor(DurabilityPerLayer * 0.45f);
+
         public int ModifyCombatDamage(int amount) => Mathf.Max(1, Mathf.RoundToInt(amount * DamageMultiplier));
 
         private void OnDamaged(Health _, int amount, DamageKind kind)

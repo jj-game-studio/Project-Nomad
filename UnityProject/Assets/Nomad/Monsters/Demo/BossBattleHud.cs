@@ -16,7 +16,11 @@ namespace Nomad.Monsters.Demo
         private Canvas canvas;
         private GameObject frame, lower;
         private RectTransform fill, durability;
-        private Text value, state;
+        private Text value, state, title;
+        private RectTransform delayedFill;
+        private BossHealthFlameGraphic healthFx;
+        private float delayedRatio = 1, hitFlash;
+        private int previousHealth;
         private PlayerHud hud;
         private PlayerMana mana;
         private PlayerStamina stamina;
@@ -30,6 +34,7 @@ namespace Nomad.Monsters.Demo
         public void Configure(DragonBossCombat owner, Health player)
         {
             boss = owner; health = GetComponent<Health>(); armor = GetComponent<BossArmor>();
+            previousHealth = health.CurrentHealth;
             hud = player.GetComponent<PlayerHud>();
             mana = player.GetComponent<PlayerMana>(); stamina = player.GetComponent<PlayerStamina>();
             var root = new GameObject("Boss battle HUD", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler));
@@ -45,11 +50,16 @@ namespace Nomad.Monsters.Demo
             RectTransform plate = Rect("Obsidian boss frame", canvas.transform, new Vector2(1160, 126), new Vector2(0, -90), true);
             plate.gameObject.AddComponent<BossBattleFrameGraphic>().raycastTarget = false;
             frame = plate.gameObject;
-            Label("잿불의 폭군  ·  최후의 수호자", plate, new Vector2(1000, 36), new Vector2(0, 34), 25);
+            title = Label("잿불의 폭군  ·  최후의 수호자", plate, new Vector2(1000, 36), new Vector2(0, 34), 25);
             Image track = Image("Health track", plate, new Vector2(1060, 30), new Vector2(0, -4), new Color(0.2f, 0.015f, 0.02f));
+            delayedFill = Image("Health damage trail", track.transform, new Vector2(1052, 20), Vector2.zero, new Color(1, 0.56f, 0.08f)).rectTransform;
+            delayedFill.anchorMin = delayedFill.anchorMax = delayedFill.pivot = new Vector2(0, 0.5f);
+            delayedFill.anchoredPosition = new Vector2(4, 0);
             fill = Image("Ruby health", track.transform, new Vector2(1052, 20), Vector2.zero, new Color(0.83f, 0.035f, 0.045f)).rectTransform;
             fill.anchorMin = fill.anchorMax = fill.pivot = new Vector2(0, 0.5f);
             fill.anchoredPosition = new Vector2(4, 0);
+            healthFx = Rect("Boss health flames", track.transform, new Vector2(1060, 30), Vector2.zero).gameObject.AddComponent<BossHealthFlameGraphic>();
+            healthFx.raycastTarget = false;
             value = Label("", plate, new Vector2(500, 25), new Vector2(0, -36), 18);
             Image armorTrack = Image("Armor track", plate, new Vector2(480, 7), new Vector2(0, -73), new Color(0.08f, 0.06f, 0.04f));
             durability = Image("Armor durability", armorTrack.transform, new Vector2(480, 5), Vector2.zero, new Color(0.85f, 0.63f, 0.3f)).rectTransform;
@@ -68,7 +78,17 @@ namespace Nomad.Monsters.Demo
                 fill.sizeDelta = new Vector2(1052 * health.CurrentHealth / health.MaxHealth, 20);
                 value.text = health.CurrentHealth.ToString("N0") + " / " + health.MaxHealth.ToString("N0");
                 durability.sizeDelta = new Vector2(480 * armor.RemainingRatio, 5);
-                state.text = "갑옷 파괴 " + armor.BreakCount + "/2" + (boss.Enraged ? "   ·   광폭" : "");
+                state.text = "갑옷 파괴 " + armor.BreakCount + "/2" + (boss.EnrageTransitioning ? "   ·   광폭 전환" : boss.Enraged ? "   ·   2페이즈 · 광폭" : "");
+                state.color = boss.EnrageTransitioning || boss.Enraged ? new Color(1, 0.3f, 0.12f) : new Color(0.95f, 0.8f, 0.5f);
+                title.text = boss.EnrageTransitioning ? "잿불의 폭군  ·  광폭화" : boss.Enraged ? "잿불의 폭군  ·  2페이즈 광폭" : "잿불의 폭군  ·  최후의 수호자";
+                if (health.CurrentHealth < previousHealth) hitFlash = 0.4f;
+                previousHealth = health.CurrentHealth;
+                hitFlash = Mathf.Max(0, hitFlash - Time.deltaTime);
+                float ratio = health.CurrentHealth / (float)health.MaxHealth;
+                delayedRatio = ratio > delayedRatio ? ratio : Mathf.MoveTowards(delayedRatio, ratio, Time.deltaTime * 0.28f);
+                delayedFill.sizeDelta = new Vector2(1052 * delayedRatio, 20);
+                healthFx.Intensity = Mathf.Max(boss.EnrageAmount * (0.8f + Mathf.Sin(Time.time * 5) * 0.2f), hitFlash);
+                healthFx.SetVerticesDirty();
             }
             if (lower == null && hud != null && hud.Canvas != null) BuildLower();
             Gauge(manaRing, manaValue, mana != null ? mana.Current / mana.Maximum : 0);

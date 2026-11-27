@@ -247,7 +247,7 @@ MonoBehaviour:
   m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Monsters.Demo.BossEncounterContent
   Tuning:
-    SlamRadius: 12
+    SlamRadius: 18
     SlamWindup: 1.55
     RecoverySeconds: 0.85
     EnragedRainPoolChance: 0.3
@@ -266,9 +266,11 @@ MonoBehaviour:
     RainRadius: 1.65
     RainFallSeconds: 0.85
     RainInterval: 0.35
-    ChargeInterval: 22
+    ChargeInterval: 34
     ChargeWindup: 2.8
     ChargeSpeed: 15
+    BodySweepRadius: 7
+    BodySweepWindup: 1.25
   Rock: {fileID: 7877644576711074951, guid: 5b91c0ccde428f74ebbae5f99da9a905, type: 3}
   BossHealth: 4200
   Knockdown: {fileID: 7400000, guid: 8098ca6f6a60ed5479a6164582a97106, type: 2}

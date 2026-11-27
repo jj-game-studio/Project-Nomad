@@ -27,6 +27,7 @@ namespace Nomad.Tests
                 {
                     Health health = boss.GetComponent<Health>();
                     health.TryApplyDamage(health.CurrentHealth - health.MaxHealth / 4, DamageKind.Fall);
+                    yield return Wait(BossEnrageTransition.Seconds + 0.1f);
                 }
                 if (pass == 2) boss.Tuning.EnragedRainPoolChance = 1;
 

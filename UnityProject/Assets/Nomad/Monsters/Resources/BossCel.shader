@@ -42,6 +42,7 @@ Shader "Nomad/Boss Cel"
                 half band = diffuse > 0.65 ? 1.15 : diffuse > 0.2 ? 0.82 : 0.48;
                 half3 texColor = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, input.uv).rgb;
                 half3 albedo = texColor * _BaseColor.rgb;
+                albedo = lerp(albedo, albedo * half3(1.65,0.36,0.24), _Enraged * 0.75);
                 // 원본 눈의 밝은 황금색만 붉게 발광시켜 눈 표면에서도 광폭을 구분합니다.
                 half eyeArea = 1 - smoothstep(0.22, 0.62, min(distance(input.positionWS, _EyeLeft), distance(input.positionWS, _EyeRight)));
                 half eyes = eyeArea * saturate(texColor.r * 1.5 - texColor.b * 0.8);

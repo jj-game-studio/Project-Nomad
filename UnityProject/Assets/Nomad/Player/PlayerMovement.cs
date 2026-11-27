@@ -80,7 +80,9 @@ namespace Nomad.Player
         private void Update()
         {
             float remainingTime = Time.deltaTime;
-            BlocksAttack = IsRolling || ViewInputBlocked;
+            bool bossLocked = GetComponent<Nomad.Monsters.Demo.PlayerBossReaction>()?.Locked == true;
+            if (bossLocked) rollTime = 0;
+            BlocksAttack = IsRolling || ViewInputBlocked || bossLocked;
             if (remainingTime <= 0f || (health != null && health.IsDead))
                 return;
 
@@ -94,10 +96,10 @@ namespace Nomad.Player
                 Axis(keyboard.wKey.isPressed, keyboard.sKey.isPressed));
             Vector3 direction = CameraRelativeDirection(input);
 
-            if (ViewInputBlocked || (inventory != null && inventory.BlocksTradeInput))
+            if (bossLocked || ViewInputBlocked || (inventory != null && inventory.BlocksTradeInput))
                 direction = Vector3.zero;
 
-            if (controller.isGrounded && !IsRolling && !ViewInputBlocked && inventory?.BlocksTradeInput != true)
+            if (controller.isGrounded && !IsRolling && !bossLocked && !ViewInputBlocked && inventory?.BlocksTradeInput != true)
             {
                 if (cooldownTime <= 0f && keyboard?.leftShiftKey.wasPressedThisFrame == true &&
                     inventory?.Panel?.HasOpenChest != true)

@@ -8,7 +8,7 @@ namespace Nomad.Monsters.Demo
         public const float ChargeTurnSpeed = 130;
         public const float ChargeLockSeconds = 0.45f;
         public const float ChargeWindup = 2.8f;
-        public const float ChargeInterval = 22;
+        public const float ChargeInterval = 34;
         public bool ChargeAimLocked { get; private set; }
         public int ChargesReleased { get; private set; }
         public float ChargeRemaining => Mathf.Max(0, nextCharge - Time.time);

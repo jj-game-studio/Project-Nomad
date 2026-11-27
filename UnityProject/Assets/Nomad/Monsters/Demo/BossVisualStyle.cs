@@ -23,7 +23,7 @@ namespace Nomad.Monsters.Demo
         private static readonly Vector3[] EyeSockets = { new Vector3(-0.02833f, 0.06875f, -0.00212f),
             new Vector3(-0.00463f, 0.07017f, -0.02426f) };
         public bool Hovered { get; private set; }
-        public bool EyesBurning => boss != null && boss.Enraged && boss.Introduced;
+        public bool EyesBurning => boss != null && boss.EnrageAmount > 0.15f && boss.Introduced && boss.Phase != DragonPhase.Dead;
 
         public void Configure(DragonBossCombat owner)
         {
@@ -116,7 +116,7 @@ namespace Nomad.Monsters.Demo
             {
                 body.GetPropertyBlock(properties);
                 properties.SetColor("_SignalColor", Color.clear);
-                properties.SetFloat("_Enraged", EyesBurning ? 1 : 0);
+                properties.SetFloat("_Enraged", boss.EnrageAmount);
                 properties.SetVector("_EyeLeft", eyeBone.TransformPoint(EyeSockets[0]));
                 properties.SetVector("_EyeRight", eyeBone.TransformPoint(EyeSockets[1]));
                 body.SetPropertyBlock(properties);

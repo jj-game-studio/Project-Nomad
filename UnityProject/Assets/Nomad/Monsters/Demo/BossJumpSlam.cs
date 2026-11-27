@@ -66,7 +66,7 @@ namespace Nomad.Monsters.Demo
             Airborne = false;
             if (body != null) body.localPosition = resting;
             if (capsule != null) capsule.center = restingCollider;
-            if (feet != null) feet.enabled = boss == null || (boss.Phase != DragonPhase.Dead && boss.Phase != DragonPhase.Stunned);
+            if (feet != null) feet.enabled = boss == null || (boss.Phase != DragonPhase.Dead && boss.Phase != DragonPhase.Stunned && !boss.EnrageTransitioning);
         }
 
         private void OnDisable() => ResetPose();

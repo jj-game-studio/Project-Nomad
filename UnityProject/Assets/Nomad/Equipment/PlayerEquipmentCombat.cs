@@ -66,7 +66,7 @@ namespace Nomad.Equipment
         public Vector3? AimPoint { get; private set; }
         public bool InputBlocked
         {
-            get => inputBlocked;
+            get => inputBlocked || GetComponent<Nomad.Monsters.Demo.PlayerBossReaction>()?.Locked == true;
             set { inputBlocked = value; if (value) { CancelMelee(); CancelCharge(); } }
         }
         public bool EquipmentUiOpen

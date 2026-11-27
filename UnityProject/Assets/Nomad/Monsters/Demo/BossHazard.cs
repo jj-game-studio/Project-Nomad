@@ -12,6 +12,8 @@ namespace Nomad.Monsters.Demo
         public bool Active => elapsed >= delay;
         public float Radius { get; private set; }
         public bool EmitsFlame { get; set; } = true;
+        public System.Action OnHit { get; set; }
+        public Color WarningColor { get; set; } = new Color(1, 0.25f, 0.04f, 0.22f);
         public Transform BreathOrigin { get; set; }
         public float BreathTravelSeconds { get; set; } = 0.65f;
         public Vector3 LastBreathOrigin { get; private set; }
@@ -113,6 +115,13 @@ namespace Nomad.Monsters.Demo
             if (target == null || target.IsDead) { Destroy(gameObject); return; }
             if (!innerBuilt && angle < 359 && InnerRadius > 0) BuildBreathFootprint();
             elapsed += Time.deltaTime;
+            if (!Active)
+            {
+                var tint = new MaterialPropertyBlock();
+                tint.SetColor("_BaseColor", WarningColor);
+                fill.GetComponent<Renderer>().SetPropertyBlock(tint);
+                boundary.startColor = boundary.endColor = new Color(WarningColor.r, WarningColor.g, WarningColor.b);
+            }
             float warning = WarningSeconds >= 0 ? WarningSeconds : delay;
             float progress = warning <= 0 ? 1 : Mathf.Clamp01(elapsed / warning);
             fill.localScale = new Vector3(Mathf.Lerp(0.08f, 1, progress), 1, Mathf.Lerp(0.08f, 1, progress));
@@ -151,7 +160,7 @@ namespace Nomad.Monsters.Demo
             if (elapsed >= nextHit)
             {
                 nextHit = elapsed + interval;
-                if (damage > 0 && Contains(target.transform.position)) target.TryApplyDamage(damage);
+                if (damage > 0 && Contains(target.transform.position) && target.TryApplyDamage(damage)) OnHit?.Invoke();
             }
             if (elapsed >= delay + duration) Destroy(gameObject);
         }
@@ -192,7 +201,9 @@ namespace Nomad.Monsters.Demo
         private bool breathWarmed;
         private void LateUpdate()
         {
-            if (fire == null || angle >= 359 || Time.deltaTime <= 0) return;
+            if (fire == null || Time.deltaTime <= 0) return;
+            if (lavaMaterial != null) { EmitLava(); return; }
+            if (angle >= 359) return;
             if (breathLight != null) { breathLight.transform.position = BreathOrigin != null ? BreathOrigin.position : transform.position + Vector3.up; breathLight.intensity = 1.5f + Mathf.Sin(Time.time * 30) * 0.25f; }
             // 애니메이션과 다리 보정이 끝난 현재 프레임의 머리를 사용합니다.
             if (!breathWarmed) { EmitBreath(true); breathWarmed = true; }
@@ -204,7 +215,7 @@ namespace Nomad.Monsters.Demo
             if (JumpClearance > 0 && GroundHeight != null && point.y - GroundHeight(point) > JumpClearance) return false;
             Vector3 offset = point - transform.position;
             float distance = Vector3.ProjectOnPlane(offset, Vector3.up).magnitude;
-            if (Mathf.Abs(offset.y) > 3 || distance > Radius || distance < InnerRadius) return false;
+            if (Mathf.Abs(offset.y) > 3 || distance > EdgeRadius(Vector3.ProjectOnPlane(offset, Vector3.up)) || distance < InnerRadius) return false;
             if (angle < 359 && Vector3.Angle(transform.forward, Vector3.ProjectOnPlane(offset, Vector3.up)) > angle * 0.5f) return false;
             Vector3 ray = target.transform.position + Vector3.up - (transform.position + Vector3.up);
             return !Projectile.TryGetFirstHit(new Ray(transform.position + Vector3.up, ray.normalized), ray.magnitude,
@@ -218,6 +229,7 @@ namespace Nomad.Monsters.Demo
             for (int index = 0; index < projected.Length; index++)
             {
                 Vector3 point = fullFootprint[index] * progress;
+                if (Irregular) point *= EdgeRadius(transform.TransformDirection(point)) / Radius;
                 if (innerBuilt) point = fullFootprint[index].normalized * (InnerRadius + (fullFootprint[index].magnitude - InnerRadius) * progress);
                 Vector3 world = transform.TransformPoint(point);
                 point.y = GroundHeight(world) + 0.22f - transform.position.y;
@@ -229,6 +241,7 @@ namespace Nomad.Monsters.Demo
             for (int index = 0; index < boundary.positionCount; index++)
             {
                 Vector3 point = fullFootprint[angle >= 359 ? boundaryStart + index : index == 0 ? 0 : boundaryStart + index - 1];
+                if (Irregular) point *= EdgeRadius(transform.TransformDirection(point)) / Radius;
                 Vector3 world = transform.TransformPoint(point);
                 point.y = GroundHeight(world) + 0.25f - transform.position.y;
                 boundary.SetPosition(index, point);

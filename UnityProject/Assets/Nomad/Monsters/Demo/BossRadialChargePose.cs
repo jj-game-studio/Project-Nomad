@@ -34,7 +34,7 @@ namespace Nomad.Monsters.Demo
         private void LateUpdate()
         {
             if (boss == null || neck == null) return;
-            if (boss.Phase == DragonPhase.Dead) { Weight = 0; gathering.Clear(); return; }
+            if (boss.Phase == DragonPhase.Dead || boss.EnrageTransitioning) { Weight = 0; gathering.Clear(); return; }
             bool preparing = boss.Phase == DragonPhase.Windup && (boss.Pattern == DragonPattern.RadialFireballs || boss.Pattern == DragonPattern.Breath || boss.Pattern == DragonPattern.FirePool);
             float desired = preparing ? Mathf.SmoothStep(0, 1, 1 - boss.Remaining / 1.8f) : 0;
             Weight = Mathf.MoveTowards(Weight, desired, Time.deltaTime * 5);

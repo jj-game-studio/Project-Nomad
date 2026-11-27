@@ -11,7 +11,7 @@ namespace Nomad.Monsters.Demo
         private Vector2 scroll;
         private int selected;
         private static readonly DragonPattern[] Choices = { DragonPattern.Circle, DragonPattern.RadialFireballs,
-            DragonPattern.Breath, DragonPattern.FirePool, DragonPattern.Charge, DragonPattern.Rain };
+            DragonPattern.Breath, DragonPattern.FirePool, DragonPattern.Charge, DragonPattern.Rain, DragonPattern.BodySweep };
         private Rect PanelRect => new Rect(12, 80, 312, Mathf.Min(740, Screen.height - 92));
         public bool GodMode
         {
@@ -44,7 +44,7 @@ namespace Nomad.Monsters.Demo
             GUI.enabled = Boss.Introduced && !Boss.GetComponent<Health>().IsDead;
             if (GUILayout.Button("선택 패턴 실행")) Boss.BeginPattern(Choices[selected]);
             GUI.enabled = true;
-            GUILayout.Label(Boss.Enraged ? "광폭 · 속도 +30% / 피해 +40%" : "체력 25% 이하: 광폭");
+            GUILayout.Label(Boss.Enraged ? "2페이즈 광폭 · 속도 +30% / 피해 +40%" : "체력 25% 이하: 광폭");
             if (GUILayout.Button("광폭 시험 (보스 체력 25%)"))
             {
                 var health = Boss.GetComponent<Health>();
@@ -85,7 +85,11 @@ namespace Nomad.Monsters.Demo
                 case DragonPattern.Charge:
                     t.ChargeSpeed = Slider("속도 (m/s)", t.ChargeSpeed, 10, 24);
                     t.ChargeWindup = Slider("준비 (초)", t.ChargeWindup, 1.5f, 5);
-                    t.ChargeInterval = Slider("간격 (초)", t.ChargeInterval, 10, 40);
+                    t.ChargeInterval = Slider("간격 (초)", t.ChargeInterval, 25, 55);
+                    break;
+                case DragonPattern.BodySweep:
+                    t.BodySweepRadius = Slider("견제 범위 (m)", t.BodySweepRadius, 4, 10);
+                    t.BodySweepWindup = Slider("전조 (초)", t.BodySweepWindup, 0.8f, 2);
                     break;
                 case DragonPattern.Rain:
                     t.RainWaves = Mathf.RoundToInt(Slider("낙하 횟수", t.RainWaves, 8, 30));

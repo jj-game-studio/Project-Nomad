@@ -195,6 +195,7 @@ namespace Nomad.Tests
             boss.GetComponent<BossArrival>().Skip();
             Health health = boss.GetComponent<Health>();
             health.TryApplyDamage(health.CurrentHealth - health.MaxHealth / 4, DamageKind.Fall);
+                    yield return Wait(BossEnrageTransition.Seconds + 0.1f);
             yield return null;
             Assert.That(boss.Enraged, Is.True);
             Assert.That(boss.Tempo, Is.GreaterThan(1));
@@ -276,6 +277,7 @@ namespace Nomad.Tests
             scene.GodMode = true;
             Health health = boss.GetComponent<Health>();
             health.TryApplyDamage(health.CurrentHealth - health.MaxHealth / 4, DamageKind.Fall);
+                    yield return Wait(BossEnrageTransition.Seconds + 0.1f);
             boss.BeginPattern(DragonPattern.RadialFireballs);
             yield return Wait(2.6f);
             Assert.That(boss.VolleysReleased, Is.EqualTo(2));

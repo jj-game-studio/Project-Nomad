@@ -21,7 +21,7 @@ namespace Nomad.Monsters.Demo
 
         public bool TryParry(Health player)
         {
-            if (boss.Pattern != DragonPattern.Circle || !Flashing || player != target || player.IsDead || boss.Phase == DragonPhase.Dead ||
+            if ((boss.Pattern != DragonPattern.Circle && boss.Pattern != DragonPattern.BodySweep) || !Flashing || player != target || player.IsDead || boss.Phase == DragonPhase.Dead ||
                 Vector3.ProjectOnPlane(player.transform.position - transform.position, Vector3.up).magnitude > range) return false;
             Armed = false;
             boss.ResolveParry();

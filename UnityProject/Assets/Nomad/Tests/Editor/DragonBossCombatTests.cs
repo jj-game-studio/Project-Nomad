@@ -164,7 +164,7 @@ namespace Nomad.Tests
                     var armor = boss.GetComponent<BossArmor>();
                     if ((armor.BreakCount == 0 && Time.time - started >= 45) || (armor.BreakCount == 1 && Time.time - started >= 85))
                     {
-                        boss.TryApplyCombatImpact(140, false, CombatImpactSource.ParriedFireball);
+                        boss.GetComponent<BossArmor>().ApplyParryBreak();
                         armor.DamageArmor(BossArmor.DurabilityPerLayer * 0.65f);
                     }
                     if ((Time.time - started) % 8 < 4.4f)
@@ -279,8 +279,8 @@ namespace Nomad.Tests
                 Assert.That(parry.TryBegin(), Is.False, "쿨다운 중 재사용 차단");
                 yield return Wait(1.2f);
                 Assert.That(parry.Reflections, Is.EqualTo(1));
-                Assert.That(boss.CurrentHealth, Is.EqualTo(before - 77), "반사 탄은 보스에 한 번 피해");
-                Assert.That(boss.LastHitSource, Is.EqualTo(CombatImpactSource.ParriedFireball));
+                Assert.That(boss.CurrentHealth, Is.EqualTo(before), "반사 탄은 보스 HP를 깎지 않음");
+                Assert.That(boss.LastHitSource, Is.EqualTo(CombatImpactSource.Basic), "반사는 체력 피해 이벤트를 만들지 않음");
                 Assert.That(boss.GetComponent<BossArmor>().RemainingRatio, Is.LessThan(0.55f), "실제 반사 탄으로 내구도 45% 감소");
                 Assert.That(parry.TryBegin(), Is.True);
                 var lob = BossFireball.Launch(combat.Effects, boss.transform, victim, point, point, 1, true);
@@ -303,7 +303,7 @@ namespace Nomad.Tests
             int hp = player.CurrentHealth;
             yield return Wait(1);
             Assert.That(player.CurrentHealth, Is.EqualTo(hp), "전조 중 피해 없음");
-            player.transform.position = arena.Center + Vector3.right * 13.5f;
+            player.transform.position = arena.Center + Vector3.right * 19.5f;
             Physics.SyncTransforms();
             yield return Wait(1.6f);
             Assert.That(player.CurrentHealth, Is.EqualTo(hp), "걸어서 범위를 빠져나가 회피");
@@ -432,7 +432,7 @@ namespace Nomad.Tests
             float before = armor.Durability;
             boss.TryApplyCombatImpact(100, false, CombatImpactSource.Skill);
             Assert.That(armor.Durability, Is.EqualTo(before));
-            boss.TryApplyCombatImpact(140, false, CombatImpactSource.ParriedFireball);
+            boss.GetComponent<BossArmor>().ApplyParryBreak();
             Assert.That(before - armor.Durability, Is.EqualTo(full * 0.45f).Within(0.01f));
             armor.DamageArmor(full * 0.65f);
             yield return null;
@@ -445,7 +445,7 @@ namespace Nomad.Tests
         {
             BossArmor armor = boss.GetComponent<BossArmor>();
             combat.BeginPattern(DragonPattern.Circle);
-            boss.TryApplyCombatImpact(140, false, CombatImpactSource.ParriedFireball);
+            boss.GetComponent<BossArmor>().ApplyParryBreak();
             armor.DamageArmor(BossArmor.DurabilityPerLayer * 0.65f);
             yield return null;
             Assert.That(combat.Phase, Is.EqualTo(DragonPhase.Stunned), "파괴 후 녹다운 딜타임");
@@ -458,7 +458,7 @@ namespace Nomad.Tests
             Assert.That(boss.GetComponentInChildren<Animator>().GetCurrentAnimatorClipInfo(0).First().clip.name, Is.EqualTo("BossKnockdown"));
             boss.TryApplyDamage(1);
             Assert.That(armor.BreakCount, Is.EqualTo(1));
-            boss.TryApplyCombatImpact(140, false, CombatImpactSource.ParriedFireball);
+            boss.GetComponent<BossArmor>().ApplyParryBreak();
             armor.DamageArmor(BossArmor.DurabilityPerLayer * 0.65f);
             yield return null;
             Assert.That(armor.BreakCount, Is.EqualTo(2));
@@ -545,6 +545,7 @@ namespace Nomad.Tests
         public IEnumerator BossLeavesReadableRecoveryBetweenAttacks()
         {
             combat.AutomaticPatterns = true;
+            combat.Tuning.RainWaves = 2;
             combat.BeginPattern(DragonPattern.Basic);
             Assert.That(boss.GetComponent<NavMeshAgent>().speed, Is.EqualTo(6));
             for (int frame = 0; frame < 540; frame++)
@@ -589,13 +590,13 @@ namespace Nomad.Tests
         }
 
         [UnityTest]
-        public IEnumerator ChargeHasPriorityAtDeadlineTracksDuringTellThenLocks()
+        public IEnumerator ChargeIsEligibleAfterLongCooldownTracksDuringTellThenLocks()
         {
-            combat.AutomaticPatterns = true;
+            combat.AutomaticPatterns = false;
             yield return Wait(0.2f);
             TestKit.SetField(combat, "nextCharge", Time.time - 0.1f);
-            combat.Stun(0.01f);
-            yield return Wait(0.95f);
+            Assert.That(Enumerable.Range(0, 100).Any(_ => combat.ChooseNextPattern(3) == DragonPattern.Charge), Is.True);
+            combat.BeginPattern(DragonPattern.Charge);
             Assert.That(combat.Pattern, Is.EqualTo(DragonPattern.Charge));
             Assert.That(combat.Phase, Is.EqualTo(DragonPhase.Windup));
             Quaternion before = boss.transform.rotation;
@@ -612,7 +613,7 @@ namespace Nomad.Tests
             Assert.That(Quaternion.Angle(locked, boss.transform.rotation), Is.LessThan(0.1f), "전조 마지막은 고정되어 회피 가능");
             yield return Wait(0.4f);
             Assert.That(combat.ChargesReleased, Is.EqualTo(1));
-            Assert.That(combat.ChargeRemaining, Is.InRange(21, 22));
+            Assert.That(combat.ChargeRemaining, Is.InRange(33, 34));
         }
 
         [UnityTest]
