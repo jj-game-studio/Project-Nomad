@@ -33,7 +33,8 @@ namespace Nomad.Monsters.Demo
             root.transform.localScale = Vector3.one * 1.65f;
             root.GetComponent<Collider>().enabled = false;
             Destroy(root.GetComponent<Collider>());
-            root.GetComponent<Renderer>().sharedMaterial = WeaponVfx.Glow;
+            root.GetComponent<Renderer>().sharedMaterial = BossFlameVfx.Molten;
+            BossFlameVfx.Jet(root.transform, Vector3.zero, Vector3.back * 2.2f, 0.4f, 0.025f);
             var tint = new MaterialPropertyBlock();
             tint.SetColor("_BaseColor", new Color(2.6f, 0.55f, 0.035f, 0.8f));
             root.GetComponent<Renderer>().SetPropertyBlock(tint);
@@ -78,9 +79,10 @@ namespace Nomad.Monsters.Demo
             {
                 Transform orb = orbs[index];
                 float radians = (index * 120 + (age - delay) * boss.Tuning.OrbitSpeed) * Mathf.Deg2Rad;
-                float radius = 3.65f;
+                float radius = boss.Tuning.OrbitRadius;
                 Vector3 point = center + new Vector3(Mathf.Sin(radians), 0, Mathf.Cos(radians)) * radius;
                 orb.position = arena.GroundPoint(point) + Vector3.up * 1.1f;
+                orb.rotation = Quaternion.LookRotation(new Vector3(Mathf.Cos(radians), 0, -Mathf.Sin(radians)));
                 orb.gameObject.SetActive(true);
                 orb.localScale = Vector3.one * (1.65f + Mathf.Sin(Time.time * 9 + index) * 0.1f);
                 Collider body = player.GetComponent<Collider>();
@@ -88,7 +90,7 @@ namespace Nomad.Monsters.Demo
                 {
                     nextHit = Time.time + 1;
                     if (player.TryApplyDamage(boss.ScaleDamage(14)))
-                        PlayerBossReaction.Play(player, center, 8, 1.15f, 0, 0.35f);
+                        PlayerBossReaction.Play(player, center, boss.Tuning.OrbitKnockback, 0.55f, 0, 0.2f);
                 }
             }
         }

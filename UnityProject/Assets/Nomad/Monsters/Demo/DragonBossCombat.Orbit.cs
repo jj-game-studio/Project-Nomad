@@ -22,9 +22,11 @@ namespace Nomad.Monsters.Demo
                 points.Add(point);
                 BossHazard eruption = Area(point, Tuning.LavaEruptionRadius, 360, windup, 0.55f, 26);
                 eruption.EmitsFlame = false;
-                eruption.HighlightActive = true;
+                eruption.HideWarningWhileActive = true;
                 BossLavaEruption.Create(effects, point, windup, Tuning.LavaEruptionRadius);
-                Area(point, Tuning.LavaEruptionRadius + 0.2f, 360, windup + 0.55f, 3.5f, 7);
+                BossHazard heat = Area(point, Tuning.LavaEruptionRadius, 360, windup + 0.55f, 3.5f, 7);
+                heat.EmitsFlame = false;
+                heat.HideWarning = true;
             }
         }
     }

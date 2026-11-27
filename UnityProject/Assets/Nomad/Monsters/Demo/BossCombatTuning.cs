@@ -43,5 +43,8 @@ namespace Nomad.Monsters.Demo
         public float OrbitSpeed = 18;
         public float LavaEruptionRadius = 2.7f;
         public float LavaEruptionWarning = 0.9f;
+        public float BreathPreparation = 1.15f;
+        public float OrbitRadius = 2.85f;
+        public float OrbitKnockback = 1.5f;
     }
 }

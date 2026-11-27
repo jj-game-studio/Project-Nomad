@@ -12,6 +12,7 @@ namespace Nomad.Monsters.Demo
         public bool Active => elapsed >= delay;
         public float Radius { get; private set; }
         public bool HighlightActive { get; set; }
+        public float ActiveOpacity { get; set; } = 0.68f;
         public bool EmitsFlame { get; set; } = true;
         public System.Action OnHit { get; set; }
         public bool IgnoreCover { get; set; }
@@ -25,6 +26,7 @@ namespace Nomad.Monsters.Demo
         public float InnerRadius { get; set; }
         public float VisualRangeMultiplier { get; set; } = 1;
         public bool HideWarningWhileActive { get; set; }
+        public bool HideWarning { get; set; }
         public bool WarningVisible => fill != null && fill.gameObject.activeSelf;
         public void CancelDamage() => damage = 0;
         private Health target;
@@ -129,11 +131,12 @@ namespace Nomad.Monsters.Demo
             float progress = warning <= 0 ? 1 : Mathf.Clamp01(elapsed / warning);
             fill.localScale = new Vector3(Mathf.Lerp(0.08f, 1, progress), 1, Mathf.Lerp(0.08f, 1, progress));
             ProjectGround(Mathf.Lerp(0.08f, 1, progress));
+            if (HideWarning) { fill.gameObject.SetActive(false); boundary.gameObject.SetActive(false); if (innerBoundary != null) innerBoundary.gameObject.SetActive(false); }
             if (!Active) return;
             if (HighlightActive)
             {
                 var tint = new MaterialPropertyBlock();
-                tint.SetColor("_BaseColor", new Color(2, 0.22f, 0.015f, 0.68f));
+                tint.SetColor("_BaseColor", new Color(2, 0.22f, 0.015f, ActiveOpacity));
                 fill.GetComponent<Renderer>().sharedMaterial = WeaponVfx.Plain;
                 fill.GetComponent<Renderer>().SetPropertyBlock(tint);
                 boundary.widthMultiplier = 0.28f;
@@ -263,6 +266,6 @@ namespace Nomad.Monsters.Demo
             boundaryProjected = true;
         }
 
-        private void OnDestroy() { if (mesh != null) Destroy(mesh); if (smokeMaterial != null) Destroy(smokeMaterial); if (lavaMaterial != null) Destroy(lavaMaterial); if (jetMaterial != null) Destroy(jetMaterial); foreach (Mesh jet in jetMeshes) Destroy(jet); }
+        private void OnDestroy() { if (mesh != null) Destroy(mesh); if (smokeMaterial != null) Destroy(smokeMaterial); if (lavaMaterial != null) Destroy(lavaMaterial); }
     }
 }

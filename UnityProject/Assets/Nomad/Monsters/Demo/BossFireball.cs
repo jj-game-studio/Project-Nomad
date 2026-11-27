@@ -16,6 +16,7 @@ namespace Nomad.Monsters.Demo
         public float Radius { get; private set; } = 0.4f;
         public bool SignalControlled { get; set; }
         public int VolleyId { get; set; }
+        public bool IsMeteor { get; private set; }
         private Transform orb;
         private System.Action<Vector3> impact;
         private ParticleSystem core, flame;
@@ -39,8 +40,16 @@ namespace Nomad.Monsters.Demo
             ball.impact = impact;
             ball.damage = damage;
             ball.Radius = radius;
+            ball.IsMeteor = !lob && start.y - goal.y > 6;
             ball.BuildFlame();
-            if (damage > 0 && !lob) ball.BuildOrb();
+            if (ball.IsMeteor)
+            {
+                ball.orb = BossFlameVfx.Rock(root.transform, "Falling molten meteor body");
+                ball.orb.localScale = Vector3.one * radius * 1.7f;
+                BossFlameVfx.Jet(root.transform, Vector3.zero, Vector3.back * 7.5f, radius * 0.8f, 0.025f);
+                BossFlameVfx.Jet(root.transform, Vector3.zero, Vector3.back * 5.5f + Vector3.right * 0.4f, radius * 0.45f, 0.015f);
+            }
+            else if (damage > 0 && !lob) ball.BuildOrb();
             return ball;
         }
 
@@ -51,7 +60,8 @@ namespace Nomad.Monsters.Demo
             sphere.transform.SetParent(transform, false);
             sphere.transform.localScale = Vector3.one * (Radius * 1.65f);
             Destroy(sphere.GetComponent<Collider>());
-            sphere.GetComponent<Renderer>().sharedMaterial = WeaponVfx.Glow;
+            sphere.GetComponent<Renderer>().sharedMaterial = BossFlameVfx.Molten;
+            BossFlameVfx.Jet(transform, Vector3.zero, Vector3.back * (Radius * 3), Radius * 0.45f, 0.02f);
             var tint = new MaterialPropertyBlock();
             tint.SetColor("_BaseColor", new Color(1.5f, 0.3f, 0.02f, 0.8f));
             sphere.GetComponent<Renderer>().SetPropertyBlock(tint);
@@ -130,6 +140,7 @@ namespace Nomad.Monsters.Demo
             Vector3 next = Vector3.Lerp(start, goal, progress);
             if (lob) next += Vector3.up * Mathf.Sin(progress * Mathf.PI) * 4;
             Vector3 delta = next - transform.position;
+            if (IsMeteor && orb != null) orb.Rotate(50 * Time.deltaTime, 90 * Time.deltaTime, 30 * Time.deltaTime);
             if (orb != null) orb.localScale = Vector3.one * (Radius * 1.65f * (1 + Mathf.Sin(Time.time * 13) * 0.035f));
             Collider targetCollider = target.GetComponent<Collider>();
             if (SignalControlled && targetCollider != null && Vector3.Distance(targetCollider.ClosestPoint(next), next) <= Radius)
@@ -206,6 +217,12 @@ namespace Nomad.Monsters.Demo
         private void Explode(Vector3 point)
         {
             impact?.Invoke(point);
+            if (IsMeteor)
+            {
+                BossMeteorImpact.Create(transform.parent, point, Radius);
+                Destroy(gameObject);
+                return;
+            }
             if (!SignalControlled && !reflected) BossStoneDebris.Create(transform.parent, point);
             WeaponVfx.Burst(point, new WeaponVfxStyle(new Color(1, 0.8f, 0.2f), new Color(1, 0.25f, 0.03f), 0.8f));
             Destroy(gameObject);

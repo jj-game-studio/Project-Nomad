@@ -181,7 +181,7 @@ namespace Nomad.Monsters.Demo
                     float fall = Tuning.RainFallSeconds;
                     Area(point, Tuning.RainRadius, 360, fall, 0.12f, 20);
                     bool burning = Enraged && Random.value < Tuning.EnragedRainPoolChance;
-                    BossFireball.Launch(effects, transform, target, point + Vector3.up * 10, point, fall, false,
+                    BossFireball.Launch(effects, transform, target, point + Vector3.up * 12 + arena.Forward * 5 + Vector3.Cross(Vector3.up, arena.Forward) * 3, point, fall, false,
                         impact: burning ? impact => Area(impact, 1.8f, 360, 0, 4, 8) : null, damage: 0,
                         radius: Tuning.RainRadius * 0.65f);
                     RainProjectilesSpawned++;
@@ -222,7 +222,7 @@ namespace Nomad.Monsters.Demo
             float windup = pattern == DragonPattern.Circle ? Tuning.SlamWindup :
                 pattern == DragonPattern.BodySweep ? Tuning.BodySweepWindup : pattern == DragonPattern.RadialFireballs ? 1.8f : pattern == DragonPattern.Charge ? Tuning.ChargeWindup :
                 pattern == DragonPattern.Rain ? 0.7f :
-                pattern == DragonPattern.LavaEruption ? Tuning.LavaEruptionWarning : pattern == DragonPattern.OrbitFlames ? 0.75f : pattern == DragonPattern.Breath ? 0.55f : 0.9f;
+                pattern == DragonPattern.LavaEruption ? Tuning.LavaEruptionWarning : pattern == DragonPattern.OrbitFlames ? 1.4f : pattern == DragonPattern.Breath ? Tuning.BreathPreparation : 0.9f;
             windup /= Tempo;
             if (pattern == DragonPattern.Breath) windup += BossBreathBackstep.Seconds;
             float turning = Vector3.Angle(transform.forward, direction) / (pattern == DragonPattern.Charge ? ChargeTurnSpeed : TurnSpeed);

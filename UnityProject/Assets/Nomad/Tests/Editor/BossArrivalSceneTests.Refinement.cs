@@ -60,9 +60,29 @@ namespace Nomad.Tests
             Assert.That(health.CurrentHealth, Is.EqualTo(hp));
             yield return Wait(0.5f);
             Assert.That(health.CurrentHealth, Is.LessThan(hp));
+            Assert.That(columns.All(column => column.JetCount == 3), Is.True, "각 분출은 세 갈래 수직 기둥");
+            Assert.That(boss.Effects.GetComponentsInChildren<BossHazard>().All(hazard => !hazard.EmitsFlame), Is.True, "불지대의 평면 용암 효과를 재사용하지 않음");
             Assert.That(columns.All(column => column.GetComponentsInChildren<ParticleSystem>().Any(system => system.name == "Molten eruption jet" && system.particleCount > 0)), Is.True);
             yield return Wait(0.6f);
             Assert.That(boss.Effects.GetComponentsInChildren<BossHazard>().Count(hazard => hazard.Active), Is.InRange(2, 3));
         }
+        [UnityTest]
+        public IEnumerator FireRainHasVisibleMeteorBodiesLongTailsAndImpactEjecta()
+        {
+            var boss = scene.Boss;
+            boss.GetComponent<BossArrival>().Skip();
+            boss.BeginPattern(DragonPattern.Rain);
+            yield return Wait(1.05f);
+            var meteors = boss.Effects.GetComponentsInChildren<BossFireball>().Where(ball => ball.IsMeteor).ToArray();
+            Assert.That(meteors.Length, Is.GreaterThanOrEqualTo(3));
+            foreach (var meteor in meteors)
+            {
+                Assert.That(meteor.GetComponentsInChildren<MeshRenderer>().Any(renderer => renderer.sharedMaterial.shader.name == "Nomad/Molten Rock"), Is.True);
+                Assert.That(meteor.GetComponentsInChildren<MeshRenderer>().Max(renderer => renderer.bounds.size.y), Is.GreaterThan(5), "부드러운 점 대신 긴 입체 꼬리");
+            }
+            yield return Wait(0.8f);
+            Assert.That(boss.Effects.GetComponentsInChildren<BossMeteorImpact>().Length, Is.GreaterThan(0));
+        }
+
     }
 }

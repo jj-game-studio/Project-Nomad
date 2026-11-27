@@ -6,7 +6,7 @@ namespace Nomad.Monsters.Demo
     [DefaultExecutionOrder(320)]
     public sealed class BossBreathBackstep : MonoBehaviour
     {
-        public const float Seconds = 0.4f;
+        public const float Seconds = 0.55f;
         public bool Airborne { get; private set; }
         public int Landings { get; private set; }
         private DragonBossCombat boss;

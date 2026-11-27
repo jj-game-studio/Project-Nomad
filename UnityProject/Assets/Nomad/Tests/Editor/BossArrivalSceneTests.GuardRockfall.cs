@@ -162,13 +162,13 @@ namespace Nomad.Tests
         }
 
         [UnityTest]
-        public IEnumerator ThreeBlastsAlternateFastAndCloseOrbitFollowsBossAndPushesPlayer()
+        public IEnumerator ThreeReadableBlastsAlternateAndCloseOrbitFollowsBossWithSmallPush()
         {
             var boss = scene.Boss;
             boss.GetComponent<BossArrival>().Skip();
             boss.BeginPattern(DragonPattern.OrbitFlames);
             var sequence = boss.Effects.GetComponentInChildren<BossRingSequence>();
-            float timeout = Time.time + 5;
+            float timeout = Time.time + 8;
             for (int round = 1; round <= 3; round++)
             {
                 while (sequence != null && sequence.RoundsReleased < round && Time.time < timeout) yield return null;
@@ -178,6 +178,8 @@ namespace Nomad.Tests
                 var active = boss.Effects.GetComponentsInChildren<BossHazard>().Where(hazard => hazard.Active).ToArray();
                 Assert.That(active.Length, Is.EqualTo(3));
                 Assert.That(active.All(hazard => hazard.HighlightActive), Is.True);
+                Assert.That(sequence.GetComponentsInChildren<BossRingBurst>().Length, Is.EqualTo(3));
+                Assert.That(sequence.GetComponentsInChildren<MeshRenderer>().Any(renderer => renderer.sharedMaterial.shader.name == "Nomad/Volumetric Flame"), Is.True);
                 yield return Wait(0.22f);
             }
             var orbit = scene.Arena.GetComponentInChildren<BossOrbitingFlames>();
@@ -187,13 +189,13 @@ namespace Nomad.Tests
             boss.GetComponent<NavMeshAgent>().Warp(scene.Arena.Center + Vector3.right * 2);
             yield return null;
             foreach (Transform orb in orbit.transform)
-                Assert.That(Vector3.ProjectOnPlane(orb.position - boss.transform.position, Vector3.up).magnitude, Is.EqualTo(3.65f).Within(0.05f));
+                Assert.That(Vector3.ProjectOnPlane(orb.position - boss.transform.position, Vector3.up).magnitude, Is.EqualTo(2.85f).Within(0.05f));
             scene.GodMode = false;
             scene.Player.GetComponent<Health>().IsCombatImmune = false;
             PlaceHero(orbit.transform.GetChild(0).position - Vector3.up * 1.1f);
             Vector3 before = scene.Player.transform.position;
             yield return Wait(0.5f);
-            Assert.That(Vector3.Distance(before, scene.Player.transform.position), Is.GreaterThan(5), "구체 접촉은 큰 밀침");
+            Assert.That(Vector3.Distance(before, scene.Player.transform.position), Is.InRange(0.9f, 2.1f), "구체 접촉은 짧고 약한 밀침");
             boss.Stun(0.5f);
             yield return null;
             Assert.That(orbit.transform.GetChild(0).gameObject.activeSelf, Is.False, "녹다운 딜타임은 구체로 방해하지 않음");

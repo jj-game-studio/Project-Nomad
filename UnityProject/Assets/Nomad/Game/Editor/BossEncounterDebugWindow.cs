@@ -5,12 +5,14 @@ using UnityEngine;
 
 namespace Nomad.Game.Editor
 {
+    [InitializeOnLoad]
     public sealed class BossEncounterDebugWindow : EditorWindow
     {
         private BossDebugBootstrap debug;
         private DragonBossCombat boss;
         private Vector2 scroll;
         private int selected;
+        private bool utilityReady;
         private static readonly DragonPattern[] Choices = { DragonPattern.Circle, DragonPattern.RadialFireballs,
             DragonPattern.Breath, DragonPattern.FirePool, DragonPattern.Charge, DragonPattern.Rain,
             DragonPattern.BodySweep, DragonPattern.Rockfall, DragonPattern.OrbitFlames, DragonPattern.LavaEruption };
@@ -18,12 +20,47 @@ namespace Nomad.Game.Editor
             "근접 밀치기", "독립 바위 낙하", "3회 거리 압박", "파괴 후 용암 분출" };
 
         [MenuItem("Nomad/Debug/보스 전투")]
-        public static void Open() => GetWindow<BossEncounterDebugWindow>("보스 전투");
+        public static void Open()
+        {
+            var window = System.Array.Find(Resources.FindObjectsOfTypeAll<BossEncounterDebugWindow>(), item => item != null);
+            if (window == null || !window.utilityReady)
+            {
+                if (window != null) window.Close();
+                window = CreateInstance<BossEncounterDebugWindow>();
+                window.titleContent = new GUIContent("보스 전투 디버거");
+                window.position = new Rect(40, 100, 410, 740);
+                window.ShowUtility();
+                window.utilityReady = true;
+            }
+            window.Focus();
+        }
+
+        [MenuItem("Window/Nomad/보스 전투 디버거")]
+        private static void OpenFromWindow() => Open();
+
+        static BossEncounterDebugWindow()
+        {
+            EditorApplication.delayCall += OpenForBossScene;
+            UnityEditor.SceneManagement.EditorSceneManager.sceneOpened += (scene, mode) => OpenForBossScene();
+            EditorApplication.playModeStateChanged += state =>
+            {
+                if (state == PlayModeStateChange.EnteredPlayMode) EditorApplication.delayCall += OpenForBossScene;
+            };
+        }
+
+        private static void OpenForBossScene()
+        {
+            if (Application.isBatchMode) return;
+            if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().path.EndsWith("/BossDebug.unity")) Open();
+        }
         private void OnInspectorUpdate() { if (EditorApplication.isPlaying) Repaint(); }
 
         private void OnGUI()
         {
-            minSize = new Vector2(360, 520);
+            minSize = new Vector2(380, 600);
+            EditorGUILayout.LabelField("보스 전투 디버거", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("현재 씬", UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
+            EditorGUILayout.LabelField("프로젝트", new System.IO.DirectoryInfo(Application.dataPath).Parent.FullName, EditorStyles.miniLabel);
             if (!EditorApplication.isPlaying) { EditorGUILayout.HelpBox("BossDebug 또는 필드 보스전 Play 중 조작합니다.", MessageType.Info); return; }
             if (boss == null) boss = FindFirstObjectByType<DragonBossCombat>();
             if (debug == null) debug = FindFirstObjectByType<BossDebugBootstrap>();
@@ -73,6 +110,7 @@ namespace Nomad.Game.Editor
                     t.RadialRange = Slider("사거리 (m)", t.RadialRange, 15, 42);
                     break;
                 case DragonPattern.Breath:
+                    t.BreathPreparation = Slider("착지 후 브레스 준비 (초)", t.BreathPreparation, 0.7f, 2.5f);
                     t.BreathRange = Slider("사거리 (m)", t.BreathRange, 10, 26);
                     t.BreathAngle = Slider("각도", t.BreathAngle, 60, 150);
                     t.BreathSafeRadius = Slider("근접 사각지대 (m)", t.BreathSafeRadius, 2, 6);
@@ -94,6 +132,8 @@ namespace Nomad.Game.Editor
                     GUILayout.Label("낙하 바위 " + boss.GetComponentInParent<BossArena>().RockCount + "/" + BossArena.MaximumRockCount);
                     break;
                 case DragonPattern.OrbitFlames:
+                    t.OrbitRadius = Slider("밀착 공전 거리 (m)", t.OrbitRadius, 2.4f, 4);
+                    t.OrbitKnockback = Slider("구체 밀침 (m)", t.OrbitKnockback, 0.5f, 3);
                     t.OrbitSpeed = Slider("공전 속도 (도/초)", t.OrbitSpeed, 8, 28);
                     break;
                 case DragonPattern.LavaEruption:

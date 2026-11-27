@@ -6,7 +6,7 @@ namespace Nomad.Monsters.Demo
     // 각 회차의 예고가 끝나면 짧고 밝은 폭발만 피해를 줍니다. 안/밖/안 세 번 교대합니다.
     public sealed class BossRingSequence : MonoBehaviour
     {
-        public const float WarningSeconds = 0.55f, BlastSeconds = 0.2f, GapSeconds = 0.12f;
+        public const float WarningSeconds = 1.25f, BlastSeconds = 0.45f, GapSeconds = 0.35f;
         public const float AfterFirstWarning = BlastSeconds * 3 + (GapSeconds + WarningSeconds) * 2;
         public int RoundsReleased { get; private set; }
         private DragonBossCombat boss;
@@ -47,6 +47,7 @@ namespace Nomad.Monsters.Demo
             band.WarningSeconds = warning;
             band.WarningColor = new Color(1, 0.18f, 0.025f, 0.12f);
             band.HighlightActive = true;
+            band.ActiveOpacity = 0.24f;
         }
 
         private void Update()
@@ -54,6 +55,10 @@ namespace Nomad.Monsters.Demo
             if (Time.time < next) return;
             if (RoundsReleased == round)
             {
+                bool outer = round % 2 == 1;
+                BossRingBurst.Create(transform, arena, center, outer ? 3.8f : 0, outer ? 7 : 3.8f, BlastSeconds);
+                BossRingBurst.Create(transform, arena, center, outer ? 10 : 7, outer ? 14 : 10, BlastSeconds);
+                BossRingBurst.Create(transform, arena, center, outer ? 17 : 14, outer ? 21 : 17, BlastSeconds);
                 RoundsReleased++;
                 next = Time.time + BlastSeconds + GapSeconds;
                 return;

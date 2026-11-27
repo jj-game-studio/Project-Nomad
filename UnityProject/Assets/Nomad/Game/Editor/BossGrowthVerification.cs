@@ -22,7 +22,7 @@ namespace Nomad.Game.Editor
         private const string Key = "Nomad.BossGrowthVerify";
         private static readonly DragonPattern[] Patterns = { DragonPattern.Circle, DragonPattern.RadialFireballs,
             DragonPattern.Breath, DragonPattern.FirePool, DragonPattern.Rain, DragonPattern.Rockfall, DragonPattern.Charge, DragonPattern.BodySweep, DragonPattern.OrbitFlames };
-        private static readonly float[] CaptureAt = { 2.7f, 1.88f, 2.8f, 1.9f, 6.5f, 2.3f, 2.15f, 0.95f, 2.65f };
+        private static readonly float[] CaptureAt = { 2.7f, 1.88f, 2.8f, 1.9f, 6.5f, 2.3f, 2.15f, 0.95f, 5.8f };
         private static readonly List<InputDevice> muted = new();
         private static DragonBossCombat boss;
         private static BossArena arena;
@@ -310,7 +310,7 @@ namespace Nomad.Game.Editor
                     {
                         var sequence = boss.Effects.GetComponentInChildren<BossRingSequence>();
                         if (sequence != null && sequence.RoundsReleased > capturedRing &&
-                            sequence.GetComponentsInChildren<BossHazard>().Any(hazard => hazard.Active))
+                            sequence.GetComponentsInChildren<BossRingBurst>().Any(burst => burst.Age >= 0.12f))
                         { capturedRing = sequence.RoundsReleased; Capture("RingBlast" + capturedRing); }
                     }
                     if (Patterns[pattern] == DragonPattern.Breath && !chargeTellCaptured && Time.time >= since + 0.3f)
