@@ -15,7 +15,9 @@ namespace Nomad.Monsters.Demo
         private BossArmor armor;
         private Canvas canvas;
         private GameObject frame, lower;
-        private RectTransform fill, durability;
+        private RectTransform fill;
+        private readonly Image[] shellFills = new Image[2];
+        private readonly Text[] shellNames = new Text[2];
         private Text value, state, title;
         private RectTransform delayedFill;
         private BossHealthFlameGraphic healthFx;
@@ -61,9 +63,16 @@ namespace Nomad.Monsters.Demo
             healthFx = Rect("Boss health flames", track.transform, new Vector2(1060, 30), Vector2.zero).gameObject.AddComponent<BossHealthFlameGraphic>();
             healthFx.raycastTarget = false;
             value = Label("", plate, new Vector2(500, 25), new Vector2(0, -36), 18);
-            Image armorTrack = Image("Armor track", plate, new Vector2(480, 7), new Vector2(0, -73), new Color(0.08f, 0.06f, 0.04f));
-            durability = Image("Armor durability", armorTrack.transform, new Vector2(480, 5), Vector2.zero, new Color(0.85f, 0.63f, 0.3f)).rectTransform;
-            durability.anchorMin = durability.anchorMax = durability.pivot = new Vector2(0, 0.5f);
+            Image armorTrack = Image("Two carapace layers", plate, new Vector2(520, 14), new Vector2(0, -73), new Color(0.08f, 0.06f, 0.04f));
+            for (int layer = 0; layer < 2; layer++)
+            {
+                float x = layer == 0 ? -132 : 132;
+                shellFills[layer] = Image(layer == 0 ? "Outer shell durability" : "Inner shell durability", armorTrack.transform,
+                    new Vector2(250, 10), new Vector2(x - 125, 0), new Color(0.7f,0.7f,0.7f));
+                shellFills[layer].rectTransform.pivot = new Vector2(0, 0.5f);
+                shellNames[layer] = Label(layer == 0 ? "외피 1단계" : "내피 2단계", armorTrack.transform,
+                    new Vector2(250, 20), new Vector2(x, 18), 14);
+            }
             state = Label("", plate, new Vector2(900, 24), new Vector2(0, -96), 16);
             frame.SetActive(false);
         }
@@ -77,8 +86,16 @@ namespace Nomad.Monsters.Demo
             {
                 fill.sizeDelta = new Vector2(1052 * health.CurrentHealth / health.MaxHealth, 20);
                 value.text = health.CurrentHealth.ToString("N0") + " / " + health.MaxHealth.ToString("N0");
-                durability.sizeDelta = new Vector2(480 * armor.RemainingRatio, 5);
-                state.text = "갑옷 파괴 " + armor.BreakCount + "/2" + (boss.EnrageTransitioning ? "   ·   광폭 전환" : boss.Enraged ? "   ·   2페이즈 · 광폭" : "");
+                for (int layer = 0; layer < 2; layer++)
+                {
+                    bool broken = layer < armor.BreakCount;
+                    float shellRatio = broken ? 0 : layer == armor.BreakCount ? armor.RemainingRatio : 1;
+                    shellFills[layer].rectTransform.sizeDelta = new Vector2(250 * shellRatio, 10);
+                    shellFills[layer].color = layer == 0 ? new Color(0.5f,0.72f,0.85f) : new Color(1,0.6f,0.2f);
+                    shellNames[layer].text = (layer == 0 ? "외피 1단계" : "내피 2단계") + (broken ? "  파괴 완료" : "  남음");
+                    shellNames[layer].color = broken ? new Color(1,0.55f,0.15f) : Color.white;
+                }
+                state.text = "갑옷 파괴 " + armor.BreakCount + "/2 · 받는 피해 " + Mathf.RoundToInt(armor.DamageMultiplier * 100) + "%" + (boss.EnrageTransitioning ? "   ·   광폭 전환" : boss.Enraged ? "   ·   2페이즈 · 광폭" : "");
                 state.color = boss.EnrageTransitioning || boss.Enraged ? new Color(1, 0.3f, 0.12f) : new Color(0.95f, 0.8f, 0.5f);
                 title.text = boss.EnrageTransitioning ? "잿불의 폭군  ·  광폭화" : boss.Enraged ? "잿불의 폭군  ·  2페이즈 광폭" : "잿불의 폭군  ·  최후의 수호자";
                 if (health.CurrentHealth < previousHealth) hitFlash = 0.4f;

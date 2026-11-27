@@ -22,7 +22,7 @@ namespace Nomad.Game.Editor
         private const string Key = "Nomad.BossGrowthVerify";
         private static readonly DragonPattern[] Patterns = { DragonPattern.Circle, DragonPattern.RadialFireballs,
             DragonPattern.Breath, DragonPattern.FirePool, DragonPattern.Rain, DragonPattern.Rockfall, DragonPattern.Charge, DragonPattern.BodySweep, DragonPattern.OrbitFlames };
-        private static readonly float[] CaptureAt = { 2.7f, 1.88f, 2.8f, 1.9f, 6.5f, 2.3f, 2.15f, 0.95f, 5.8f };
+        private static readonly float[] CaptureAt = { 2.7f, 1.88f, 2.8f, 1.9f, 6.5f, 2.3f, 2.15f, 0.95f, 4.8f };
         private static readonly List<InputDevice> muted = new();
         private static DragonBossCombat boss;
         private static BossArena arena;
@@ -33,7 +33,7 @@ namespace Nomad.Game.Editor
         private static float since;
         private static bool requestedField;
         private static int rocksBeforeParry, hpBeforeOrb;
-        private static bool chargeTellCaptured;
+        private static bool chargeTellCaptured, eruptionCaptured, counterCaptured;
         private static bool arrivalWarningCaptured, arrivalFallCaptured, deathCaptured;
         private static string error;
         private static double deadline;
@@ -169,15 +169,17 @@ namespace Nomad.Game.Editor
                 if (stage == 12)
                 {
                     var signal = boss.GetComponent<BossParrySignal>();
-                    if (!signal.Flashing) return;
+                    if (!signal.Flashing || Time.time < signal.ImpactAt - 0.15f) return;
                     Capture("SlamYellowFlash");
                     InputSystem.QueueStateEvent(keyboard, new KeyboardState(UnityEngine.InputSystem.Key.F));
                     since = Time.time;
+                    counterCaptured = false;
                     stage = 13;
                     return;
                 }
                 if (stage == 13)
                 {
+                    if (!counterCaptured && Time.time >= since + 0.03f) { Capture("ParryCounterBurst"); counterCaptured = true; }
                     InputSystem.QueueStateEvent(keyboard, new KeyboardState());
                     if (Time.time < since + 0.9f) return;
                     Require(boss.ParrySuccesses == 3 && arena.RockCount == rocksBeforeParry, "실제 F 강타 패링/바위 미생성");
@@ -388,13 +390,16 @@ namespace Nomad.Game.Editor
                     boss.BeginPattern(DragonPattern.LavaEruption);
                     Require(boss.Effects.GetComponentsInChildren<BossLavaEruption>().Length >= 2, "갑옷 파괴 후 용암 분출 해금");
                     Capture("LavaEruptionWarning");
-                    since = Time.time; stage = 34; return;
+                    since = Time.time; eruptionCaptured = false; stage = 34; return;
                 }
                 if (stage == 34)
                 {
                     if (Time.time < since + boss.Tuning.LavaEruptionWarning + 0.45f) return;
-                    Require(boss.Effects.GetComponentsInChildren<ParticleSystem>().Any(system => system.name == "Molten eruption jet" && system.particleCount > 0), "실제 용암 분출 입자");
-                    Capture("LavaEruption");
+                    Require(eruptionCaptured || boss.Effects.GetComponentsInChildren<ParticleSystem>().Any(system => system.name == "Molten eruption jet" && system.particleCount > 0), "실제 용암 분출 입자");
+                    if (!eruptionCaptured) { Capture("LavaEruption"); eruptionCaptured = true; }
+                    if (Time.time < since + boss.Tuning.LavaEruptionWarning + 1) return;
+                    Require(boss.Effects.GetComponentsInChildren<BossHazard>().Any(h => h.Active && h.EmitsFlame), "분출 후 용암 지대");
+                    Capture("LavaEruptionPool");
                     boss.Stun(0.03f);
                     InputSystem.QueueStateEvent(keyboard, new KeyboardState(UnityEngine.InputSystem.Key.Tab));
                     since = Time.time;

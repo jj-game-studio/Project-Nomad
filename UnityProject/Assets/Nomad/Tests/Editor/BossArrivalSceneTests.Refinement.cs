@@ -61,10 +61,10 @@ namespace Nomad.Tests
             yield return Wait(0.5f);
             Assert.That(health.CurrentHealth, Is.LessThan(hp));
             Assert.That(columns.All(column => column.JetCount == 3), Is.True, "각 분출은 세 갈래 수직 기둥");
-            Assert.That(boss.Effects.GetComponentsInChildren<BossHazard>().All(hazard => !hazard.EmitsFlame), Is.True, "불지대의 평면 용암 효과를 재사용하지 않음");
+            Assert.That(boss.Effects.GetComponentsInChildren<BossHazard>().Count(hazard => hazard.EmitsFlame), Is.EqualTo(columns.Length), "분출 뒤에는 별도 용암 지대가 남음");
             Assert.That(columns.All(column => column.GetComponentsInChildren<ParticleSystem>().Any(system => system.name == "Molten eruption jet" && system.particleCount > 0)), Is.True);
-            yield return Wait(0.6f);
-            Assert.That(boss.Effects.GetComponentsInChildren<BossHazard>().Count(hazard => hazard.Active), Is.InRange(2, 3));
+            yield return Wait(0.9f);
+            Assert.That(boss.Effects.GetComponentsInChildren<BossHazard>().Count(hazard => hazard.Active && hazard.EmitsFlame), Is.InRange(2, 3));
         }
         [UnityTest]
         public IEnumerator FireRainHasVisibleMeteorBodiesLongTailsAndImpactEjecta()
@@ -78,7 +78,8 @@ namespace Nomad.Tests
             foreach (var meteor in meteors)
             {
                 Assert.That(meteor.GetComponentsInChildren<MeshRenderer>().Any(renderer => renderer.sharedMaterial.shader.name == "Nomad/Molten Rock"), Is.True);
-                Assert.That(meteor.GetComponentsInChildren<MeshRenderer>().Max(renderer => renderer.bounds.size.y), Is.GreaterThan(5), "부드러운 점 대신 긴 입체 꼬리");
+                Assert.That(meteor.GetComponent<TrailRenderer>().sharedMaterial.shader.name, Is.EqualTo("Nomad/Soft Comet Flame"));
+                Assert.That(meteor.GetComponent<TrailRenderer>().positionCount, Is.GreaterThan(2), "움직임을 따라 부드럽게 이어지는 화염 꼬리");
             }
             yield return Wait(0.8f);
             Assert.That(boss.Effects.GetComponentsInChildren<BossMeteorImpact>().Length, Is.GreaterThan(0));

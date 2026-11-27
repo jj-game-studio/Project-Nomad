@@ -179,7 +179,7 @@ namespace Nomad.Tests
                 Assert.That(active.Length, Is.EqualTo(3));
                 Assert.That(active.All(hazard => hazard.HighlightActive), Is.True);
                 Assert.That(sequence.GetComponentsInChildren<BossRingBurst>().Length, Is.EqualTo(3));
-                Assert.That(sequence.GetComponentsInChildren<MeshRenderer>().Any(renderer => renderer.sharedMaterial.shader.name == "Nomad/Volumetric Flame"), Is.True);
+                Assert.That(sequence.GetComponentsInChildren<MeshRenderer>().Any(renderer => renderer.sharedMaterial.shader.name == "Nomad/Swirling Fire Annulus"), Is.True);
                 yield return Wait(0.22f);
             }
             var orbit = scene.Arena.GetComponentInChildren<BossOrbitingFlames>();

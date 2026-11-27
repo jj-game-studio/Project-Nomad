@@ -7,12 +7,12 @@ namespace Nomad.Monsters.Demo
     [RequireComponent(typeof(Health))]
     public sealed class BossArmor : MonoBehaviour, ICombatDamageModifier
     {
-        public const int ReferenceHealth = 4200;
+        public const int ReferenceHealth = 8250;
         public int BreakCount { get; private set; }
         public const float DurabilityPerLayer = 1450;
         public float Durability { get; private set; } = DurabilityPerLayer;
         public float RemainingRatio => BreakCount >= 2 ? 0 : Durability / DurabilityPerLayer;
-        public float DamageMultiplier => BreakCount == 0 ? 0.55f : BreakCount == 1 ? 1f : 1.85f;
+        public float DamageMultiplier => BreakCount == 0 ? 0.35f : BreakCount == 1 ? 1.1f : 2.2f;
         public event Action<int> Broken;
         private Health health;
 

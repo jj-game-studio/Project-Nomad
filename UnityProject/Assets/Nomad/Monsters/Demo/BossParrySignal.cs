@@ -6,13 +6,18 @@ namespace Nomad.Monsters.Demo
     public sealed class BossParrySignal : MonoBehaviour
     {
         public const float ReactionSeconds = 0.5f;
+        public const float RadialReactionSeconds = 0.75f;
+        public const float SlamReactionSeconds = 0.28f;
+        public const float SlamInputWindow = 0.22f;
+        private float Lead => boss.Pattern == DragonPattern.RadialFireballs ? RadialReactionSeconds :
+            boss.Pattern == DragonPattern.Circle ? SlamReactionSeconds : ReactionSeconds;
         private DragonBossCombat boss;
         private Health target;
         private float impact, range;
         public bool Armed { get; private set; }
-        public bool Flashing => Armed && Time.time >= impact - ReactionSeconds && Time.time <= impact + 0.12f;
+        public bool Flashing => Armed && Time.time >= impact - Lead && Time.time <= impact + 0.12f;
         public float ImpactAt => impact;
-        public float FlashAt => impact - ReactionSeconds;
+        public float FlashAt => impact - Lead;
         public float CueShownAt { get; private set; } = -1;
         private bool shown;
         private readonly System.Collections.Generic.Queue<(float impact, float range)> pending = new();
@@ -25,8 +30,13 @@ namespace Nomad.Monsters.Demo
         }
         public void Clear() { Armed = false; pending.Clear(); }
 
-        public bool TryParry(Health player)
+        public bool TryParry(Health player) => TryParry(player, Time.time);
+
+        public bool TryParry(Health player, float pressedAt)
         {
+            // 강타는 하강/착지 직전에 새로 누른 입력만 받습니다. 이전 가드 유지 시간은 넘겨받지 않습니다.
+            if (boss.Pattern == DragonPattern.Circle && (boss.Phase != DragonPhase.Active ||
+                !boss.GetComponent<BossJumpSlam>().Airborne || pressedAt < impact - SlamInputWindow || pressedAt > impact + 0.06f)) return false;
             if ((boss.Pattern != DragonPattern.Circle && boss.Pattern != DragonPattern.BodySweep) || !Flashing || player != target || player.IsDead || boss.Phase == DragonPhase.Dead ||
                 Vector3.ProjectOnPlane(player.transform.position - transform.position, Vector3.up).magnitude > range) return false;
             Armed = false;

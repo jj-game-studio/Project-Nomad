@@ -114,7 +114,7 @@ namespace Nomad.Tests
             var boss = scene.Boss;
             boss.GetComponent<BossArrival>().Skip();
             Health health = boss.GetComponent<Health>();
-            health.TryApplyDamage(health.MaxHealth * 2);
+            health.TryApplyDamage(health.MaxHealth, DamageKind.Fall);
             yield return null;
             yield return null;
             var death = boss.GetComponent<BossDeathPresentation>();
@@ -174,7 +174,7 @@ namespace Nomad.Tests
                 int before = scene.Arena.RockCount;
                 int successes = parry.Successes;
                 boss.BeginPattern(pattern);
-                while (Time.time < signal.FlashAt + 0.02f) yield return null;
+                while (Time.time < signal.FlashAt + (pattern == DragonPattern.Circle ? 0.13f : 0.12f)) yield return null;
                 Assert.That(signal.Flashing, Is.True);
                 Assert.That(scene.Player.CanParry, Is.True, "UI 밖에서 실제 F 패링 입력 가능");
                 InputSystem.QueueStateEvent(keyboard, new UnityEngine.InputSystem.LowLevel.KeyboardState(Key.F));

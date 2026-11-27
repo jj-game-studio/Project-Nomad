@@ -15,6 +15,7 @@ namespace Nomad.Monsters.Demo
         {
             Create(point, player.rotation, true);
             ParrySuccessBanner.Show(player);
+            WeaponVfx.Burst(point, new WeaponVfxStyle(Gold, new Color(2.4f, 1.1f, 0.18f), 1.7f), 1.4f);
         }
 
         private static void Create(Vector3 point, Quaternion facing, bool guarded)
@@ -32,9 +33,9 @@ namespace Nomad.Monsters.Demo
                 ray.sharedMaterial = WeaponVfx.Beam;
                 ray.positionCount = 3;
                 Vector3 axis = index == 0 ? Vector3.up : index == 1 ? Vector3.right : (Vector3.right + Vector3.up).normalized;
-                float length = guarded ? 2.6f : 2.7f;
+                float length = guarded ? 4.2f : 2.7f;
                 ray.SetPositions(new[] { -axis * length, Vector3.zero, axis * length });
-                ray.widthCurve = new AnimationCurve(new Keyframe(0, 0), new Keyframe(0.5f, guarded ? 0.32f : 0.12f), new Keyframe(1, 0));
+                ray.widthCurve = new AnimationCurve(new Keyframe(0, 0), new Keyframe(0.5f, guarded ? 0.55f : 0.12f), new Keyframe(1, 0));
                 effect.rays[index] = ray;
             }
 
@@ -44,8 +45,8 @@ namespace Nomad.Monsters.Demo
             main.startSize = new ParticleSystem.MinMaxCurve(0.03f, 0.12f);
             main.startColor = Gold;
             WeaponVfx.Fade(sparks, 0);
-            for (int index = 0; index < (guarded ? 84 : 24); index++)
-                sparks.Emit(new ParticleSystem.EmitParams { position = point, velocity = Random.onUnitSphere * (guarded ? 6 : 4) }, 1);
+            for (int index = 0; index < (guarded ? 140 : 24); index++)
+                sparks.Emit(new ParticleSystem.EmitParams { position = point, velocity = Random.onUnitSphere * (guarded ? 8 : 4) }, 1);
             Destroy(root, 0.45f);
         }
 

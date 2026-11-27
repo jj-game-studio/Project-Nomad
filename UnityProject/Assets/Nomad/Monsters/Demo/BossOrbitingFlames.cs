@@ -21,9 +21,19 @@ namespace Nomad.Monsters.Demo
             var orbit = root.AddComponent<BossOrbitingFlames>();
             orbit.boss = boss; orbit.arena = arena; orbit.player = player;
             orbit.center = boss.transform.position; orbit.delay = delay; orbit.duration = duration;
+            boss.GetComponent<BossArmor>().Broken += orbit.OnArmorBroken;
             for (int index = 0; index < orbit.orbs.Length; index++) orbit.BuildOrb(index);
             return orbit;
         }
+
+        private void OnArmorBroken(int layer)
+        {
+            if (layer < 1) return;
+            gameObject.SetActive(false);
+            Destroy(gameObject);
+        }
+
+        private void OnDestroy() { if (boss != null && boss.TryGetComponent(out BossArmor owner)) owner.Broken -= OnArmorBroken; }
 
         private void BuildOrb(int index)
         {
@@ -34,7 +44,6 @@ namespace Nomad.Monsters.Demo
             root.GetComponent<Collider>().enabled = false;
             Destroy(root.GetComponent<Collider>());
             root.GetComponent<Renderer>().sharedMaterial = BossFlameVfx.Molten;
-            BossFlameVfx.Jet(root.transform, Vector3.zero, Vector3.back * 2.2f, 0.4f, 0.025f);
             var tint = new MaterialPropertyBlock();
             tint.SetColor("_BaseColor", new Color(2.6f, 0.55f, 0.035f, 0.8f));
             root.GetComponent<Renderer>().SetPropertyBlock(tint);
@@ -59,7 +68,7 @@ namespace Nomad.Monsters.Demo
             emission.enabled = true; emission.rateOverTime = 36;
             WeaponVfx.Fade(fire, 0);
             var trail = root.AddComponent<TrailRenderer>();
-            trail.sharedMaterial = WeaponVfx.Beam; trail.time = 1.2f;
+            trail.sharedMaterial = BossFlameVfx.Trail; trail.time = 1.2f;
             trail.startWidth = 1.1f; trail.endWidth = 0;
             trail.startColor = new Color(1.8f, 0.3f, 0.015f, 0.65f); trail.endColor = Color.clear;
             root.SetActive(false);

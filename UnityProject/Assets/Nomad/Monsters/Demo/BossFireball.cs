@@ -11,7 +11,10 @@ namespace Nomad.Monsters.Demo
         private Health target;
         private Vector3 start, goal;
         private float duration, elapsed;
-        private bool lob, reflected, resolved;
+        private bool lob, reflected, resolved, contactPending;
+        private float contactedAt;
+        private Vector3 contactPoint;
+        public const float ContactGraceSeconds = 0.14f;
         private int damage;
         public float Radius { get; private set; } = 0.4f;
         public bool SignalControlled { get; set; }
@@ -46,8 +49,7 @@ namespace Nomad.Monsters.Demo
             {
                 ball.orb = BossFlameVfx.Rock(root.transform, "Falling molten meteor body");
                 ball.orb.localScale = Vector3.one * radius * 1.7f;
-                BossFlameVfx.Jet(root.transform, Vector3.zero, Vector3.back * 7.5f, radius * 0.8f, 0.025f);
-                BossFlameVfx.Jet(root.transform, Vector3.zero, Vector3.back * 5.5f + Vector3.right * 0.4f, radius * 0.45f, 0.015f);
+                ball.AddMeteorSmoke();
             }
             else if (damage > 0 && !lob) ball.BuildOrb();
             return ball;
@@ -61,7 +63,6 @@ namespace Nomad.Monsters.Demo
             sphere.transform.localScale = Vector3.one * (Radius * 1.65f);
             Destroy(sphere.GetComponent<Collider>());
             sphere.GetComponent<Renderer>().sharedMaterial = BossFlameVfx.Molten;
-            BossFlameVfx.Jet(transform, Vector3.zero, Vector3.back * (Radius * 3), Radius * 0.45f, 0.02f);
             var tint = new MaterialPropertyBlock();
             tint.SetColor("_BaseColor", new Color(1.5f, 0.3f, 0.02f, 0.8f));
             sphere.GetComponent<Renderer>().SetPropertyBlock(tint);
@@ -103,13 +104,27 @@ namespace Nomad.Monsters.Demo
             WeaponVfx.Fade(flame, 0);
 
             var trail = gameObject.AddComponent<TrailRenderer>();
-            trail.sharedMaterial = WeaponVfx.Beam;
-            trail.time = 0.7f;
+            trail.sharedMaterial = BossFlameVfx.Trail;
+            trail.textureMode = LineTextureMode.Stretch;
+            trail.time = IsMeteor ? 0.6f : 0.4f;
             trail.startWidth = Radius * 2;
             trail.endWidth = 0;
-            trail.startColor = Radius > 1 ? new Color(1.2f, 0.22f, 0.015f, 0.55f) : new Color(2, 0.5f, 0.03f);
+            trail.startColor = IsMeteor ? new Color(1.5f, 0.5f, 0.03f, 1) : Radius > 1 ? new Color(1.2f, 0.22f, 0.015f, 0.55f) : new Color(2, 0.5f, 0.03f);
             trail.endColor = new Color(0.8f, 0.02f, 0, 0);
             trail.minVertexDistance = 0.06f;
+        }
+
+        private void AddMeteorSmoke()
+        {
+            var smoke = WeaponVfx.CreateParticles(transform, "Meteor soft smoke trail", BossFlameVfx.Smoke);
+            var main = smoke.main;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(0.35f, 0.65f);
+            main.startSize = new ParticleSystem.MinMaxCurve(Radius * 0.8f, Radius * 1.5f);
+            main.startColor = new Color(0.17f,0.1f,0.06f,0.22f);
+            var shape = smoke.shape; shape.enabled = true;
+            shape.shapeType = ParticleSystemShapeType.Sphere; shape.radius = Radius * 0.35f;
+            var emission = smoke.emission; emission.enabled = true; emission.rateOverTime = 40;
+            WeaponVfx.Fade(smoke, 0.2f);
         }
 
         private void AddMeteorSparks()
@@ -135,6 +150,18 @@ namespace Nomad.Monsters.Demo
         {
             if (target == null || target.IsDead) { Destroy(gameObject); return; }
             if (resolved) return;
+            if (contactPending)
+            {
+                var guard = target.GetComponent<PlayerBossParry>();
+                if (guard != null && guard.TryReflect(this, contactPoint)) return;
+                if (Time.time - contactedAt >= ContactGraceSeconds)
+                {
+                    owner.GetComponent<DragonBossCombat>().HitRadialWave(damage, VolleyId);
+                    resolved = true;
+                    Explode(contactPoint);
+                }
+                return;
+            }
             elapsed += Time.deltaTime;
             float progress = Mathf.Clamp01(elapsed / duration);
             Vector3 next = Vector3.Lerp(start, goal, progress);
@@ -147,9 +174,7 @@ namespace Nomad.Monsters.Demo
             {
                 var guard = target.GetComponent<PlayerBossParry>();
                 if (guard != null && guard.TryReflect(this, next)) return;
-                owner.GetComponent<DragonBossCombat>().HitRadialWave(damage, VolleyId);
-                resolved = true;
-                Explode(next);
+                BeginContact(next);
                 return;
             }
             if (!lob && damage > 0 && delta.sqrMagnitude > 0)
@@ -163,6 +188,8 @@ namespace Nomad.Monsters.Demo
                         (SignalControlled && hit.collider.GetComponentInParent<Health>() != target)) continue;
                     var parry = hit.collider.GetComponentInParent<PlayerBossParry>();
                     if (parry != null && parry.TryReflect(this, hit.point)) return;
+                    if (SignalControlled && hit.collider.GetComponentInParent<Health>() == target)
+                    { BeginContact(transform.position + delta.normalized * hit.distance); return; }
                     resolved = true;
                     enabled = false;
                     if (hit.collider.GetComponentInParent<Health>() == target)
@@ -179,6 +206,12 @@ namespace Nomad.Monsters.Demo
             if (progress >= 1) { resolved = true; Explode(goal); }
         }
 
+        private void BeginContact(Vector3 point)
+        {
+            contactPending = true; contactedAt = Time.time; contactPoint = point;
+            transform.position = point;
+        }
+
         public bool Reflect(Transform defender)
         {
             if (!Parryable || owner == null || defender == null) return false;
@@ -186,6 +219,7 @@ namespace Nomad.Monsters.Demo
             if (attacker == null || attacker.IsDead) return false;
             DragonBossCombat boss = owner.GetComponent<DragonBossCombat>();
             reflected = true;
+            contactPending = false;
             SignalControlled = false;
             Radius = 0.6f;
             target = attacker;

@@ -105,7 +105,7 @@ namespace Nomad.Tests
         }
 
         [UnityTest]
-        public IEnumerator ReferenceSwordCombatLastsAboutTwoMinutesAndPlayerHurtFeedbackFades()
+        public IEnumerator ReferenceSwordFightTargetsThirtySecondBreaksAndTwoAndHalfMinutes()
         {
             var muted = new List<InputDevice>();
             Mouse mouse = InputSystem.AddDevice<Mouse>();
@@ -159,16 +159,20 @@ namespace Nomad.Tests
                 Vector2 pointer = camera.WorldToScreenPoint(boss.transform.position + Vector3.up);
                 float started = Time.time;
                 int attacks = 0, skills = 0;
+                float firstBreakAt = -1, secondBreakAt = -1, enrageAt = -1;
                 // 8초마다 4.4초 공격, 3.6초 회피. 실제 선딜·쿨다운·스킬·갑옷 보정을 통과합니다.
                 while (!boss.IsDead && Time.time - started < 180)
                 {
-                    // 패링 반격과 바위 충돌로 45초/85초에 갑옷을 순차 파괴하는 기준 전투입니다.
+                    // 패링 반격과 바위 충돌로 30초/60초에 갑옷을 순차 파괴하는 기준 전투입니다.
                     var armor = boss.GetComponent<BossArmor>();
-                    if ((armor.BreakCount == 0 && Time.time - started >= 45) || (armor.BreakCount == 1 && Time.time - started >= 85))
+                    if ((armor.BreakCount == 0 && Time.time - started >= 30) || (armor.BreakCount == 1 && Time.time - started >= 60))
                     {
                         boss.GetComponent<BossArmor>().ApplyParryBreak();
                         armor.DamageArmor(BossArmor.DurabilityPerLayer * 0.65f);
+                        if (armor.BreakCount == 1) firstBreakAt = Time.time - started; else secondBreakAt = Time.time - started;
                     }
+                    if (enrageAt < 0 && boss.CurrentHealth <= boss.MaxHealth * DragonBossCombat.EnrageHealthRatio) enrageAt = Time.time - started;
+                    // 모든 단계에 같은 8초 중 4.4초 공격/3.6초 회피 기준을 적용합니다.
                     if ((Time.time - started) % 8 < 4.4f)
                     {
                         if (attacker.TryUseSkill(pointer)) skills++;
@@ -177,9 +181,12 @@ namespace Nomad.Tests
                     yield return null;
                 }
                 float elapsed = Time.time - started;
-                Debug.Log($"BOSS_REFERENCE_FIGHT seconds={elapsed:0.0} health={boss.MaxHealth} weapon=B+1 crit=off attacks={attacks} skills={skills} attackWindow=4.4/8");
+                Debug.Log($"BOSS_REFERENCE_FIGHT seconds={elapsed:0.0} health={boss.MaxHealth} weapon=B+1 crit=off attacks={attacks} skills={skills} firstBreak={firstBreakAt:0.0} secondBreak={secondBreakAt:0.0} enrage={enrageAt:0.0} attackWindow=4.4/8;allPhases=same");
                 Assert.That(boss.IsDead, Is.True);
-                Assert.That(elapsed, Is.InRange(105f, 140f));
+                Assert.That(firstBreakAt, Is.InRange(30,30.2f));
+                Assert.That(secondBreakAt, Is.InRange(60,60.2f));
+                Assert.That(enrageAt, Is.InRange(80,105));
+                Assert.That(elapsed, Is.InRange(135f, 175f));
                 Assert.That(boss.GetComponent<BossArmor>().BreakCount, Is.EqualTo(2), "패링/바위 활용 후 두 단계 파괴");
             }
             finally
@@ -458,7 +465,7 @@ namespace Nomad.Tests
             yield return null;
             Assert.That(combat.Phase, Is.EqualTo(DragonPhase.Stunned), "파괴 후 녹다운 딜타임");
             Assert.That(armor.BreakCount, Is.EqualTo(1));
-            Assert.That(armor.ModifyCombatDamage(100), Is.EqualTo(100));
+            Assert.That(armor.ModifyCombatDamage(100), Is.EqualTo(110));
             Assert.That(boss.GetComponentsInChildren<Transform>().Any(item => item.name.Contains("stun star")), Is.False);
             Assert.That(combat.Effects.GetComponentsInChildren<BossHazard>().Length, Is.Zero);
             Assert.That(combat.Remaining, Is.InRange(3, 3.2f));
@@ -470,7 +477,7 @@ namespace Nomad.Tests
             armor.DamageArmor(BossArmor.DurabilityPerLayer * 0.65f);
             yield return null;
             Assert.That(armor.BreakCount, Is.EqualTo(2));
-            Assert.That(armor.ModifyCombatDamage(100), Is.EqualTo(185));
+            Assert.That(armor.ModifyCombatDamage(100), Is.EqualTo(220));
             Assert.That(combat.Phase, Is.EqualTo(DragonPhase.Stunned));
             boss.TryApplyDamage(boss.MaxHealth, DamageKind.Fall);
             yield return null;

@@ -34,7 +34,7 @@ namespace Nomad.Monsters.Demo
                 warning.lengths[index] = Mathf.Max(0, Mathf.Min(range + radius, arena.DistanceToBoundary(center, warning.headings[index]) - radius * 0.5f));
             }
             warning.Build();
-            Destroy(root, fillSeconds + BossParrySignal.ReactionSeconds + 0.18f);
+            Destroy(root, fillSeconds + BossParrySignal.RadialReactionSeconds + 0.3f);
             return warning;
         }
 

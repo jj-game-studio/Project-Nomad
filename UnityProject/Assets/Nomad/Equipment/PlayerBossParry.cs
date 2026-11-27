@@ -17,6 +17,7 @@ namespace Nomad.Equipment
         private PlayerEquipmentCombat combat;
         public int Reflections { get; private set; }
         public int Successes { get; private set; }
+        public float PressedAt { get; private set; } = float.NegativeInfinity;
         public bool IsReady => Time.time >= next;
         public bool Active => !consumed && Time.time < until && combat.CanParry;
 
@@ -26,6 +27,7 @@ namespace Nomad.Equipment
             if (!combat.CanParry || !IsReady) return false;
             combat.InterruptForParry();
             consumed = false;
+            PressedAt = Time.time;
             float hold = Window;
             foreach (BossParrySignal signal in FindObjectsByType<BossParrySignal>(FindObjectsSortMode.None))
                 if (signal.Flashing && signal.GetComponent<DragonBossCombat>().Pattern == DragonPattern.RadialFireballs)
@@ -46,7 +48,7 @@ namespace Nomad.Equipment
             if (!Active) return;
 
             foreach (BossParrySignal signal in FindObjectsByType<BossParrySignal>(FindObjectsSortMode.None))
-                if (signal.TryParry(GetComponent<Health>()))
+                if (signal.TryParry(GetComponent<Health>(), PressedAt))
                 {
                     if (signal.GetComponent<DragonBossCombat>().Pattern == DragonPattern.RadialFireballs) Reflections++;
                     Succeed(transform.position + Vector3.up * 1.3f);
@@ -68,7 +70,7 @@ namespace Nomad.Equipment
         {
             if (!Active || !ball.Parryable || ball.Target != GetComponent<Health>()) return false;
             Vector3 delta = point - (transform.position + Vector3.up * 1.3f);
-            if (delta.magnitude > ball.Radius + 0.85f || Vector3.Angle(transform.forward, Vector3.ProjectOnPlane(delta, Vector3.up)) > 80) return false;
+            if (delta.magnitude > ball.Radius + 1.2f || Vector3.Angle(transform.forward, Vector3.ProjectOnPlane(delta, Vector3.up)) > 80) return false;
             if (!ball.Reflect(transform)) return false;
 
             Reflections++;
@@ -81,6 +83,7 @@ namespace Nomad.Equipment
             consumed = true;
             Successes++;
             BossJustGuardVfx.Success(transform, point);
+            BossParrySlowMotion.Pulse();
             HitCameraImpulse.Pulse(0.13f, 0.12f);
             CombatImpactAudio.Play(GetComponent<AudioSource>() ?? gameObject.AddComponent<AudioSource>(), true, 0.25f);
         }

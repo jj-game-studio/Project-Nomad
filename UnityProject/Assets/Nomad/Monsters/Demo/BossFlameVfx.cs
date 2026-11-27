@@ -7,11 +7,24 @@ namespace Nomad.Monsters.Demo
     // 운석 본체와 체적 화염은 같은 재질을 쓰되, 생성한 메시의 수명은 각 효과가 소유합니다.
     public sealed class BossFlameVfx : MonoBehaviour
     {
-        private static Material molten, flame;
+        private static Material molten, flame, trail, smoke;
         private readonly List<Mesh> meshes = new();
 
         public static Material Molten => molten != null ? molten : molten = new Material(Resources.Load<Shader>("BossMoltenRock"));
         public static Material Flame => flame != null ? flame : flame = new Material(Resources.Load<Shader>("BossVolumeFlame"));
+
+        public static Material Trail => trail != null ? trail : trail = new Material(Resources.Load<Shader>("BossFlameTrail"));
+        public static Material Smoke
+        {
+            get
+            {
+                if (smoke != null) return smoke;
+                smoke = new Material(Nomad.Equipment.WeaponVfx.Glow);
+                smoke.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
+                smoke.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
+                return smoke;
+            }
+        }
 
         public static Transform Rock(Transform parent, string name)
         {

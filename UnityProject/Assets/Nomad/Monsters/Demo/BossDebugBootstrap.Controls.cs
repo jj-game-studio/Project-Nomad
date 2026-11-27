@@ -25,7 +25,7 @@ namespace Nomad.Monsters.Demo
         {
             if (Boss == null) return;
             var health = Boss.GetComponent<Health>();
-            int damage = health.CurrentHealth - Mathf.FloorToInt(health.MaxHealth * 0.25f);
+            int damage = health.CurrentHealth - Mathf.FloorToInt(health.MaxHealth * DragonBossCombat.EnrageHealthRatio);
             if (damage > 0) health.TryApplyDamage(damage, DamageKind.Fall);
         }
     }

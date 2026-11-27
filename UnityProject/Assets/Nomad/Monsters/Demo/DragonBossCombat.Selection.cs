@@ -15,7 +15,11 @@ namespace Nomad.Monsters.Demo
             if (targetDistance <= Tuning.BodySweepRadius + 1 && Pattern != DragonPattern.BodySweep)
                 choices.Add(DragonPattern.BodySweep);
             if (Time.time >= nextCharge && Pattern != DragonPattern.Charge) choices.Add(DragonPattern.Charge);
-            if (GetComponent<BossArmor>().BreakCount > 0 && Pattern != DragonPattern.LavaEruption) choices.Add(DragonPattern.LavaEruption);
+            if (GetComponent<BossArmor>().BreakCount > 0 && Pattern != DragonPattern.LavaEruption)
+            {
+                choices.Add(DragonPattern.LavaEruption);
+                choices.Add(DragonPattern.LavaEruption);
+            }
             return choices[Random.Range(0, choices.Count)];
         }
 

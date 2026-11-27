@@ -28,7 +28,8 @@ namespace Nomad.Monsters.Demo
         public Transform Effects => effects;
         public bool Introduced => arrival == null || arrival.Landed;
         public BossCombatTuning Tuning { get; private set; } = new BossCombatTuning();
-        public bool EnrageRequested => health != null && !health.IsDead && health.CurrentHealth <= health.MaxHealth * 0.25f;
+        public const float EnrageHealthRatio = 0.55f;
+        public bool EnrageRequested => health != null && !health.IsDead && health.CurrentHealth <= health.MaxHealth * EnrageHealthRatio;
         public bool Enraged => enrage != null && enrage.Completed && health != null && !health.IsDead;
         public float EnrageAmount => enrage != null ? enrage.VisualAmount : 0;
         public bool EnrageTransitioning => Phase == DragonPhase.Enraging;
@@ -78,6 +79,7 @@ namespace Nomad.Monsters.Demo
             tracker.enabled = false;
             GetComponent<BossArmor>().Broken += ArmorBroken;
             gameObject.AddComponent<BossKnockdownAnimation>();
+            gameObject.AddComponent<BossArmorShell>().Configure(this);
             gameObject.AddComponent<BossJumpSlam>().Configure(this, arena);
             agent.speed = 6;
             agent.acceleration = 18;
@@ -222,7 +224,7 @@ namespace Nomad.Monsters.Demo
             float windup = pattern == DragonPattern.Circle ? Tuning.SlamWindup :
                 pattern == DragonPattern.BodySweep ? Tuning.BodySweepWindup : pattern == DragonPattern.RadialFireballs ? 1.8f : pattern == DragonPattern.Charge ? Tuning.ChargeWindup :
                 pattern == DragonPattern.Rain ? 0.7f :
-                pattern == DragonPattern.LavaEruption ? Tuning.LavaEruptionWarning : pattern == DragonPattern.OrbitFlames ? 1.4f : pattern == DragonPattern.Breath ? Tuning.BreathPreparation : 0.9f;
+                pattern == DragonPattern.LavaEruption ? Tuning.LavaEruptionWarning : pattern == DragonPattern.OrbitFlames ? 1.2f : pattern == DragonPattern.Breath ? Tuning.BreathPreparation : 0.9f;
             windup /= Tempo;
             if (pattern == DragonPattern.Breath) windup += BossBreathBackstep.Seconds;
             float turning = Vector3.Angle(transform.forward, direction) / (pattern == DragonPattern.Charge ? ChargeTurnSpeed : TurnSpeed);
@@ -236,7 +238,7 @@ namespace Nomad.Monsters.Demo
             if (pattern == DragonPattern.Circle)
             {
                 slam = Area(transform.position, Tuning.SlamRadius, 360, windup + LeapDuration, 0.12f, 32);
-                slam.WarningSeconds = windup + LeapDuration - BossParrySignal.ReactionSeconds;
+                slam.WarningSeconds = windup + LeapDuration - BossParrySignal.SlamReactionSeconds;
                 slam.WarningColor = new Color(1, 0.78f, 0.08f, 0.3f);
                 slam.EmitsFlame = false;
                 parrySignal.Arm(Time.time + windup + LeapDuration, Tuning.SlamRadius + 0.5f);

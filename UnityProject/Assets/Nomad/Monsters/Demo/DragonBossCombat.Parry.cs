@@ -39,7 +39,7 @@ namespace Nomad.Monsters.Demo
             float impactAt = Time.time + windup;
             parrySignal.Arm(impactAt, Tuning.RadialRange);
             BossParryRangeWarning.Create(effects, arena, transform.position, direction, Tuning.RadialCount, Tuning.RadialRadius, Tuning.RadialRange,
-                Mathf.Max(0.1f, windup - BossParrySignal.ReactionSeconds), volley * 180f / Tuning.RadialCount);
+                Mathf.Max(0.1f, windup - BossParrySignal.RadialReactionSeconds), volley * 180f / Tuning.RadialCount);
         }
     }
 }
