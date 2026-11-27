@@ -69,7 +69,7 @@ namespace Nomad.Hud
         private static readonly Color BarTrack = new Color32(64, 58, 56, 235);
         private static readonly Color SlotGray = new Color32(78, 72, 70, 205);
         private static readonly Color SlotRed = new Color32(150, 74, 66, 220);
-        private const float KeyPadding = 10f;
+        private const float KeyPadding = 8f;
         private static readonly Color SlotSelected = new Color32(226, 72, 64, 245);
 
         private void Awake()
@@ -328,40 +328,46 @@ namespace Nomad.Hud
             bar.pivot = new Vector2(.5f, 0f);
             bar.anchoredPosition = Vector2.zero;
 
-            healthFill = StatusBar(bar, "Health", 150, HudArtwork.Shape.Heart, Red, out healthText);
-            manaFill = StatusBar(bar, "Mana", 30, HudArtwork.Shape.Star, Blue, out manaText);
+            // 상태 바와 퀵바를 한 줄로 묶어 고정 크기로 화면 가운데 정렬합니다.
+            const float size = 78, gap = 9, between = 28, rowY = 70;
+            float quickWidth = PlayerQuickSlots.Capacity * size + (PlayerQuickSlots.Capacity - 1) * gap;
+            float left = -(StatusWidth + between + quickWidth) * .5f;
 
-            // 퀵바는 고정 크기로 화면 가운데 정렬하고, 남는 폭은 양옆 여백으로 둡니다.
-            const float size = 104, gap = 12;
-            float first = -(PlayerQuickSlots.Capacity - 1) * (size + gap) * .5f;
+            healthFill = StatusBar(bar, "Health", new Vector2(left, rowY + 20), HudArtwork.Shape.Heart, Red, out healthText);
+            manaFill = StatusBar(bar, "Mana", new Vector2(left, rowY - 20), HudArtwork.Shape.Star, Blue, out manaText);
+
+            float first = left + StatusWidth + between + size * .5f;
             for (int index = 0; index < PlayerQuickSlots.Capacity; index++)
-                BuildQuickSlot(bar, index, new Vector2(first + index * (size + gap), 0), size);
+                BuildQuickSlot(bar, index, new Vector2(first + index * (size + gap), rowY), size);
 
             weaponText = Label("Weapon Name", quickRects[0], "", new Vector2(190, 26), new Vector2(0, size * .5f + 18), 18);
-            attackStatusText = Label("Current", quickRects[0], "CURRENT", new Vector2(190, 22), new Vector2(0, size * .5f + 40), 16);
+            attackStatusText = Label("Current", quickRects[0], "CURRENT", new Vector2(190, 22), new Vector2(0, size * .5f + 16), 14);
             attackStatusText.color = Red;
             attackStatusText.gameObject.SetActive(false);
         }
 
-        private RectTransform StatusBar(RectTransform parent, string name, float y, HudArtwork.Shape icon, Color tint, out TMP_Text value)
+        // 아이콘 32 + 간격 8 + 막대 168(이전 420의 40%)입니다.
+        private const float StatusWidth = 208, BarWidth = 168;
+
+        private RectTransform StatusBar(RectTransform parent, string name, Vector2 position, HudArtwork.Shape icon, Color tint, out TMP_Text value)
         {
-            RectTransform group = Rect(name, parent, new Vector2(520, 100));
-            group.anchorMin = group.anchorMax = group.pivot = Vector2.zero;
-            group.anchoredPosition = new Vector2(70, y);
+            RectTransform group = Rect(name, parent, new Vector2(StatusWidth, 40));
+            group.anchorMin = group.anchorMax = new Vector2(.5f, 0f);
+            group.pivot = new Vector2(0f, .5f);
+            group.anchoredPosition = position;
 
-            // 아이콘은 막대 왼쪽에 크게, 수치는 막대 위에 흰색으로 둡니다.
-            // 아이콘 오른쪽 끝과 막대 왼쪽 끝 사이에 16px 간격을 둡니다.
-            Art(name == "Health" ? "Heart" : "Star", group, new Vector2(80, 76), new Vector2(-220, -14), icon, tint);
-            RectTransform track = Rect(name + " Track", group, new Vector2(420, 32), new Vector2(54, -28));
-            Art("Outline", track, new Vector2(426, 38), Vector2.zero, HudArtwork.Shape.Panel, new Color32(24, 20, 20, 230));
-            Art("Empty", track, new Vector2(420, 32), Vector2.zero, HudArtwork.Shape.Panel, BarTrack);
+            // 아이콘은 막대 왼쪽, 수치는 막대 위에 흰색으로 둡니다.
+            Art(name == "Health" ? "Heart" : "Star", group, new Vector2(32, 30), new Vector2(-StatusWidth * .5f + 16, -4), icon, tint);
+            RectTransform track = Rect(name + " Track", group, new Vector2(BarWidth, 12), new Vector2(StatusWidth * .5f - BarWidth * .5f, -10));
+            Art("Outline", track, new Vector2(BarWidth + 4, 16), Vector2.zero, HudArtwork.Shape.Panel, new Color32(24, 20, 20, 230));
+            Art("Empty", track, new Vector2(BarWidth, 12), Vector2.zero, HudArtwork.Shape.Panel, BarTrack);
 
-            RectTransform fill = Art("Fill", track, new Vector2(420, 32), Vector2.zero, HudArtwork.Shape.Panel, tint).rectTransform;
+            RectTransform fill = Art("Fill", track, new Vector2(BarWidth, 12), Vector2.zero, HudArtwork.Shape.Panel, tint).rectTransform;
             fill.anchorMin = Vector2.zero;
             fill.anchorMax = Vector2.one;
             fill.offsetMin = fill.offsetMax = Vector2.zero;
 
-            value = Label(name + " Value", track, "", new Vector2(420, 40), new Vector2(0, 42), 34);
+            value = Label(name + " Value", track, "", new Vector2(BarWidth, 20), new Vector2(0, 17), 17);
             value.alignment = TextAlignmentOptions.Left;
             value.color = Color.white;
             return fill;
@@ -372,7 +378,7 @@ namespace Nomad.Hud
             Vector2 square = new Vector2(size, size);
             RectTransform slot = Rect($"Slot {index + 1}", bar, square);
             slot.anchorMin = slot.anchorMax = new Vector2(.5f, 0f);
-            slot.anchoredPosition = position + new Vector2(0, 96);
+            slot.anchoredPosition = position;
             quickRects[index] = slot;
             quickGroups[index] = slot.gameObject.AddComponent<CanvasGroup>();
 
@@ -389,19 +395,28 @@ namespace Nomad.Hud
             icon.raycastTarget = false;
             icon.preserveAspect = true;
             quickIcons[index] = icon;
-            quickNames[index] = Label("Item Name", slot, "", square * .85f, Vector2.zero, 18, true);
+            quickNames[index] = Label("Item Name", slot, "", square * .85f, Vector2.zero, 14, true);
             quickNames[index].enableAutoSizing = true;
             quickNames[index].fontSizeMin = 10;
 
-            quickCounts[index] = Label("Item Count", slot, "", new Vector2(60, 26), new Vector2(size * .5f - 34, -size * .5f + 16), 20);
+            quickCounts[index] = Label("Item Count", slot, "", new Vector2(50, 20), new Vector2(size * .5f - 29, -size * .5f + 12), 16);
             quickCounts[index].alignment = TextAlignmentOptions.Right;
             // 숫자 윗선(Capline)을 기준으로 맞춰 왼쪽·위 여백이 정확히 같게 합니다.
-            TMP_Text key = Label("Key", slot, (index + 1).ToString(), new Vector2(40, 0), Vector2.zero, 20);
+            TMP_Text key = Label("Key", slot, (index + 1).ToString(), new Vector2(40, 30), Vector2.zero, 16);
             key.rectTransform.anchorMin = key.rectTransform.anchorMax = key.rectTransform.pivot = new Vector2(0f, 1f);
-            key.rectTransform.anchoredPosition = new Vector2(KeyPadding, -KeyPadding);
-            key.alignment = TextAlignmentOptions.CaplineLeft;
+            key.alignment = TextAlignmentOptions.TopLeft;
             key.margin = Vector4.zero;
-            quickCaptions[index] = Label("Caption", slot, "", new Vector2(size + 10, 28), new Vector2(0, -size * .5f - 18), 20, true);
+            PlaceKey(key);
+            quickCaptions[index] = Label("Caption", slot, "", new Vector2(size + 10, 22), new Vector2(0, -size * .5f - 14), 16, true);
+        }
+
+        // 글꼴 여백과 관계없이 실제 숫자 외곽의 왼쪽·위가 칸 모서리에서 같은 거리에 오도록 옮깁니다.
+        private static void PlaceKey(TMP_Text key)
+        {
+            key.rectTransform.anchoredPosition = Vector2.zero;
+            key.ForceMeshUpdate();
+            Vector2 glyphTopLeft = key.textInfo.characterCount > 0 ? (Vector2)key.textInfo.characterInfo[0].topLeft : Vector2.zero;
+            key.rectTransform.anchoredPosition = new Vector2(KeyPadding - glyphTopLeft.x, -KeyPadding - glyphTopLeft.y);
         }
 
         private HudArtwork Art(string name, Transform parent, Vector2 size, Vector2 position, HudArtwork.Shape shape, Color color, float line = 4)
