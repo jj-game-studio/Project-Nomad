@@ -92,11 +92,11 @@ namespace Nomad.Equipment.Editor
                     equipment = manager.Player.GetComponent<PlayerEquipment>();
                     hud = manager.Player.GetComponentInChildren<PlayerHud>();
 
-                    manager.Player.GetComponent<PlayerMovement>().enabled = false;
                     CharacterController controller = manager.Player.GetComponent<CharacterController>();
                     controller.enabled = false;
                     manager.Player.transform.position = new Vector3(0, 0.05f, -24);
                     controller.enabled = true;
+                    controller.Move(Vector3.down);
 
                     inventory.Add(PlayerEquipmentCombat.ArrowItemId, 30);
                     foreach (string id in Weapons) inventory.Add(id, 1);
@@ -110,11 +110,15 @@ namespace Nomad.Equipment.Editor
                     int slot = Enumerable.Range(0, PlayerInventory.Capacity).First(index => inventory.GetSlot(index).Item?.ItemId == Weapons[weaponIndex]);
                     Require(equipment.TryEquip(slot, EquipmentSlot.Weapon1), "검토 무기 장착");
                     equipment.SelectWeapon(EquipmentSlot.Weapon1);
+                    changedFrame = frame;
                     stage = 1;
                     return;
                 }
                 if (stage == 1)
                 {
+                    if (frame < changedFrame + 12) return;
+                    Require(combat.GetComponent<Nomad.PlayerVisual.PlayerAnimation>().CurrentState == "Idle", "정지·접지 상태에서 대기 자세 확인");
+                    Capture("idle");
                     if (!combat.TryBeginCharge(pointer)) return;
                     Require(combat.TryReleaseCharge(pointer) && combat.LastShotPower == 1f, "좌클릭 짧게 누른 일반 위력 발사");
                     changedFrame = frame;
@@ -157,13 +161,34 @@ namespace Nomad.Equipment.Editor
                 Require(!combat.IsCharging && combat.LastShotPower == 2.5f && !hud.ChargeGaugeVisible, "놓기 발사·게이지 정리");
                 Capture("strong");
                 if (++weaponIndex < Weapons.Length) { stage = 0; changedFrame = frame; return; }
-                Debug.Log("CHARGE_FEEDBACK_PLAY_PASS leftTap=1 full=2.5 gauge=pass bow,staff=pass captures=8");
+                Debug.Log("CHARGE_FEEDBACK_PLAY_PASS leftTap=1 full=2.5 gauge=pass bow,staff=pass captures=15 idle=grounded");
                 Finish(0);
             }
             catch (Exception error) { Debug.LogException(error); Finish(1); }
         }
 
-        private static void Capture(string state) => Nomad.Minimap.Editor.MinimapVerification.Capture("issue210-main-" + weaponIndex + "-" + state + ".png");
+        private static void Capture(string state)
+        {
+            Nomad.Minimap.Editor.MinimapVerification.Capture("issue212-main-" + weaponIndex + "-" + state + ".png");
+            if (weaponIndex != 1) return;
+            Camera camera = Camera.main;
+            Vector3 position = camera.transform.position;
+            Quaternion rotation = camera.transform.rotation;
+            float size = camera.orthographicSize;
+            try
+            {
+                Vector3 center = combat.transform.position + Vector3.up;
+                camera.transform.position = center + combat.transform.rotation * new Vector3(3, 2, 5);
+                camera.transform.LookAt(center);
+                camera.orthographicSize = 1.9f;
+                Nomad.Minimap.Editor.MinimapVerification.Capture("issue212-staff-close-" + state + ".png");
+            }
+            finally
+            {
+                camera.transform.SetPositionAndRotation(position, rotation);
+                camera.orthographicSize = size;
+            }
+        }
         private static void VerifyStaffShot(Nomad.Combat.Projectile shot, ItemDefinition weapon)
         {
             if (weapon.AttackMode != WeaponAttackMode.Staff) return;

@@ -38,7 +38,7 @@ namespace Nomad.Shop.Editor
 
             var scene = EditorSceneManager.OpenScene(VillageShopAuthoring.ScenePath);
             Require(Object.FindObjectsByType<Shopkeeper>(FindObjectsSortMode.None).Length == 1, "저장된 마을 상점 하나");
-            Require(GameObject.Find("Merchant NPC") != null && GameObject.Find("Field Exit Guide") != null,
+            Require(GameObject.Find("Merchant NPC") != null && GameObject.Find("Field Gateway") != null,
                 "NPC와 필드 출구 안내가 저장 씬에 존재");
             int roots = scene.rootCount;
             VillageShopAuthoring.ApplyToScene(scene);
@@ -229,27 +229,33 @@ namespace Nomad.Shop.Editor
 
         private static void VerifyFieldGuide()
         {
-            Transform guide = GameObject.Find("Field Exit Guide").transform;
-            MeshFilter[] arrows = guide.GetComponentsInChildren<MeshFilter>().Where(mesh => mesh.name == "To Field").ToArray();
-            Require(arrows.Length == 3 && guide.Find("Field Entrance Label") != null, "큰 채움 화살표3개와 실제 입구 표지판");
+            Transform guide = GameObject.Find("Field Gateway").transform;
+            Require(GameObject.Find("Field Exit Guide") == null, "이전 화살표·나무 간판 제거");
+            Require(guide.Find("Stone Arch") != null && guide.Find("Gateway Title") != null, "석조 관문과 이름 표시");
+            Require(guide.GetComponentsInChildren<Nomad.Village.FieldGatewayFlame>().Length == 2, "화로 두 개");
             Transform exit = GameObject.Find("Field Exit Trigger").transform;
-            foreach (MeshFilter arrow in arrows)
-            {
-                Vector3 tip = arrow.transform.TransformPoint(new Vector3(0, 0, -1.6f));
-                Vector3 tail = arrow.transform.TransformPoint(new Vector3(0, 0, 1.1f));
-                Require(Vector3.Distance(tip, exit.position) < Vector3.Distance(tail, exit.position), "화살표는 실제 필드 입구를 가리킴");
-            }
-            Require(guide.GetComponentsInChildren<Collider>().Length == 0, "안내가 통행을 막지 않음");
+            Require(exit.GetComponent<BoxCollider>().isTrigger && Mathf.Abs(exit.position.z + 35.5f) < 0.01f, "출격 트리거 보존");
             Camera camera = Camera.main;
             Vector3 position = camera.transform.position;
             Quaternion rotation = camera.transform.rotation;
             float size = camera.orthographicSize;
             try
             {
-                camera.transform.position = new Vector3(10, 20, -43);
-                camera.transform.LookAt(new Vector3(0, 0, -24));
-                camera.orthographicSize = 14;
-                Nomad.Minimap.Editor.MinimapVerification.Capture("issue210-field-entrance-guide.png");
+                camera.transform.position = new Vector3(8, 12, -47);
+                camera.transform.LookAt(new Vector3(0, 2, -34));
+                camera.orthographicSize = 8;
+                Nomad.Minimap.Editor.MinimapVerification.Capture("issue212-field-gateway.png");
+                CharacterController controller = GameManager.Instance.Player.GetComponent<CharacterController>();
+                Vector3 start = controller.transform.position;
+                controller.enabled = false;
+                controller.transform.position = guide.position + new Vector3(0, 0.5f, 2);
+                controller.enabled = true;
+                Physics.SyncTransforms();
+                for (int step = 0; step < 60; step++) controller.Move(new Vector3(0, -0.05f, -0.04f));
+                Require(controller.transform.position.z < guide.position.z - 0.3f, "실제 플레이어가 관문 중앙 통과");
+                controller.enabled = false;
+                controller.transform.position = start;
+                controller.enabled = true;
             }
             finally
             {

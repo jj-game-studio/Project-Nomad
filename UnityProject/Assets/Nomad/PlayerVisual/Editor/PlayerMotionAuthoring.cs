@@ -47,6 +47,7 @@ namespace Nomad.PlayerVisual.Editor
                 if (controller.layers.Length > 1)
                 {
                     var layers = controller.layers;
+                    layers[0].iKPass = true;
                     layers[1].iKPass = true;
                     controller.layers = layers;
                     foreach (AnimationClip clip in new[] { bow, staff, ranged })

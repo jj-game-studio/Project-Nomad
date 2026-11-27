@@ -178,7 +178,7 @@ namespace Nomad.Equipment
             else if (!TryFire(weapon, aim))
                 return false;
 
-            AimPoint = aim;
+            if (mode == WeaponAttackMode.Melee) AimPoint = aim;
             Attacked?.Invoke(mode);
             return true;
         }
@@ -236,7 +236,12 @@ namespace Nomad.Equipment
                 return false;
 
             Projectile shot = bow ? arrowProjectile : projectile;
-            if (!Projectile.TryLaunch(shot, transform, ProjectileOrigin, aim, collisionLayers, 45f,
+            FaceRangedAim(aim);
+            Vector3 origin = ProjectileOrigin;
+            // 커서가 몸통·무기 안쪽이면 뒤집어 쏘지 않고 현재 보는 방향을 유지합니다.
+            if (Vector3.Dot(Vector3.ProjectOnPlane(aim - origin, Vector3.up), transform.forward) < 0.25f)
+                aim = origin + transform.forward * weapon.AttackRange;
+            if (!Projectile.TryLaunch(shot, transform, origin, aim, collisionLayers, 45f,
                     weapon.AttackRange, Mathf.Max(1, Mathf.RoundToInt(Damage(weapon) * power)), point => NotifyRangedImpact(point, weapon, power), out Projectile launched))
                 return false;
 
@@ -249,6 +254,7 @@ namespace Nomad.Equipment
             else if (staff)
                 mana.TrySpend(weapon.ManaCost);
 
+            AimPoint = aim;
             Fired?.Invoke(launched, weapon);
             return true;
         }

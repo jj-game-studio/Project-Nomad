@@ -74,13 +74,25 @@ namespace Nomad.Tests
                 inventory.Add(PlayerEquipmentCombat.ArrowItemId, 30);
                 yield return null;
 
-                foreach (string id in new[] { "weapon-shortbow", "weapon-apprentice-staff" })
+                foreach (string id in new[] { "weapon-shortbow", "weapon-apprentice-staff", "weapon-crystal-staff", "weapon-archmage-staff" })
                 {
                     inventory.Add(id, 1);
                     int slot = Enumerable.Range(0, PlayerInventory.Capacity).First(index => inventory.GetSlot(index).Item?.ItemId == id);
                     Assert.That(equipment.TryEquip(slot, EquipmentSlot.Weapon1), Is.True);
                     equipment.SelectWeapon(EquipmentSlot.Weapon1);
                     combat.GetComponent<PlayerMana>().RestoreFull();
+                    for (int frame = 0; frame < 12; frame++) yield return null;
+                    if (id.Contains("staff")) AssertStaffGrip(combat, visuals, false);
+
+                    GameObject obstruction = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    created.Add(obstruction);
+                    obstruction.transform.position = combat.ProjectileOrigin;
+                    obstruction.transform.localScale = Vector3.one * 0.3f;
+                    Physics.SyncTransforms();
+                    Assert.That(combat.TryAttack(camera.WorldToScreenPoint(combat.transform.position + Vector3.forward * 7)), Is.False, "막힌 발사구에서 발사 거절");
+                    Assert.That(movement.AimFacing.HasValue, Is.False, "발사 실패가 이동 방향을 잠그지 않음");
+                    Object.DestroyImmediate(obstruction);
+
                     int fired = 0;
 
                     System.Action<Projectile, ItemDefinition> onFire = (shot, _) =>
@@ -89,7 +101,7 @@ namespace Nomad.Tests
                         Vector3 expected = combat.AimPoint.Value;
                         Assert.That(Vector3.Angle(shot.transform.forward, expected - shot.transform.position), Is.LessThan(0.1f), "커서 조준 지점으로 실제 발사");
                         Assert.That(Vector3.Distance(shot.transform.position, combat.ProjectileOrigin), Is.LessThan(0.001f), "현재 프레임 무기 위치에서 발사");
-                        Assert.That(Vector3.Angle(combat.transform.forward, Flat(expected - combat.transform.position)), Is.LessThan(2f), "발사 시 몸도 커서 방향");
+                        Assert.That(Vector3.Angle(combat.transform.forward, Flat(shot.transform.forward)), Is.LessThan(0.2f), "발사 시 몸도 커서 방향");
                     };
                     combat.Fired += onFire;
 
@@ -110,6 +122,7 @@ namespace Nomad.Tests
                         for (int frame = 0; frame < 12; frame++) yield return null;
                         Assert.That(Flat(movement.transform.position - start).magnitude, Is.GreaterThan(0.1f), "실제 방향키 이동 " + key);
                         AssertAligned(combat, visual, visuals);
+                        if (id.Contains("staff")) AssertStaffGrip(combat, visuals, true);
                     }
 
                     InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.D));
@@ -125,7 +138,6 @@ namespace Nomad.Tests
                     for (int frame = 0; frame < 3; frame++) yield return null;
                     Assert.That(fired, Is.EqualTo(1), "이동 중 좌클릭 놓기에 한 발");
                     Assert.That(combat.GetComponentInChildren<ChargeGatherVfx>().ParticleCount, Is.Zero);
-                    combat.Fired -= onFire;
 
                     InputSystem.QueueStateEvent(keyboard, new KeyboardState());
                     float releasedAt = Time.time;
@@ -135,8 +147,19 @@ namespace Nomad.Tests
                     for (int frame = 0; frame < 10; frame++) yield return null;
                     Assert.That(Vector3.Angle(movement.transform.forward, Flat(camera.transform.forward)), Is.LessThan(1f),
                         "공격 후 일반 이동 회전 복원");
+                    if (id.Contains("staff")) AssertStaffGrip(combat, visuals, false);
                     InputSystem.QueueStateEvent(keyboard, new KeyboardState());
-                    Debug.Log("RANGED_AIM_ALIGNMENT_PASS " + id + " movement=4 cursor=4 body,pose,motes,muzzle,shot=aligned rightClick=none");
+                    pointer = camera.WorldToScreenPoint(combat.transform.position + Vector3.up);
+                    InputSystem.QueueStateEvent(mouse, new MouseState { position = pointer }.WithButton(MouseButton.Left));
+                    for (int frame = 0; frame < 15; frame++) yield return null;
+                    Assert.That(combat.IsCharging, Is.True, "몸통 근처 커서도 차징 가능");
+                    InputSystem.QueueStateEvent(mouse, new MouseState { position = pointer });
+                    for (int frame = 0; frame < 3; frame++) yield return null;
+                    Assert.That(fired, Is.EqualTo(2), "몸통 근처에서도 현재 정면으로 발사");
+                    combat.Fired -= onFire;
+                    float ready = Time.time + combat.CurrentWeapon.AttackInterval + 0.2f;
+                    while (Time.time < ready) yield return null;
+                    Debug.Log("RANGED_AIM_ALIGNMENT_PASS " + id + " movement=4 cursor=4 nearBody=pass staffGrip=pass rightClick=none");
                 }
             }
             finally
@@ -155,11 +178,21 @@ namespace Nomad.Tests
 
         private static Vector3 Flat(Vector3 value) => Vector3.ProjectOnPlane(value, Vector3.up);
 
+        private static void AssertStaffGrip(PlayerEquipmentCombat combat, EquipmentCombatVisuals visuals, bool casting)
+        {
+            Transform hand = combat.GetComponentInChildren<Animator>().GetBoneTransform(HumanBodyBones.RightHand);
+            MeshFilter mesh = visuals.WeaponModel.GetComponentInChildren<MeshFilter>();
+            Vector3 middle = mesh.transform.TransformPoint(mesh.sharedMesh.bounds.center);
+            Assert.That(Vector3.Distance(middle, hand.position), Is.LessThan(0.06f), "지팡이 중간을 실제 오른손으로 잡음");
+            Vector3 shaft = combat.transform.rotation * Quaternion.Euler(casting ? 65 : 15, 0, 0) * Vector3.up;
+            Assert.That(Vector3.Angle(visuals.WeaponModel.transform.up, shaft), Is.LessThan(8), "손목과 연결된 지팡이 기울기");
+        }
+
         private static void AssertAligned(PlayerEquipmentCombat combat, Transform visual, EquipmentCombatVisuals visuals)
         {
             Assert.That(combat.IsCharging, Is.True);
-            Vector3 aim = Flat(combat.AimPoint.Value - combat.transform.position);
-            Assert.That(Vector3.Angle(combat.transform.forward, aim), Is.LessThan(2f), "키보드 이동과 무관하게 몸은 커서 조준");
+            Vector3 aim = Flat(combat.AimPoint.Value - combat.ProjectileOrigin);
+            Assert.That(Vector3.Angle(combat.transform.forward, aim), Is.LessThan(1f), "키보드 이동과 무관하게 몸과 발사구 조준 일치");
             Assert.That(Vector3.Angle(visual.forward, combat.transform.forward), Is.LessThan(2f), "몸과 상체 방향 일치");
             Assert.That(Vector3.Distance(combat.GetComponentInChildren<ChargeGatherVfx>().transform.position, combat.ProjectileOrigin), Is.LessThan(0.15f), "차징 입자는 현재 무기를 따라감");
             string name = combat.CurrentWeapon.AttackMode == WeaponAttackMode.Bow ? "Bow Muzzle" : "Staff Tip Muzzle";

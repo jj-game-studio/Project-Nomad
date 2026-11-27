@@ -39,7 +39,7 @@ namespace Nomad.Equipment
                 weaponSocket = value;
                 if (value == null || weaponModel == null) return;
                 weaponModel.transform.SetParent(value, false);
-                weaponModel.transform.localPosition = Vector3.zero;
+                weaponModel.transform.localPosition = weaponGripOffset;
                 weaponModel.transform.localRotation = displayedWeapon.EquippedVisual.transform.localRotation;
             }
         }
@@ -177,7 +177,7 @@ namespace Nomad.Equipment
             if (WeaponSocket != null)
             {
                 weaponModel.transform.SetParent(WeaponSocket, false);
-                weaponModel.transform.localPosition = Vector3.zero;
+                weaponModel.transform.localPosition = weaponGripOffset;
                 weaponModel.transform.localRotation = weapon.EquippedVisual.transform.localRotation;
                 weaponModel.SetActive(true);
                 return;
