@@ -22,6 +22,7 @@ namespace Nomad.Monsters.Demo
             blast.IgnoreCover = true;
             blast.EmitsFlame = false;
             blast.HighlightActive = true;
+            blast.JumpClearance = 0.55f;
             blast.gameObject.AddComponent<BossDelayedRing>().Configure(arena, transform.position, inner, outer, windup);
         }
 
@@ -41,7 +42,7 @@ namespace Nomad.Monsters.Demo
         private void TickAimedBreath()
         {
             if (Pattern != DragonPattern.AimedBreath || Phase != DragonPhase.Windup || aimedBreath == null) return;
-            if (Remaining > 0.4f)
+            if (Remaining > BossLineBreath.LockSeconds)
             {
                 direction = Vector3.ProjectOnPlane(target.transform.position - transform.position, Vector3.up).normalized;
                 aimedBreath.SetHeading(direction);

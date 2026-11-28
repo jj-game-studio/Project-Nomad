@@ -15,12 +15,12 @@ namespace Nomad.Monsters.Demo
             CreateContinuousJet();
             core = WeaponVfx.CreateParticles(transform, "Hot flame core", WeaponVfx.Glow);
             var main = core.main;
-            main.startColor = new Color(1.8f, 1.1f, 0.3f);
+            main.startColor = new Color(1.8f, 0.65f, 0.08f);
             main.maxParticles = 600;
             var renderer = core.GetComponent<ParticleSystemRenderer>();
             renderer.renderMode = ParticleSystemRenderMode.Stretch;
-            renderer.lengthScale = 1.6f;
-            renderer.velocityScale = 0.06f;
+            renderer.lengthScale = 1f;
+            renderer.velocityScale = 0.03f;
             WeaponVfx.Fade(core, 0);
 
             smokeMaterial = new Material(WeaponVfx.Glow);

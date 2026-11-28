@@ -30,7 +30,8 @@ namespace Nomad.Monsters.Demo
         {
             sweep = Area(transform.position, Tuning.BodySweepRadius, 360, windup, 0.12f, 28);
             sweep.EmitsFlame = false;
-            sweep.WarningSeconds = SweepParryable ? Mathf.Max(0.1f, windup - BossParrySignal.ReactionSeconds) : windup;
+            sweep.HitGraceSeconds = SweepParryable ? BossParrySignal.DamageGrace : 0;
+            sweep.WarningSeconds = SweepParryable ? Mathf.Max(0.1f, windup - BossParrySignal.BodyLead(windup)) : windup;
             sweep.WarningColor = SweepParryable ? new Color(1, 0.78f, 0.08f, 0.3f) : new Color(1, 0.08f, 0.015f, 0.3f);
             sweep.OnHit = () => PlayerBossReaction.Play(target, transform.position, 7, 1.35f, 0, 0.3f);
             if (SweepParryable) parrySignal.Arm(Time.time + windup, Tuning.BodySweepRadius + 0.5f);

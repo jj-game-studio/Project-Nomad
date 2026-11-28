@@ -299,7 +299,7 @@ namespace Nomad.Tests
             boss.Tuning.EnragedRainPoolChance = 1;
             boss.BeginPattern(DragonPattern.Rain);
             yield return Wait(2);
-            Assert.That(boss.RainProjectilesSpawned, Is.InRange(12, 15));
+            Assert.That(boss.RainProjectilesSpawned, Is.InRange(18, 21));
             Assert.That(boss.Effects.GetComponentsInChildren<BossHazard>().Any(hazard => hazard.Active && hazard.Radius == 1.8f), Is.True, "광폭 화염우 착지 뒤 불지대 유지");
         }
 

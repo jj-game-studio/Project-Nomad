@@ -20,7 +20,7 @@ namespace Nomad.Equipment
             if (!mana.Unlimited) charge = Mathf.Min(charge, Mathf.Floor(mana.Current) / Mathf.Max(1, weapon.ManaCost * 2));
             int cost = StaffManaCost(weapon, charge);
             if (cost > 0 && !mana.CanSpend(cost)) return false;
-            float power = cost == 0 ? 0.65f : Mathf.Lerp(0.9f, 3, charge);
+            float power = cost == 0 ? 1.1f : Mathf.Lerp(0.9f, 3, charge);
             FaceRangedAim(aim);
             Vector3 origin = ProjectileOrigin;
             if (Vector3.Dot(Vector3.ProjectOnPlane(aim-origin,Vector3.up),transform.forward) < 0.25f)

@@ -40,8 +40,9 @@ namespace Nomad.Monsters.Demo
         private void Band(float inner, float outer)
         {
             var band = BossHazard.Create(transform, boss.transform, arena.GroundPoint(center), Quaternion.identity,
-                player, outer, 360, warning, BlastSeconds, boss.ScaleDamage(18));
+                player, outer, 360, warning, BlastSeconds / boss.Tempo, boss.ScaleDamage(18));
             band.InnerRadius = inner;
+            band.JumpClearance = 0.55f;
             band.GroundHeight = arena.GroundHeight;
             band.AllowIrregular = false; band.IgnoreCover = true; band.EmitsFlame = false;
             band.WarningSeconds = warning;
@@ -56,15 +57,15 @@ namespace Nomad.Monsters.Demo
             if (RoundsReleased == round)
             {
                 bool outer = round % 2 == 1;
-                BossRingBurst.Create(transform, arena, center, outer ? 3.8f : 0, outer ? 7 : 3.8f, BlastSeconds);
-                BossRingBurst.Create(transform, arena, center, outer ? 10 : 7, outer ? 14 : 10, BlastSeconds);
-                BossRingBurst.Create(transform, arena, center, outer ? 17 : 14, outer ? 21 : 17, BlastSeconds);
+                BossRingBurst.Create(transform, arena, center, outer ? 3.8f : 0, outer ? 7 : 3.8f, BlastSeconds / boss.Tempo);
+                BossRingBurst.Create(transform, arena, center, outer ? 10 : 7, outer ? 14 : 10, BlastSeconds / boss.Tempo);
+                BossRingBurst.Create(transform, arena, center, outer ? 17 : 14, outer ? 21 : 17, BlastSeconds / boss.Tempo);
                 RoundsReleased++;
-                next = Time.time + BlastSeconds + GapSeconds;
+                next = Time.time + (BlastSeconds + GapSeconds) / boss.Tempo;
                 return;
             }
             if (++round >= 3) { Destroy(gameObject); return; }
-            warning = WarningSeconds;
+            warning = WarningSeconds / boss.Tempo;
             SpawnRound();
         }
     }

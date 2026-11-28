@@ -90,10 +90,15 @@ namespace Nomad.Tests
             Assert.That(scene.Arena.RockCount, Is.Zero);
             var cracks = boss.Effects.GetComponentInChildren<BossGroundCracks>();
             Assert.That(cracks, Is.Not.Null);
-            var lines = cracks.GetComponentsInChildren<LineRenderer>().Where(line => line.name == "Broken stone seam").ToArray();
-            Assert.That(lines.Length, Is.EqualTo(16));
-            Assert.That(lines[0].startWidth, Is.GreaterThan(0.3f));
-            Assert.That(lines[0].GetPosition(4).y - scene.Arena.GroundHeight(lines[0].GetPosition(4)), Is.GreaterThan(0.15f));
+            Mesh fissure = cracks.GetComponent<MeshFilter>().sharedMesh;
+            Assert.That(cracks.BranchCount,Is.EqualTo(15));
+            Assert.That(fissure.vertexCount,Is.GreaterThan(500));
+            Assert.That(fissure.colors.Any(color=>color.r<0.02f),Is.True);
+            foreach(Vector3 vertex in fissure.vertices)
+            {
+                Vector3 world=cracks.transform.TransformPoint(vertex);
+                Assert.That(world.y-scene.Arena.GroundHeight(world),Is.GreaterThan(0.2f));
+            }
         }
 
         [UnityTest]

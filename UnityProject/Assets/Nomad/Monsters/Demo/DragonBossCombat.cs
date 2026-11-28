@@ -34,7 +34,7 @@ namespace Nomad.Monsters.Demo
         public float EnrageAmount => enrage != null ? enrage.VisualAmount : 0;
         public bool EnrageTransitioning => Phase == DragonPhase.Enraging;
         private BossEnrageTransition enrage;
-        public float Tempo => Enraged ? 1.15f : 1;
+        public float Tempo => Enraged ? 1.5f : 1;
         public float MoveSpeed => Enraged ? 8 : 6;
         public float LeapDuration => BossJumpSlam.LeapSeconds / Tempo;
         public int ParrySuccesses { get; private set; }
@@ -57,6 +57,7 @@ namespace Nomad.Monsters.Demo
         private Transform effects;
         private float until, nextRain;
         private float phaseStarted, phaseDuration;
+        private float RainBeat => Tuning.RainInterval / (Enraged ? 1.25f : 1);
         private Vector3 aim, direction;
         private int rainCount;
         private TextMesh status;
@@ -176,7 +177,7 @@ namespace Nomad.Monsters.Demo
             TickAimedBreath();
             if (Phase == DragonPhase.Active && Pattern == DragonPattern.Rain && Time.time >= nextRain && rainCount < Tuning.RainWaves)
             {
-                nextRain = Time.time + Tuning.RainInterval;
+                nextRain = Time.time + RainBeat;
                 for (int index = 0; index < Tuning.RainPerWave; index++)
                 {
                     float distance = index == 0 ? 0 : index == 1 ? 2.6f : 4.2f;
@@ -217,6 +218,7 @@ namespace Nomad.Monsters.Demo
             pendingSlamCounter = false;
             Pattern = pattern;
             AttacksStarted++;
+            if (IsParryPattern(pattern)) lastParryPatternAt = Time.time;
             Phase = DragonPhase.Windup;
             aim = ClampPoint(target.transform.position);
             direction = Vector3.ProjectOnPlane(aim - transform.position, Vector3.up).normalized;
@@ -227,7 +229,7 @@ namespace Nomad.Monsters.Demo
                 pattern == DragonPattern.Rain ? 0.7f :
                 pattern == DragonPattern.LavaEruption ? Tuning.LavaEruptionWarning : pattern == DragonPattern.OrbitFlames ? 1.2f : pattern == DragonPattern.Breath ? Tuning.BreathPreparation : 0.9f;
             windup /= Tempo;
-            if (pattern == DragonPattern.AimedBreath) windup = 1.5f / Tempo;
+            if (pattern == DragonPattern.AimedBreath) windup = BossLineBreath.AimSeconds / Tempo + BossLineBreath.LockSeconds;
             if (pattern == DragonPattern.InnerBlast || pattern == DragonPattern.OuterBlast) windup = 1.2f / Tempo;
             if (pattern == DragonPattern.Breath) windup += BossBreathBackstep.Seconds;
             float turning = Vector3.Angle(transform.forward, direction) / (pattern == DragonPattern.Charge ? ChargeTurnSpeed : TurnSpeed);
@@ -242,9 +244,11 @@ namespace Nomad.Monsters.Demo
             if (pattern == DragonPattern.Circle)
             {
                 slam = Area(transform.position, Tuning.SlamRadius, 360, windup + LeapDuration, 0.12f, 32);
-                slam.WarningSeconds = windup + LeapDuration - BossParrySignal.SlamReactionSeconds;
+                slam.WarningSeconds = windup + LeapDuration - BossParrySignal.SlamLead(this);
                 slam.WarningColor = new Color(1, 0.78f, 0.08f, 0.3f);
                 slam.EmitsFlame = false;
+                slam.HideWarningWhileActive = true;
+                slam.HitGraceSeconds = BossParrySignal.DamageGrace;
                 parrySignal.Arm(Time.time + windup + LeapDuration, Tuning.SlamRadius + 0.5f);
             }
             if (pattern == DragonPattern.BodySweep) PrepareBodySweep(windup);
@@ -275,12 +279,12 @@ namespace Nomad.Monsters.Demo
             status.text = "";
             Phase = DragonPhase.Active;
             until = Time.time + (Pattern == DragonPattern.Breath ? 2.4f : Pattern == DragonPattern.Rain ? RainDuration :
-                Pattern == DragonPattern.Circle ? LeapDuration + 0.12f : Pattern == DragonPattern.RadialFireballs ? Tuning.RadialRange / (Tuning.RadialSpeed * Tempo) + 0.3f : 0.18f);
-            if (Pattern == DragonPattern.OrbitFlames) until = Time.time + BossRingSequence.AfterFirstWarning;
+                Pattern == DragonPattern.Circle ? LeapDuration + 0.25f : Pattern == DragonPattern.RadialFireballs ? Tuning.RadialRange / (Tuning.RadialSpeed * Tempo) + 0.3f : 0.18f);
+            if (Pattern == DragonPattern.OrbitFlames) until = Time.time + BossRingSequence.AfterFirstWarning / Tempo;
             if (Pattern == DragonPattern.LavaEruption) until = Time.time + 1.1f;
             if (Pattern == DragonPattern.AimedBreath) until = Time.time + 1.3f / Tempo;
             if (Pattern == DragonPattern.Rain)
-                until = Time.time + (Tuning.RainWaves - 1) * Tuning.RainInterval + Tuning.RainFallSeconds + 0.15f;
+                until = Time.time + (Tuning.RainWaves - 1) * RainBeat + Tuning.RainFallSeconds + 0.15f;
             if (Pattern == DragonPattern.Breath) until = Time.time + 2.4f / Tempo;
             phaseStarted = Time.time;
             phaseDuration = until - Time.time;
@@ -425,7 +429,8 @@ namespace Nomad.Monsters.Demo
                 return;
             }
             if (slam != null) slam.CancelDamage();
-            pendingSlamCounter = true;
+            if (GetComponent<BossJumpSlam>().Airborne) pendingSlamCounter = true;
+            else GetComponent<BossArmor>().ApplyParryBreak();
         }
 
         public void FinishParriedSlam()
@@ -438,13 +443,14 @@ namespace Nomad.Monsters.Demo
         private void Recover()
         {
             Phase = DragonPhase.Recovery;
-            until = Time.time + Tuning.RecoverySeconds;
+            until = Time.time + Tuning.RecoverySeconds / Tempo;
             status.text = "";
             SetMotion(null, 1);
         }
 
         public void FinishArrival()
         {
+            lastParryPatternAt = Time.time;
             Phase = DragonPhase.Waiting;
             until = Time.time + 0.2f;
         }
@@ -472,6 +478,8 @@ namespace Nomad.Monsters.Demo
 
         private void StopEncounter()
         {
+            lastParryPatternAt = Time.time;
+            queuedPattern = null;
             parrySignal?.Clear();
             CancelEffects();
             ClearBackground();

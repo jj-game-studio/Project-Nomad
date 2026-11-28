@@ -6,9 +6,24 @@ namespace Nomad.Monsters.Demo
     public sealed partial class DragonBossCombat
     {
         private DragonPattern? queuedPattern;
+        public const float MaximumParryGap = 10;
+        private float lastParryPatternAt;
+        public float ParryPatternGap => Mathf.Max(0, Time.time - lastParryPatternAt);
+        public static bool IsParryPattern(DragonPattern pattern) => pattern == DragonPattern.Circle ||
+            pattern == DragonPattern.RadialFireballs || pattern == DragonPattern.BodySweep || pattern == DragonPattern.TrackingFireball;
+
+        private DragonPattern GuaranteedParry(float distance)
+        {
+            var choices = new List<DragonPattern> { DragonPattern.RadialFireballs, DragonPattern.TrackingFireball };
+            if (distance <= Tuning.BodySweepRadius) choices.Add(DragonPattern.BodySweep);
+            if (distance <= 5.5f) choices.Add(DragonPattern.Circle);
+            choices.Remove(Pattern);
+            return choices[Random.Range(0, choices.Count)];
+        }
 
         public DragonPattern ChooseNextPattern(float targetDistance)
         {
+            if (ParryPatternGap >= MaximumParryGap) return GuaranteedParry(targetDistance);
             var choices = new List<DragonPattern>();
             foreach (DragonPattern pattern in Rotation)
                 if (AttacksStarted == 0 || pattern != Pattern) choices.Add(pattern);
@@ -36,6 +51,7 @@ namespace Nomad.Monsters.Demo
 
         private void BeginNext()
         {
+            if (ParryPatternGap >= MaximumParryGap) queuedPattern = GuaranteedParry(Vector3.Distance(transform.position,target.transform.position));
             queuedPattern ??= ChooseNextPattern(Vector3.Distance(transform.position, target.transform.position));
             DragonPattern next = queuedPattern.Value;
             float engageRange = next == DragonPattern.Charge || next == DragonPattern.TrackingFireball || next == DragonPattern.AimedBreath ? float.PositiveInfinity :

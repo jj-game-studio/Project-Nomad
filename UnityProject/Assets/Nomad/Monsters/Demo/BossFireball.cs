@@ -14,7 +14,7 @@ namespace Nomad.Monsters.Demo
         private bool lob, reflected, resolved, contactPending;
         private float contactedAt;
         private Vector3 contactPoint;
-        public const float ContactGraceSeconds = 0.14f;
+        public const float ContactGraceSeconds = 0.25f;
         private int damage;
         public float Radius { get; private set; } = 0.4f;
         public bool SignalControlled { get; set; }
@@ -158,7 +158,8 @@ namespace Nomad.Monsters.Demo
                 if (guard != null && guard.TryReflect(this, contactPoint)) return;
                 if (Time.time - contactedAt >= ContactGraceSeconds)
                 {
-                    owner.GetComponent<DragonBossCombat>().HitRadialWave(damage, VolleyId);
+                    if (SignalControlled) owner.GetComponent<DragonBossCombat>().HitRadialWave(damage, VolleyId);
+                    else target.TryApplyDamage(damage);
                     resolved = true;
                     Explode(contactPoint);
                 }
@@ -180,7 +181,7 @@ namespace Nomad.Monsters.Demo
             if (IsMeteor && orb != null) orb.Rotate(50 * Time.deltaTime, 90 * Time.deltaTime, 30 * Time.deltaTime);
             if (orb != null) orb.localScale = Vector3.one * (Radius * 1.65f * (1 + Mathf.Sin(Time.time * 13) * 0.035f));
             Collider targetCollider = target.GetComponent<Collider>();
-            if (SignalControlled && targetCollider != null && Vector3.Distance(targetCollider.ClosestPoint(next), next) <= Radius)
+            if (Parryable && target.GetComponent<PlayerBossParry>() != null && targetCollider != null && Vector3.Distance(targetCollider.ClosestPoint(next), next) <= Radius)
             {
                 var guard = target.GetComponent<PlayerBossParry>();
                 if (guard != null && guard.TryReflect(this, next)) return;
@@ -198,7 +199,7 @@ namespace Nomad.Monsters.Demo
                         (SignalControlled && hit.collider.GetComponentInParent<Health>() != target)) continue;
                     var parry = hit.collider.GetComponentInParent<PlayerBossParry>();
                     if (parry != null && parry.TryReflect(this, hit.point)) return;
-                    if (SignalControlled && hit.collider.GetComponentInParent<Health>() == target)
+                    if (Parryable && hit.collider.GetComponentInParent<PlayerBossParry>() != null && hit.collider.GetComponentInParent<Health>() == target)
                     { BeginContact(transform.position + delta.normalized * hit.distance); return; }
                     resolved = true;
                     enabled = false;

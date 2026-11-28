@@ -23,6 +23,7 @@ namespace Nomad.Monsters.Demo
         public System.Func<Vector3, float> GroundHeight { get; set; }
         public float WarningSeconds { get; set; } = -1;
         public float JumpClearance { get; set; }
+        public float HitGraceSeconds { get; set; }
         public float InnerRadius { get; set; }
         public float VisualRangeMultiplier { get; set; } = 1;
         public bool HideWarningWhileActive { get; set; }
@@ -175,12 +176,12 @@ namespace Nomad.Monsters.Demo
                 if (angle < 359) CreateBreathLayers();
                 else if (duration > 1) CreateLavaSurface();
             }
-            if (elapsed >= nextHit)
+            if (elapsed >= nextHit && elapsed >= delay + HitGraceSeconds)
             {
                 nextHit = elapsed + interval;
                 if (damage > 0 && Contains(target.transform.position) && target.TryApplyDamage(damage)) OnHit?.Invoke();
             }
-            if (elapsed >= delay + duration) Destroy(gameObject);
+            if (elapsed >= delay + duration + HitGraceSeconds) Destroy(gameObject);
         }
 
         private void EmitBreath(bool warm)
@@ -268,6 +269,6 @@ namespace Nomad.Monsters.Demo
             boundaryProjected = true;
         }
 
-        private void OnDestroy() { if (mesh != null) Destroy(mesh); if (smokeMaterial != null) Destroy(smokeMaterial); if (lavaMaterial != null) Destroy(lavaMaterial); }
+        private void OnDestroy() { if (mesh != null) Destroy(mesh); if (smokeMaterial != null) Destroy(smokeMaterial); if (lavaMaterial != null) Destroy(lavaMaterial); if(fanMaterial!=null)Destroy(fanMaterial); }
     }
 }

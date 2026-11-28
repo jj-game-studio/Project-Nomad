@@ -93,7 +93,7 @@ namespace Nomad.Tests
             Assert.That(line,Is.Not.Null);
             Vector3 heading=line.Heading;
             PlaceHero(scene.Player.transform.position+Vector3.right*8);
-            yield return Wait(0.4f);
+            yield return Wait(1.2f);
             Assert.That(line.Fired,Is.True);
             Assert.That(Vector3.Angle(heading,line.Heading),Is.LessThan(1));
             Assert.That(line.Contains(scene.Player.transform.position),Is.False);
@@ -129,7 +129,7 @@ namespace Nomad.Tests
             float before=mana.Current;
             Assert.That(combat.TryAttack(pointer),Is.True);
             Assert.That(mana.Current,Is.EqualTo(before));
-            Assert.That(combat.LastShotPower,Is.EqualTo(0.65f));
+            Assert.That(combat.LastShotPower,Is.EqualTo(1.1f));
             yield return Wait(1.5f);
             Assert.That(combat.TryBeginCharge(pointer),Is.True);
             // 마우스 자동 취소 경로와 분리해 실제 릴리스 메서드의 유지 시간/비용을 검증합니다.

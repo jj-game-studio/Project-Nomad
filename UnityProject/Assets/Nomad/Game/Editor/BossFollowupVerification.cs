@@ -19,13 +19,14 @@ namespace Nomad.Game.Editor
         private static readonly DragonPattern[] Patterns={DragonPattern.Circle,DragonPattern.RadialFireballs,DragonPattern.Breath,
             DragonPattern.Rain,DragonPattern.BodySweep,DragonPattern.RedSweep,DragonPattern.OrbitFlames,
             DragonPattern.TrackingFireball,DragonPattern.AimedBreath,DragonPattern.InnerBlast,DragonPattern.OuterBlast,DragonPattern.LavaEruption};
-        private static readonly float[] CaptureAt={1.9f,1.95f,2.25f,3f,1.1f,1.1f,1.4f,1.15f,1.7f,1.4f,1.4f,1.3f};
+        private static readonly float[] CaptureAt={1.9f,1.95f,2.25f,3f,1.1f,1.1f,1.4f,1.15f,2.8f,1.4f,1.4f,1.3f};
         private static DragonBossCombat boss;
         private static BossArena arena;
         private static PlayerEquipmentCombat player;
         private static float since;
         private static int stage,index,frame;
         private static bool requestedField;
+        private static bool capturedLock;
         private static double deadline;
         private static string error;
 
@@ -98,15 +99,22 @@ namespace Nomad.Game.Editor
                     boss.GetComponent<NavMeshAgent>().Warp(arena.Center);
                     Place(Patterns[index]==DragonPattern.BodySweep||Patterns[index]==DragonPattern.RedSweep?5:9);
                     boss.BeginPattern(Patterns[index]);
+                    capturedLock=false;
                     Require(boss.Pattern==Patterns[index],"패턴 실행 "+Patterns[index]);
                     since=Time.time;stage=2;return;
                 }
                 if(stage==2)
                 {
+                    if(Patterns[index]==DragonPattern.AimedBreath&&!capturedLock&&Time.time>since+1.35f)
+                    {
+                        var line=boss.Effects.GetComponentInChildren<BossLineBreath>();
+                        Require(line.Locked&&!line.Fired,"레이저 방향 고정 후 발사 대기");
+                        Capture("AimedBreathLocked");capturedLock=true;
+                    }
                     if(Time.time<since+CaptureAt[index])return;
                     Capture(Patterns[index].ToString());
                     if(Patterns[index]==DragonPattern.Circle)
-                        Require(boss.Effects.GetComponentInChildren<BossHeavedGround>()!=null,"융기된 지진 바닥");
+                        Require(boss.Effects.GetComponentInChildren<BossGroundCracks>()?.GetComponent<MeshFilter>()?.sharedMesh.vertexCount>500,"검은 분기 균열 메시");
                     if(Patterns[index]==DragonPattern.AimedBreath)
                         Require(boss.Effects.GetComponentInChildren<BossLineBreath>()?.Fired==true,"직선 브레스 발사");
                     boss.Stun(0.03f);since=Time.time;

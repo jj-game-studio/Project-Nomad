@@ -10,8 +10,8 @@ namespace Nomad.Equipment
     [RequireComponent(typeof(PlayerEquipmentCombat))]
     public sealed class PlayerBossParry : MonoBehaviour
     {
-        public const float Window = 0.5f;
-        public const float Cooldown = 0.9f;
+        public const float Window = 0.65f;
+        public const float Cooldown = 0.75f;
         private float until, next;
         private bool consumed;
         private PlayerEquipmentCombat combat;
@@ -70,7 +70,7 @@ namespace Nomad.Equipment
         {
             if (!Active || !ball.Parryable || ball.Target != GetComponent<Health>()) return false;
             Vector3 delta = point - (transform.position + Vector3.up * 1.3f);
-            if (delta.magnitude > ball.Radius + 1.2f || Vector3.Angle(transform.forward, Vector3.ProjectOnPlane(delta, Vector3.up)) > 80) return false;
+            if (delta.magnitude > ball.Radius + 1.6f || Vector3.Angle(transform.forward, Vector3.ProjectOnPlane(delta, Vector3.up)) > 105) return false;
             if (!ball.Reflect(transform)) return false;
 
             Reflections++;
