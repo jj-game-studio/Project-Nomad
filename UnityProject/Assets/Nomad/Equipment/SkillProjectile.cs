@@ -51,7 +51,7 @@ namespace Nomad.Equipment
                     Destroy(gameObject);
                     return;
                 }
-                if (target != null) { struck.Add(target); target.TryApplyCombatDamage(damage, critical); }
+                if (target != null) { struck.Add(target); target.TryApplyCombatImpact(damage, critical, CombatImpactSource.Skill); }
                 else { Destroy(gameObject); return; }
             }
             transform.position += transform.forward * step;
@@ -71,7 +71,7 @@ namespace Nomad.Equipment
                 Vector3 ray = target.transform.position + Vector3.up - (center + Vector3.up);
                 if (Projectile.TryGetFirstHit(new Ray(center + Vector3.up, ray.normalized), ray.magnitude,
                     Physics.DefaultRaycastLayers, owner, out RaycastHit wall) && wall.collider.GetComponentInParent<Health>() != target) continue;
-                target.TryApplyCombatDamage(damage, critical);
+                target.TryApplyCombatImpact(damage, critical, CombatImpactSource.Skill);
             }
         }
     }

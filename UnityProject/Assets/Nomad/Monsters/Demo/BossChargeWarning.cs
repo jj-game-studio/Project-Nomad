@@ -8,6 +8,7 @@ namespace Nomad.Monsters.Demo
     {
         public const float Width = 3.2f;
         public float Length { get; private set; }
+        public System.Func<Vector3, float> GroundHeight { get; set; }
         private Mesh mesh;
         private LineRenderer outline;
         private Transform fill;
@@ -42,15 +43,34 @@ namespace Nomad.Monsters.Demo
         {
             Length = length;
             transform.SetPositionAndRotation(point + Vector3.up * 0.1f, Quaternion.LookRotation(direction));
-            Vector3[] corners = { new(-Width / 2, 0, 0), new(-Width / 2, 0, length),
-                new(Width / 2, 0, length), new(Width / 2, 0, 0) };
-            mesh.vertices = corners;
-            mesh.triangles = new[] { 0, 1, 2, 0, 2, 3 };
+            const int rows = 24;
+            var vertices = new Vector3[(rows + 1) * 2];
+            var triangles = new int[rows * 6];
+            for (int row = 0; row <= rows; row++)
+            for (int side = 0; side < 2; side++)
+            {
+                Vector3 vertex = new(side == 0 ? -Width / 2 : Width / 2, 0, length * Mathf.Lerp(0.15f, 1, progress) * row / rows);
+                if (GroundHeight != null) vertex.y = GroundHeight(transform.TransformPoint(vertex)) + 0.22f - transform.position.y;
+                vertices[row * 2 + side] = vertex;
+                if (side != 0 || row == rows) continue;
+                int first = row * 6, index = row * 2;
+                triangles[first] = index; triangles[first + 1] = index + 2; triangles[first + 2] = index + 1;
+                triangles[first + 3] = index + 1; triangles[first + 4] = index + 2; triangles[first + 5] = index + 3;
+            }
+            mesh.vertices = vertices;
+            mesh.triangles = triangles;
             mesh.RecalculateNormals();
             mesh.RecalculateBounds();
-            outline.SetPositions(corners);
+            outline.positionCount = (rows + 1) * 2;
+            for (int row = 0; row <= rows; row++)
+            for (int side = 0; side < 2; side++)
+            {
+                Vector3 pointOnEdge = new(side == 0 ? -Width / 2 : Width / 2, 0, length * row / rows);
+                if (GroundHeight != null) pointOnEdge.y = GroundHeight(transform.TransformPoint(pointOnEdge)) + 0.25f - transform.position.y;
+                outline.SetPosition(side == 0 ? row : outline.positionCount - row - 1, pointOnEdge);
+            }
             outline.startColor = outline.endColor = locked ? Color.red : new Color(1, 0.75f, 0.15f);
-            fill.localScale = new Vector3(1, 1, Mathf.Lerp(0.15f, 1, progress));
+            fill.localScale = Vector3.one;
         }
 
         private void OnDestroy() { if (mesh != null) Destroy(mesh); }

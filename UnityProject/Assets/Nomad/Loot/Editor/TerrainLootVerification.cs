@@ -84,7 +84,7 @@ namespace Nomad.Loot.Editor
                     Require(Chests().All(c => c.GetComponent<BoxCollider>().bounds.Contains(c.InteractionPoint)), "points inside chest colliders");
                     signature = Signature();
                     MoveToChest();
-                    Press(Key.F);
+                    InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.LeftShift, Key.F));
                     return;
                 }
                 Advance();

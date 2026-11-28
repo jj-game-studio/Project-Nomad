@@ -45,6 +45,7 @@ namespace Nomad.Monsters.Demo
                 prefab != null && prefab.name.Contains("Warrior") ? MonsterWeaponStyle.Sword : MonsterWeaponStyle.Crossbow;
             GameObject body = prefab != null ? Instantiate(prefab) : GameObject.CreatePrimitive(PrimitiveType.Capsule);
             body.name = "Body";
+            if (rank != MonsterRank.Boss) body.AddComponent<CartoonSurfaceStyle>();
             body.transform.SetParent(root.transform, false);
             if (prefab == null)
             {

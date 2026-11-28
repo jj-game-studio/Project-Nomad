@@ -14,6 +14,7 @@ namespace Nomad.Player
         private float recoveryTime;
 
         public float Current { get; private set; }
+        public bool Unlimited { get; set; }
         private int maximumBonus;
         private float recoveryBonus;
 
@@ -48,14 +49,14 @@ namespace Nomad.Player
                 Current = Maximum;
         }
 
-        public bool CanSpend(int amount) => isActiveAndEnabled && !health.IsDead && amount > 0 && Current >= amount;
+        public bool CanSpend(int amount) => isActiveAndEnabled && !health.IsDead && amount > 0 && (Unlimited || Current >= amount);
 
         public bool TrySpend(int amount)
         {
             if (!CanSpend(amount))
                 return false;
 
-            Current -= amount;
+            if (!Unlimited) Current -= amount;
             recoveryTime = Time.time + recoveryDelay;
             return true;
         }

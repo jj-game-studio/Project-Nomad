@@ -160,13 +160,13 @@ namespace Nomad.Hud
         private void UpdateWeaponStatus()
         {
             ItemDefinition weapon = combat.CurrentWeapon;
-            int requiredMana = weapon?.AttackMode == WeaponAttackMode.Staff ? weapon.ManaCost : 0;
+            int requiredMana = weapon?.AttackMode == WeaponAttackMode.Staff && combat.IsCharging ? PlayerEquipmentCombat.StaffManaCost(weapon,combat.ChargeProgress) : 0;
             int availableMana = mana != null ? Mathf.FloorToInt(mana.Current) : 0;
             if (requiredMana != shownRequiredMana || availableMana != shownAvailableMana || attackStatusText.text.Length == 0)
             {
                 shownRequiredMana = requiredMana;
                 shownAvailableMana = availableMana;
-                bool insufficient = requiredMana > 0 && availableMana < requiredMana;
+                bool insufficient = requiredMana > 0 && mana?.Unlimited != true && availableMana < requiredMana;
                 attackStatusText.text = insufficient ? $"마나 부족 {availableMana}/{requiredMana}" : "CURRENT";
 
                 // 시안에는 CURRENT 표기가 없어 마나 부족 경고만 화면에 띄웁니다.

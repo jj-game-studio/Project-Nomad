@@ -9,6 +9,8 @@ namespace Nomad.Combat
         Fall
     }
 
+    public enum CombatImpactSource { Basic, Skill, ParriedFireball, ParriedSlam }
+
     [DisallowMultipleComponent]
     public sealed class Health : MonoBehaviour
     {
@@ -21,7 +23,10 @@ namespace Nomad.Combat
         public int CurrentHealth { get; private set; }
         public bool IsDead => CurrentHealth == 0;
         public bool IsCombatImmune { get; set; }
+        // 구르기처럼 한 프레임마다 갱신되는 무적과 독립적인 디버그 무적입니다.
+        public bool IsInvulnerable { get; set; }
         public bool LastHitCritical { get; private set; }
+        public CombatImpactSource LastHitSource { get; private set; }
 
         public event Action<Health> Died;
         public event Action<Health> Evaded;
@@ -59,13 +64,15 @@ namespace Nomad.Combat
             return true;
         }
 
-        public bool TryApplyDamage(int amount, DamageKind kind = DamageKind.Combat) => ApplyDamage(amount, kind, false);
+        public bool TryApplyDamage(int amount, DamageKind kind = DamageKind.Combat) => ApplyDamage(amount, kind, false, CombatImpactSource.Basic);
 
-        public bool TryApplyCombatDamage(int amount, bool critical) => ApplyDamage(amount, DamageKind.Combat, critical);
+        public bool TryApplyCombatDamage(int amount, bool critical) => ApplyDamage(amount, DamageKind.Combat, critical, CombatImpactSource.Basic);
 
-        private bool ApplyDamage(int amount, DamageKind kind, bool critical)
+        public bool TryApplyCombatImpact(int amount, bool critical, CombatImpactSource source) => ApplyDamage(amount, DamageKind.Combat, critical, source);
+
+        private bool ApplyDamage(int amount, DamageKind kind, bool critical, CombatImpactSource source)
         {
-            if (amount <= 0 || IsDead || (kind == DamageKind.Combat && IsCombatImmune))
+            if (amount <= 0 || IsDead || IsInvulnerable || (kind == DamageKind.Combat && IsCombatImmune))
                 return false;
 
             // 보정 결과가 0 이하이면 회피한 공격으로 보고 피해를 적용하지 않습니다.
@@ -82,6 +89,7 @@ namespace Nomad.Combat
             int before = CurrentHealth;
             CurrentHealth = Mathf.Max(0, CurrentHealth - amount);
             LastHitCritical = critical;
+            LastHitSource = source;
             Damaged?.Invoke(this, before - CurrentHealth, kind);
             if (IsDead)
                 Died?.Invoke(this);

@@ -7,12 +7,12 @@ namespace Nomad.Monsters.Demo
     [RequireComponent(typeof(Health))]
     public sealed class BossArmor : MonoBehaviour, ICombatDamageModifier
     {
-        public const int ReferenceHealth = 5200;
+        public const int ReferenceHealth = 8250;
         public int BreakCount { get; private set; }
         public const float DurabilityPerLayer = 1450;
         public float Durability { get; private set; } = DurabilityPerLayer;
         public float RemainingRatio => BreakCount >= 2 ? 0 : Durability / DurabilityPerLayer;
-        public float DamageMultiplier => BreakCount == 0 ? 1 : BreakCount == 1 ? 1.25f : 1.55f;
+        public float DamageMultiplier => BreakCount == 0 ? 0.35f : BreakCount == 1 ? 1.1f : 2.2f;
         public event Action<int> Broken;
         private Health health;
 
@@ -26,12 +26,16 @@ namespace Nomad.Monsters.Demo
             health.RestoreFull();
         }
 
+        public void ApplyParryBreak() => DamageArmor(DurabilityPerLayer * 0.45f);
+
         public int ModifyCombatDamage(int amount) => Mathf.Max(1, Mathf.RoundToInt(amount * DamageMultiplier));
 
         private void OnDamaged(Health _, int amount, DamageKind kind)
         {
-            if (health.IsDead) return;
-            DamageArmor(amount / DamageMultiplier);
+            if (health.IsDead || kind != DamageKind.Combat) return;
+            if (health.LastHitSource == CombatImpactSource.ParriedFireball || health.LastHitSource == CombatImpactSource.ParriedSlam)
+                DamageArmor(DurabilityPerLayer * 0.45f);
+            else if (health.LastHitSource == CombatImpactSource.Basic) DamageArmor(Mathf.Min(12, amount / DamageMultiplier * 0.15f));
         }
 
         public void DamageArmor(float amount)

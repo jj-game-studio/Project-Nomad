@@ -35,8 +35,9 @@ namespace Nomad.Monsters.Demo
             sound.spatialBlend = 0.2f;
             sound.maxDistance = 35;
             Transform body = transform.Find("Body");
-            bodies = body.GetComponentsInChildren<Renderer>();
-            head = System.Array.Find(body.GetComponentsInChildren<Transform>(), bone => bone.name == "neck3");
+            bodies = System.Array.FindAll(body.GetComponentsInChildren<Renderer>(true),
+                renderer => renderer.sharedMaterial != null && renderer.sharedMaterial.HasProperty("_BaseColor"));
+            head = System.Array.Find(body.GetComponentsInChildren<Transform>(true), bone => bone.name == "neck3");
             GetComponent<MonsterHitFeedback>()?.SetEffects(false, false, false);
             CreateParticles();
         }
@@ -76,7 +77,7 @@ namespace Nomad.Monsters.Demo
         private void OnArmorBroken(int stage)
         {
             Vector3 point = transform.position + Vector3.up * 1.8f;
-            overlay.ArmorBreak(stage);
+            if (GetComponent<BossBattleHud>() == null) overlay.ArmorBreak(stage);
             Emit(fragments, point, 28, 5);
             Emit(sparks, point, 40, 6);
             HitCameraImpulse.Pulse(0.2f, 0.2f);
@@ -118,9 +119,9 @@ namespace Nomad.Monsters.Demo
 
         private void LateUpdate()
         {
-            if (health.IsDead) { overlay.HideArmor(); return; }
-            overlay.ShowArmor(armor.BreakCount, armor.DamageMultiplier);
-            overlay.ShowDurability(armor.RemainingRatio, armor.BreakCount);
+            if (health.IsDead || !GetComponent<DragonBossCombat>().Introduced) { overlay.HideArmor(); return; }
+            if (GetComponent<BossBattleHud>() != null) overlay.HideArmor();
+            else { overlay.ShowArmor(armor.BreakCount, armor.DamageMultiplier); overlay.ShowDurability(armor.RemainingRatio, armor.BreakCount); }
             float flash = Mathf.Clamp01(1 - (Time.time - hitAt) / 0.075f);
             foreach (Renderer renderer in bodies)
             {

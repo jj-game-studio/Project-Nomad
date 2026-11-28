@@ -8,7 +8,7 @@ namespace Nomad.Monsters.Demo
         public const float ChargeTurnSpeed = 130;
         public const float ChargeLockSeconds = 0.45f;
         public const float ChargeWindup = 2.8f;
-        public const float ChargeInterval = 10;
+        public const float ChargeInterval = 34;
         public bool ChargeAimLocked { get; private set; }
         public int ChargesReleased { get; private set; }
         public float ChargeRemaining => Mathf.Max(0, nextCharge - Time.time);
@@ -19,7 +19,7 @@ namespace Nomad.Monsters.Demo
 
         private void UpdateFacing()
         {
-            if (!engaged) { engaged = true; nextCharge = Time.time + ChargeInterval; }
+            if (!engaged) { engaged = true; nextCharge = Time.time + Tuning.ChargeInterval; }
             if (Phase == DragonPhase.Windup)
             {
                 if (Pattern == DragonPattern.Charge)
@@ -29,22 +29,22 @@ namespace Nomad.Monsters.Demo
                         Vector3 targetDirection = Vector3.ProjectOnPlane(target.transform.position - transform.position, Vector3.up);
                         TurnTowards(targetDirection, ChargeTurnSpeed);
                         direction = transform.forward;
-                        PlannedChargeDistance = Mathf.Clamp(targetDirection.magnitude + 2, 5, BossArena.HalfSize * 2.9f);
+                        PlannedChargeDistance = Mathf.Clamp(targetDirection.magnitude + ChargeOvershoot, MinimumChargeDistance, BossArena.HalfSize * 2.9f);
                     }
                     else if (!ChargeAimLocked) { ChargeAimLocked = true; direction = transform.forward; }
-                    if (chargeWarning != null) chargeWarning.Refresh(transform.position, direction, PlannedChargeDistance,
+                    if (chargeWarning != null) chargeWarning.Refresh(transform.position, direction, Mathf.Min(PlannedChargeDistance, arena.DistanceToBoundary(transform.position, direction)),
                         Mathf.Clamp01((Time.time - phaseStarted) / phaseDuration), ChargeAimLocked);
                 }
                 else TurnTowards(direction, TurnSpeed);
                 return;
             }
-            if ((Phase == DragonPhase.Recovery || Phase == DragonPhase.Waiting) && tracker.enabled && agent.isOnNavMesh)
+            if ((Phase == DragonPhase.Recovery || Phase == DragonPhase.Waiting) && agent.isOnNavMesh && agent.hasPath)
             {
                 Vector3 travel = agent.desiredVelocity;
                 if (travel.sqrMagnitude < 0.01f) return;
                 float angle = Vector3.Angle(transform.forward, travel);
                 // 크게 방향을 바꿀 때는 속도를 낮춰 옆으로 미끄러지지 않게 합니다.
-                agent.speed = Mathf.Lerp(1.2f, 6, Mathf.InverseLerp(90, 15, angle));
+                agent.speed = Mathf.Lerp(Enraged ? 4 : 1.2f, MoveSpeed, Mathf.InverseLerp(90, 15, angle));
                 TurnTowards(travel, TurnSpeed);
             }
         }
