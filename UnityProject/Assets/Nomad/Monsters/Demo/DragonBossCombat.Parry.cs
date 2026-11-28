@@ -24,14 +24,16 @@ namespace Nomad.Monsters.Demo
             pendingVolleyHits.Clear();
         }
 
+        public bool SweepParryable => Pattern == DragonPattern.BodySweep;
+
         private void PrepareBodySweep(float windup)
         {
             sweep = Area(transform.position, Tuning.BodySweepRadius, 360, windup, 0.12f, 28);
             sweep.EmitsFlame = false;
-            sweep.WarningSeconds = Mathf.Max(0.1f, windup - BossParrySignal.ReactionSeconds);
-            sweep.WarningColor = new Color(1, 0.78f, 0.08f, 0.3f);
+            sweep.WarningSeconds = SweepParryable ? Mathf.Max(0.1f, windup - BossParrySignal.ReactionSeconds) : windup;
+            sweep.WarningColor = SweepParryable ? new Color(1, 0.78f, 0.08f, 0.3f) : new Color(1, 0.08f, 0.015f, 0.3f);
             sweep.OnHit = () => PlayerBossReaction.Play(target, transform.position, 7, 1.35f, 0, 0.3f);
-            parrySignal.Arm(Time.time + windup, Tuning.BodySweepRadius + 0.5f);
+            if (SweepParryable) parrySignal.Arm(Time.time + windup, Tuning.BodySweepRadius + 0.5f);
         }
 
         private void PrepareRadialWarning(float windup, int volley = 0)

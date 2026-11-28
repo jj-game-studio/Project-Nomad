@@ -26,6 +26,8 @@ namespace Nomad.Monsters.Demo
         public bool Parryable => !lob && damage > 0 && !reflected && !resolved;
         public Health Target => target;
         public bool Reflected => reflected;
+        public bool Homing { get; set; }
+        public float TravelSpeed { get; set; } = 10;
 
         public static BossFireball Launch(Transform parent, Transform owner, Health target, Vector3 start,
             Vector3 goal, float seconds, bool lob, System.Action<Vector3> impact = null, int damage = 25, float radius = 0.4f)
@@ -165,6 +167,14 @@ namespace Nomad.Monsters.Demo
             elapsed += Time.deltaTime;
             float progress = Mathf.Clamp01(elapsed / duration);
             Vector3 next = Vector3.Lerp(start, goal, progress);
+            if (Homing && !reflected)
+            {
+                Vector3 heading = target.transform.position + Vector3.up * 1.2f - transform.position;
+                if (heading.sqrMagnitude > 0.01f)
+                    transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(heading), 75 * Time.deltaTime);
+                next = transform.position + transform.forward * (TravelSpeed * Time.deltaTime);
+                goal = next;
+            }
             if (lob) next += Vector3.up * Mathf.Sin(progress * Mathf.PI) * 4;
             Vector3 delta = next - transform.position;
             if (IsMeteor && orb != null) orb.Rotate(50 * Time.deltaTime, 90 * Time.deltaTime, 30 * Time.deltaTime);
@@ -219,6 +229,7 @@ namespace Nomad.Monsters.Demo
             if (attacker == null || attacker.IsDead) return false;
             DragonBossCombat boss = owner.GetComponent<DragonBossCombat>();
             reflected = true;
+            Homing = false;
             contactPending = false;
             SignalControlled = false;
             Radius = 0.6f;

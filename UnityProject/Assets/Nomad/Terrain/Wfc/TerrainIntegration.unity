@@ -1569,33 +1569,33 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Nomad.Monsters.Demo.BossEncounterContent
   Tuning:
     SlamRadius: 18
-    SlamWindup: 1.55
+    SlamWindup: 1.25
     RecoverySeconds: 0.85
     EnragedRainPoolChance: 0.3
     RadialCount: 12
     RadialRadius: 1.25
     RadialSpeed: 42
     RadialRange: 34
-    BreathRange: 22
-    BreathAngle: 120
+    BreathRange: 18
+    BreathAngle: 90
     BreathSafeRadius: 3.5
     BreathTravelSeconds: 1.3
     FirePoolCount: 4
     FirePoolRadius: 2.8
-    RainWaves: 20
+    RainWaves: 17
     RainPerWave: 3
     RainRadius: 1.65
-    RainFallSeconds: 0.85
+    RainFallSeconds: 1
     RainInterval: 0.35
     ChargeInterval: 34
     ChargeWindup: 2.8
     ChargeSpeed: 15
     BodySweepRadius: 7
     BodySweepWindup: 0.85
-    RockfallInterval: 14
+    RockfallInterval: 9
     RockfallWarning: 1.1
     RockfallRadius: 2.7
-    BreathBackstep: 4.5
+    BreathBackstep: 3
     OrbitSpeed: 18
     LavaEruptionRadius: 2.7
     LavaEruptionWarning: 0.9

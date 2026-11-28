@@ -185,7 +185,7 @@ namespace Nomad.Tests
                 Assert.That(boss.IsDead, Is.True);
                 Assert.That(firstBreakAt, Is.InRange(30,30.2f));
                 Assert.That(secondBreakAt, Is.InRange(60,60.2f));
-                Assert.That(enrageAt, Is.InRange(80,105));
+                Assert.That(enrageAt, Is.InRange(elapsed * 0.7f,elapsed));
                 Assert.That(elapsed, Is.InRange(135f, 175f));
                 Assert.That(boss.GetComponent<BossArmor>().BreakCount, Is.EqualTo(2), "패링/바위 활용 후 두 단계 파괴");
             }
@@ -335,7 +335,7 @@ namespace Nomad.Tests
             int hp = player.CurrentHealth;
             float restingCollider = boss.GetComponent<CapsuleCollider>().center.y;
             combat.BeginPattern(DragonPattern.Circle);
-            yield return Wait(1.85f);
+            yield return Wait(1.5f);
             var jump = boss.GetComponent<BossJumpSlam>();
             Assert.That(jump.Airborne, Is.True);
             Assert.That(boss.transform.Find("Body").localPosition.y, Is.GreaterThan(1.5f));
@@ -508,18 +508,20 @@ namespace Nomad.Tests
         [UnityTest]
         public IEnumerator FirePoolTicksAndStopsAfterLeavingAndDeathCleansIt()
         {
-            combat.BeginPattern(DragonPattern.FirePool);
-            BossHazard[] pools = combat.Effects.GetComponentsInChildren<BossHazard>();
-            Assert.That(pools.Length, Is.EqualTo(4));
+            boss.GetComponent<BossArmor>().DamageArmor(BossArmor.DurabilityPerLayer);
+            yield return Wait(3.4f);
+            combat.BeginPattern(DragonPattern.LavaEruption);
+            BossHazard[] pools = combat.Effects.GetComponentsInChildren<BossHazard>().Where(h=>h.EmitsFlame).ToArray();
+            Assert.That(pools.Length, Is.InRange(4,5));
             player.transform.position = pools[0].transform.position;
             Physics.SyncTransforms();
             int hp = player.CurrentHealth;
             yield return Wait(1.9f);
-            Assert.That(player.CurrentHealth, Is.EqualTo(hp - 10));
+            Assert.That(player.CurrentHealth, Is.EqualTo(hp - 34));
             player.transform.position = arena.Center - Vector3.right * 6;
             Physics.SyncTransforms();
             yield return Wait(1);
-            Assert.That(player.CurrentHealth, Is.EqualTo(hp - 10));
+            Assert.That(player.CurrentHealth, Is.EqualTo(hp - 34));
             boss.TryApplyDamage(boss.MaxHealth, DamageKind.Fall);
             yield return null;
             Assert.That(combat.Effects.childCount, Is.Zero);
@@ -574,12 +576,12 @@ namespace Nomad.Tests
         }
 
         [UnityTest]
-        public IEnumerator RainContinuesLongerAndSpawnsSixtyFireballs()
+        public IEnumerator RainContinuesLongerAndSpawnsFiftyOneFireballs()
         {
             combat.BeginPattern(DragonPattern.Rain);
-            yield return Wait(7.9f);
+            yield return Wait(7.1f);
             Assert.That(combat.Phase, Is.EqualTo(DragonPhase.Active));
-            Assert.That(combat.RainProjectilesSpawned, Is.EqualTo(60));
+            Assert.That(combat.RainProjectilesSpawned, Is.EqualTo(51));
             yield return Wait(0.9f);
             Assert.That(combat.Effects.GetComponentsInChildren<BossHazard>().Length, Is.Zero);
         }

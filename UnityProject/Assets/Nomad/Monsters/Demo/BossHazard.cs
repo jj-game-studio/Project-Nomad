@@ -41,6 +41,7 @@ namespace Nomad.Monsters.Demo
         private LineRenderer boundary;
         private bool boundaryProjected;
         private int boundaryStart;
+        private bool shook;
 
         public static BossHazard Create(Transform parent, Transform owner, Vector3 point, Quaternion facing, Health target,
             float radius, float angle, float delay, float duration, int damage, float interval = 0.75f)
@@ -133,6 +134,7 @@ namespace Nomad.Monsters.Demo
             ProjectGround(Mathf.Lerp(0.08f, 1, progress));
             if (HideWarning) { fill.gameObject.SetActive(false); boundary.gameObject.SetActive(false); if (innerBoundary != null) innerBoundary.gameObject.SetActive(false); }
             if (!Active) return;
+            if (!shook && damage > 0) { shook = true; BossCombatImpact.Pulse(Radius > 12 ? 0.18f : 0.07f); }
             if (HighlightActive)
             {
                 var tint = new MaterialPropertyBlock();

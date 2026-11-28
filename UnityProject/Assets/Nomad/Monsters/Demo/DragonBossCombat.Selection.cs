@@ -12,11 +12,22 @@ namespace Nomad.Monsters.Demo
             var choices = new List<DragonPattern>();
             foreach (DragonPattern pattern in Rotation)
                 if (AttacksStarted == 0 || pattern != Pattern) choices.Add(pattern);
-            if (targetDistance <= Tuning.BodySweepRadius + 1 && Pattern != DragonPattern.BodySweep)
-                choices.Add(DragonPattern.BodySweep);
+            if (targetDistance <= Tuning.BodySweepRadius)
+            {
+                if (Pattern != DragonPattern.BodySweep) choices.Add(DragonPattern.BodySweep);
+                if (Pattern != DragonPattern.RedSweep) choices.Add(DragonPattern.RedSweep);
+            }
+            else
+            {
+                if (Pattern != DragonPattern.TrackingFireball) choices.Add(DragonPattern.TrackingFireball);
+                if (Pattern != DragonPattern.AimedBreath) choices.Add(DragonPattern.AimedBreath);
+            }
             if (Time.time >= nextCharge && Pattern != DragonPattern.Charge) choices.Add(DragonPattern.Charge);
             if (GetComponent<BossArmor>().BreakCount > 0 && Pattern != DragonPattern.LavaEruption)
             {
+                choices.Add(DragonPattern.LavaEruption);
+                choices.Add(DragonPattern.LavaEruption);
+                choices.Add(DragonPattern.LavaEruption);
                 choices.Add(DragonPattern.LavaEruption);
                 choices.Add(DragonPattern.LavaEruption);
             }
@@ -27,8 +38,8 @@ namespace Nomad.Monsters.Demo
         {
             queuedPattern ??= ChooseNextPattern(Vector3.Distance(transform.position, target.transform.position));
             DragonPattern next = queuedPattern.Value;
-            float engageRange = next == DragonPattern.Charge ? float.PositiveInfinity :
-                next == DragonPattern.Circle ? 5.5f : next == DragonPattern.BodySweep ? Tuning.BodySweepRadius : 9;
+            float engageRange = next == DragonPattern.Charge || next == DragonPattern.TrackingFireball || next == DragonPattern.AimedBreath ? float.PositiveInfinity :
+                next == DragonPattern.Circle ? 5.5f : next == DragonPattern.BodySweep || next == DragonPattern.RedSweep ? Tuning.BodySweepRadius : 9;
             if (Vector3.Distance(transform.position, target.transform.position) > engageRange)
             {
                 if (pursuitStarted < 0) pursuitStarted = Time.time;
@@ -38,7 +49,7 @@ namespace Nomad.Monsters.Demo
                     until = Time.time + 0.08f;
                     return;
                 }
-                next = DragonPattern.RadialFireballs;
+                next = Random.value < 0.5f ? DragonPattern.TrackingFireball : DragonPattern.AimedBreath;
             }
             pursuitStarted = -1;
             queuedPattern = null;

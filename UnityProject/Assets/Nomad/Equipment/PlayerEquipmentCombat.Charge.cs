@@ -29,7 +29,7 @@ namespace Nomad.Equipment
             if (IsCharging || !ChargeAllowed || weapon == null ||
                 (weapon.AttackMode != WeaponAttackMode.Bow && weapon.AttackMode != WeaponAttackMode.Staff) ||
                 (weapon.AttackMode == WeaponAttackMode.Bow && ArrowCount == 0) ||
-                (weapon.AttackMode == WeaponAttackMode.Staff && (mana == null || !mana.CanSpend(weapon.ManaCost))) ||
+                (weapon.AttackMode == WeaponAttackMode.Staff && mana == null) ||
                 IsOverUi(pointer) || !TryGetAim(pointer, out Vector3 aim)) return false;
 
             chargeWeapon = weapon;
@@ -45,12 +45,13 @@ namespace Nomad.Equipment
             if (!IsCharging) return false;
             ItemDefinition weapon = chargeWeapon;
             float power = 1f + ChargeProgress * 1.5f;
+            float charge = ChargeProgress;
             bool allowed = ChargeAllowed && CurrentWeapon == weapon && !IsOverUi(pointer) && AimPoint.HasValue;
             if (!allowed) { CancelCharge(); return false; }
             Vector3 aim = AimPoint.Value;
 
             // 발사 전에 자세를 취소하면 지팡이 손이 원위치로 돌아가 다른 쪽에서 탄이 나가 보입니다.
-            bool fired = TryFire(weapon, aim, power);
+            bool fired = weapon.AttackMode == WeaponAttackMode.Staff ? TryFireChargedStaff(weapon, aim, charge) : TryFire(weapon, aim, power);
             CancelCharge();
             if (!fired) return false;
             Attacked?.Invoke(weapon.AttackMode);

@@ -198,7 +198,7 @@ namespace Nomad.Tests
             var boss = scene.Boss;
             boss.GetComponent<BossArrival>().Skip();
             Health health = boss.GetComponent<Health>();
-            health.TryApplyDamage(health.CurrentHealth - health.MaxHealth / 4, DamageKind.Fall);
+            health.TryApplyDamage(health.CurrentHealth - health.MaxHealth / 5, DamageKind.Fall);
                     yield return Wait(BossEnrageTransition.Seconds + 0.1f);
             yield return null;
             Assert.That(boss.Enraged, Is.True);
@@ -216,7 +216,7 @@ namespace Nomad.Tests
             yield return Wait(2.1f);
             BossHazard breath = boss.Effects.GetComponentInChildren<BossHazard>();
             Assert.That(breath.WarningVisible, Is.False);
-            Assert.That(breath.Radius, Is.EqualTo(22));
+            Assert.That(breath.Radius, Is.EqualTo(18));
             Assert.That(breath.Contains(boss.transform.position + boss.transform.forward * 2), Is.False);
             Assert.That(breath.VisualRangeMultiplier, Is.EqualTo(1));
         }
@@ -262,7 +262,7 @@ namespace Nomad.Tests
             yield return Wait(0.1f);
             Canvas.ForceUpdateCanvases();
             var graphics = Object.FindObjectsByType<BossBattleFrameGraphic>(FindObjectsSortMode.None);
-            Assert.That(graphics.Length, Is.EqualTo(4), "상/하단 프레임과 MP/STM 원형 게이지");
+            Assert.That(graphics.Length, Is.EqualTo(5), "상/하단 프레임과 MP/STM 원형 게이지");
             foreach (var graphic in graphics)
             {
                 Mesh mesh = graphic.canvasRenderer.GetMesh();
@@ -280,7 +280,7 @@ namespace Nomad.Tests
             boss.GetComponent<BossArrival>().Skip();
             scene.GodMode = true;
             Health health = boss.GetComponent<Health>();
-            health.TryApplyDamage(health.CurrentHealth - health.MaxHealth / 4, DamageKind.Fall);
+            health.TryApplyDamage(health.CurrentHealth - health.MaxHealth / 5, DamageKind.Fall);
                     yield return Wait(BossEnrageTransition.Seconds + 0.1f);
             boss.BeginPattern(DragonPattern.RadialFireballs);
             yield return Wait(2.6f);
@@ -291,7 +291,7 @@ namespace Nomad.Tests
             yield return Wait(0.5f);
             Assert.That(Quaternion.Angle(facing, boss.transform.rotation), Is.GreaterThan(7));
             boss.BeginPattern(DragonPattern.FirePool);
-            Assert.That(boss.Effects.GetComponentsInChildren<BossHazard>().Count(hazard => hazard.Radius == boss.Tuning.FirePoolRadius), Is.EqualTo(8));
+            Assert.That(boss.Effects.GetComponentsInChildren<BossHazard>().Count(hazard => hazard.Radius == boss.Tuning.FirePoolRadius), Is.Zero);
             Assert.That(boss.DashSpeed, Is.GreaterThan(boss.Tuning.ChargeSpeed * 1.5f));
             boss.Stun(5);
             Assert.That(boss.Remaining, Is.InRange(2.9f, 3.01f));

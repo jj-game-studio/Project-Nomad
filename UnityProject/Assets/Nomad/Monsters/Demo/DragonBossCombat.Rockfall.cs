@@ -27,8 +27,7 @@ namespace Nomad.Monsters.Demo
             {
                 for (int attempt = 0; attempt < 24; attempt++)
                 {
-                    Vector3 requested = index == 0 && attempt == 0 ? target.transform.position :
-                        arena.Center + Quaternion.Euler(0, Random.Range(0, 360), 0) * Vector3.forward * Random.Range(8, 18);
+                    Vector3 requested = transform.position + Quaternion.Euler(0, Random.Range(0, 360), 0) * Vector3.forward * Random.Range(6.5f, 11);
                     if (!arena.FindRockDropPoint(requested, transform.position, out Vector3 point)) continue;
                     if (fallingRocks.Exists(rock => rock != null && Vector3.Distance(rock.Landing, point) < 6)) continue;
                     BossHazard warning = BossHazard.Create(background, transform, point, Quaternion.identity, target,

@@ -30,7 +30,7 @@ namespace Nomad.Tests
                 yield return null;
             }
             Assert.That(scene.Arena.RockCount, Is.InRange(3, 6));
-            Assert.That(boss.RainProjectilesSpawned, Is.GreaterThan(20));
+            Assert.That(boss.RainProjectilesSpawned, Is.GreaterThanOrEqualTo(18));
         }
 
         [UnityTest]
@@ -52,7 +52,8 @@ namespace Nomad.Tests
             int hp = health.CurrentHealth;
             boss.BeginPattern(DragonPattern.LavaEruption);
             var columns = boss.Effects.GetComponentsInChildren<BossLavaEruption>();
-            Assert.That(columns.Length, Is.InRange(2, 3));
+            Assert.That(columns.Length, Is.InRange(4, 5));
+            PlaceHero(columns[0].transform.position);
             foreach (var column in columns)
                 foreach (var other in columns)
                     if (column != other) Assert.That(Vector3.Distance(column.transform.position, other.transform.position), Is.GreaterThanOrEqualTo(5.9f));
@@ -64,7 +65,7 @@ namespace Nomad.Tests
             Assert.That(boss.Effects.GetComponentsInChildren<BossHazard>().Count(hazard => hazard.EmitsFlame), Is.EqualTo(columns.Length), "분출 뒤에는 별도 용암 지대가 남음");
             Assert.That(columns.All(column => column.GetComponentsInChildren<ParticleSystem>().Any(system => system.name == "Molten eruption jet" && system.particleCount > 0)), Is.True);
             yield return Wait(0.9f);
-            Assert.That(boss.Effects.GetComponentsInChildren<BossHazard>().Count(hazard => hazard.Active && hazard.EmitsFlame), Is.InRange(2, 3));
+            Assert.That(boss.Effects.GetComponentsInChildren<BossHazard>().Count(hazard => hazard.Active && hazard.EmitsFlame), Is.InRange(4, 5));
         }
         [UnityTest]
         public IEnumerator FireRainHasVisibleMeteorBodiesLongTailsAndImpactEjecta()

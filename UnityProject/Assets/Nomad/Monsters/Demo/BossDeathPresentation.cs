@@ -14,6 +14,7 @@ namespace Nomad.Monsters.Demo
         private Health health;
         private Animator animator;
         private float started;
+        private bool exploded;
 
         private void Awake()
         {
@@ -34,6 +35,11 @@ namespace Nomad.Monsters.Demo
                 GetComponent<Collider>().enabled = false;
                 var agent = GetComponent<NavMeshAgent>();
                 if (agent.enabled && agent.isOnNavMesh) agent.isStopped = true;
+            }
+            if (!exploded && Progress >= 0.82f)
+            {
+                exploded = true;
+                BossDeathBurst.Create(transform.position + Vector3.up * 1.5f);
             }
             animator.speed = 0;
             animator.Play("Base Layer.BossDeath", 0, Progress);

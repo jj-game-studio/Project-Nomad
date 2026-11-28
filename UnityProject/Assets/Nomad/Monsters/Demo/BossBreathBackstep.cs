@@ -32,15 +32,32 @@ namespace Nomad.Monsters.Demo
         {
             ResetPose();
             start = transform.position;
+            float requested = distance;
+            float best = SafeDistance(backward, requested);
+            if (best < requested * 0.65f)
+            {
+                foreach (Vector3 alternative in new[] { -backward, Quaternion.Euler(0,90,0)*backward, Quaternion.Euler(0,-90,0)*backward })
+                {
+                    float available = SafeDistance(alternative, requested);
+                    if (available <= best) continue;
+                    backward = alternative;
+                    best = available;
+                }
+            }
+            goal = arena.GroundPoint(start + backward * best);
+            since = Time.time;
+            running = true;
+        }
+
+        private float SafeDistance(Vector3 backward, float distance)
+        {
             distance = Mathf.Min(distance, Mathf.Max(0, arena.DistanceToBoundary(start, backward) - capsule.radius - 0.5f));
             if (NavMesh.Raycast(start, start + backward * distance, out NavMeshHit edge, agent.areaMask))
                 distance = Mathf.Min(distance, Mathf.Max(0, Vector3.Distance(start, edge.position) - 0.25f));
             if (Physics.CapsuleCast(start + Vector3.up * capsule.radius, start + Vector3.up * (capsule.height - capsule.radius),
                 capsule.radius, backward, out RaycastHit solid, distance, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
                 if (!solid.collider.transform.IsChildOf(transform)) distance = Mathf.Min(distance, Mathf.Max(0, solid.distance - 0.2f));
-            goal = arena.GroundPoint(start + backward * distance);
-            since = Time.time;
-            running = true;
+            return distance;
         }
 
         private void LateUpdate()

@@ -7,6 +7,14 @@ namespace Nomad.Monsters.Demo
     public sealed partial class BossDebugBootstrap
     {
         private bool godMode;
+        public bool UnlimitedResources { get; set; }
+
+        private void LateUpdate()
+        {
+            if (Player == null) return;
+            Player.GetComponent<PlayerMana>().Unlimited = UnlimitedResources;
+            Player.GetComponent<PlayerStamina>().Unlimited = UnlimitedResources;
+        }
         public bool GodMode
         {
             get => godMode;

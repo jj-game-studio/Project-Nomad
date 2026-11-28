@@ -26,7 +26,7 @@ namespace Nomad.Tests
                 if (pass == 1)
                 {
                     Health health = boss.GetComponent<Health>();
-                    health.TryApplyDamage(health.CurrentHealth - health.MaxHealth / 4, DamageKind.Fall);
+                    health.TryApplyDamage(health.CurrentHealth - health.MaxHealth / 5, DamageKind.Fall);
                     yield return Wait(BossEnrageTransition.Seconds + 0.1f);
                 }
                 if (pass == 2) boss.Tuning.EnragedRainPoolChance = 1;
@@ -38,7 +38,7 @@ namespace Nomad.Tests
                 var ball = boss.Effects.GetComponentInChildren<BossFireball>();
                 Assert.That(ball, Is.Not.Null);
                 float seconds = (float)typeof(BossFireball).GetField("duration", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(ball);
-                Assert.That(seconds, Is.EqualTo(0.85f).Within(0.001f), "일반/광폭 낙하 속도 동일");
+                Assert.That(seconds, Is.EqualTo(1f).Within(0.001f), "일반/광폭 낙하 속도 동일");
                 yield return Wait(1.1f);
                 BossHazard[] pools = boss.Effects.GetComponentsInChildren<BossHazard>().Where(hazard => hazard.Radius == 1.8f).ToArray();
                 Assert.That(pools.Length, Is.EqualTo(pass == 2 ? 1 : 0));

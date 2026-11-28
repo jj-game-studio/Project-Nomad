@@ -4,19 +4,19 @@ using UnityEngine.AI;
 
 namespace Nomad.Monsters.Demo
 {
-    public enum DragonPattern { Basic, Circle, RadialFireballs, Breath, FirePool, Charge, Rain, BodySweep, Rockfall, OrbitFlames, LavaEruption }
+    public enum DragonPattern { Basic, Circle, RadialFireballs, Breath, FirePool, Charge, Rain, BodySweep, Rockfall, OrbitFlames, LavaEruption, RedSweep, TrackingFireball, AimedBreath, InnerBlast, OuterBlast }
     public enum DragonPhase { Waiting, Windup, Active, Recovery, Stunned, Dead, Arriving, Enraging }
 
     [DefaultExecutionOrder(120)]
     public sealed partial class DragonBossCombat : MonoBehaviour
     {
-        public const int RainWaves = 20;
+        public const int RainWaves = 17;
         public const int RainPerWave = 3;
         public const float RainInterval = 0.35f;
         public const float CircleRadius = 18f;
-        public const float BreathRange = 22;
-        public const float BreathAngle = 120;
-        public const float RainDuration = 7.65f;
+        public const float BreathRange = 18;
+        public const float BreathAngle = 90;
+        public const float RainDuration = 6.75f;
         public const int RadialFireballCount = 12;
         public bool AutomaticPatterns { get; set; } = true;
         public int AttacksStarted { get; private set; }
@@ -28,13 +28,13 @@ namespace Nomad.Monsters.Demo
         public Transform Effects => effects;
         public bool Introduced => arrival == null || arrival.Landed;
         public BossCombatTuning Tuning { get; private set; } = new BossCombatTuning();
-        public const float EnrageHealthRatio = 0.55f;
+        public const float EnrageHealthRatio = 0.2f;
         public bool EnrageRequested => health != null && !health.IsDead && health.CurrentHealth <= health.MaxHealth * EnrageHealthRatio;
         public bool Enraged => enrage != null && enrage.Completed && health != null && !health.IsDead;
         public float EnrageAmount => enrage != null ? enrage.VisualAmount : 0;
         public bool EnrageTransitioning => Phase == DragonPhase.Enraging;
         private BossEnrageTransition enrage;
-        public float Tempo => Enraged ? 1.3f : 1;
+        public float Tempo => Enraged ? 1.15f : 1;
         public float MoveSpeed => Enraged ? 8 : 6;
         public float LeapDuration => BossJumpSlam.LeapSeconds / Tempo;
         public int ParrySuccesses { get; private set; }
@@ -61,7 +61,7 @@ namespace Nomad.Monsters.Demo
         private int rainCount;
         private TextMesh status;
         private static readonly DragonPattern[] Rotation = { DragonPattern.Circle, DragonPattern.RadialFireballs,
-            DragonPattern.Breath, DragonPattern.FirePool, DragonPattern.Rain, DragonPattern.OrbitFlames };
+            DragonPattern.Breath, DragonPattern.Rain, DragonPattern.OrbitFlames, DragonPattern.InnerBlast, DragonPattern.OuterBlast };
 
         public void Configure(BossArena room, Health victim)
         {
@@ -173,6 +173,7 @@ namespace Nomad.Monsters.Demo
                 if (TickBossCharge()) Recover();
                 return;
             }
+            TickAimedBreath();
             if (Phase == DragonPhase.Active && Pattern == DragonPattern.Rain && Time.time >= nextRain && rainCount < Tuning.RainWaves)
             {
                 nextRain = Time.time + Tuning.RainInterval;
@@ -208,7 +209,7 @@ namespace Nomad.Monsters.Demo
         {
             // 낙하는 현재 공격을 끊지 않는 별도 환경 공격입니다.
             if (pattern == DragonPattern.Rockfall) { DropRocks(); return; }
-            if ((pattern == DragonPattern.LavaEruption && GetComponent<BossArmor>().BreakCount == 0) || pattern == DragonPattern.Basic || EnrageTransitioning || health == null || health.IsDead || !Introduced || !PlayerInside || arena.IsLocked ||
+            if (pattern == DragonPattern.FirePool || ((pattern == DragonPattern.BodySweep || pattern == DragonPattern.RedSweep) && Vector3.Distance(transform.position, target.transform.position) > Tuning.BodySweepRadius) || (pattern == DragonPattern.LavaEruption && GetComponent<BossArmor>().BreakCount == 0) || pattern == DragonPattern.Basic || EnrageTransitioning || health == null || health.IsDead || !Introduced || !PlayerInside || arena.IsLocked ||
                 (Phase == DragonPhase.Stunned && Time.time < until)) return;
             tactics.Stop();
             Pause();
@@ -222,10 +223,12 @@ namespace Nomad.Monsters.Demo
             if (direction.sqrMagnitude < 0.01f) direction = transform.forward;
             ChargeAimLocked = false;
             float windup = pattern == DragonPattern.Circle ? Tuning.SlamWindup :
-                pattern == DragonPattern.BodySweep ? Tuning.BodySweepWindup : pattern == DragonPattern.RadialFireballs ? 1.8f : pattern == DragonPattern.Charge ? Tuning.ChargeWindup :
+                pattern == DragonPattern.BodySweep || pattern == DragonPattern.RedSweep ? Tuning.BodySweepWindup : pattern == DragonPattern.RadialFireballs ? 1.8f : pattern == DragonPattern.Charge ? Tuning.ChargeWindup :
                 pattern == DragonPattern.Rain ? 0.7f :
                 pattern == DragonPattern.LavaEruption ? Tuning.LavaEruptionWarning : pattern == DragonPattern.OrbitFlames ? 1.2f : pattern == DragonPattern.Breath ? Tuning.BreathPreparation : 0.9f;
             windup /= Tempo;
+            if (pattern == DragonPattern.AimedBreath) windup = 1.5f / Tempo;
+            if (pattern == DragonPattern.InnerBlast || pattern == DragonPattern.OuterBlast) windup = 1.2f / Tempo;
             if (pattern == DragonPattern.Breath) windup += BossBreathBackstep.Seconds;
             float turning = Vector3.Angle(transform.forward, direction) / (pattern == DragonPattern.Charge ? ChargeTurnSpeed : TurnSpeed);
             windup = Mathf.Max(windup, turning + (pattern == DragonPattern.Charge ? ChargeLockSeconds : 0.12f));
@@ -235,6 +238,7 @@ namespace Nomad.Monsters.Demo
             SetMotion("Attack_A", 1f / (windup + 0.5f));
             status.text = pattern == DragonPattern.RadialFireballs ? "" : pattern == DragonPattern.Charge ? "돌진 준비" :
                 pattern == DragonPattern.Breath ? "브레스 준비" : pattern == DragonPattern.Rain ? "화염우" : "";
+            PrepareAdditionalPattern(pattern, windup);
             if (pattern == DragonPattern.Circle)
             {
                 slam = Area(transform.position, Tuning.SlamRadius, 360, windup + LeapDuration, 0.12f, 32);
@@ -267,12 +271,14 @@ namespace Nomad.Monsters.Demo
 
         private void Release()
         {
+            ReleaseAdditionalPattern();
             status.text = "";
             Phase = DragonPhase.Active;
             until = Time.time + (Pattern == DragonPattern.Breath ? 2.4f : Pattern == DragonPattern.Rain ? RainDuration :
                 Pattern == DragonPattern.Circle ? LeapDuration + 0.12f : Pattern == DragonPattern.RadialFireballs ? Tuning.RadialRange / (Tuning.RadialSpeed * Tempo) + 0.3f : 0.18f);
             if (Pattern == DragonPattern.OrbitFlames) until = Time.time + BossRingSequence.AfterFirstWarning;
             if (Pattern == DragonPattern.LavaEruption) until = Time.time + 1.1f;
+            if (Pattern == DragonPattern.AimedBreath) until = Time.time + 1.3f / Tempo;
             if (Pattern == DragonPattern.Rain)
                 until = Time.time + (Tuning.RainWaves - 1) * Tuning.RainInterval + Tuning.RainFallSeconds + 0.15f;
             if (Pattern == DragonPattern.Breath) until = Time.time + 2.4f / Tempo;
@@ -283,9 +289,7 @@ namespace Nomad.Monsters.Demo
                 FireRadialVolley();
                 until = Time.time + Tuning.RadialRange / (Tuning.RadialSpeed * Tempo) + (Enraged ? 1 : 0) + 0.3f;
             }
-            if (Pattern == DragonPattern.FirePool)
-                foreach (Vector3 point in firePoolTargets)
-                    BossFireball.Launch(effects, transform, target, Mouth.position, point, 0.75f, true);
+            // 용암 투척은 제거하고 지면 분출이 잔열을 남깁니다.
             if (Pattern == DragonPattern.Charge)
             {
                 direction = transform.forward;

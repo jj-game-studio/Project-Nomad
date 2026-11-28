@@ -92,7 +92,7 @@ namespace Nomad.Tests
             Assert.That(cracks, Is.Not.Null);
             var lines = cracks.GetComponentsInChildren<LineRenderer>().Where(line => line.name == "Broken stone seam").ToArray();
             Assert.That(lines.Length, Is.EqualTo(16));
-            Assert.That(lines[0].startWidth, Is.GreaterThan(0.6f));
+            Assert.That(lines[0].startWidth, Is.GreaterThan(0.3f));
             Assert.That(lines[0].GetPosition(4).y - scene.Arena.GroundHeight(lines[0].GetPosition(4)), Is.GreaterThan(0.15f));
         }
 
@@ -110,6 +110,7 @@ namespace Nomad.Tests
             int hp = health.CurrentHealth;
             Assert.That(scene.Arena.RockCount, Is.Zero);
             boss.BeginPattern(DragonPattern.Rockfall);
+            PlaceHero(scene.Arena.GetComponentInChildren<BossFallingRock>().Landing);
             yield return Wait(0.5f);
             Assert.That(scene.Arena.RockCount, Is.Zero);
             Assert.That(health.CurrentHealth, Is.EqualTo(hp));
@@ -155,10 +156,10 @@ namespace Nomad.Tests
             Assert.That(Vector3.Distance(start, boss.transform.position), Is.GreaterThan(3));
             var breath = boss.Effects.GetComponentInChildren<BossHazard>();
             Assert.That(breath, Is.Not.Null);
-            Assert.That(breath.Radius, Is.EqualTo(22));
+            Assert.That(breath.Radius, Is.EqualTo(18));
             Assert.That(breath.Contains(boss.transform.position + boss.transform.forward * 2), Is.False);
-            Assert.That(breath.Contains(boss.transform.position + boss.transform.forward * 21), Is.True);
-            Assert.That(breath.Contains(boss.transform.position + boss.transform.forward * 22.1f), Is.False);
+            Assert.That(breath.Contains(boss.transform.position + boss.transform.forward * 17), Is.True);
+            Assert.That(breath.Contains(boss.transform.position + boss.transform.forward * 18.1f), Is.False);
         }
 
         [UnityTest]

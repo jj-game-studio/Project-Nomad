@@ -102,9 +102,9 @@ namespace Nomad.Tests
                     Assert.That(combat.TryBeginCharge(pointer), Is.True);
                     TestKit.SetField(combat, "chargeStarted", Time.time - PlayerEquipmentCombat.FullChargeSeconds);
                     Assert.That(combat.TryReleaseCharge(pointer), Is.True);
-                    Assert.That(combat.LastShotPower, Is.EqualTo(2.5f));
+                    Assert.That(combat.LastShotPower, Is.EqualTo(combat.CurrentWeapon.AttackMode == WeaponAttackMode.Staff ? 3f : 2.5f));
                     Assert.That(combat.ArrowCount, Is.EqualTo(arrows - (combat.CurrentWeapon.AttackMode == WeaponAttackMode.Bow ? 1 : 0)));
-                    Assert.That(mana.Current, Is.EqualTo(beforeMana - (combat.CurrentWeapon.AttackMode == WeaponAttackMode.Staff ? combat.CurrentWeapon.ManaCost : 0)));
+                    Assert.That(mana.Current, Is.EqualTo(beforeMana - (combat.CurrentWeapon.AttackMode == WeaponAttackMode.Staff ? combat.CurrentWeapon.ManaCost * 2 : 0)));
                     TestKit.SetField(combat, "nextAttackTime", 0f);
                     Assert.That(combat.TryBeginCharge(pointer), Is.True);
                     combat.InputBlocked = true;
@@ -162,7 +162,7 @@ namespace Nomad.Tests
                     yield return null;
                     yield return null;
                     Assert.That(combat.IsCharging, Is.False, "좌클릭 놓으면 발사");
-                    Assert.That(combat.LastShotPower, Is.EqualTo(2.5f));
+                    Assert.That(combat.LastShotPower, Is.EqualTo(combat.CurrentWeapon.AttackMode == WeaponAttackMode.Staff ? 3f : 2.5f));
                     Assert.That(hud.ChargeGaugeVisible, Is.False, "발사 후 게이지 숨김");
                     Assert.That(movement.ChargeSpeedMultiplier, Is.EqualTo(1f), "발사 후 감속 복원");
                     Assert.That(gathering.ParticleCount, Is.Zero, "발사 후 차징 입자 정리");
@@ -176,7 +176,7 @@ namespace Nomad.Tests
                     movement.enabled = false;
                     InputSystem.QueueStateEvent(keyboard, new KeyboardState());
                     Assert.That(combat.ArrowCount, Is.EqualTo(arrows - (combat.CurrentWeapon.AttackMode == WeaponAttackMode.Bow ? 1 : 0)));
-                    Assert.That(mana.Current, Is.EqualTo(beforeMana - (combat.CurrentWeapon.AttackMode == WeaponAttackMode.Staff ? combat.CurrentWeapon.ManaCost : 0)));
+                    Assert.That(mana.Current, Is.EqualTo(beforeMana - (combat.CurrentWeapon.AttackMode == WeaponAttackMode.Staff ? combat.CurrentWeapon.ManaCost * 2 : 0)));
                 }
 
                 monsters = new GameObject("Loot rank test");

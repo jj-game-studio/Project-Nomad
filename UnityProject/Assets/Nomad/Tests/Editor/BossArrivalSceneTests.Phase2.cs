@@ -142,7 +142,7 @@ namespace Nomad.Tests
             boss.GetComponent<BossArrival>().Skip();
             PlaceHero(scene.Arena.Center - Vector3.forward * 5);
             Health health = boss.GetComponent<Health>();
-            health.TryApplyDamage(health.CurrentHealth - health.MaxHealth / 4, DamageKind.Fall);
+            health.TryApplyDamage(health.CurrentHealth - health.MaxHealth / 5, DamageKind.Fall);
             yield return Wait(0.2f);
             Assert.That(boss.EnrageTransitioning, Is.True);
             Assert.That(boss.Enraged, Is.False);
@@ -178,9 +178,11 @@ namespace Nomad.Tests
         {
             scene.Boss.GetComponent<BossArrival>().Skip();
             foreach (BossBreakableRock rock in scene.Arena.GetComponentsInChildren<BossBreakableRock>()) Object.DestroyImmediate(rock.gameObject);
-            scene.Boss.BeginPattern(DragonPattern.FirePool);
+            scene.Boss.GetComponent<BossArmor>().DamageArmor(BossArmor.DurabilityPerLayer);
+            yield return Wait(3.4f);
+            scene.Boss.BeginPattern(DragonPattern.LavaEruption);
             yield return Wait(1.6f);
-            var pool = scene.Boss.Effects.GetComponentsInChildren<BossHazard>().First();
+            var pool = scene.Boss.Effects.GetComponentsInChildren<BossHazard>().First(h=>h.Irregular);
             Assert.That(pool.Irregular, Is.True);
             float[] edges = Enumerable.Range(0, 36).Select(index => pool.EdgeRadius(Quaternion.Euler(0, index * 10, 0) * Vector3.forward)).ToArray();
             Assert.That(edges.Max() - edges.Min(), Is.GreaterThan(0.4f));

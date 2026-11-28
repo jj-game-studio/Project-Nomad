@@ -76,13 +76,13 @@ namespace Nomad.Tests
             yield return null;
             var armor = boss.GetComponent<BossArmor>(); var shell = boss.GetComponent<BossArmorShell>();
             Assert.That(shell.LayersVisible, Is.EqualTo(2));
-            Assert.That(boss.GetComponentsInChildren<Transform>().Count(t => t.name == "Outer carapace plate"), Is.EqualTo(12));
+            Assert.That(boss.GetComponentsInChildren<Transform>().Count(t => t.name == "Outer fitted carapace"), Is.GreaterThanOrEqualTo(1));
             armor.DamageArmor(BossArmor.DurabilityPerLayer);
             yield return null;
             Assert.That(scene.Arena.GetComponentInChildren<BossOrbitingFlames>(), Is.Null);
             Assert.That(shell.LayersVisible, Is.EqualTo(1));
-            Assert.That(boss.GetComponentsInChildren<Transform>().Any(t => t.name == "Outer carapace plate"), Is.False);
-            Assert.That(boss.GetComponentsInChildren<Text>().Any(t => t.text.Contains("외피") && t.text.Contains("파괴 완료")), Is.True);
+            Assert.That(boss.GetComponentsInChildren<Transform>().Any(t => t.name == "Outer fitted carapace"), Is.False);
+            Assert.That(boss.GetComponentsInChildren<Text>().Any(t => t.text.Contains("내피") && t.text.Contains("1/2")), Is.True);
             Assert.That(armor.ModifyCombatDamage(100), Is.EqualTo(110));
             armor.DamageArmor(BossArmor.DurabilityPerLayer);
             yield return null;

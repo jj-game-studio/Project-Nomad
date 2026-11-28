@@ -10,50 +10,54 @@ namespace Nomad.Monsters.Demo
         private static Material material;
         private BossArmor armor;
         private DragonBossCombat boss;
-        private Transform rear, front;
-        private readonly List<Transform>[] layers = { new(), new() };
+        private Health health;
+        private readonly List<SkinnedMeshRenderer>[] layers = { new(), new() };
         public int LayersVisible => 2 - armor.BreakCount;
 
         public void Configure(DragonBossCombat owner)
         {
-            boss = owner; armor = GetComponent<BossArmor>();
-            Transform[] bones = GetComponentsInChildren<Transform>();
-            rear = System.Array.Find(bones, bone => bone.name == "base");
-            front = System.Array.Find(bones, bone => bone.name == "neck1");
-            if (rear == null || front == null) { rear = transform; front = transform; }
-            if (material == null) material = new Material(Resources.Load<Shader>("BossArmorShell"));
-
-            for (int layer = 1; layer >= 0; layer--)
-            for (int index = 0; index < 12; index++)
-            {
-                Transform plate = BossFlameVfx.Rock(transform, layer == 0 ? "Outer carapace plate" : "Inner carapace plate");
-                plate.GetComponent<Renderer>().sharedMaterial = material;
-                plate.localScale = layer == 0 ? new Vector3(1.65f, 0.8f, 1.8f) : new Vector3(1.45f, 0.6f, 1.55f);
-                layers[layer].Add(plate);
-            }
+            boss = owner; armor = GetComponent<BossArmor>(); health = GetComponent<Health>();
             armor.Broken += Shatter;
+        }
+
+        private void Start()
+        {
+            if (material == null) material = new Material(Resources.Load<Shader>("BossArmorShell"));
+            var sources = transform.Find("Body").GetComponentsInChildren<SkinnedMeshRenderer>();
+            foreach (var source in sources)
+            {
+                if (source.name.Contains("outline")) continue;
+                for (int layer = armor.BreakCount; layer < 2; layer++)
+                {
+                    var root = new GameObject(layer == 0 ? "Outer fitted carapace" : "Inner fitted carapace");
+                    root.transform.SetParent(source.transform, false);
+                    var shell = root.AddComponent<SkinnedMeshRenderer>();
+                    shell.sharedMesh = source.sharedMesh; shell.bones = source.bones;
+                    shell.rootBone = source.rootBone; shell.localBounds = source.localBounds;
+                    var slots = new Material[source.sharedMaterials.Length]; System.Array.Fill(slots, material);
+                    shell.sharedMaterials = slots;
+                    shell.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                    layers[layer].Add(shell);
+                }
+            }
         }
 
         private void LateUpdate()
         {
             if (boss == null || armor == null) return;
-            Vector3 along = front.position - rear.position;
-            Quaternion facing = along.sqrMagnitude > 0.1f ? Quaternion.LookRotation(along, transform.up) : transform.rotation;
             for (int layer = 0; layer < 2; layer++)
-            for (int index = 0; index < layers[layer].Count; index++)
+            foreach (var shell in layers[layer])
             {
-                Transform plate = layers[layer][index];
-                if (plate == null) continue;
-                plate.gameObject.SetActive(boss.Introduced && !GetComponent<Health>().IsDead);
-                int side = index % 3 - 1; float row = index / 3 / 3f;
-                Vector3 center = Vector3.Lerp(rear.position, front.position, row);
-                plate.position = center + transform.right * (side * 0.8f) + transform.up *
-                    ((side == 0 ? 0.85f : 0.46f) + (layer == 0 ? 0.17f : 0));
-                plate.rotation = facing * Quaternion.Euler(0, 0, -side * 25);
+                if (shell == null) continue;
+                shell.enabled = boss.Introduced && !health.IsDead;
                 var tint = new MaterialPropertyBlock();
-                tint.SetColor("_LayerColor", layer == 0 ? new Color(0.17f,0.23f,0.27f) : new Color(0.4f,0.24f,0.12f));
+                tint.SetColor("_LayerColor", layer == 0 ? new Color(0.25f,0.22f,0.2f) : new Color(0.38f,0.24f,0.13f));
+                tint.SetFloat("_Offset", shell.sharedMesh.bounds.extents.magnitude * (layer == 0 ? 0.004f : 0.002f));
                 tint.SetFloat("_Stress", layer == armor.BreakCount ? 1 - armor.RemainingRatio : 0);
-                plate.GetComponent<Renderer>().SetPropertyBlock(tint);
+                var source = shell.transform.parent.GetComponent<SkinnedMeshRenderer>();
+                if (source != null && source.sharedMaterial.mainTexture != null)
+                    tint.SetTexture("_BaseMap",source.sharedMaterial.mainTexture);
+                shell.SetPropertyBlock(tint);
             }
         }
 
@@ -61,17 +65,27 @@ namespace Nomad.Monsters.Demo
         {
             int layer = count - 1;
             if (layer < 0 || layer >= 2) return;
-            foreach (Transform plate in layers[layer])
+            foreach (var shell in layers[layer])
             {
-                if (plate == null) continue;
-                plate.SetParent(null, true);
-                var shard = plate.gameObject.AddComponent<Rigidbody>();
-                shard.linearVelocity = (plate.position - transform.position).normalized * 4 + Vector3.up * 3;
-                shard.angularVelocity = Random.insideUnitSphere * 6;
-                Destroy(plate.gameObject, 1.4f);
+                if (shell == null) continue;
+                var baked = new Mesh(); shell.BakeMesh(baked);
+                Vector3[] vertices = baked.vertices;
+                int pieces = Mathf.Min(24, vertices.Length);
+                for (int i = 0; i < pieces; i++)
+                {
+                    Transform shard = BossFlameVfx.Rock(null, "Crumbled fitted shell");
+                    shard.position = shell.transform.TransformPoint(vertices[i * vertices.Length / pieces]);
+                    shard.localScale = Vector3.one * Random.Range(0.12f, 0.3f);
+                    shard.GetComponent<Renderer>().sharedMaterial = material;
+                    var body = shard.gameObject.AddComponent<Rigidbody>();
+                    body.linearVelocity = (shard.position - transform.position).normalized * 3 + Vector3.up * 2;
+                    body.angularVelocity = Random.insideUnitSphere * 4;
+                    Destroy(shard.gameObject, 1.2f);
+                }
+                Destroy(baked); Destroy(shell.gameObject);
             }
             layers[layer].Clear();
-            BossStoneDebris.Create(transform.parent, transform.position + Vector3.up * 1.3f);
+            BossStoneDebris.Create(transform.parent, transform.position + Vector3.up);
         }
 
         private void OnDestroy() { if (armor != null) armor.Broken -= Shatter; }

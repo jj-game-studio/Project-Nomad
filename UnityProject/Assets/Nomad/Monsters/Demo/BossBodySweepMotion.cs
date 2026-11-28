@@ -29,7 +29,7 @@ namespace Nomad.Monsters.Demo
         private void LateUpdate()
         {
             if (boss == null || root == null) return;
-            bool sweep = boss.Pattern == DragonPattern.BodySweep;
+            bool sweep = boss.Pattern == DragonPattern.BodySweep || boss.Pattern == DragonPattern.RedSweep;
             bool winding = sweep && boss.Phase == DragonPhase.Windup;
             if (winding) released = false;
             if (sweep && boss.Phase == DragonPhase.Active && !released) { releaseAt = Time.time; released = true; }

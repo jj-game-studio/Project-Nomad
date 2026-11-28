@@ -14,10 +14,12 @@ namespace Nomad.Game.Editor
         private int selected;
         private bool utilityReady;
         private static readonly DragonPattern[] Choices = { DragonPattern.Circle, DragonPattern.RadialFireballs,
-            DragonPattern.Breath, DragonPattern.FirePool, DragonPattern.Charge, DragonPattern.Rain,
-            DragonPattern.BodySweep, DragonPattern.Rockfall, DragonPattern.OrbitFlames, DragonPattern.LavaEruption };
-        private static readonly string[] Names = { "점프 강타", "전방향 화염탄", "브레스", "불지대", "돌진", "화염우",
-            "근접 밀치기", "독립 바위 낙하", "3회 거리 압박", "파괴 후 용암 분출" };
+            DragonPattern.Breath, DragonPattern.Charge, DragonPattern.Rain,
+            DragonPattern.BodySweep, DragonPattern.RedSweep, DragonPattern.Rockfall, DragonPattern.OrbitFlames, DragonPattern.LavaEruption,
+            DragonPattern.TrackingFireball, DragonPattern.AimedBreath, DragonPattern.InnerBlast, DragonPattern.OuterBlast };
+        private static readonly string[] Names = { "점프 강타", "전방향 화염탄", "백스텝 브레스", "돌진", "화염우",
+            "노랑 근접 패링", "빨강 근접 회피", "독립 바위 낙하", "3회 거리 압박", "파괴 후 용암 분출",
+            "추적 화염구", "조준 고정 직선 브레스", "바깥 안전 폭발", "안쪽 안전 폭발" };
 
         [MenuItem("Nomad/Debug/보스 전투")]
         public static void Open()
@@ -72,6 +74,7 @@ namespace Nomad.Game.Editor
             if (debug != null && debug.Ready)
             {
                 debug.GodMode = EditorGUILayout.Toggle("플레이어 무적", debug.GodMode);
+                debug.UnlimitedResources = EditorGUILayout.Toggle("마나·스태미나 무제한", debug.UnlimitedResources);
                 if (GUILayout.Button("체력·마나 회복")) debug.RestorePlayer();
                 GUILayout.BeginHorizontal();
                 if (GUILayout.Button("검 +1")) debug.Equip("demo-sword");
@@ -84,7 +87,8 @@ namespace Nomad.Game.Editor
             using (new EditorGUI.DisabledScope(!boss.Introduced || boss.GetComponent<Health>().IsDead ||
                 Choices[selected] == DragonPattern.LavaEruption && boss.GetComponent<BossArmor>().BreakCount == 0))
                 if (GUILayout.Button("선택 공격 실행")) boss.BeginPattern(Choices[selected]);
-            EditorGUILayout.LabelField("바위 (낙하 중 포함)", (boss.GetComponentInParent<BossArena>().RockCount + boss.PendingRocks) + "/6");
+            var arena = FindFirstObjectByType<BossArena>();
+            EditorGUILayout.LabelField("바위 (낙하 중 포함)", ((arena != null ? arena.RockCount : 0) + boss.PendingRocks) + "/6");
             if (GUILayout.Button("갑옷 1층 파괴 시험")) boss.GetComponent<BossArmor>().DamageArmor(BossArmor.DurabilityPerLayer);
             if (debug != null)
             {

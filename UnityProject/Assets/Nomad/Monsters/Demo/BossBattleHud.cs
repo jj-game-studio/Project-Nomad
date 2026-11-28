@@ -16,8 +16,10 @@ namespace Nomad.Monsters.Demo
         private Canvas canvas;
         private GameObject frame, lower;
         private RectTransform fill;
-        private readonly Image[] shellFills = new Image[2];
-        private readonly Text[] shellNames = new Text[2];
+        private Image shellFill;
+        private Text shellName, healthLines;
+        private BossBattleFrameGraphic portraitRing;
+        private bool portraitReady;
         private Text value, state, title;
         private RectTransform delayedFill;
         private BossHealthFlameGraphic healthFx;
@@ -49,31 +51,37 @@ namespace Nomad.Monsters.Demo
             scaler.referenceResolution = new Vector2(1920, 1080);
             scaler.matchWidthOrHeight = 0.5f;
 
-            RectTransform plate = Rect("Obsidian boss frame", canvas.transform, new Vector2(1160, 126), new Vector2(0, -90), true);
+            RectTransform plate = Rect("Obsidian boss frame", canvas.transform, new Vector2(1040, 190), new Vector2(80, -115), true);
             plate.gameObject.AddComponent<BossBattleFrameGraphic>().raycastTarget = false;
             frame = plate.gameObject;
-            title = Label("잿불의 폭군  ·  최후의 수호자", plate, new Vector2(1000, 36), new Vector2(0, 34), 25);
-            Image track = Image("Health track", plate, new Vector2(1060, 30), new Vector2(0, -4), new Color(0.2f, 0.015f, 0.02f));
-            delayedFill = Image("Health damage trail", track.transform, new Vector2(1052, 20), Vector2.zero, new Color(1, 0.56f, 0.08f)).rectTransform;
+            title = Label("잿불의 폭군  ·  최후의 수호자", plate, new Vector2(900, 36), new Vector2(25, 57), 25);
+            Image track = Image("Health track", plate, new Vector2(950, 30), new Vector2(0, 25), new Color(0.2f, 0.015f, 0.02f));
+            delayedFill = Image("Health damage trail", track.transform, new Vector2(942, 20), Vector2.zero, new Color(1, 0.56f, 0.08f)).rectTransform;
             delayedFill.anchorMin = delayedFill.anchorMax = delayedFill.pivot = new Vector2(0, 0.5f);
             delayedFill.anchoredPosition = new Vector2(4, 0);
-            fill = Image("Ruby health", track.transform, new Vector2(1052, 20), Vector2.zero, new Color(0.83f, 0.035f, 0.045f)).rectTransform;
+            fill = Image("Ruby health", track.transform, new Vector2(942, 20), Vector2.zero, new Color(0.83f, 0.035f, 0.045f)).rectTransform;
             fill.anchorMin = fill.anchorMax = fill.pivot = new Vector2(0, 0.5f);
             fill.anchoredPosition = new Vector2(4, 0);
-            healthFx = Rect("Boss health flames", track.transform, new Vector2(1060, 30), Vector2.zero).gameObject.AddComponent<BossHealthFlameGraphic>();
+            healthFx = Rect("Boss health flames", track.transform, new Vector2(950, 30), Vector2.zero).gameObject.AddComponent<BossHealthFlameGraphic>();
             healthFx.raycastTarget = false;
-            value = Label("", plate, new Vector2(500, 25), new Vector2(0, -36), 18);
-            Image armorTrack = Image("Two carapace layers", plate, new Vector2(520, 14), new Vector2(0, -73), new Color(0.08f, 0.06f, 0.04f));
-            for (int layer = 0; layer < 2; layer++)
-            {
-                float x = layer == 0 ? -132 : 132;
-                shellFills[layer] = Image(layer == 0 ? "Outer shell durability" : "Inner shell durability", armorTrack.transform,
-                    new Vector2(250, 10), new Vector2(x - 125, 0), new Color(0.7f,0.7f,0.7f));
-                shellFills[layer].rectTransform.pivot = new Vector2(0, 0.5f);
-                shellNames[layer] = Label(layer == 0 ? "외피 1단계" : "내피 2단계", armorTrack.transform,
-                    new Vector2(250, 20), new Vector2(x, 18), 14);
-            }
-            state = Label("", plate, new Vector2(900, 24), new Vector2(0, -96), 16);
+            value = Label("", plate, new Vector2(500, 25), new Vector2(0, -6), 18);
+            RectTransform portrait = Rect("Boss portrait ring", plate, new Vector2(152,152), new Vector2(-595,0));
+            portrait.anchorMin = portrait.anchorMax = new Vector2(0.5f,0.5f);
+            portraitRing = portrait.gameObject.AddComponent<BossBattleFrameGraphic>();
+            portraitRing.Ring = true; portraitRing.raycastTarget = false;
+            RectTransform face = Rect("Dragon portrait", portrait, new Vector2(118,118), Vector2.zero);
+            face.anchorMin = face.anchorMax = new Vector2(0.5f,0.5f);
+            face.gameObject.AddComponent<BossPortraitMask>().raycastTarget = false;
+            face.gameObject.AddComponent<Mask>().showMaskGraphic = false;
+            RectTransform photo = Rect("Portrait image",face,new Vector2(118,118),Vector2.zero);
+            photo.anchorMin = photo.anchorMax = new Vector2(0.5f,0.5f);
+            photo.gameObject.AddComponent<BossPortrait>();
+            healthLines = Label("×10", plate, new Vector2(70,30), new Vector2(440,-6),22);
+            Image armorTrack = Image("Current carapace track", plate, new Vector2(700,16), new Vector2(-100,-60), new Color(0.1f,0.07f,0.06f));
+            shellFill = Image("Current carapace progress", armorTrack.transform, new Vector2(692,10), new Vector2(-346,0),Color.white);
+            shellFill.rectTransform.pivot = new Vector2(0,0.5f);
+            shellName = Label("",plate,new Vector2(700,23),new Vector2(-100,-35),17);
+            state = Label("", plate, new Vector2(900, 24), new Vector2(0, -85), 16);
             frame.SetActive(false);
         }
 
@@ -84,16 +92,24 @@ namespace Nomad.Monsters.Demo
             GetComponent<Nomad.Monsters.SegmentedHealthBar>().enabled = false;
             if (visible)
             {
-                fill.sizeDelta = new Vector2(1052 * health.CurrentHealth / health.MaxHealth, 20);
+                float totalLines = health.CurrentHealth / (float)health.MaxHealth * 10;
+                int lines = Mathf.Max(1,Mathf.CeilToInt(totalLines));
+                float lineFill = totalLines - (lines - 1);
+                fill.sizeDelta = new Vector2(942 * lineFill,20);
+                fill.GetComponent<Image>().color = boss.Enraged ? new Color(0.95f,0.12f,0.02f) : new Color(0.8f,0.025f,0.04f);
                 value.text = health.CurrentHealth.ToString("N0") + " / " + health.MaxHealth.ToString("N0");
-                for (int layer = 0; layer < 2; layer++)
+                healthLines.text = "×" + lines;
+                Color armorColor = armor.BreakCount == 0 ? new Color(1,0.6f,0.12f) : new Color(0.72f,0.28f,1);
+                float progress = armor.BreakCount >= 2 ? 1 : 1 - armor.RemainingRatio;
+                shellFill.rectTransform.sizeDelta = new Vector2(692 * progress,10);
+                shellFill.color = armorColor;
+                shellName.text = armor.BreakCount >= 2 ? "외피·내피 파괴 완료  2/2" :
+                    (armor.BreakCount == 0 ? "외피 파괴 진행  0/2" : "내피 파괴 진행  1/2") + "   " + Mathf.RoundToInt(progress*100) + "%";
+                portraitRing.GaugeColor = armorColor; portraitRing.Fraction = progress; portraitRing.SetVerticesDirty();
+                if (!portraitReady)
                 {
-                    bool broken = layer < armor.BreakCount;
-                    float shellRatio = broken ? 0 : layer == armor.BreakCount ? armor.RemainingRatio : 1;
-                    shellFills[layer].rectTransform.sizeDelta = new Vector2(250 * shellRatio, 10);
-                    shellFills[layer].color = layer == 0 ? new Color(0.5f,0.72f,0.85f) : new Color(1,0.6f,0.2f);
-                    shellNames[layer].text = (layer == 0 ? "외피 1단계" : "내피 2단계") + (broken ? "  파괴 완료" : "  남음");
-                    shellNames[layer].color = broken ? new Color(1,0.55f,0.15f) : Color.white;
+                    portraitReady = true;
+                    frame.GetComponentInChildren<BossPortrait>().Capture(boss);
                 }
                 state.text = "갑옷 파괴 " + armor.BreakCount + "/2 · 받는 피해 " + Mathf.RoundToInt(armor.DamageMultiplier * 100) + "%" + (boss.EnrageTransitioning ? "   ·   광폭 전환" : boss.Enraged ? "   ·   2페이즈 · 광폭" : "");
                 state.color = boss.EnrageTransitioning || boss.Enraged ? new Color(1, 0.3f, 0.12f) : new Color(0.95f, 0.8f, 0.5f);
@@ -103,7 +119,7 @@ namespace Nomad.Monsters.Demo
                 hitFlash = Mathf.Max(0, hitFlash - Time.deltaTime);
                 float ratio = health.CurrentHealth / (float)health.MaxHealth;
                 delayedRatio = ratio > delayedRatio ? ratio : Mathf.MoveTowards(delayedRatio, ratio, Time.deltaTime * 0.28f);
-                delayedFill.sizeDelta = new Vector2(1052 * delayedRatio, 20);
+                delayedFill.sizeDelta = fill.sizeDelta;
                 healthFx.Intensity = Mathf.Max(boss.EnrageAmount * (0.8f + Mathf.Sin(Time.time * 5) * 0.2f), hitFlash);
                 healthFx.SetVerticesDirty();
             }

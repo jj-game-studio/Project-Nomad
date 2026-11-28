@@ -7,7 +7,7 @@ namespace Nomad.Monsters.Demo
     [DefaultExecutionOrder(300)]
     public sealed class BossJumpSlam : MonoBehaviour
     {
-        public const float LeapSeconds = 0.65f;
+        public const float LeapSeconds = 0.5f;
         public int Landings { get; private set; }
         public bool Airborne { get; private set; }
         private DragonBossCombat boss;
